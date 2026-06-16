@@ -1,0 +1,47 @@
+import { Component, inject } from '@angular/core';
+import { RouterLink, RouterOutlet, NavigationEnd, Router } from '@angular/router';
+import { filter, map, startWith } from 'rxjs/operators';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { MOCK_USER } from '../../../shared/mock-data';
+
+@Component({
+  selector: 'app-payment-layout',
+  imports: [RouterLink, RouterOutlet],
+  template: `
+    <div class="split-view">
+      <div class="split-view-list" [class.split-hidden]="isChildRoute()">
+        <div class="page">
+          <h1 class="page-title">Métodos de pago</h1>
+          <div class="wallet-card mb-2">
+            <p style="opacity:0.9">Monedero ArinPark</p>
+            <p class="wallet-balance">{{ user.balance }} €</p>
+          </div>
+          <p class="section-title">Tarjetas</p>
+          <div class="card">💳 Visa •••• 4242 <span class="badge badge-primary">Principal</span></div>
+          <div class="row mt-2">
+            <a routerLink="/app/account/recharge" class="btn btn-primary btn-sm">Recargar</a>
+            <a routerLink="/app/account/refund" class="btn btn-secondary btn-sm">Retirar saldo</a>
+          </div>
+          <a routerLink="/app/account/payment-methods/add" class="btn btn-secondary btn-block mt-2">Añadir tarjeta</a>
+        </div>
+      </div>
+      <div class="split-view-detail" [class.split-hidden]="!isChildRoute()">
+        <router-outlet />
+      </div>
+    </div>
+  `,
+  styles: `@media (min-width:768px){.split-view-detail.split-hidden{display:flex!important}}`,
+})
+export class PaymentLayoutComponent {
+  readonly user = MOCK_USER;
+  private readonly router = inject(Router);
+  private readonly url = toSignal(
+    this.router.events.pipe(
+      filter((e): e is NavigationEnd => e instanceof NavigationEnd),
+      map((e) => e.urlAfterRedirects),
+      startWith(this.router.url),
+    ),
+    { initialValue: this.router.url },
+  );
+  isChildRoute = () => this.url().includes('/payment-methods/add');
+}
