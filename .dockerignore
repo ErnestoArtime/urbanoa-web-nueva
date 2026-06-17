@@ -1,0 +1,11 @@
+node_modules
+dist
+.angular
+.git
+.gitignore
+coverage
+.vscode
+.editorconfig
+README.md
+AI_MAQUETA_GUIDELINES.md
+docker-compose.yml
