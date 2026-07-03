@@ -1,41 +1,95 @@
-import { Component, inject } from '@angular/core';
-import { RouterLink, RouterOutlet, NavigationEnd, Router } from '@angular/router';
+import { Component, computed, inject, signal } from '@angular/core';
+import { DecimalPipe } from '@angular/common';
+import { RouterLink, RouterLinkActive, RouterOutlet, NavigationEnd, Router } from '@angular/router';
 import { filter, map, startWith } from 'rxjs/operators';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { MOCK_OPERATIONS } from '../../../shared/mock-data';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { DateRangeFilterComponent, type DateRange } from '../../../shared/components/date-range-filter/date-range-filter.component';
+import { OperationType, OPERATION_TYPE_LABELS } from '../../../shared/models/operation-type';
+import { UnpaidFinesService } from '../../../core/services/unpaid-fines.service';
+import { OperationsService } from '../../../core/services/operations.service';
+import type { Operation } from '../../../shared/models/operation';
+import { OperationIconComponent } from '../../../shared/components/operation-icon/operation-icon.component';
 
 @Component({
   selector: 'app-operations-layout',
-  imports: [RouterLink, RouterOutlet],
+  imports: [RouterLink, RouterLinkActive, RouterOutlet, TranslatePipe, DecimalPipe, DateRangeFilterComponent, OperationIconComponent],
   template: `
     <div class="split-view" style="min-height:calc(100dvh - var(--bottom-nav-height))">
       <div class="split-view-list" [class.split-hidden]="isDetailRoute()">
         <div class="page" style="padding-bottom:0">
-          <h1 class="page-title">Operaciones</h1>
-          <div class="chip-row">
-            @for (f of filters; track f) {
-              <span class="chip" [class.active]="f === 'Este mes'">{{ f }}</span>
-            }
-          </div>
-          <ul class="list" style="margin:0 -1.25rem">
-            @for (op of operations; track op.id) {
-              <a [routerLink]="['/app/operations/detail', op.type]" class="list-item" routerLinkActive="active">
-                <div class="list-item-content">
-                  <div class="list-item-title">{{ op.title }}</div>
-                  <div class="list-item-subtitle">{{ op.date }}</div>
+          <h1 class="page-title">{{ 'ops.title' | translate }}</h1>
+
+          <section class="current-section">
+            <p class="section-label">En curso</p>
+            @if (activeTicket(); as active) {
+              <article class="active-operation">
+                <div class="active-operation-head">
+                  <span class="car-icon">▣</span>
+                  <div><strong>{{ active.plate }}</strong><small>{{ active.zone }}</small></div>
+                  <span class="running-badge">{{ active.timeRemaining }}</span>
                 </div>
-                <span>{{ op.amount }}</span>
-              </a>
+                <div class="active-times"><span>Finaliza</span><strong>{{ active.endTime }}</strong></div>
+                <div class="active-actions">
+                  <button type="button" class="btn btn-danger btn-sm" (click)="onUnpark()">Desaparcar</button>
+                  <a routerLink="/app/parking/time-steps" class="btn btn-primary btn-sm">Ampliar</a>
+                </div>
+              </article>
+            } @else {
+              <article class="active-operation empty-active-operation">
+                <p>No hay operaciones en curso.</p>
+              </article>
+            }
+          </section>
+
+          <section class="actions-section">
+            <a routerLink="/app/operations/unpaid-fines" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: false }" ariaCurrentWhenActive="page" class="list-item action-item">
+              <div class="list-item-content">
+                <div class="list-item-title">
+                  Denuncias por pagar <span class="badge badge-error">{{ unpaidFinesCount() }}</span>
+                </div>
+              </div>
+              <span class="list-item-chevron">›</span>
+            </a>
+            <a routerLink="/app/operations/report" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: false }" ariaCurrentWhenActive="page" class="list-item action-item">
+              <div class="list-item-content"><div class="list-item-title">{{ 'ops.report' | translate }}</div></div>
+              <span class="list-item-chevron">›</span>
+            </a>
+          </section>
+
+          <section class="history-filter-panel">
+            <p class="section-label history-label">Historial</p>
+            <app-date-range-filter (rangeChange)="onRangeChange($event)" />
+          </section>
+
+          <ul class="list history-list">
+            @for (group of groupedHistory(); track group.label) {
+              <li class="history-group-label">{{ group.label }}</li>
+              @for (op of group.items; track op.id) {
+                <a [routerLink]="['/app/operations/detail', op.id]" class="list-item" routerLinkActive="active">
+                  <app-operation-icon [type]="op.type" />
+                  <div class="list-item-content">
+                    @if (isFinishParking(op)) {
+                      <div class="list-item-title finish-op-title">Fin de estacionamiento</div>
+                    } @else {
+                      <div class="list-item-title">
+                        {{ OPERATION_TYPE_LABELS[op.type] | translate }}
+                      </div>
+                    }
+                    <div class="list-item-subtitle">{{ op.date }}{{ op.zone ? ' — ' + op.zone : '' }}</div>
+                  </div>
+                  <span [class]="op.amount > 0 ? 'badge badge-success' : ''">
+                    {{ op.amount > 0 ? '+' : '' }}{{ op.amount | number:'1.2-2' }} €
+                  </span>
+                </a>
+              }
+            }
+            @if (groupedHistory().length === 0) {
+              <li class="list-item" style="justify-content:center;color:var(--color-muted)">
+                {{ 'ops.empty' | translate }}
+              </li>
             }
           </ul>
-          <a routerLink="/app/operations/unpaid-fines" class="list-item" style="margin-top:0.5rem">
-            <div class="list-item-content"><div class="list-item-title">Multas impagadas</div></div>
-            <span class="badge badge-error">2</span>
-          </a>
-          <a routerLink="/app/operations/report" class="list-item">
-            <div class="list-item-content"><div class="list-item-title">Generar informe</div></div>
-            <span class="list-item-chevron">›</span>
-          </a>
         </div>
       </div>
       <div class="split-view-detail" [class.split-hidden]="!isDetailRoute()">
@@ -43,17 +97,93 @@ import { MOCK_OPERATIONS } from '../../../shared/mock-data';
       </div>
     </div>
   `,
-  styles: `
-    .list-item.active { background: rgba(84,129,148,0.1); }
+  styles: [`
+    .list-item.active { background:rgba(93,154,150,.16); color:var(--color-primary-dark); box-shadow:inset 4px 0 0 var(--color-primary); }
+    .op-icon { font-size: 1.1rem; margin-right: 0.25rem; }
+    .section-label { margin:.85rem 0 .4rem; color:var(--color-text-muted); font-size:.72rem; font-weight:800; text-transform:uppercase; letter-spacing:.06em; }
+    .history-filter-panel { margin:1rem 0 .7rem; padding:.8rem; border:1px solid var(--color-border); border-radius:var(--radius-md); background:var(--color-background); }
+    .history-label { margin:0 0 .25rem; }
+    .history-list { margin:0; overflow:hidden; border:1px solid var(--color-border); border-radius:var(--radius-md); background:var(--color-surface); }
+    .history-group-label {
+      list-style:none;
+      padding:.65rem .8rem .4rem;
+      color:var(--color-text-muted);
+      font-size:.75rem;
+      font-weight:800;
+      text-transform:uppercase;
+      letter-spacing:.05em;
+      background:var(--color-background);
+    }
+    .finish-op-title {
+      color: var(--color-primary-dark);
+      font-weight: 700;
+    }
+    .active-operation { overflow:hidden; border:1px solid var(--color-primary-light); border-top:5px solid var(--color-primary); border-radius:var(--radius-md); background:var(--color-surface); box-shadow:var(--shadow-sm); }
+    .empty-active-operation { border-top-width:1px; padding:.8rem; color:var(--color-text-muted); }
+    .active-operation-head { display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:.65rem; padding:.75rem; }
+    .active-operation-head div { display:flex; flex-direction:column; }
+    .active-operation-head small { color:var(--color-text-muted); font-size:.72rem; }
+    .car-icon { display:grid; place-items:center; width:32px; height:32px; border-radius:50%; background:var(--color-accent-soft); color:var(--color-primary); }
+    .running-badge { padding:.28rem .5rem; border-radius:999px; background:var(--color-active); color:var(--color-primary-dark); font-size:.72rem; font-weight:800; }
+    .active-times { display:flex; justify-content:space-between; padding:.55rem .75rem; border-top:1px dashed var(--color-border); font-size:.8rem; }
+    .active-actions { display:grid; grid-template-columns:1fr 1fr; gap:.5rem; padding:.65rem .75rem; background:rgba(93,154,150,.07); }
+    .actions-section {
+      margin-top: 1rem;
+      padding: 0.75rem 1.25rem;
+      background: var(--color-surface);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--color-border);
+    }
+    .action-item {
+      background: transparent;
+      border-radius: var(--radius-sm);
+      margin: 0 -0.75rem;
+      padding: 0.5rem 0.75rem;
+      border-bottom: 1px solid var(--color-border);
+    }
+    .action-item:last-child {
+      border-bottom: none;
+    }
+    .action-item:hover {
+      background: var(--color-background);
+    }
+    .action-item.active {
+      position:relative;
+      background:var(--color-active);
+      color:var(--color-primary-dark);
+      box-shadow:inset 4px 0 0 var(--color-primary);
+    }
+    .action-item.active .list-item-title { font-weight:800; }
+    .action-item.active .list-item-chevron { color:var(--color-primary); font-weight:900; }
+    :host ::ng-deep .history-filter-panel .date-filter { padding:.35rem 0 0; }
+    :host ::ng-deep .history-filter-panel .date-filter-chips { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.4rem; margin-bottom:.65rem; }
+    :host ::ng-deep .history-filter-panel .chip { display:flex; align-items:center; justify-content:center; min-width:0; padding:.35rem .4rem; white-space:nowrap; }
+    :host ::ng-deep .history-filter-panel .date-filter-cal-row { display:grid; grid-template-columns:1fr; gap:.55rem; }
+    :host ::ng-deep .history-filter-panel .date-filter-toggle { width:100%; justify-content:center; min-height:38px; }
+    :host ::ng-deep .history-filter-panel .date-filter-inputs { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:.55rem; width:100%; }
+    :host ::ng-deep .history-filter-panel .date-picker-field { min-width:0; }
+    :host ::ng-deep .history-filter-panel .date-display { min-width:0; width:100%; }
+    :host ::ng-deep .history-filter-panel .date-filter-clear { grid-column:1/-1; justify-self:end; }
     @media (min-width: 768px) {
+      .split-view { min-width:0; overflow:hidden; }
+      .split-view-list { width:420px; min-width:0; overflow-x:hidden; }
+      .split-view-list>.page { min-width:0; }
       .split-view-detail.split-hidden { display: flex !important; }
     }
-  `,
+  `],
 })
 export class OperationsLayoutComponent {
   private readonly router = inject(Router);
-  readonly operations = MOCK_OPERATIONS;
-  readonly filters = ['Hoy', 'Esta semana', 'Este mes', 'Más antiguas'];
+  private readonly operationsService = inject(OperationsService);
+  private readonly operations = this.operationsService.operations;
+  private readonly rangeFilter = signal<DateRange>({ from: '', to: '' });
+  private readonly unpaidFinesService = inject(UnpaidFinesService);
+  readonly unpaidFinesCount = () => this.unpaidFinesService.fines().length;
+  readonly OperationType = OperationType;
+  readonly OPERATION_TYPE_LABELS = OPERATION_TYPE_LABELS;
+  readonly activeTicket = this.operationsService.activeOperation;
+  readonly filteredOps = computed(() => this.applyFilter(this.operations()));
+  readonly groupedHistory = computed(() => this.groupByPeriod(this.filteredOps()));
 
   private readonly url = toSignal(
     this.router.events.pipe(
@@ -64,5 +194,89 @@ export class OperationsLayoutComponent {
     { initialValue: this.router.url },
   );
 
-  isDetailRoute = () => this.url().includes('/app/operations/detail/');
+  isDetailRoute = () => {
+    const path = this.url().split('?')[0].replace(/\/$/, '');
+    return path !== '/app/operations';
+  };
+
+  onRangeChange(range: DateRange): void {
+    this.rangeFilter.set(range);
+  }
+
+  onUnpark(): void {
+    this.operationsService.unparkActiveOperation();
+  }
+
+  isFinishParking(op: Operation): boolean {
+    return op.type === OperationType.BALANCE_REFUND && !!op.plate;
+  }
+
+  private applyFilter(list: Operation[]): Operation[] {
+    const { from, to } = this.rangeFilter();
+    const history = list.filter((op) => op.type !== OperationType.UNPAID_FINES);
+    const sorted = [...history].sort((a, b) => this.toDateValue(b.date) - this.toDateValue(a.date));
+
+    if (!from && !to) {
+      return sorted;
+    }
+
+    return sorted.filter(op => {
+      const opDate = this.parseDate(op.date);
+      if (from && opDate < this.parseDate(from)) return false;
+      if (to && opDate > this.parseDate(to)) return false;
+      return true;
+    });
+  }
+
+  private groupByPeriod(list: Operation[]): Array<{ label: string; items: Operation[] }> {
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startOfYesterday = new Date(startOfToday);
+    startOfYesterday.setDate(startOfYesterday.getDate() - 1);
+    const startOfWeek = new Date(startOfToday);
+    const day = (startOfWeek.getDay() + 6) % 7;
+    startOfWeek.setDate(startOfWeek.getDate() - day);
+
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const groups: Record<string, Operation[]> = {
+      'Hoy': [],
+      'Ayer': [],
+      'Esta semana': [],
+      'Este mes': [],
+      'Anteriores': [],
+    };
+
+    for (const op of list) {
+      const d = this.parseDate(op.date);
+      if (d >= startOfToday) {
+        groups['Hoy'].push(op);
+      } else if (d >= startOfYesterday) {
+        groups['Ayer'].push(op);
+      } else if (d >= startOfWeek) {
+        groups['Esta semana'].push(op);
+      } else if (d >= startOfMonth) {
+        groups['Este mes'].push(op);
+      } else {
+        groups['Anteriores'].push(op);
+      }
+    }
+
+    return Object.entries(groups)
+      .filter(([, items]) => items.length > 0)
+      .map(([label, items]) => ({ label, items }));
+  }
+
+  private toDateValue(d: string): number {
+    return this.parseDate(d).getTime();
+  }
+
+  private parseDate(d: string): Date {
+    if (d.includes('/')) {
+      const [day, month, year] = d.split('/').map(Number);
+      return new Date(year, month - 1, day, 12, 0, 0, 0);
+    }
+    const [year, month, day] = d.split('-').map(Number);
+    return new Date(year, month - 1, day, 12, 0, 0, 0);
+  }
 }
