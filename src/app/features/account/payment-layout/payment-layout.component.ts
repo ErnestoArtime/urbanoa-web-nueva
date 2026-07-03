@@ -11,7 +11,6 @@ import { MOCK_USER } from '../../../shared/mock-data';
     <div class="split-view">
       <div class="split-view-list" [class.split-hidden]="isChildRoute()">
         <div class="page">
-          <h1 class="page-title">Métodos de pago</h1>
           <div class="wallet-card mb-2">
             <p style="opacity:0.9">Monedero ArinPark</p>
             <p class="wallet-balance">{{ user.balance }} €</p>

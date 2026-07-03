@@ -11,7 +11,6 @@ import { MOCK_VEHICLES } from '../../../shared/mock-data';
     <div class="split-view">
       <div class="split-view-list" [class.split-hidden]="isChildRoute()">
         <div class="page">
-          <h1 class="page-title">Vehículos</h1>
           <ul class="list card" style="padding:0;overflow:hidden">
             @for (v of vehicles; track v.id) {
               <a routerLink="/app/account/vehicles/edit" class="list-item">
