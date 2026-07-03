@@ -1,27 +1,43 @@
-import { Component } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Component, inject, OnInit, signal } from '@angular/core';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MOCK_TARIFFS } from '../../../shared/mock-data';
+import { LoaderComponent } from '../../../shared/components/loader/loader.component';
+import { readParkingFlowQuery } from '../parking-flow.model';
 
 @Component({
   selector: 'app-parking-tickets',
-  imports: [RouterLink],
+  imports: [RouterLink, LoaderComponent],
   template: `
-    <div class="page">
-      <h1 class="page-title">Seleccionar tarifa</h1>
-      <ul class="list card" style="padding:0;overflow:hidden">
-        @for (t of tariffs; track t.id) {
-          <a routerLink="/app/parking/time-steps" class="list-item">
-            <div class="list-item-content">
-              <div class="list-item-title">{{ t.name }}</div>
-              <div class="list-item-subtitle">{{ t.desc }} — {{ t.price }}</div>
-            </div>
-            <span class="list-item-chevron">›</span>
+    <app-loader [visible]="loading()" message="Cargando tarifas..." />
+    <div class="page flow-page">
+      <a routerLink="/app/parking" [queryParams]="{city:query.city}" class="back-link">‹ Volver al mapa</a>
+      <p class="flow-step">Paso 2 de 5</p>
+      <h1 class="page-title">Tickets disponibles</h1>
+      <div class="selection-summary card">
+        <span class="zone-color" [style.background]="'#' + query.sectorColor"></span>
+        <div><strong>{{ query.street }}</strong><p>{{ query.zone }} · {{ query.cityName }}</p><small>Vehículo {{ query.plate }}</small></div>
+      </div>
+      <div class="tariff-list">
+        @for (tariff of tariffs; track tariff.id) {
+          <a routerLink="/app/parking/time-steps" [queryParams]="withTariff(tariff)" class="ticket-option">
+            <span class="ticket-color" [style.background]="'#' + (query.sectorColor || '2b6767')"></span>
+            <div class="ticket-option-head"><div><small>{{ query.zone || 'Zona regulada' }}</small><h2>{{ tariff.name }}</h2><p>{{ tariff.desc }}</p></div><strong>{{ tariff.price }}</strong></div>
+            <div class="ticket-meta"><span><small>Sector</small><strong>{{ query.sector || query.street }}</strong></span><span><small>Horario</small><strong>09:00–20:00</strong></span><span><small>Mínimo</small><strong>30 min</strong></span></div>
+            <span class="ticket-action">Sacar ticket <b>›</b></span>
           </a>
         }
-      </ul>
+      </div>
     </div>
   `,
+  styles: [`
+    .flow-page{max-width:760px}.back-link{display:inline-block;margin-bottom:1rem}.flow-step{color:var(--color-primary);font-size:.72rem;font-weight:800;text-transform:uppercase}.selection-summary{display:flex;gap:.8rem;margin:1rem 0}.zone-color{width:8px;border-radius:99px}.selection-summary p,.selection-summary small{color:var(--color-text-muted)}.tariff-list{display:grid;gap:.8rem}.ticket-option{position:relative;display:grid;gap:.8rem;overflow:hidden;padding:1rem;border:1px solid var(--color-border);border-radius:14px;background:var(--color-surface);color:inherit;box-shadow:var(--shadow-sm)}.ticket-option:hover{text-decoration:none;box-shadow:var(--shadow-md)}.ticket-color{position:absolute;top:0;right:0;left:0;height:6px}.ticket-option-head{display:flex;justify-content:space-between;gap:1rem;padding-top:.2rem}.ticket-option-head small,.ticket-option-head p{color:var(--color-text-muted);font-size:.75rem}.ticket-option-head h2{margin:.12rem 0;font-size:1rem}.ticket-option-head>strong{align-self:center;color:var(--color-primary);white-space:nowrap}.ticket-meta{display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;padding:.65rem 0;border-block:1px dashed var(--color-border)}.ticket-meta span{display:flex;min-width:0;flex-direction:column}.ticket-meta small{color:var(--color-text-muted);font-size:.68rem}.ticket-meta strong{overflow:hidden;font-size:.75rem;text-overflow:ellipsis;white-space:nowrap}.ticket-action{justify-self:end;color:var(--color-primary);font-size:.8rem;font-weight:800}.ticket-action b{font-size:1rem}
+  `],
 })
-export class ParkingTicketsComponent {
+export class ParkingTicketsComponent implements OnInit {
+  private readonly route = inject(ActivatedRoute);
   readonly tariffs = MOCK_TARIFFS;
+  readonly query = readParkingFlowQuery(this.route);
+  readonly loading = signal(true);
+  ngOnInit(): void { setTimeout(() => this.loading.set(false), 600); }
+  withTariff(tariff: typeof MOCK_TARIFFS[number]): Record<string,string> { return {...this.query,tariffId:tariff.id,tariff:tariff.name,tariffPrice:tariff.price}; }
 }

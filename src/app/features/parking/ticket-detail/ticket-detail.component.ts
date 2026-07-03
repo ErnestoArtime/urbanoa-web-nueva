@@ -1,5 +1,5 @@
-import { Component } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Component, inject } from '@angular/core';
+import { RouterLink, ActivatedRoute } from '@angular/router';
 import { MOCK_TICKET_ACTIVE, MOCK_USER } from '../../../shared/mock-data';
 
 @Component({
@@ -7,6 +7,7 @@ import { MOCK_TICKET_ACTIVE, MOCK_USER } from '../../../shared/mock-data';
   imports: [RouterLink],
   template: `
     <div class="page">
+      <a routerLink="/app/home" class="back-link">‹ Volver</a>
       <h1 class="page-title">Detalle del ticket</h1>
       <div class="card mt-2">
         <p><strong>Vehículo:</strong> {{ ticket.plate }}</p>
@@ -19,10 +20,11 @@ import { MOCK_TICKET_ACTIVE, MOCK_USER } from '../../../shared/mock-data';
       </div>
       <p class="section-title">Método de pago</p>
       <div class="card">Monedero — {{ user.balance }} €</div>
-      <a routerLink="/app/parking/time-steps" class="btn btn-primary btn-block mt-2">Ampliar aparcamiento</a>
-      <a routerLink="/app/operations/detail/unpark" class="btn btn-secondary btn-block mt-1">Desaparcar</a>
+      <a [routerLink]="['/app/parking/time-steps']" [queryParams]="{plate: ticket.plate, zone: ticket.zone}" class="btn btn-primary btn-block mt-2">Ampliar aparcamiento</a>
+      <a routerLink="/app/operations" class="btn btn-secondary btn-block mt-1">Desaparcar</a>
     </div>
   `,
+  styles: [`.back-link{display:inline-block;margin-bottom:1rem}`],
 })
 export class ParkingTicketDetailComponent {
   readonly ticket = MOCK_TICKET_ACTIVE;

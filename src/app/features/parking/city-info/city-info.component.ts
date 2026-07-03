@@ -1,19 +1,28 @@
-import { Component } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Component, inject } from '@angular/core';
+import { RouterLink, ActivatedRoute } from '@angular/router';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { MOCK_MUNICIPIOS } from '../../../shared/mock-data';
 
 @Component({
   selector: 'app-parking-city-info',
-  imports: [RouterLink],
+  imports: [RouterLink, TranslatePipe],
   template: `
     <div class="page">
-      <h1 class="page-title">Bilbao</h1>
-      <p class="page-subtitle">Zona azul y aparcamiento regulado</p>
+      <a routerLink="/app/parking/cities" class="back-link">‹ Volver a municipios</a>
+      <h1 class="page-title">{{ municipio.nombre }}</h1>
+      <p class="page-subtitle">{{ municipio.provincia }}</p>
       <div class="card mt-2">
-        <p>Horario: L-V 9:00–14:00 y 16:00–20:00</p>
-        <p class="text-muted mt-1">Tarifa rotación: 0,60 €/h</p>
+        <p><strong>{{ 'parking.zones' | translate }}:</strong> {{ municipio.zonas }}</p>
+        <p class="text-muted mt-1"><strong>{{ 'parking.tariff' | translate }}:</strong> Desde 0,30 €/h</p>
       </div>
-      <a routerLink="/app/parking/streets" class="btn btn-primary btn-block mt-2">Buscar calle</a>
+      <a [routerLink]="['/app/parking/streets']" [queryParams]="{city: municipio.id, cityName: municipio.nombre}" class="btn btn-primary btn-block mt-2">{{ 'parking.selectStreet' | translate }}</a>
     </div>
   `,
+  styles: [`.back-link{display:inline-block;margin-bottom:1rem}`],
 })
-export class ParkingCityInfoComponent {}
+export class ParkingCityInfoComponent {
+  private readonly route = inject(ActivatedRoute);
+  readonly municipio = MOCK_MUNICIPIOS.find(
+    m => m.id === this.route.snapshot.queryParamMap.get('id')
+  ) ?? MOCK_MUNICIPIOS[1];
+}
