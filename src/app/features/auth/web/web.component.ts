@@ -8,7 +8,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
     <div class="page">
       <h1 class="page-title">{{ title }}</h1>
       <div class="card mt-2">
-        <p>Contenido legal de ArinPark (maqueta). Sustituir por documento real en producción.</p>
+        <p>Contenido legal de ArinPark.</p>
         <p class="text-muted mt-1">Gertek — gestión de aparcamiento regulado.</p>
       </div>
       <a routerLink="/auth/login" class="btn btn-secondary btn-block mt-2">Cerrar</a>

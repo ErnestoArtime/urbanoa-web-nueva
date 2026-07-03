@@ -6,7 +6,6 @@ import { RouterLink } from '@angular/router';
   imports: [RouterLink],
   template: `
     <div class="page">
-      <h1 class="page-title">Método de pago</h1>
       <p class="page-subtitle">Añade una tarjeta para pagar al instante o recargar tu monedero ArinPark. Tus datos se guardan de forma encriptada y segura.</p>
       <div class="card mt-2">
         <p class="card-title">💳 Tarjeta bancaria</p>

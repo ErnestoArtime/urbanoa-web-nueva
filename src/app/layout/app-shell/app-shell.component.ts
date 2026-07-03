@@ -1,23 +1,62 @@
-import { Component, inject } from '@angular/core';
-import { Router, RouterOutlet, NavigationEnd } from '@angular/router';
+import { Component, inject, signal } from '@angular/core';
+import { Router, RouterOutlet, NavigationEnd, NavigationStart, NavigationCancel, NavigationError } from '@angular/router';
 import { filter, map, startWith } from 'rxjs/operators';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { SidebarComponent } from '../sidebar/sidebar.component';
 import { BottomNavComponent } from '../bottom-nav/bottom-nav.component';
 import { AppHeaderComponent } from '../app-header/app-header.component';
+import { AppBreadcrumbComponent } from '../../shared/components/breadcrumb/breadcrumb.component';
+import { LangSelectorComponent } from '../../shared/components/lang-selector/lang-selector.component';
+import { LoaderComponent } from '../../shared/components/loader/loader.component';
+import { BreadcrumbService } from '../../core/services/breadcrumb.service';
+import { TranslationService } from '../../core/services/translation.service';
 
 const MAIN_TAB_PATHS = ['/app/home', '/app/parking', '/app/operations', '/app/account'];
 
+const TITLE_KEYS: Record<string, string> = {
+  '/app/parking/cities': 'parking.selectMunicipio',
+  '/app/parking/city-info': 'parking.title',
+  '/app/parking/streets': 'parking.selectStreet',
+  '/app/parking/tickets': 'parking.tariff',
+  '/app/parking/ticket': 'parking.title',
+  '/app/parking/time-steps': 'parking.extend',
+  '/app/parking/confirm': 'parking.confirmStart',
+  '/app/parking/success': 'parking.success',
+  '/app/operations/detail': 'ops.detail',
+  '/app/operations/unpaid-fines': 'ops.denuncias',
+  '/app/operations/unpaid-fine-detail': 'ops.detail',
+  '/app/operations/report': 'ops.report',
+  '/app/operations/report-success': 'ops.report',
+  '/app/account/profile': 'account.profile',
+  '/app/account/settings': 'account.settings',
+  '/app/account/notifications': 'account.title',
+  '/app/account/change-password': 'account.settings',
+  '/app/account/tax-data': 'account.taxData',
+  '/app/account/vehicles': 'account.vehicles',
+  '/app/account/vehicles/add': 'account.vehicles',
+  '/app/account/vehicles/edit': 'account.vehicles',
+  '/app/account/payment-methods': 'account.paymentMethods',
+  '/app/account/payment-methods/add': 'account.paymentMethods',
+  '/app/account/recharge': 'dashboard.recharge',
+  '/app/account/refund': 'ops.type.balanceRefund',
+  '/app/account/about': 'app.title',
+  '/app/account/support': 'account.support',
+  '/app/account/support-success': 'account.support',
+};
+
 @Component({
   selector: 'app-shell',
-  imports: [RouterOutlet, SidebarComponent, BottomNavComponent, AppHeaderComponent],
+  imports: [RouterOutlet, SidebarComponent, BottomNavComponent, AppHeaderComponent, AppBreadcrumbComponent, LangSelectorComponent, LoaderComponent],
   template: `
     <div class="app-shell">
+      <app-lang-selector />
       <app-sidebar class="app-shell-sidebar" />
       <div class="app-shell-main">
+        <app-loader [visible]="routeTransitionLoading()" message="Cargando..." imageSrc="/assets/brand/login-logo.jpg" />
         @if (showHeader()) {
           <app-header [title]="headerTitle()" [showBack]="showBack()" />
         }
+        <app-breadcrumb />
         <main class="app-shell-content" [class.with-bottom-nav]="showBottomNav()">
           <router-outlet />
         </main>
@@ -30,7 +69,8 @@ const MAIN_TAB_PATHS = ['/app/home', '/app/parking', '/app/operations', '/app/ac
   styles: `
     .app-shell {
       display: flex;
-      min-height: 100dvh;
+      height: 100dvh;
+      background: var(--color-background);
     }
     .app-shell-sidebar {
       display: none;
@@ -40,7 +80,10 @@ const MAIN_TAB_PATHS = ['/app/home', '/app/parking', '/app/operations', '/app/ac
       display: flex;
       flex-direction: column;
       min-width: 0;
-      min-height: 100dvh;
+      height: 100%;
+    }
+    :host {
+      position: relative;
     }
     .app-shell-content {
       flex: 1;
@@ -52,15 +95,29 @@ const MAIN_TAB_PATHS = ['/app/home', '/app/parking', '/app/operations', '/app/ac
     .app-shell-bottom-nav {
       display: block;
     }
+    app-breadcrumb {
+      display: none;
+    }
+    app-lang-selector {
+      display: block;
+    }
     @media (min-width: 768px) {
       .app-shell-sidebar { display: flex; }
       .app-shell-bottom-nav { display: none; }
       .app-shell-content.with-bottom-nav { padding-bottom: 0; }
+      app-breadcrumb,
+      app-lang-selector { display: block; }
     }
   `,
 })
 export class AppShellComponent {
   private readonly router = inject(Router);
+  private readonly breadcrumbService = inject(BreadcrumbService);
+  private readonly translationService = inject(TranslationService);
+  readonly routeTransitionLoading = signal(false);
+  private readonly routeTransitionMinMs = 1000;
+  private routeTransitionStartedAt = 0;
+  private routeTransitionHideTimer?: ReturnType<typeof setTimeout>;
 
   private readonly url = toSignal(
     this.router.events.pipe(
@@ -70,6 +127,38 @@ export class AppShellComponent {
     ),
     { initialValue: this.router.url },
   );
+
+  constructor() {
+    this.router.events.pipe(
+      filter((e): e is NavigationEnd => e instanceof NavigationEnd),
+      startWith({ urlAfterRedirects: this.router.url } as NavigationEnd),
+    ).subscribe((e) => {
+      this.breadcrumbService.setFromUrl(e.urlAfterRedirects);
+    });
+
+    this.router.events.subscribe((event) => {
+      if (event instanceof NavigationStart) {
+        if (this.routeTransitionHideTimer !== undefined) {
+          clearTimeout(this.routeTransitionHideTimer);
+          this.routeTransitionHideTimer = undefined;
+        }
+        this.routeTransitionStartedAt = Date.now();
+        this.routeTransitionLoading.set(true);
+      }
+      if (event instanceof NavigationEnd || event instanceof NavigationCancel || event instanceof NavigationError) {
+        const elapsed = Date.now() - this.routeTransitionStartedAt;
+        const remaining = Math.max(this.routeTransitionMinMs - elapsed, 0);
+        if (remaining === 0) {
+          this.routeTransitionLoading.set(false);
+          return;
+        }
+        this.routeTransitionHideTimer = setTimeout(() => {
+          this.routeTransitionLoading.set(false);
+          this.routeTransitionHideTimer = undefined;
+        }, remaining);
+      }
+    });
+  }
 
   showBottomNav = () => {
     const u = this.url();
@@ -85,39 +174,9 @@ export class AppShellComponent {
 
   headerTitle = () => {
     const u = this.url();
-    const titles: Record<string, string> = {
-      '/app/parking/cities': 'Ciudades',
-      '/app/parking/city-info': 'Información',
-      '/app/parking/streets': 'Calles',
-      '/app/parking/tickets': 'Tarifas',
-      '/app/parking/ticket': 'Ticket',
-      '/app/parking/time-steps': 'Duración',
-      '/app/parking/confirm': 'Confirmar',
-      '/app/parking/success': 'Aparcamiento',
-      '/app/operations/detail': 'Detalle',
-      '/app/operations/unpaid-fines': 'Multas impagadas',
-      '/app/operations/unpaid-fine-detail': 'Detalle multa',
-      '/app/operations/report': 'Informe',
-      '/app/operations/report-success': 'Informe generado',
-      '/app/account/profile': 'Mi perfil',
-      '/app/account/settings': 'Ajustes',
-      '/app/account/notifications': 'Notificaciones',
-      '/app/account/change-password': 'Cambiar contraseña',
-      '/app/account/tax-data': 'Datos fiscales',
-      '/app/account/vehicles': 'Vehículos',
-      '/app/account/vehicles/add': 'Añadir vehículo',
-      '/app/account/vehicles/edit': 'Editar vehículo',
-      '/app/account/payment-methods': 'Métodos de pago',
-      '/app/account/payment-methods/add': 'Añadir tarjeta',
-      '/app/account/recharge': 'Recargar saldo',
-      '/app/account/refund': 'Retirar saldo',
-      '/app/account/about': 'Sobre ArinPark',
-      '/app/account/support': 'Soporte',
-      '/app/account/support-success': 'Mensaje enviado',
-    };
-    for (const [path, title] of Object.entries(titles)) {
-      if (u.startsWith(path)) return title;
+    for (const [path, key] of Object.entries(TITLE_KEYS)) {
+      if (u.startsWith(path)) return this.translationService.translate(key);
     }
-    return 'ArinPark';
+    return this.translationService.translate('app.title');
   };
 }

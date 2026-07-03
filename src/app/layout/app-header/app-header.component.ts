@@ -1,17 +1,20 @@
-import { Component, input } from '@angular/core';
+import { Component, inject, input } from '@angular/core';
 import { Location } from '@angular/common';
+import { TranslationService } from '../../core/services/translation.service';
 
 @Component({
   selector: 'app-header',
   template: `
   <header class="app-header">
     @if (showBack()) {
-      <button type="button" class="app-header-back" (click)="goBack()" aria-label="Atrás">‹</button>
+      <button type="button" class="app-header-back" (click)="goBack()" [attr.aria-label]="backAriaLabel()">‹</button>
     } @else {
       <span class="app-header-spacer"></span>
     }
     <h1 class="app-header-title">{{ title() }}</h1>
-    <span class="app-header-spacer"></span>
+    <div class="app-header-right">
+      <ng-content />
+    </div>
   </header>
   `,
   styles: `
@@ -20,7 +23,7 @@ import { Location } from '@angular/common';
       align-items: center;
       height: var(--header-height);
       padding: 0 0.5rem;
-      background: var(--color-surface);
+      background: var(--color-background);
       border-bottom: 1px solid var(--color-border);
       position: sticky;
       top: 0;
@@ -40,8 +43,14 @@ import { Location } from '@angular/common';
     .app-header-title {
       flex: 1;
       text-align: center;
-      font-size: 1.0625rem;
-      font-weight: 700;
+      font-size: 1rem;
+      font-weight: 600;
+    }
+    .app-header-right {
+      width: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
     .app-header-spacer { width: 44px; }
     @media (min-width: 768px) {
@@ -50,10 +59,14 @@ import { Location } from '@angular/common';
   `,
 })
 export class AppHeaderComponent {
+  private readonly translationService = inject(TranslationService);
+
   title = input('ArinPark');
   showBack = input(true);
 
   constructor(private readonly location: Location) {}
+
+  backAriaLabel = () => this.translationService.translate('common.back');
 
   goBack(): void {
     this.location.back();
