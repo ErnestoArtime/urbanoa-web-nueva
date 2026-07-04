@@ -3,27 +3,28 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MOCK_TARIFFS } from '../../../shared/mock-data';
 import { LoaderComponent } from '../../../shared/components/loader/loader.component';
 import { readParkingFlowQuery } from '../parking-flow.model';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 
 @Component({
   selector: 'app-parking-tickets',
-  imports: [RouterLink, LoaderComponent],
+  imports: [RouterLink, LoaderComponent, TranslatePipe],
   template: `
-    <app-loader [visible]="loading()" message="Cargando tarifas..." />
+    <app-loader [visible]="loading()" [message]="'parking.tickets.loading' | translate" />
     <div class="page flow-page">
-      <a routerLink="/app/parking" [queryParams]="{city:query.city}" class="back-link">‹ Volver al mapa</a>
-      <p class="flow-step">Paso 2 de 5</p>
-      <h1 class="page-title">Tickets disponibles</h1>
+      <a routerLink="/app/parking" [queryParams]="{city:query.city}" class="back-link">{{ 'parking.tickets.back' | translate }}</a>
+      <p class="flow-step">{{ 'parking.tickets.step' | translate }}</p>
+      <h1 class="page-title">{{ 'parking.tickets.title' | translate }}</h1>
       <div class="selection-summary card">
         <span class="zone-color" [style.background]="'#' + query.sectorColor"></span>
-        <div><strong>{{ query.street }}</strong><p>{{ query.zone }} · {{ query.cityName }}</p><small>Vehículo {{ query.plate }}</small></div>
+        <div><strong>{{ query.street }}</strong><p>{{ query.zone }} · {{ query.cityName }}</p><small>{{ 'parking.tickets.vehicle' | translate:{plate: query.plate} }}</small></div>
       </div>
       <div class="tariff-list">
         @for (tariff of tariffs; track tariff.id) {
           <a routerLink="/app/parking/time-steps" [queryParams]="withTariff(tariff)" class="ticket-option">
             <span class="ticket-color" [style.background]="'#' + (query.sectorColor || '2b6767')"></span>
-            <div class="ticket-option-head"><div><small>{{ query.zone || 'Zona regulada' }}</small><h2>{{ tariff.name }}</h2><p>{{ tariff.desc }}</p></div><strong>{{ tariff.price }}</strong></div>
-            <div class="ticket-meta"><span><small>Sector</small><strong>{{ query.sector || query.street }}</strong></span><span><small>Horario</small><strong>09:00–20:00</strong></span><span><small>Mínimo</small><strong>30 min</strong></span></div>
-            <span class="ticket-action">Sacar ticket <b>›</b></span>
+            <div class="ticket-option-head"><div><small>{{ query.zone || ('parking.tickets.defaultZone' | translate) }}</small><h2>{{ tariff.name }}</h2><p>{{ tariff.desc }}</p></div><strong>{{ tariff.price }}</strong></div>
+            <div class="ticket-meta"><span><small>{{ 'parking.tickets.sector' | translate }}</small><strong>{{ query.sector || query.street }}</strong></span><span><small>{{ 'parking.tickets.schedule' | translate }}</small><strong>{{ 'parking.tickets.scheduleValue' | translate }}</strong></span><span><small>{{ 'parking.tickets.minimum' | translate }}</small><strong>{{ 'parking.tickets.minimumValue' | translate }}</strong></span></div>
+            <span class="ticket-action">{{ 'parking.tickets.getTicket' | translate }} <b>›</b></span>
           </a>
         }
       </div>

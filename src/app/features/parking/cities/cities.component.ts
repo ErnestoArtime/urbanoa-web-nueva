@@ -11,14 +11,14 @@ import { MOCK_MUNICIPIOS } from '../../../shared/mock-data';
       <h1 class="page-title">{{ 'parking.selectMunicipio' | translate }}</h1>
       <label class="municipio-search">
         <span aria-hidden="true">⌕</span>
-        <input type="search" placeholder="Buscar municipio o provincia" [value]="search()" (input)="updateSearch($event)" />
+        <input type="search" [placeholder]="'parking.cities.searchPlaceholder' | translate" [value]="search()" (input)="updateSearch($event)" />
       </label>
       <div class="municipios-layout mt-2">
         <div class="municipios-grid">
           @for (m of filteredMunicipios(); track m.id) {
             <button type="button" class="municipio-card" [class.active]="selected().id === m.id" (click)="selected.set(m)">
               <div class="municipio-img">
-                <img [src]="'assets/municipios/' + m.imagen" [alt]="'Vista de ' + m.nombre" />
+                <img [src]="'assets/municipios/' + m.imagen" [alt]="'parking.cities.viewOf' | translate:{name: m.nombre}" />
                 <span class="municipio-map-label">{{ m.nombre }}</span>
               </div>
               <div class="municipio-body">
@@ -28,21 +28,21 @@ import { MOCK_MUNICIPIOS } from '../../../shared/mock-data';
               </div>
             </button>
           } @empty {
-            <p class="empty-result">No se encontraron municipios.</p>
+            <p class="empty-result">{{ 'parking.cities.empty' | translate }}</p>
           }
         </div>
         <aside class="municipio-detail">
-          <span class="detail-kicker">Municipio seleccionado</span>
+          <span class="detail-kicker">{{ 'parking.cities.selected' | translate }}</span>
           <h2>{{ selected().nombre }}</h2>
-          <p>{{ selected().provincia }} · {{ selected().zonas }} zonas reguladas</p>
-          <h3>Calles y zonas</h3>
+          <p>{{ 'parking.cities.zonesLabel' | translate:{count: '' + selected().zonas} }}</p>
+          <h3>{{ 'parking.cities.streetsTitle' | translate }}</h3>
           <ul>
-            <li><span>Centro</span><strong>Zona azul</strong></li>
-            <li><span>Casco histórico</span><strong>Rotación</strong></li>
-            <li><span>Área residencial</span><strong>Residentes</strong></li>
+            <li><span>{{ 'parking.cities.centro' | translate }}</span><strong>{{ 'parking.cities.zonaAzul' | translate }}</strong></li>
+            <li><span>{{ 'parking.cities.cascoHistorico' | translate }}</span><strong>{{ 'parking.cities.rotacion' | translate }}</strong></li>
+            <li><span>{{ 'parking.cities.areaResidencial' | translate }}</span><strong>{{ 'parking.cities.residentes' | translate }}</strong></li>
           </ul>
-          <a routerLink="/app/parking" [queryParams]="{city: selected().id}" class="btn btn-primary btn-block">Ver zonas en el mapa</a>
-          <a routerLink="/app/parking/streets" [queryParams]="{municipio: selected().id}" class="btn btn-secondary btn-block">Ver calles y tarifas</a>
+          <a routerLink="/app/parking" [queryParams]="{city: selected().id}" class="btn btn-primary btn-block">{{ 'parking.cities.viewMap' | translate }}</a>
+          <a routerLink="/app/parking/streets" [queryParams]="{municipio: selected().id}" class="btn btn-secondary btn-block">{{ 'parking.cities.viewStreets' | translate }}</a>
         </aside>
       </div>
     </div>

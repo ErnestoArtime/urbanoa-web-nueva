@@ -2,6 +2,7 @@ import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { LoaderComponent } from '../../../shared/components/loader/loader.component';
 import { readParkingFlowQuery } from '../parking-flow.model';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 
 interface ParkingTimeOption {
   label: string;
@@ -10,14 +11,14 @@ interface ParkingTimeOption {
 
 @Component({
   selector: 'app-parking-time-steps',
-  imports: [RouterLink, LoaderComponent],
+  imports: [RouterLink, LoaderComponent, TranslatePipe],
   template: `
-    <app-loader [visible]="loading()" message="Cargando tiempos disponibles..." imageSrc="/assets/brand/login-logo.jpg" />
+    <app-loader [visible]="loading()" [message]="'parking.timeSteps.loading' | translate" imageSrc="/assets/brand/login-logo.jpg" />
     <div class="page flow-page">
-      <a routerLink="/app/parking/tickets" [queryParams]="query" class="back-link">‹ Cambiar tarifa</a>
-      <p class="flow-step">Paso 3 de 5</p>
-      <h1 class="page-title">Selecciona la duración</h1>
-      <p class="page-subtitle">Elige uno de los tiempos permitidos para esta tarifa.</p>
+      <a routerLink="/app/parking/tickets" [queryParams]="query" class="back-link">{{ 'parking.timeSteps.back' | translate }}</a>
+      <p class="flow-step">{{ 'parking.timeSteps.step' | translate }}</p>
+      <h1 class="page-title">{{ 'parking.timeSteps.title' | translate }}</h1>
+      <p class="page-subtitle">{{ 'parking.timeSteps.subtitle' | translate }}</p>
 
       <div class="context-card card">
         <span class="sector-mark" [style.background]="sectorColor()"></span>
@@ -29,26 +30,26 @@ interface ParkingTimeOption {
       </div>
 
       <div class="time-line card">
-        <div><small>Inicio</small><strong>{{ startTime() }}</strong></div>
+        <div><small>{{ 'parking.timeSteps.start' | translate }}</small><strong>{{ startTime() }}</strong></div>
         <span class="line"></span>
         <div class="duration-pill">{{ selected().label }}</div>
         <span class="line"></span>
-        <div><small>Fin</small><strong>{{ endTime() }}</strong></div>
+        <div><small>{{ 'parking.timeSteps.end' | translate }}</small><strong>{{ endTime() }}</strong></div>
       </div>
 
-      <section class="time-selector" aria-label="Selector de duración">
-        <button type="button" class="step-control" aria-label="Reducir duración" (click)="changeTime(-1)" [disabled]="selectedIndex() === 0">−</button>
+      <section class="time-selector" [attr.aria-label]="'parking.timeSteps.title' | translate">
+        <button type="button" class="step-control" [attr.aria-label]="'parking.timeSteps.decreaseDuration' | translate" (click)="changeTime(-1)" [disabled]="selectedIndex() === 0">−</button>
         <div class="time-wheel" [style.background]="wheelBackground()">
           <div class="wheel-content">
-            <small>Tiempo</small>
+            <small>{{ 'parking.timeSteps.time' | translate }}</small>
             <strong>{{ selected().label }}</strong>
             <span>{{ amount() }}</span>
           </div>
         </div>
-        <button type="button" class="step-control" aria-label="Aumentar duración" (click)="changeTime(1)" [disabled]="selectedIndex() === times.length - 1">+</button>
+        <button type="button" class="step-control" [attr.aria-label]="'parking.timeSteps.increaseDuration' | translate" (click)="changeTime(1)" [disabled]="selectedIndex() === times.length - 1">+</button>
       </section>
 
-      <div class="step-options" aria-label="Tiempos disponibles">
+      <div class="step-options" [attr.aria-label]="'parking.timeSteps.title' | translate">
         @for (option of times; track option.minutes) {
           <button type="button" [class.active]="option.minutes === selected().minutes" (click)="selected.set(option)">
             {{ option.label }}
@@ -57,10 +58,10 @@ interface ParkingTimeOption {
       </div>
 
       <div class="price-card card">
-        <span>Importe estimado</span>
+        <span>{{ 'parking.timeSteps.estimatedPrice' | translate }}</span>
         <strong>{{ amount() }}</strong>
       </div>
-      <a routerLink="/app/parking/confirm" [queryParams]="confirmationParams()" class="btn btn-primary btn-block">Continuar</a>
+      <a routerLink="/app/parking/confirm" [queryParams]="confirmationParams()" class="btn btn-primary btn-block">{{ 'parking.timeSteps.continue' | translate }}</a>
     </div>
   `,
   styles: [`
@@ -68,7 +69,7 @@ interface ParkingTimeOption {
     .time-line{display:grid;grid-template-columns:auto 1fr auto 1fr auto;align-items:center;gap:.65rem;text-align:center}.time-line div{display:flex;flex-direction:column}.time-line small{color:var(--color-text-muted)}.time-line strong{font-size:1.15rem}.line{height:1px;background:var(--color-border)}.duration-pill{padding:.45rem .7rem;border:1px solid var(--color-border);border-radius:10px;font-weight:700;background:var(--color-background)}
     .time-selector{display:flex;align-items:center;justify-content:center;gap:1.25rem;margin:1.5rem 0}.time-wheel{width:210px;height:210px;padding:11px;border-radius:50%;box-shadow:0 8px 26px rgba(34,105,105,.16);transition:background .25s ease}.wheel-content{height:100%;border-radius:50%;background:var(--color-surface);display:flex;flex-direction:column;align-items:center;justify-content:center;border:1px solid var(--color-border)}.wheel-content small{color:var(--color-text-muted);text-transform:uppercase;font-weight:700}.wheel-content strong{font-size:2rem;color:var(--color-primary);margin:.2rem 0}.wheel-content span{font-weight:800}.step-control{width:44px;height:44px;border-radius:50%;border:1px solid var(--color-primary);background:var(--color-surface);color:var(--color-primary);font-size:1.6rem;cursor:pointer}.step-control:disabled{opacity:.3;cursor:not-allowed}
     .step-options{display:flex;flex-wrap:wrap;justify-content:center;gap:.5rem;margin-bottom:1.25rem}.step-options button{border:1px solid var(--color-border);border-radius:999px;background:var(--color-surface);padding:.45rem .75rem;cursor:pointer}.step-options button.active{background:var(--color-primary);border-color:var(--color-primary);color:#fff;font-weight:700}.price-card{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem}.price-card span{color:var(--color-text-muted)}.price-card strong{font-size:1.3rem;color:var(--color-primary)}
-    @media(min-width:768px) and (max-height:950px){.flow-page{padding-top:1rem;padding-bottom:.8rem}.back-link{margin-bottom:.35rem}.page-title{font-size:1.35rem}.page-subtitle{font-size:.85rem}.context-card{margin:.65rem 0;padding:.75rem}.time-line{padding:.65rem}.time-selector{margin:.7rem 0}.time-wheel{width:168px;height:168px;padding:9px}.wheel-content strong{font-size:1.55rem}.step-control{width:40px;height:40px}.step-options{margin-bottom:.65rem}.price-card{padding:.65rem;margin-bottom:.55rem}}
+    @media(min-width:960px) and (max-height:950px){.flow-page{padding-top:1rem;padding-bottom:.8rem}.back-link{margin-bottom:.35rem}.page-title{font-size:1.35rem}.page-subtitle{font-size:.85rem}.context-card{margin:.65rem 0;padding:.75rem}.time-line{padding:.65rem}.time-selector{margin:.7rem 0}.time-wheel{width:168px;height:168px;padding:9px}.wheel-content strong{font-size:1.55rem}.step-control{width:40px;height:40px}.step-options{margin-bottom:.65rem}.price-card{padding:.65rem;margin-bottom:.55rem}}
     @media(max-width:520px){.time-wheel{width:175px;height:175px}.time-selector{gap:.75rem}.time-line{gap:.35rem}.duration-pill{padding:.35rem}.flow-page{padding-inline:1rem}}
   `],
 })

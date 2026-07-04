@@ -8,7 +8,7 @@ import { MOCK_STREETS_ZARAUTZ } from '../../../shared/mock-data';
   imports: [RouterLink, TranslatePipe],
   template: `
     <div class="page">
-      <a [routerLink]="['/app/parking/city-info']" [queryParams]="{id: cityId}" class="back-link">‹ Volver</a>
+      <a [routerLink]="['/app/parking/city-info']" [queryParams]="{id: cityId}" class="back-link">{{ 'parking.streets.back' | translate }}</a>
       <h1 class="page-title">{{ 'parking.selectStreet' | translate }}</h1>
       <div class="form-group">
         <input class="form-input" [placeholder]="('parking.selectStreet' | translate)" />

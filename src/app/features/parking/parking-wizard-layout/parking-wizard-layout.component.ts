@@ -2,35 +2,36 @@ import { Component, computed, inject } from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { filter, map, startWith } from 'rxjs/operators';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 
 interface WizardStep {
-  label: string;
-  hint: string;
+  labelKey: string;
+  hintKey: string;
   path: string;
 }
 
 @Component({
   selector: 'app-parking-wizard-layout',
-  imports: [RouterLink, RouterOutlet],
+  imports: [RouterLink, RouterOutlet, TranslatePipe],
   template: `
     <div class="parking-wizard">
       <aside class="wizard-sidebar">
         <div class="wizard-heading">
-          <span class="wizard-kicker">Proceso de aparcado</span>
-          <h1>Aparcar</h1>
-          <p>Completa los pasos para obtener tu ticket.</p>
+          <span class="wizard-kicker">{{ 'parking.wizard.kicker' | translate }}</span>
+          <h1>{{ 'parking.wizard.title' | translate }}</h1>
+          <p>{{ 'parking.wizard.subtitle' | translate }}</p>
         </div>
 
-        <ol class="wizard-steps" aria-label="Pasos del aparcamiento">
+        <ol class="wizard-steps" [attr.aria-label]="'parking.wizard.ariaLabel' | translate">
           @for (step of steps; track step.path; let index = $index) {
             <li [class.active]="index === currentStep()" [class.complete]="index < currentStep()">
               @if (index < currentStep()) {
                 <a [routerLink]="step.path" [queryParams]="query()" class="step-link">
-                  <span class="step-number">✓</span><span><strong>{{ step.label }}</strong><small>{{ step.hint }}</small></span>
+                  <span class="step-number">✓</span><span><strong>{{ step.labelKey | translate }}</strong><small>{{ step.hintKey | translate }}</small></span>
                 </a>
               } @else {
                 <div class="step-link">
-                  <span class="step-number">{{ index + 1 }}</span><span><strong>{{ step.label }}</strong><small>{{ step.hint }}</small></span>
+                  <span class="step-number">{{ index + 1 }}</span><span><strong>{{ step.labelKey | translate }}</strong><small>{{ step.hintKey | translate }}</small></span>
                 </div>
               }
             </li>
@@ -39,19 +40,19 @@ interface WizardStep {
 
         @if (query()['cityName'] || query()['plate']) {
           <section class="wizard-summary">
-            <span>Selección actual</span>
-            @if (query()['cityName']) { <p><small>Municipio</small><strong>{{ query()['cityName'] }}</strong></p> }
-            @if (query()['zone']) { <p><small>Zona</small><strong>{{ query()['zone'] }}</strong></p> }
-            @if (query()['plate']) { <p><small>Vehículo</small><strong>{{ query()['plate'] }}</strong></p> }
-            @if (query()['duration']) { <p><small>Duración</small><strong>{{ query()['duration'] }}</strong></p> }
+            <span>{{ 'parking.wizard.currentSelection' | translate }}</span>
+            @if (query()['cityName']) { <p><small>{{ 'parking.wizard.municipio' | translate }}</small><strong>{{ query()['cityName'] }}</strong></p> }
+            @if (query()['zone']) { <p><small>{{ 'common.zone' | translate }}</small><strong>{{ query()['zone'] }}</strong></p> }
+            @if (query()['plate']) { <p><small>{{ 'parking.wizard.vehicle' | translate }}</small><strong>{{ query()['plate'] }}</strong></p> }
+            @if (query()['duration']) { <p><small>{{ 'parking.wizard.duration' | translate }}</small><strong>{{ query()['duration'] }}</strong></p> }
           </section>
         }
       </aside>
 
-      <section class="wizard-detail">
-        <header class="wizard-mobile-head">
-          <span>Paso {{ currentStep() + 1 }} de {{ steps.length }}</span>
-          <strong>{{ steps[currentStep()].label }}</strong>
+      <section class="wizard-detail" [class.map-step]="currentStep() === 0">
+        <header class="wizard-mobile-head" [class.map-step]="currentStep() === 0">
+          <span>{{ 'parking.wizard.step' | translate:{current: '' + (currentStep() + 1), total: '' + steps.length} }}</span>
+          <strong>{{ steps[currentStep()].labelKey | translate }}</strong>
           <div class="mobile-progress"><i [style.width.%]="((currentStep() + 1) / steps.length) * 100"></i></div>
         </header>
         <router-outlet />
@@ -76,8 +77,11 @@ interface WizardStep {
     .wizard-mobile-head>span { color:var(--color-primary); font-size:.68rem; font-weight:800; text-transform:uppercase; }
     .mobile-progress { height:4px; margin-top:.3rem; overflow:hidden; border-radius:99px; background:var(--color-border); }
     .mobile-progress i { display:block; height:100%; border-radius:inherit; background:var(--color-primary); transition:width .25s ease; }
+    .wizard-mobile-head.map-step { display:none; }
+    .wizard-detail.map-step { display:flex; flex-direction:column; }
+    :host ::ng-deep .wizard-detail.map-step > app-parking-map { flex:1; min-height:0; }
     :host ::ng-deep .flow-page { margin:0 auto; }
-    @media (min-width:768px) {
+    @media (min-width:960px) {
       .parking-wizard { display:grid; grid-template-columns:290px minmax(0,1fr); height:100%; min-height:0; overflow:hidden; }
       .wizard-sidebar { display:flex; min-height:0; flex-direction:column; padding:1.35rem 1rem; overflow-y:auto; border-right:1px solid var(--color-border); border-bottom:0; }
       .wizard-heading { display:block; padding:0 .45rem 1rem; }
@@ -106,11 +110,11 @@ interface WizardStep {
 export class ParkingWizardLayoutComponent {
   private readonly router = inject(Router);
   readonly steps: WizardStep[] = [
-    { label:'Ubicación y vehículo', hint:'Selecciona una zona válida', path:'/app/parking' },
-    { label:'Tarifa', hint:'Elige el ticket disponible', path:'/app/parking/tickets' },
-    { label:'Tiempo', hint:'Selecciona un paso permitido', path:'/app/parking/time-steps' },
-    { label:'Confirmar y pagar', hint:'Revisa los datos y desliza', path:'/app/parking/confirm' },
-    { label:'Resultado', hint:'Ticket de estacionamiento', path:'/app/parking/success' },
+    { labelKey:'parking.wizard.step1.label', hintKey:'parking.wizard.step1.hint', path:'/app/parking' },
+    { labelKey:'parking.wizard.step2.label', hintKey:'parking.wizard.step2.hint', path:'/app/parking/tickets' },
+    { labelKey:'parking.wizard.step3.label', hintKey:'parking.wizard.step3.hint', path:'/app/parking/time-steps' },
+    { labelKey:'parking.wizard.step4.label', hintKey:'parking.wizard.step4.hint', path:'/app/parking/confirm' },
+    { labelKey:'parking.wizard.step5.label', hintKey:'parking.wizard.step5.hint', path:'/app/parking/success' },
   ];
   private readonly url = toSignal(this.router.events.pipe(
     filter((event): event is NavigationEnd => event instanceof NavigationEnd),

@@ -3,6 +3,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import * as L from 'leaflet';
 import { MOCK_MUNICIPIOS, MOCK_VEHICLES, type Vehicle } from '../../../shared/mock-data';
 import { LoaderComponent } from '../../../shared/components/loader/loader.component';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 
 interface MapParkingZone {
   zoneId: number;
@@ -15,26 +16,26 @@ interface MapParkingZone {
 
 @Component({
   selector: 'app-parking-map',
-  imports: [RouterLink, LoaderComponent],
+  imports: [RouterLink, LoaderComponent, TranslatePipe],
   template: `
-    <app-loader [visible]="mapLoading()" message="Cargando zonas..." imageSrc="/assets/brand/login-logo.jpg" />
+    <app-loader [visible]="mapLoading()" [message]="'parking.map.loading' | translate" imageSrc="/assets/brand/login-logo.jpg" />
     <section class="parking-map-page">
       <header class="map-heading">
-        <div><p>Estacionamiento regulado</p><h1>¿Dónde quieres aparcar?</h1><span>Consulta las zonas reales de cada municipio.</span></div>
-        <a routerLink="/app/parking/cities" class="btn btn-secondary">Buscar municipio</a>
+        <div><p>{{ 'parking.map.kicker' | translate }}</p><h1>{{ 'parking.map.title' | translate }}</h1><span>{{ 'parking.map.subtitle' | translate }}</span></div>
+        <a routerLink="/app/parking/cities" class="btn btn-secondary">{{ 'parking.map.searchMunicipio' | translate }}</a>
       </header>
 
       <div class="map-frame">
-        <div #mapContainer class="leaflet-map" aria-label="Mapa de zonas de estacionamiento"></div>
+        <div #mapContainer class="leaflet-map" [attr.aria-label]="'parking.map.ariaLabel' | translate"></div>
         <div class="map-target" aria-hidden="true"><span></span></div>
 
         <section class="parking-controls">
-          <a routerLink="/app/parking/cities" class="search-control"><span>⌕</span><span><small>Municipio</small><strong>{{ selected.nombre }}</strong></span><b>›</b></a>
+          <a routerLink="/app/parking/cities" class="search-control"><span>⌕</span><span><small>{{ 'parking.map.municipio' | translate }}</small><strong>{{ selected.nombre }}</strong></span><b>›</b></a>
           
           <div class="vehicle-control-wrapper">
             <div class="vehicle-control" (click)="toggleVehicleSelector()">
               <span>▣</span>
-              <span><small>Vehículo</small><strong>{{ selectedVehicle().plate }}</strong></span>
+              <span><small>{{ 'parking.map.vehicle' | translate }}</small><strong>{{ selectedVehicle().plate }}</strong></span>
               <b>▼</b>
             </div>
             
@@ -52,17 +53,17 @@ interface MapParkingZone {
           </div>
           
           @if (selectedZone(); as zone) {
-            <div class="selected-zone"><span [style.background]="'#' + zone.color"></span><div><small>Ubicación seleccionada</small><strong>{{ zone.street }}</strong><em>{{ zone.name }}</em></div></div>
+            <div class="selected-zone"><span [style.background]="'#' + zone.color"></span><div><small>{{ 'parking.map.selectedZone' | translate }}</small><strong>{{ zone.street }}</strong><em>{{ zone.name }}</em></div></div>
           } @else {
-            <p class="select-hint">Mueve el mapa y coloca el marcador dentro de una zona.</p>
+            <p class="select-hint">{{ 'parking.map.selectHint' | translate }}</p>
           }
-          <button type="button" class="btn btn-primary btn-block" [disabled]="!selectedZone()" (click)="startParking()">Aparcar aquí</button>
+          <button type="button" class="btn btn-primary btn-block" [disabled]="!selectedZone()" (click)="startParking()">{{ 'parking.map.parkHere' | translate }}</button>
         </section>
 
         <div class="map-status" [class.error]="mapError()">
-          @if (mapLoading()) { Cargando zonas de {{ selected.nombre }}… }
-          @else if (mapError()) { No se pudieron cargar las zonas. }
-          @else { {{ zoneCount() }} zonas cartográficas · {{ selected.nombre }} }
+          @if (mapLoading()) { {{ 'parking.map.loadingZones' | translate:{city: selected.nombre} }} }
+          @else if (mapError()) { {{ 'parking.map.errorZones' | translate }} }
+          @else { {{ 'parking.map.zonesCount' | translate:{count: '' + zoneCount(), city: selected.nombre} }} }
         </div>
       </div>
     </section>
@@ -202,11 +203,18 @@ interface MapParkingZone {
       :host-context(app-parking-wizard-layout) .parking-controls { top:1rem; left:1rem; }
     }
     @media (max-width:600px) {
-      .map-heading { align-items:start; flex-direction:column; }
-      .map-heading .btn { width:100%; }
-      .map-frame,.leaflet-map { min-height:560px; }
-      .parking-controls { top:.65rem; left:.65rem; width:calc(100% - 1.3rem); }
-      .map-status { right:.65rem; bottom:.65rem; }
+      .parking-map-page { padding:.65rem; }
+      .map-heading { align-items:start; flex-direction:column; gap:.5rem; margin-bottom:.65rem; }
+      .map-heading h1 { font-size:1.2rem; }
+      .map-heading p { margin:0; font-size:.65rem; }
+      .map-heading span { font-size:.75rem; }
+      .map-heading .btn { width:100%; padding:.5rem .75rem; font-size:.8rem; }
+      .map-frame,.leaflet-map { min-height:380px; }
+      .parking-controls { top:.5rem; left:.5rem; width:calc(100% - 1rem); padding:.6rem; gap:.35rem; }
+      .parking-controls .search-control,
+      .parking-controls .vehicle-control { min-height:42px; padding:.4rem .6rem; }
+      .parking-controls .btn { padding:.55rem; font-size:.82rem; }
+      .map-status { right:.5rem; bottom:.5rem; font-size:.65rem; padding:.35rem .55rem; }
     }
   `],
 })
