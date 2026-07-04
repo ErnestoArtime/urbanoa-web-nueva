@@ -11,7 +11,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
   selector: 'app-parking-confirm',
   imports: [RouterLink, LoaderComponent, PaymentSummaryComponent, SwipeToPayComponent, TranslatePipe],
   template: `
-    <div class="page flow-page confirm-page">
+    <div class="page flow-page confirm-page has-sticky-actions">
       <app-loader [visible]="loading()" [message]="'parking.confirm.loading' | translate" imageSrc="/assets/brand/login-logo.jpg" />
       <a routerLink="/app/parking/time-steps" [queryParams]="query" class="back-link">{{ 'parking.confirm.back' | translate }}</a>
       <p class="flow-step">{{ 'parking.confirm.step' | translate }}</p>
@@ -27,7 +27,9 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 
       <app-payment-summary [wallet]="wallet" [totalAmount]="totalAmount()" />
 
-      <app-swipe-to-pay (onComplete)="onSwipeComplete()" />
+      <div class="sticky-actions">
+        <app-swipe-to-pay (onComplete)="onSwipeComplete()" />
+      </div>
 
       <a routerLink="/app/account/payment-methods" class="change-payment">{{ 'parking.confirm.changePayment' | translate }}</a>
     </div>

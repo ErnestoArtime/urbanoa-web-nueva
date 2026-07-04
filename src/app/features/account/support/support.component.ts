@@ -7,7 +7,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
   selector: 'app-account-support',
   imports: [TranslatePipe],
   template: `
-    <div class="page account-static-page">
+    <div class="page account-static-page has-sticky-actions">
       <h1 class="page-title">{{ 'account.support.title' | translate }}</h1>
       <div class="card">
         <div class="form-group"><label>{{ 'account.support.category' | translate }} <span class="text-error">*</span></label>
@@ -25,7 +25,9 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
         </div>
         <div class="form-group"><label>{{ 'account.support.plate' | translate }}</label><input class="form-input" [placeholder]="'account.support.plate' | translate" /></div>
         <div class="form-group"><label>{{ 'account.support.message' | translate }} <span class="text-error">*</span></label><textarea class="form-input" rows="4" [placeholder]="'account.support.messagePlaceholder' | translate"></textarea></div>
-        <button class="btn btn-primary btn-block" (click)="submit()">{{ 'account.support.send' | translate }}</button>
+        <div class="sticky-actions">
+          <button class="btn btn-primary btn-block" (click)="submit()">{{ 'account.support.send' | translate }}</button>
+        </div>
       </div>
       @if (success()) { <div class="toast">{{ 'account.support.success' | translate }}</div> }
       @if (error()) { <div class="toast error">{{ 'account.support.requiredFields' | translate }}</div> }

@@ -14,7 +14,7 @@ interface ParkingTimeOption {
   imports: [RouterLink, LoaderComponent, TranslatePipe],
   template: `
     <app-loader [visible]="loading()" [message]="'parking.timeSteps.loading' | translate" imageSrc="/assets/brand/login-logo.jpg" />
-    <div class="page flow-page">
+    <div class="page flow-page has-sticky-actions">
       <a routerLink="/app/parking/tickets" [queryParams]="query" class="back-link">{{ 'parking.timeSteps.back' | translate }}</a>
       <p class="flow-step">{{ 'parking.timeSteps.step' | translate }}</p>
       <h1 class="page-title">{{ 'parking.timeSteps.title' | translate }}</h1>
@@ -61,7 +61,9 @@ interface ParkingTimeOption {
         <span>{{ 'parking.timeSteps.estimatedPrice' | translate }}</span>
         <strong>{{ amount() }}</strong>
       </div>
-      <a routerLink="/app/parking/confirm" [queryParams]="confirmationParams()" class="btn btn-primary btn-block">{{ 'parking.timeSteps.continue' | translate }}</a>
+      <div class="sticky-actions">
+        <a routerLink="/app/parking/confirm" [queryParams]="confirmationParams()" class="btn btn-primary btn-block">{{ 'parking.timeSteps.continue' | translate }}</a>
+      </div>
     </div>
   `,
   styles: [`

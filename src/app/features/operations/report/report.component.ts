@@ -31,7 +31,7 @@ interface ReportRangeItem {
   selector: 'app-report',
   imports: [FormsModule, TranslatePipe, DateRangeFilterComponent],
   template: `
-    <div class="report-page">
+    <div class="report-page has-sticky-actions">
       <div class="report-scroll">
         <h1 class="page-title">{{ 'ops.report' | translate }}</h1>
         <p class="page-subtitle">{{ 'ops.report.subtitle' | translate }}</p>
@@ -84,9 +84,11 @@ interface ReportRangeItem {
         </section>
       </div>
 
-      <button type="button" class="btn btn-primary btn-block report-submit" (click)="generateReport()" [disabled]="isGenerating()">
-        {{ isGenerating() ? ('ops.report.generating' | translate) : ('ops.report.generateButton' | translate) }}
-      </button>
+      <div class="sticky-actions">
+        <button type="button" class="btn btn-primary btn-block report-submit" (click)="generateReport()" [disabled]="isGenerating()">
+          {{ isGenerating() ? ('ops.report.generating' | translate) : ('ops.report.generateButton' | translate) }}
+        </button>
+      </div>
     </div>
   `,
   styles: [`
