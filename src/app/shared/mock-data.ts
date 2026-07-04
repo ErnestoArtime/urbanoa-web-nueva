@@ -11,6 +11,8 @@ export interface Vehicle {
 export interface TicketActive {
   plate: string;
   zone: string;
+  startTime: string;
+  durationLabel: string;
   timeRemaining: string;
   endTime: string;
 }
@@ -61,7 +63,7 @@ export const MOCK_VEHICLE_PRINCIPAL = {
 };
 
 export const MOCK_WALLET: Wallet = {
-  balance: 12.50,
+  balance: 12.5,
   mainCard: {
     brand: 'Visa',
     last4: '1234',
@@ -71,54 +73,76 @@ export const MOCK_WALLET: Wallet = {
 };
 
 export const MOCK_OPERATIONS: Operation[] = [
-  { id: '1',  type: OperationType.PARKING,          plate: '1234 ABC', date: '16/06/2026', amount: -1.20,  zone: 'Zona Azul — Centro' },
-  { id: '2',  type: OperationType.TOP_UP,           plate: null,       date: '15/06/2026', amount: 20.00,  zone: null },
-  { id: '3',  type: OperationType.PARKING_EXTENSION, plate: '1234 ABC', date: '14/06/2026', amount: -0.60,  zone: 'Zona Azul — Centro' },
-  { id: '4',  type: OperationType.FINE_PAYMENT,      plate: '1234 ABC', date: '10/06/2026', amount: -35.00, zone: 'Gran Vía' },
-  { id: '5',  type: OperationType.REFUND,            plate: '5678 DEF', date: '08/06/2026', amount: 3.50,   zone: 'Zona Verde — Ensanche' },
-  { id: '6',  type: OperationType.BALANCE_REFUND,    plate: null,       date: '01/06/2026', amount: 5.00,   zone: null },
-  { id: '7',  type: OperationType.UNPAID_FINES,      plate: '1234 ABC', date: '28/05/2026', amount: -20.00, zone: 'Ercilla' },
+  { id: '1', type: OperationType.PARKING, plate: '1234 ABC', date: '16/06/2026', amount: -1.2, zone: 'Zona Azul — Centro' },
+  { id: '2', type: OperationType.TOP_UP, plate: null, date: '15/06/2026', amount: 20.0, zone: null },
+  { id: '3', type: OperationType.PARKING_EXTENSION, plate: '1234 ABC', date: '14/06/2026', amount: -0.6, zone: 'Zona Azul — Centro' },
+  { id: '4', type: OperationType.FINE_PAYMENT, plate: '1234 ABC', date: '10/06/2026', amount: -35.0, zone: 'Gran Vía' },
+  { id: '5', type: OperationType.REFUND, plate: '5678 DEF', date: '08/06/2026', amount: 3.5, zone: 'Zona Verde — Ensanche' },
+  { id: '6', type: OperationType.BALANCE_REFUND, plate: null, date: '01/06/2026', amount: 5.0, zone: null },
+  { id: '7', type: OperationType.UNPAID_FINES, plate: '1234 ABC', date: '28/05/2026', amount: -20.0, zone: 'Ercilla' },
 ];
 
 export const MOCK_TICKET_ACTIVE: TicketActive = {
   plate: '1234 ABC',
   zone: 'Zona Azul — Zarautz Centro',
+  startTime: '18:36',
+  durationLabel: '1h 4min',
   timeRemaining: '01:24:35',
   endTime: '16:55',
 };
 
 export const MOCK_MUNICIPIOS: Municipio[] = [
-  { id: 'durango',  nombre: 'Durango',  provincia: 'Bizkaia',    zonas: 3, imagen: 'durango.jpg' },
-  { id: 'zarautz',  nombre: 'Zarautz',  provincia: 'Gipuzkoa',   zonas: 4, imagen: 'zarautz.jpg' },
-  { id: 'tolosa',   nombre: 'Tolosa',   provincia: 'Gipuzkoa',   zonas: 2, imagen: 'tolosa.jpg' },
-  { id: 'bergara',  nombre: 'Bergara',  provincia: 'Gipuzkoa',   zonas: 3, imagen: 'bergara.jpg' },
-  { id: 'arrasate', nombre: 'Arrasate', provincia: 'Gipuzkoa',   zonas: 3, imagen: 'arrasate.jpg' },
-  { id: 'soria',    nombre: 'Soria',    provincia: 'Soria',      zonas: 5, imagen: 'soria.jpg' },
-  { id: 'deba',     nombre: 'Deba',     provincia: 'Gipuzkoa',   zonas: 1, imagen: 'deba.jpg' },
-  { id: 'mutriku',  nombre: 'Mutriku',  provincia: 'Gipuzkoa',   zonas: 2, imagen: 'mutriku.jpg' },
+  { id: 'durango', nombre: 'Durango', provincia: 'Bizkaia', zonas: 3, imagen: 'durango.jpg' },
+  { id: 'zarautz', nombre: 'Zarautz', provincia: 'Gipuzkoa', zonas: 4, imagen: 'zarautz.jpg' },
+  { id: 'tolosa', nombre: 'Tolosa', provincia: 'Gipuzkoa', zonas: 2, imagen: 'tolosa.jpg' },
+  { id: 'bergara', nombre: 'Bergara', provincia: 'Gipuzkoa', zonas: 3, imagen: 'bergara.jpg' },
+  { id: 'arrasate', nombre: 'Arrasate', provincia: 'Gipuzkoa', zonas: 3, imagen: 'arrasate.jpg' },
+  { id: 'soria', nombre: 'Soria', provincia: 'Soria', zonas: 5, imagen: 'soria.jpg' },
+  { id: 'deba', nombre: 'Deba', provincia: 'Gipuzkoa', zonas: 1, imagen: 'deba.jpg' },
+  { id: 'mutriku', nombre: 'Mutriku', provincia: 'Gipuzkoa', zonas: 2, imagen: 'mutriku.jpg' },
 ];
 
 export const MOCK_STREETS_ZARAUTZ: Street[] = [
-  { nombre: 'Nagusia Kalea',       zona: 'Casco histórico', tarifa: '0,60 €/h' },
-  { nombre: 'Nafarroa Kalea',      zona: 'Centro',          tarifa: '0,60 €/h' },
-  { nombre: 'Zigordia Kalea',      zona: 'Casco histórico', tarifa: '0,60 €/h' },
-  { nombre: 'Azara Kalea',         zona: 'Casco histórico', tarifa: '0,50 €/h' },
-  { nombre: 'Mendilauta Kalea',    zona: 'Mendilauta',      tarifa: '0,40 €/h' },
-  { nombre: 'Santa Marina Kalea',  zona: 'Centro',          tarifa: '0,60 €/h' },
-  { nombre: 'Gipuzkoa Kalea',      zona: 'Centro',          tarifa: '0,60 €/h' },
-  { nombre: 'Lapurdi Kalea',       zona: 'Centro',          tarifa: '0,60 €/h' },
-  { nombre: 'Itsas Pasealekua',    zona: 'Playa',           tarifa: '0,70 €/h' },
-  { nombre: 'Salbide Kalea',       zona: 'Salbide',         tarifa: '0,30 €/h' },
+  { nombre: 'Nagusia Kalea', zona: 'Casco histórico', tarifa: '0,60 €/h' },
+  { nombre: 'Nafarroa Kalea', zona: 'Centro', tarifa: '0,60 €/h' },
+  { nombre: 'Zigordia Kalea', zona: 'Casco histórico', tarifa: '0,60 €/h' },
+  { nombre: 'Azara Kalea', zona: 'Casco histórico', tarifa: '0,50 €/h' },
+  { nombre: 'Mendilauta Kalea', zona: 'Mendilauta', tarifa: '0,40 €/h' },
+  { nombre: 'Santa Marina Kalea', zona: 'Centro', tarifa: '0,60 €/h' },
+  { nombre: 'Gipuzkoa Kalea', zona: 'Centro', tarifa: '0,60 €/h' },
+  { nombre: 'Lapurdi Kalea', zona: 'Centro', tarifa: '0,60 €/h' },
+  { nombre: 'Itsas Pasealekua', zona: 'Playa', tarifa: '0,70 €/h' },
+  { nombre: 'Salbide Kalea', zona: 'Salbide', tarifa: '0,30 €/h' },
 ];
 
-export const MOCK_STREETS = MOCK_STREETS_ZARAUTZ.map(s => s.nombre);
+export const MOCK_STREETS = MOCK_STREETS_ZARAUTZ.map((s) => s.nombre);
 
 export const MOCK_TARIFFS = [
-  { id: '1', name: 'Rotación', desc: 'Estacionamiento regulado', price: '0,60 €/h', schedule: 'Lun-Sáb 09:00-20:00', maxTime: '120', minAmount: '0,60', ticketBehavior: 'NORMAL', showTakeTicketButton: true },
-  { id: '2', name: 'Residentes Z. NO OTA', desc: 'Tarifa residentes', price: '0,30 €/h', schedule: 'Lun-Dom 00:00-23:59', maxTime: '240', minAmount: '0,30', ticketBehavior: 'RESIDENT', showTakeTicketButton: false },
+  {
+    id: '1',
+    name: 'Rotación',
+    desc: 'Estacionamiento regulado',
+    price: '0,60 €/h',
+    schedule: 'Lun-Sáb 09:00-20:00',
+    maxTime: '120',
+    minAmount: '0,60',
+    ticketBehavior: 'NORMAL',
+    showTakeTicketButton: true,
+  },
+  {
+    id: '2',
+    name: 'Residentes Z. NO OTA',
+    desc: 'Tarifa residentes',
+    price: '0,30 €/h',
+    schedule: 'Lun-Dom 00:00-23:59',
+    maxTime: '240',
+    minAmount: '0,30',
+    ticketBehavior: 'RESIDENT',
+    showTakeTicketButton: false,
+  },
 ];
 
-export const MOCK_CITIES = MOCK_MUNICIPIOS.map(m => m.nombre);
+export const MOCK_CITIES = MOCK_MUNICIPIOS.map((m) => m.nombre);
 
 export const MOCK_UNPAID_FINES = [
   { id: '1', plate: '1234 ABC', date: '05/06/2026', amount: '35,00 €', location: 'Nagusia Kalea' },
@@ -133,18 +157,72 @@ export const NAV_ITEMS = [
 ] as const;
 
 export const ACCOUNT_MENU = [
-  { key: 'profile', path: '/app/account/profile', labelKey: 'account.menu.profile', icon: 'profile', groupKey: 'account.menu.group.myAccount' },
-  { key: 'tax-data', path: '/app/account/tax-data', labelKey: 'account.menu.taxData', icon: 'tax', groupKey: 'account.menu.group.myAccount' },
-  { key: 'change-password', path: '/app/account/change-password', labelKey: 'account.menu.changePassword', icon: 'lock', groupKey: 'account.menu.group.myAccount' },
-  { key: 'payment-methods', path: '/app/account/payment-methods', labelKey: 'account.menu.paymentMethods', icon: 'payment', groupKey: 'account.menu.group.myAccount' },
-  { key: 'vehicles', path: '/app/account/vehicles', labelKey: 'account.menu.vehicles', icon: 'vehicle', groupKey: 'account.menu.group.myAccount' },
-  { key: 'notifications', path: '/app/account/notifications', labelKey: 'account.menu.notifications', icon: 'notifications', groupKey: 'account.menu.group.myAccount' },
-  { key: 'settings', path: '/app/account/settings', labelKey: 'account.menu.settings', icon: 'settings', groupKey: 'account.menu.group.other' },
+  {
+    key: 'profile',
+    path: '/app/account/profile',
+    labelKey: 'account.menu.profile',
+    icon: 'profile',
+    groupKey: 'account.menu.group.myAccount',
+  },
+  {
+    key: 'tax-data',
+    path: '/app/account/tax-data',
+    labelKey: 'account.menu.taxData',
+    icon: 'tax',
+    groupKey: 'account.menu.group.myAccount',
+  },
+  {
+    key: 'change-password',
+    path: '/app/account/change-password',
+    labelKey: 'account.menu.changePassword',
+    icon: 'lock',
+    groupKey: 'account.menu.group.myAccount',
+  },
+  {
+    key: 'payment-methods',
+    path: '/app/account/payment-methods',
+    labelKey: 'account.menu.paymentMethods',
+    icon: 'payment',
+    groupKey: 'account.menu.group.myAccount',
+  },
+  {
+    key: 'vehicles',
+    path: '/app/account/vehicles',
+    labelKey: 'account.menu.vehicles',
+    icon: 'vehicle',
+    groupKey: 'account.menu.group.myAccount',
+  },
+  {
+    key: 'notifications',
+    path: '/app/account/notifications',
+    labelKey: 'account.menu.notifications',
+    icon: 'notifications',
+    groupKey: 'account.menu.group.myAccount',
+  },
+  {
+    key: 'settings',
+    path: '/app/account/settings',
+    labelKey: 'account.menu.settings',
+    icon: 'settings',
+    groupKey: 'account.menu.group.other',
+  },
   { key: 'help', path: '/app/account/help', labelKey: 'account.menu.help', icon: 'help', groupKey: 'account.menu.group.other' },
   { key: 'share', path: '/app/account/share', labelKey: 'account.menu.share', icon: 'share', groupKey: 'account.menu.group.other' },
   { key: 'review', path: '/app/account/review', labelKey: 'account.menu.review', icon: 'review', groupKey: 'account.menu.group.other' },
-  { key: 'terms-and-conditions', path: '/app/account/terms-and-conditions', labelKey: 'account.menu.terms', icon: 'terms', groupKey: 'account.menu.group.other' },
-  { key: 'privacy-policy', path: '/app/account/privacy-policy', labelKey: 'account.menu.privacy', icon: 'privacy', groupKey: 'account.menu.group.other' },
+  {
+    key: 'terms-and-conditions',
+    path: '/app/account/terms-and-conditions',
+    labelKey: 'account.menu.terms',
+    icon: 'terms',
+    groupKey: 'account.menu.group.other',
+  },
+  {
+    key: 'privacy-policy',
+    path: '/app/account/privacy-policy',
+    labelKey: 'account.menu.privacy',
+    icon: 'privacy',
+    groupKey: 'account.menu.group.other',
+  },
   { key: 'about', path: '/app/account/about', labelKey: 'account.menu.about', icon: 'about', groupKey: 'account.menu.group.other' },
   { key: 'support', path: '/app/account/support', labelKey: 'account.menu.support', icon: 'support', groupKey: 'account.menu.group.other' },
 ];

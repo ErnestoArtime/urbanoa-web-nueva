@@ -10,22 +10,63 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
       <div class="card">
         <p class="section-title">{{ 'account.notifications.app' | translate }}</p>
         @for (notif of appNotifications; track notif.key) {
-          <label class="switch-row"><span>{{ notif.labelKey | translate }}</span><input type="checkbox" [checked]="notif.enabled" /><span class="switch"></span></label>
+          <label class="switch-row"
+            ><span>{{ notif.labelKey | translate }}</span
+            ><input type="checkbox" [checked]="notif.enabled" /><span class="switch"></span
+          ></label>
         }
       </div>
       <div class="card mt-1">
         <p class="section-title">{{ 'account.notifications.email' | translate }}</p>
         <p class="text-muted">{{ 'account.notifications.emailHint' | translate }}</p>
         @for (notif of emailNotifications; track notif.key) {
-          <label class="switch-row"><span>{{ notif.labelKey | translate }}</span><input type="checkbox" [checked]="notif.enabled" /><span class="switch"></span></label>
+          <label class="switch-row"
+            ><span>{{ notif.labelKey | translate }}</span
+            ><input type="checkbox" [checked]="notif.enabled" /><span class="switch"></span
+          ></label>
         }
       </div>
       <button class="btn btn-primary btn-block mt-2">{{ 'account.notifications.save' | translate }}</button>
     </div>
   `,
-  styles: [`
-    .switch-row{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:.65rem 0;cursor:pointer}.switch{position:relative;width:44px;height:24px;border-radius:99px;background:var(--color-border);transition:background .2s;flex-shrink:0}.switch::after{content:'';position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#fff;transition:left .2s}input:checked+.switch{background:var(--color-primary)}input:checked+.switch::after{left:22px}
-  `],
+  styles: [
+    `
+      .switch-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 0.65rem 0;
+        cursor: pointer;
+      }
+      .switch {
+        position: relative;
+        width: 44px;
+        height: 24px;
+        border-radius: 99px;
+        background: var(--color-border);
+        transition: background 0.2s;
+        flex-shrink: 0;
+      }
+      .switch::after {
+        content: '';
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: #fff;
+        transition: left 0.2s;
+      }
+      input:checked + .switch {
+        background: var(--color-primary);
+      }
+      input:checked + .switch::after {
+        left: 22px;
+      }
+    `,
+  ],
 })
 export class AccountNotificationsComponent {
   readonly appNotifications = [

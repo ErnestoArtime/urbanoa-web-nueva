@@ -7,7 +7,9 @@ import { APP_BRAND } from '../../../shared/constants/app-brand';
   imports: [RouterLink],
   template: `
     <div class="page">
-      <p class="page-subtitle">Añade una tarjeta para pagar al instante o recargar tu monedero {{ brand.name }}. Tus datos se guardan de forma encriptada y segura.</p>
+      <p class="page-subtitle">
+        Añade una tarjeta para pagar al instante o recargar tu monedero {{ brand.name }}. Tus datos se guardan de forma encriptada y segura.
+      </p>
       <div class="card mt-2">
         <p class="card-title">💳 Tarjeta bancaria</p>
         <p class="card-subtitle">Visa, Mastercard</p>

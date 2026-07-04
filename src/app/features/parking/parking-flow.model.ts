@@ -22,5 +22,7 @@ export interface ParkingFlowQuery extends Record<string, string> {
 }
 
 export function readParkingFlowQuery(route: import('@angular/router').ActivatedRoute): ParkingFlowQuery {
-  return Object.fromEntries(route.snapshot.queryParamMap.keys.map(key => [key, route.snapshot.queryParamMap.get(key) ?? ''])) as ParkingFlowQuery;
+  return Object.fromEntries(
+    route.snapshot.queryParamMap.keys.map((key) => [key, route.snapshot.queryParamMap.get(key) ?? '']),
+  ) as ParkingFlowQuery;
 }

@@ -6,17 +6,17 @@ import { APP_BRAND } from '../../shared/constants/app-brand';
 @Component({
   selector: 'app-header',
   template: `
-  <header class="app-header">
-    @if (showBack()) {
-      <button type="button" class="app-header-back" (click)="goBack()" [attr.aria-label]="backAriaLabel()">‹</button>
-    } @else {
-      <span class="app-header-spacer"></span>
-    }
-    <h1 class="app-header-title">{{ title() }}</h1>
-    <div class="app-header-right">
-      <ng-content />
-    </div>
-  </header>
+    <header class="app-header">
+      @if (showBack()) {
+        <button type="button" class="app-header-back" (click)="goBack()" [attr.aria-label]="backAriaLabel()">‹</button>
+      } @else {
+        <span class="app-header-spacer"></span>
+      }
+      <h1 class="app-header-title">{{ title() }}</h1>
+      <div class="app-header-right">
+        <ng-content />
+      </div>
+    </header>
   `,
   styles: `
     .app-header {
@@ -61,11 +61,10 @@ import { APP_BRAND } from '../../shared/constants/app-brand';
 })
 export class AppHeaderComponent {
   private readonly translationService = inject(TranslationService);
+  private readonly location = inject(Location);
 
   title = input(APP_BRAND.name);
   showBack = input(true);
-
-  constructor(private readonly location: Location) {}
 
   backAriaLabel = () => this.translationService.translate('common.back');
 

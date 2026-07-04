@@ -26,10 +26,15 @@ import { SplitViewComponent } from '../../../layout/split-view/split-view.compon
             <article class="active-operation">
               <div class="active-operation-head">
                 <span class="car-icon">▣</span>
-                <div><strong>{{ active.plate }}</strong><small>{{ active.zone }}</small></div>
+                <div>
+                  <strong>{{ active.plate }}</strong
+                  ><small>{{ active.zone }}</small>
+                </div>
                 <span class="running-badge">{{ active.timeRemaining }}</span>
               </div>
-              <div class="active-times"><span>Finaliza</span><strong>{{ active.endTime }}</strong></div>
+              <div class="active-times">
+                <span>Finaliza</span><strong>{{ active.endTime }}</strong>
+              </div>
               <div class="active-actions">
                 <button type="button" class="btn btn-danger btn-sm" (click)="onUnpark()">Desaparcar</button>
                 <a routerLink="/app/parking/time-steps" class="btn btn-primary btn-sm">Ampliar</a>
@@ -43,7 +48,13 @@ import { SplitViewComponent } from '../../../layout/split-view/split-view.compon
         </section>
 
         <section class="actions-section">
-          <a routerLink="/app/operations/unpaid-fines" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: false }" ariaCurrentWhenActive="page" class="list-item action-item">
+          <a
+            routerLink="/app/operations/unpaid-fines"
+            routerLinkActive="active"
+            [routerLinkActiveOptions]="{ exact: false }"
+            ariaCurrentWhenActive="page"
+            class="list-item action-item"
+          >
             <div class="list-item-content">
               <div class="list-item-title">
                 Denuncias por pagar <span class="badge badge-error">{{ unpaidFinesCount() }}</span>
@@ -51,8 +62,16 @@ import { SplitViewComponent } from '../../../layout/split-view/split-view.compon
             </div>
             <span class="list-item-chevron">›</span>
           </a>
-          <a routerLink="/app/operations/report" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: false }" ariaCurrentWhenActive="page" class="list-item action-item">
-            <div class="list-item-content"><div class="list-item-title">{{ 'ops.report' | translate }}</div></div>
+          <a
+            routerLink="/app/operations/report"
+            routerLinkActive="active"
+            [routerLinkActiveOptions]="{ exact: false }"
+            ariaCurrentWhenActive="page"
+            class="list-item action-item"
+          >
+            <div class="list-item-content">
+              <div class="list-item-title">{{ 'ops.report' | translate }}</div>
+            </div>
             <span class="list-item-chevron">›</span>
           </a>
         </section>
@@ -79,7 +98,7 @@ import { SplitViewComponent } from '../../../layout/split-view/split-view.compon
                   <div class="list-item-subtitle">{{ op.date }}{{ op.zone ? ' — ' + op.zone : '' }}</div>
                 </div>
                 <span [class]="op.amount > 0 ? 'badge badge-success' : ''">
-                  {{ op.amount > 0 ? '+' : '' }}{{ op.amount | number:'1.2-2' }} €
+                  {{ op.amount > 0 ? '+' : '' }}{{ op.amount | number: '1.2-2' }} €
                 </span>
               </a>
             }
@@ -93,74 +112,194 @@ import { SplitViewComponent } from '../../../layout/split-view/split-view.compon
       </div>
     </app-split-view>
   `,
-  styles: [`
-    .list-item.active { background:rgba(93,154,150,.16); color:var(--color-primary-dark); box-shadow:inset 4px 0 0 var(--color-primary); }
-    .op-icon { font-size: var(--text-base); margin-right: 0.25rem; }
-    .section-label { margin:.85rem 0 .4rem; color:var(--color-text-muted); font-size: var(--text-xs); font-weight: var(--font-extra); text-transform:uppercase; letter-spacing:.06em; }
-    .history-filter-panel { margin:1rem 0 .7rem; padding:.8rem; border:1px solid var(--color-border); border-radius:var(--radius-md); background:var(--color-background); }
-    .history-label { margin:0 0 .25rem; }
-    .history-list { margin:0; overflow:hidden; border:1px solid var(--color-border); border-radius:var(--radius-md); background:var(--color-surface); }
-    .history-group-label {
-      list-style:none;
-      padding:.65rem .8rem .4rem;
-      color:var(--color-text-muted);
-      font-size: var(--text-xs);
-      font-weight: var(--font-extra);
-      text-transform:uppercase;
-      letter-spacing:.05em;
-      background:var(--color-background);
-    }
-    .finish-op-title {
-      color: var(--color-primary-dark);
-      font-weight: var(--font-bold);
-    }
-    .active-operation { overflow:hidden; border:1px solid var(--color-primary-light); border-top:5px solid var(--color-primary); border-radius:var(--radius-md); background:var(--color-surface); box-shadow:var(--shadow-sm); }
-    .empty-active-operation { border-top-width:1px; padding:.8rem; color:var(--color-text-muted); }
-    .active-operation-head { display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:.65rem; padding:.75rem; }
-    .active-operation-head div { display:flex; flex-direction:column; }
-    .active-operation-head small { color:var(--color-text-muted); font-size: var(--text-xs); }
-    .car-icon { display:grid; place-items:center; width:32px; height:32px; border-radius:50%; background:var(--color-accent-soft); color:var(--color-primary); }
-    .running-badge { padding:.28rem .5rem; border-radius:999px; background:var(--color-active); color:var(--color-primary-dark); font-size: var(--text-xs); font-weight: var(--font-extra); }
-    .active-times { display:flex; justify-content:space-between; padding:.55rem .75rem; border-top:1px dashed var(--color-border); font-size: var(--text-sm); }
-    .active-actions { display:grid; grid-template-columns:1fr 1fr; gap:.5rem; padding:.65rem .75rem; background:rgba(93,154,150,.07); }
-    .actions-section {
-      margin-top: 1rem;
-      padding: 0.75rem 1.25rem;
-      background: var(--color-surface);
-      border-radius: var(--radius-md);
-      border: 1px solid var(--color-border);
-    }
-    .action-item {
-      background: transparent;
-      border-radius: var(--radius-sm);
-      margin: 0 -0.75rem;
-      padding: 0.5rem 0.75rem;
-      border-bottom: 1px solid var(--color-border);
-    }
-    .action-item:last-child {
-      border-bottom: none;
-    }
-    .action-item:hover {
-      background: var(--color-background);
-    }
-    .action-item.active {
-      position:relative;
-      background:var(--color-active);
-      color:var(--color-primary-dark);
-      box-shadow:inset 4px 0 0 var(--color-primary);
-    }
-    .action-item.active .list-item-title { font-weight: var(--font-extra); }
-    .action-item.active .list-item-chevron { color:var(--color-primary); font-weight: var(--font-extra); }
-    :host ::ng-deep .history-filter-panel .date-filter { padding:.35rem 0 0; }
-    :host ::ng-deep .history-filter-panel .date-filter-chips { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.4rem; margin-bottom:.65rem; }
-    :host ::ng-deep .history-filter-panel .chip { display:flex; align-items:center; justify-content:center; min-width:0; padding:.35rem .4rem; white-space:nowrap; }
-    :host ::ng-deep .history-filter-panel .date-filter-cal-row { display:grid; grid-template-columns:1fr; gap:.55rem; }
-    :host ::ng-deep .history-filter-panel .date-filter-toggle { width:100%; justify-content:center; min-height:38px; }
-    :host ::ng-deep .history-filter-panel .date-filter-inputs { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:.55rem; width:100%; }
-    :host ::ng-deep .history-filter-panel .date-picker-field { min-width:0; }
-    :host ::ng-deep .history-filter-panel .date-display { min-width:0; width:100%; }
-    :host ::ng-deep .history-filter-panel .date-filter-clear { grid-column:1/-1; justify-self:end; }
-  `],
+  styles: [
+    `
+      .list-item.active {
+        background: rgba(93, 154, 150, 0.16);
+        color: var(--color-primary-dark);
+        box-shadow: inset 4px 0 0 var(--color-primary);
+      }
+      .op-icon {
+        font-size: var(--text-base);
+        margin-right: 0.25rem;
+      }
+      .section-label {
+        margin: 0.85rem 0 0.4rem;
+        color: var(--color-text-muted);
+        font-size: var(--text-xs);
+        font-weight: var(--font-extra);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+      .history-filter-panel {
+        margin: 1rem 0 0.7rem;
+        padding: 0.8rem;
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        background: var(--color-background);
+      }
+      .history-label {
+        margin: 0 0 0.25rem;
+      }
+      .history-list {
+        margin: 0;
+        overflow: hidden;
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        background: var(--color-surface);
+      }
+      .history-group-label {
+        list-style: none;
+        padding: 0.65rem 0.8rem 0.4rem;
+        color: var(--color-text-muted);
+        font-size: var(--text-xs);
+        font-weight: var(--font-extra);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        background: var(--color-background);
+      }
+      .finish-op-title {
+        color: var(--color-primary-dark);
+        font-weight: var(--font-bold);
+      }
+      .active-operation {
+        overflow: hidden;
+        border: 1px solid var(--color-primary-light);
+        border-top: 5px solid var(--color-primary);
+        border-radius: var(--radius-md);
+        background: var(--color-surface);
+        box-shadow: var(--shadow-sm);
+      }
+      .empty-active-operation {
+        border-top-width: 1px;
+        padding: 0.8rem;
+        color: var(--color-text-muted);
+      }
+      .active-operation-head {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        align-items: center;
+        gap: 0.65rem;
+        padding: 0.75rem;
+      }
+      .active-operation-head div {
+        display: flex;
+        flex-direction: column;
+      }
+      .active-operation-head small {
+        color: var(--color-text-muted);
+        font-size: var(--text-xs);
+      }
+      .car-icon {
+        display: grid;
+        place-items: center;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: var(--color-accent-soft);
+        color: var(--color-primary);
+      }
+      .running-badge {
+        padding: 0.28rem 0.5rem;
+        border-radius: 999px;
+        background: var(--color-active);
+        color: var(--color-primary-dark);
+        font-size: var(--text-xs);
+        font-weight: var(--font-extra);
+      }
+      .active-times {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.55rem 0.75rem;
+        border-top: 1px dashed var(--color-border);
+        font-size: var(--text-sm);
+      }
+      .active-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.5rem;
+        padding: 0.65rem 0.75rem;
+        background: rgba(93, 154, 150, 0.07);
+      }
+      .actions-section {
+        margin-top: 1rem;
+        padding: 0.75rem 1.25rem;
+        background: var(--color-surface);
+        border-radius: var(--radius-md);
+        border: 1px solid var(--color-border);
+      }
+      .action-item {
+        background: transparent;
+        border-radius: var(--radius-sm);
+        margin: 0 -0.75rem;
+        padding: 0.5rem 0.75rem;
+        border-bottom: 1px solid var(--color-border);
+      }
+      .action-item:last-child {
+        border-bottom: none;
+      }
+      .action-item:hover {
+        background: var(--color-background);
+      }
+      .action-item.active {
+        position: relative;
+        background: var(--color-active);
+        color: var(--color-primary-dark);
+        box-shadow: inset 4px 0 0 var(--color-primary);
+      }
+      .action-item.active .list-item-title {
+        font-weight: var(--font-extra);
+      }
+      .action-item.active .list-item-chevron {
+        color: var(--color-primary);
+        font-weight: var(--font-extra);
+      }
+      :host ::ng-deep .history-filter-panel .date-filter {
+        padding: 0.35rem 0 0;
+      }
+      :host ::ng-deep .history-filter-panel .date-filter-chips {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.4rem;
+        margin-bottom: 0.65rem;
+      }
+      :host ::ng-deep .history-filter-panel .chip {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 0;
+        padding: 0.35rem 0.4rem;
+        white-space: nowrap;
+      }
+      :host ::ng-deep .history-filter-panel .date-filter-cal-row {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 0.55rem;
+      }
+      :host ::ng-deep .history-filter-panel .date-filter-toggle {
+        width: 100%;
+        justify-content: center;
+        min-height: 38px;
+      }
+      :host ::ng-deep .history-filter-panel .date-filter-inputs {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 0.55rem;
+        width: 100%;
+      }
+      :host ::ng-deep .history-filter-panel .date-picker-field {
+        min-width: 0;
+      }
+      :host ::ng-deep .history-filter-panel .date-display {
+        min-width: 0;
+        width: 100%;
+      }
+      :host ::ng-deep .history-filter-panel .date-filter-clear {
+        grid-column: 1/-1;
+        justify-self: end;
+      }
+    `,
+  ],
 })
 export class OperationsLayoutComponent {
   private readonly router = inject(Router);
@@ -210,7 +349,7 @@ export class OperationsLayoutComponent {
       return sorted;
     }
 
-    return sorted.filter(op => {
+    return sorted.filter((op) => {
       const opDate = this.parseDate(op.date);
       if (from && opDate < this.parseDate(from)) return false;
       if (to && opDate > this.parseDate(to)) return false;
@@ -218,7 +357,7 @@ export class OperationsLayoutComponent {
     });
   }
 
-  private groupByPeriod(list: Operation[]): Array<{ label: string; items: Operation[] }> {
+  private groupByPeriod(list: Operation[]): { label: string; items: Operation[] }[] {
     const now = new Date();
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const startOfYesterday = new Date(startOfToday);
@@ -230,11 +369,11 @@ export class OperationsLayoutComponent {
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
     const groups: Record<string, Operation[]> = {
-      'Hoy': [],
-      'Ayer': [],
+      Hoy: [],
+      Ayer: [],
       'Esta semana': [],
       'Este mes': [],
-      'Anteriores': [],
+      Anteriores: [],
     };
 
     for (const op of list) {

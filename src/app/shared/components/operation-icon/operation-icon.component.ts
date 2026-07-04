@@ -11,9 +11,39 @@ import { OperationType } from '../../models/operation-type';
       <app-icon [name]="iconName()" />
     </span>
   `,
-  styles: [`
-    .operation-icon{display:grid;place-items:center;flex:0 0 36px;width:36px;height:36px;border-radius:50%;background:var(--color-accent-soft);color:var(--color-primary)}svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.operation-icon[data-type="4"]{background:var(--color-error-bg);color:var(--color-error)}.operation-icon[data-type="5"],.operation-icon[data-type="8"],.operation-icon[data-type="3"]{background:#e4f3e9;color:var(--color-success)}
-  `],
+  styles: [
+    `
+      .operation-icon {
+        display: grid;
+        place-items: center;
+        flex: 0 0 36px;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: var(--color-accent-soft);
+        color: var(--color-primary);
+      }
+      svg {
+        width: 21px;
+        height: 21px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.8;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .operation-icon[data-type='4'] {
+        background: var(--color-error-bg);
+        color: var(--color-error);
+      }
+      .operation-icon[data-type='5'],
+      .operation-icon[data-type='8'],
+      .operation-icon[data-type='3'] {
+        background: #e4f3e9;
+        color: var(--color-success);
+      }
+    `,
+  ],
 })
 export class OperationIconComponent {
   readonly type = input.required<OperationType>();

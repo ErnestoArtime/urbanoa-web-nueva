@@ -10,20 +10,49 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
     <div class="page account-static-page">
       <h1 class="page-title">{{ 'account.profile.title' | translate }}</h1>
       <div class="card">
-        <div class="form-group"><label>{{ 'account.profile.name' | translate }}</label><input class="form-input" [placeholder]="'account.profile.name' | translate" [value]="user.name"/><small class="form-error">{{ 'account.profile.nameRequired' | translate }}</small></div>
-        <div class="form-group"><label>{{ 'account.profile.surname' | translate }}</label><input class="form-input" [placeholder]="'account.profile.surname' | translate" [value]="user.surname"/><small class="form-error">{{ 'account.profile.surnameRequired' | translate }}</small></div>
-        <div class="form-group"><label>{{ 'account.profile.nif' | translate }}</label><input class="form-input" [placeholder]="'account.profile.nif' | translate" [value]="user.nif"/><small class="form-error">{{ 'account.profile.nifRequired' | translate }}</small></div>
-        <div class="form-group"><label>{{ 'account.profile.phone' | translate }}</label><input class="form-input" [placeholder]="'account.profile.phone' | translate" [value]="user.phone"/></div>
-        <div class="form-group"><label>{{ 'account.profile.email' | translate }}</label><input class="form-input" type="email" [placeholder]="'account.profile.email' | translate" [value]="user.email"/><small class="form-error">{{ 'account.profile.emailRequired' | translate }}</small></div>
+        <div class="form-group">
+          <label>{{ 'account.profile.name' | translate }}</label
+          ><input class="form-input" [placeholder]="'account.profile.name' | translate" [value]="user.name" /><small class="form-error">{{
+            'account.profile.nameRequired' | translate
+          }}</small>
+        </div>
+        <div class="form-group">
+          <label>{{ 'account.profile.surname' | translate }}</label
+          ><input class="form-input" [placeholder]="'account.profile.surname' | translate" [value]="user.surname" /><small
+            class="form-error"
+            >{{ 'account.profile.surnameRequired' | translate }}</small
+          >
+        </div>
+        <div class="form-group">
+          <label>{{ 'account.profile.nif' | translate }}</label
+          ><input class="form-input" [placeholder]="'account.profile.nif' | translate" [value]="user.nif" /><small class="form-error">{{
+            'account.profile.nifRequired' | translate
+          }}</small>
+        </div>
+        <div class="form-group">
+          <label>{{ 'account.profile.phone' | translate }}</label
+          ><input class="form-input" [placeholder]="'account.profile.phone' | translate" [value]="user.phone" />
+        </div>
+        <div class="form-group">
+          <label>{{ 'account.profile.email' | translate }}</label
+          ><input class="form-input" type="email" [placeholder]="'account.profile.email' | translate" [value]="user.email" /><small
+            class="form-error"
+            >{{ 'account.profile.emailRequired' | translate }}</small
+          >
+        </div>
         <button class="btn btn-primary btn-block">{{ 'common.save' | translate }}</button>
       </div>
-      <a routerLink="/app/account/change-password" class="btn btn-secondary btn-block mt-2">{{ 'account.menu.changePassword' | translate }}</a>
+      <a routerLink="/app/account/change-password" class="btn btn-secondary btn-block mt-2">{{
+        'account.menu.changePassword' | translate
+      }}</a>
       @if (saved()) {
         <div class="toast">{{ 'account.profile.saveSuccess' | translate }}</div>
       }
     </div>
   `,
-  styles: ['.toast{position:fixed;bottom:2rem;left:50%;transform:translateX(-50%);padding:.65rem 1.25rem;border-radius:999px;background:var(--color-primary-dark);color:#fff;z-index:2000}'],
+  styles: [
+    '.toast{position:fixed;bottom:2rem;left:50%;transform:translateX(-50%);padding:.65rem 1.25rem;border-radius:999px;background:var(--color-primary-dark);color:#fff;z-index:2000}',
+  ],
 })
 export class AccountProfileComponent {
   readonly user = MOCK_USER;

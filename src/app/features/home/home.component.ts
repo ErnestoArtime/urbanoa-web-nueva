@@ -14,10 +14,17 @@ import { ProfileProgressCardComponent } from './components/profile-progress-card
 
 @Component({
   selector: 'app-home',
-  imports: [TranslatePipe, ActiveTicketCardComponent, WalletSummaryCardComponent, VehicleSummaryCardComponent, RecentOperationsCardComponent, ProfileProgressCardComponent],
+  imports: [
+    TranslatePipe,
+    ActiveTicketCardComponent,
+    WalletSummaryCardComponent,
+    VehicleSummaryCardComponent,
+    RecentOperationsCardComponent,
+    ProfileProgressCardComponent,
+  ],
   template: `
     <div class="page">
-      <h1 class="page-title">{{ 'dashboard.greeting' | translate:{ name: fullName() } }}</h1>
+      <h1 class="page-title">{{ 'dashboard.greeting' | translate: { name: fullName() } }}</h1>
       <p class="page-subtitle">{{ user().email }}</p>
 
       <div class="dashboard-grid mt-2">
@@ -36,37 +43,42 @@ import { ProfileProgressCardComponent } from './components/profile-progress-card
       </div>
     </div>
   `,
-  styles: [`
-    .dashboard-grid {
-      display: flex;
-      flex-direction: column;
-      gap: 0.8rem;
-    }
-    @media (min-width: 960px) {
-      :host > .page {
-        max-width: 1120px;
-        margin: 0 auto;
-        padding: 2.5rem 1.5rem 2rem;
-      }
-      .page-title, .page-subtitle { display:none; }
+  styles: [
+    `
       .dashboard-grid {
-        display:grid;
-        grid-template-columns:minmax(300px, .82fr) minmax(410px, 1.18fr);
-        align-items: start;
-        gap:.75rem;
-      }
-      .dashboard-col-left {
         display: flex;
         flex-direction: column;
-        gap: 0.75rem;
+        gap: 0.8rem;
       }
-      .dashboard-col-right {
-        display: flex;
-        flex-direction: column;
-        gap: 0.78rem;
+      @media (min-width: 960px) {
+        :host > .page {
+          max-width: 1120px;
+          margin: 0 auto;
+          padding: 2.5rem 1.5rem 2rem;
+        }
+        .page-title,
+        .page-subtitle {
+          display: none;
+        }
+        .dashboard-grid {
+          display: grid;
+          grid-template-columns: minmax(300px, 0.82fr) minmax(410px, 1.18fr);
+          align-items: start;
+          gap: 0.75rem;
+        }
+        .dashboard-col-left {
+          display: flex;
+          flex-direction: column;
+          gap: 0.75rem;
+        }
+        .dashboard-col-right {
+          display: flex;
+          flex-direction: column;
+          gap: 0.78rem;
+        }
       }
-    }
-  `],
+    `,
+  ],
 })
 export class HomeComponent {
   private readonly router = inject(Router);
@@ -78,7 +90,8 @@ export class HomeComponent {
   readonly ticket = computed(() => this.operationsService.activeOperation());
   readonly vehicle = MOCK_VEHICLE_PRINCIPAL;
   readonly recentOps = computed(() => {
-    const list = this.operationsService.operations()
+    const list = this.operationsService
+      .operations()
       .filter((op) => op.type !== OperationType.UNPAID_FINES)
       .sort((a, b) => this.toDateValue(b.date) - this.toDateValue(a.date));
     return list.slice(0, 3);

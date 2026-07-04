@@ -19,37 +19,39 @@ import { BreadcrumbService } from '../../../core/services/breadcrumb.service';
       </nav>
     }
   `,
-  styles: [`
-    .breadcrumb {
-      display: flex;
-      align-items: center;
-      gap: 0.375rem;
-      padding: 0.5rem 1.25rem;
-      font-size: 0.8125rem;
-      background: var(--color-surface, #fff);
-      border-bottom: 1px solid var(--color-border, #e5e7eb);
-      overflow-x: auto;
-      white-space: nowrap;
-    }
-    .breadcrumb-link {
-      color: var(--color-primary, #006a68);
-      text-decoration: none;
-    }
-    .breadcrumb-link:hover {
-      text-decoration: underline;
-    }
-    .breadcrumb-sep {
-      color: var(--color-muted, #9ca3af);
-    }
-    .breadcrumb-current {
-      color: var(--color-muted, #6b7280);
-    }
-    @media (min-width: 960px) {
+  styles: [
+    `
       .breadcrumb {
-        padding: 0.5rem 2rem;
+        display: flex;
+        align-items: center;
+        gap: 0.375rem;
+        padding: 0.5rem 1.25rem;
+        font-size: 0.8125rem;
+        background: var(--color-surface, #fff);
+        border-bottom: 1px solid var(--color-border, #e5e7eb);
+        overflow-x: auto;
+        white-space: nowrap;
       }
-    }
-  `],
+      .breadcrumb-link {
+        color: var(--color-primary, #006a68);
+        text-decoration: none;
+      }
+      .breadcrumb-link:hover {
+        text-decoration: underline;
+      }
+      .breadcrumb-sep {
+        color: var(--color-muted, #9ca3af);
+      }
+      .breadcrumb-current {
+        color: var(--color-muted, #6b7280);
+      }
+      @media (min-width: 960px) {
+        .breadcrumb {
+          padding: 0.5rem 2rem;
+        }
+      }
+    `,
+  ],
 })
 export class AppBreadcrumbComponent {
   private breadcrumbService = inject(BreadcrumbService);

@@ -19,7 +19,5 @@ import { APP_BRAND } from '../../../shared/constants/app-brand';
 export class WebComponent {
   readonly brand = APP_BRAND;
   private readonly route = inject(ActivatedRoute);
-  title = this.route.snapshot.paramMap.get('type') === 'privacy'
-    ? 'Política de privacidad'
-    : 'Términos y condiciones';
+  title = this.route.snapshot.paramMap.get('type') === 'privacy' ? 'Política de privacidad' : 'Términos y condiciones';
 }

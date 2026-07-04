@@ -1,21 +1,5 @@
 import { Injectable, signal } from '@angular/core';
-
-export interface ParkingTimeStepInput {
-  tariffId: string;
-  tariffPrice: number;
-  startDate?: Date;
-  maxMinutes?: number;
-}
-
-export interface ParkingTimeStep {
-  time: number;
-  quantity: number;
-  timeFormatted: string;
-  hourMinute: string;
-  dayDescriptor: string;
-  datetimeRaw: string;
-  amount: number;
-}
+import type { ParkingTimeStep, ParkingTimeStepInput } from './models/parking-time-step.model';
 
 @Injectable({ providedIn: 'root' })
 export class ParkingTimeStepsService {
@@ -36,8 +20,8 @@ export class ParkingTimeStepsService {
     ];
 
     const steps = durations
-      .filter(d => d.minutes <= maxMinutes)
-      .map(d => {
+      .filter((d) => d.minutes <= maxMinutes)
+      .map((d) => {
         const amount = parseFloat(((d.minutes / 60) * hourlyPrice).toFixed(2));
         return {
           time: d.minutes,
@@ -64,6 +48,6 @@ export class ParkingTimeStepsService {
   }
 
   getStepByTime(minutes: number): ParkingTimeStep | undefined {
-    return this.steps().find(s => s.time === minutes);
+    return this.steps().find((s) => s.time === minutes);
   }
 }

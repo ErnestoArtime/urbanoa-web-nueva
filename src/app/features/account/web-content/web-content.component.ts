@@ -8,7 +8,7 @@ import { APP_BRAND } from '../../../shared/constants/app-brand';
   imports: [TranslatePipe],
   template: `
     @if (loading()) {
-      <p class="text-center text-muted">{{ 'account.webContent.loading' | translate:{title: title()} }}</p>
+      <p class="text-center text-muted">{{ 'account.webContent.loading' | translate: { title: title() } }}</p>
     }
     @if (error()) {
       <div class="web-content-error">
@@ -17,7 +17,14 @@ import { APP_BRAND } from '../../../shared/constants/app-brand';
       </div>
     }
     @if (!error()) {
-      <iframe #iframe [src]="sanitizedUrl()" (load)="onLoad()" (error)="onError()" style="width:100%;height:100%;border:0" title="{{ title() }}"></iframe>
+      <iframe
+        #iframe
+        [src]="sanitizedUrl()"
+        (load)="onLoad()"
+        (error)="onError()"
+        style="width:100%;height:100%;border:0"
+        title="{{ title() }}"
+      ></iframe>
     }
   `,
   styles: [':host{display:block;height:100%;position:relative} .web-content-error{padding:2rem;text-align:center}'],
@@ -40,6 +47,11 @@ export class WebContentComponent {
     return this.sanitizer.bypassSecurityTrustResourceUrl(this.url());
   }
 
-  onLoad(): void { this.loading.set(false); }
-  onError(): void { this.error.set(true); this.loading.set(false); }
+  onLoad(): void {
+    this.loading.set(false);
+  }
+  onError(): void {
+    this.error.set(true);
+    this.loading.set(false);
+  }
 }

@@ -49,10 +49,7 @@ export class TranslationService {
   }
 
   private detectBrowserLang(): SupportedLang | null {
-    const candidates = [
-      ...(navigator.languages ?? []),
-      navigator.language,
-    ].filter(Boolean);
+    const candidates = [...(navigator.languages ?? []), navigator.language].filter(Boolean);
 
     for (const candidate of candidates) {
       const normalized = candidate.toLowerCase();

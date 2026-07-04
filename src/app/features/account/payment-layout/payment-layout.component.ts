@@ -17,7 +17,9 @@ import { SplitViewComponent } from '../../../layout/split-view/split-view.compon
           <p class="wallet-balance">{{ user.balance }} €</p>
         </div>
         <p class="section-title">{{ 'account.cards' | translate }}</p>
-        <div class="card">💳 Visa •••• 4242 <span class="badge badge-primary">{{ 'account.cardPrimary' | translate }}</span></div>
+        <div class="card">
+          💳 Visa •••• 4242 <span class="badge badge-primary">{{ 'account.cardPrimary' | translate }}</span>
+        </div>
         <div class="row mt-2">
           <a routerLink="/app/account/recharge" class="btn btn-primary btn-sm">{{ 'dashboard.recharge' | translate }}</a>
           <a routerLink="/app/account/refund" class="btn btn-secondary btn-sm">{{ 'account.withdrawBalance' | translate }}</a>

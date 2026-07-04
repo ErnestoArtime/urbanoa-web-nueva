@@ -91,51 +91,148 @@ interface ReportRangeItem {
       </div>
     </div>
   `,
-  styles: [`
-    .report-page { display:flex; flex-direction:column; height:100%; padding:0.9rem 1rem 1.25rem; }
-    .report-scroll { flex:1; overflow-y:auto; padding:0 0 .5rem; }
-    .report-submit { flex-shrink:0; margin-top:1.1rem; }
-    .page-subtitle { color: var(--color-text-muted); margin-bottom: 1rem; }
-    .report-section { margin-top: 1rem; }
-    .section-label { margin:0 0 .55rem; color:var(--color-text); font-size: var(--text-xs); font-weight: var(--font-extra); text-transform:uppercase; letter-spacing:.06em; }
-    .toggle-row, .filter-row, .range-row {
-      display:grid;
-      grid-template-columns:1fr auto auto;
-      align-items:center;
-      gap:.8rem;
-      width:100%;
-      border:1px solid var(--color-border);
-      border-radius:18px;
-      background:var(--color-surface);
-      padding:.9rem 1rem;
-      box-shadow:var(--shadow-sm);
-    }
-    .toggle-row, .filter-row { margin-bottom:.75rem; position:relative; overflow:hidden; }
-    .toggle-row strong, .filter-copy strong { display:block; font-size: var(--text-base) }
-    .toggle-row span, .filter-copy span { display:block; margin-top:.2rem; color:var(--color-text-muted); font-size: var(--text-sm); line-height: var(--line-normal); }
-    .filter-copy { padding-right:.5rem; }
-    .toggle-row input, .filter-row input { position:absolute; inset:auto 1rem auto auto; opacity:0; pointer-events:none; }
-    .switch {
-      width:3.1rem; height:1.85rem; border-radius:999px; background:#cbbfd0;
-      border:2px solid rgba(77,67,89,.35); position:relative; flex:none; transition:background .2s ease;
-    }
-    .switch::after {
-      content:''; position:absolute; top:50%; left:.18rem; width:1.18rem; height:1.18rem;
-      border-radius:50%; background:#fff; box-shadow:0 1px 2px rgba(0,0,0,.25);
-      transform:translateY(-50%); transition:transform .2s ease, background .2s ease;
-    }
-    .toggle-row input:checked + .switch, .filter-row input:checked + .switch { background:var(--color-primary); border-color:var(--color-primary); }
-    .toggle-row input:checked + .switch::after, .filter-row input:checked + .switch::after { transform:translate(1.25rem,-50%); }
-    .range-row { grid-template-columns:1fr auto; text-align:left; margin-bottom:.75rem; cursor:pointer; }
+  styles: [
+    `
+      .report-page {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        padding: 0.9rem 1rem 1.25rem;
+      }
+      .report-scroll {
+        flex: 1;
+        overflow-y: auto;
+        padding: 0 0 0.5rem;
+      }
+      .report-submit {
+        flex-shrink: 0;
+        margin-top: 1.1rem;
+      }
+      .page-subtitle {
+        color: var(--color-text-muted);
+        margin-bottom: 1rem;
+      }
+      .report-section {
+        margin-top: 1rem;
+      }
+      .section-label {
+        margin: 0 0 0.55rem;
+        color: var(--color-text);
+        font-size: var(--text-xs);
+        font-weight: var(--font-extra);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+      .toggle-row,
+      .filter-row,
+      .range-row {
+        display: grid;
+        grid-template-columns: 1fr auto auto;
+        align-items: center;
+        gap: 0.8rem;
+        width: 100%;
+        border: 1px solid var(--color-border);
+        border-radius: 18px;
+        background: var(--color-surface);
+        padding: 0.9rem 1rem;
+        box-shadow: var(--shadow-sm);
+      }
+      .toggle-row,
+      .filter-row {
+        margin-bottom: 0.75rem;
+        position: relative;
+        overflow: hidden;
+      }
+      .toggle-row strong,
+      .filter-copy strong {
+        display: block;
+        font-size: var(--text-base);
+      }
+      .toggle-row span,
+      .filter-copy span {
+        display: block;
+        margin-top: 0.2rem;
+        color: var(--color-text-muted);
+        font-size: var(--text-sm);
+        line-height: var(--line-normal);
+      }
+      .filter-copy {
+        padding-right: 0.5rem;
+      }
+      .toggle-row input,
+      .filter-row input {
+        position: absolute;
+        inset: auto 1rem auto auto;
+        opacity: 0;
+        pointer-events: none;
+      }
+      .switch {
+        width: 3.1rem;
+        height: 1.85rem;
+        border-radius: 999px;
+        background: #cbbfd0;
+        border: 2px solid rgba(77, 67, 89, 0.35);
+        position: relative;
+        flex: none;
+        transition: background 0.2s ease;
+      }
+      .switch::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 0.18rem;
+        width: 1.18rem;
+        height: 1.18rem;
+        border-radius: 50%;
+        background: #fff;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+        transform: translateY(-50%);
+        transition:
+          transform 0.2s ease,
+          background 0.2s ease;
+      }
+      .toggle-row input:checked + .switch,
+      .filter-row input:checked + .switch {
+        background: var(--color-primary);
+        border-color: var(--color-primary);
+      }
+      .toggle-row input:checked + .switch::after,
+      .filter-row input:checked + .switch::after {
+        transform: translate(1.25rem, -50%);
+      }
+      .range-row {
+        grid-template-columns: 1fr auto;
+        text-align: left;
+        margin-bottom: 0.75rem;
+        cursor: pointer;
+      }
 
-    .range-grid { display:grid; grid-template-columns:1fr 1fr; gap:.55rem; margin-bottom:.9rem; }
-    .range-chip {
-      padding:.7rem .8rem; border-radius:14px; border:1px solid var(--color-border);
-      background:var(--color-background); color:var(--color-text); text-align:left; font-weight: var(--font-bold);
-    }
-    .range-chip.active { background:rgba(93,154,150,.16); border-color:var(--color-primary); color:var(--color-primary-dark); }
-    .chevron { color:var(--color-text-muted); font-size: var(--text-lg); }
-  `],
+      .range-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.55rem;
+        margin-bottom: 0.9rem;
+      }
+      .range-chip {
+        padding: 0.7rem 0.8rem;
+        border-radius: 14px;
+        border: 1px solid var(--color-border);
+        background: var(--color-background);
+        color: var(--color-text);
+        text-align: left;
+        font-weight: var(--font-bold);
+      }
+      .range-chip.active {
+        background: rgba(93, 154, 150, 0.16);
+        border-color: var(--color-primary);
+        color: var(--color-primary-dark);
+      }
+      .chevron {
+        color: var(--color-text-muted);
+        font-size: var(--text-lg);
+      }
+    `,
+  ],
 })
 export class ReportComponent {
   private readonly router = inject(Router);
@@ -160,7 +257,12 @@ export class ReportComponent {
     { key: 'extends', labelKey: 'ops.report.extension', descKey: 'ops.report.extensionDesc', type: OperationType.PARKING_EXTENSION },
     { key: 'refunds', labelKey: 'ops.report.refunds', descKey: 'ops.report.refundsDesc', type: OperationType.REFUND },
     { key: 'recharges', labelKey: 'ops.report.topUps', descKey: 'ops.report.topUpsDesc', type: OperationType.TOP_UP },
-    { key: 'balanceRefunds', labelKey: 'ops.report.balanceRefunds', descKey: 'ops.report.balanceRefundsDesc', type: OperationType.BALANCE_REFUND },
+    {
+      key: 'balanceRefunds',
+      labelKey: 'ops.report.balanceRefunds',
+      descKey: 'ops.report.balanceRefundsDesc',
+      type: OperationType.BALANCE_REFUND,
+    },
     { key: 'fines', labelKey: 'ops.report.fines', descKey: 'ops.report.finesDesc', type: OperationType.FINE_PAYMENT },
   ];
   private readonly filterState: Record<ReportFilterKey, boolean> = {
@@ -200,13 +302,17 @@ export class ReportComponent {
   }
 
   private buildReportHtml(operations: Operation[]): string {
-    const rows = operations.map(op => `
+    const rows = operations
+      .map(
+        (op) => `
       <tr>
         <td>${this.translationService.translate(OPERATION_TYPE_LABELS[op.type])}</td>
         <td>${op.plate ?? '—'}</td>
         <td>${op.date}</td>
         <td style="text-align:right">${op.amount > 0 ? '+' : ''}${op.amount.toFixed(2)} €</td>
-      </tr>`).join('');
+      </tr>`,
+      )
+      .join('');
 
     const total = operations.reduce((sum, item) => sum + item.amount, 0);
     const title = this.translationService.translate('ops.report');
@@ -314,5 +420,4 @@ export class ReportComponent {
     const [day, month, year] = value.split('/').map(Number);
     return new Date(year, month - 1, day, 12, 0, 0, 0);
   }
-
 }

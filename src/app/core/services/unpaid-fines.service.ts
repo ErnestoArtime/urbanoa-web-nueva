@@ -25,14 +25,14 @@ export class UnpaidFinesService {
   }
 
   payFine(id: string): boolean {
-    const fine = this.fines().find(f => f.id === id);
+    const fine = this.fines().find((f) => f.id === id);
     if (!fine) return false;
 
     const numericAmount = Number.parseFloat(fine.amount.replace(',', '.').replace(/[^0-9.,]/g, ''));
     if (this.walletService.balance() < numericAmount) return false;
 
     this.walletService.addBalance(-numericAmount);
-    this.fines.update(list => list.filter(f => f.id !== id));
+    this.fines.update((list) => list.filter((f) => f.id !== id));
     this.operationsService.registerFinePayment({
       plate: fine.plate,
       location: fine.location,
@@ -42,6 +42,6 @@ export class UnpaidFinesService {
   }
 
   getFine(id: string): UnpaidFine | undefined {
-    return this.fines().find(f => f.id === id);
+    return this.fines().find((f) => f.id === id);
   }
 }

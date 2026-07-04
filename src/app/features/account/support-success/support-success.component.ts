@@ -16,5 +16,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 })
 export class AccountSupportSuccessComponent {
   private readonly router = inject(Router);
-  goBack(): void { void this.router.navigate(['/app/account']); }
+  goBack(): void {
+    void this.router.navigate(['/app/account']);
+  }
 }

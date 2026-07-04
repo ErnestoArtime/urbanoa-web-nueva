@@ -13,7 +13,7 @@ import { APP_BRAND } from '../../../shared/constants/app-brand';
     <div class="card wallet-shell-card">
       <div class="wallet-card-inline">
         <p class="wallet-inline-title">Mi monedero</p>
-        <p class="wallet-inline-balance">{{ balance() | number:'1.2-2' }} €</p>
+        <p class="wallet-inline-balance">{{ balance() | number: '1.2-2' }} €</p>
         <span class="wallet-inline-brand">ap</span>
         <span class="wallet-inline-mark" aria-hidden="true">{{ brand.name }}</span>
       </div>
@@ -31,7 +31,8 @@ import { APP_BRAND } from '../../../shared/constants/app-brand';
       </div>
     </div>
   `,
-  styles: [`
+  styles: [
+    `
     .card {
       border-radius: 12px;
       border: 1px solid #d4d9cd;
@@ -88,7 +89,8 @@ import { APP_BRAND } from '../../../shared/constants/app-brand';
     .wallet-actions .btn { min-width: 136px; }
     .wallet-actions .btn-secondary { background:#f3f6ed; border-color:#c5cec1; color:#3c4a41; }
     .wallet-actions .btn-primary { background:#2f6f71; }
-  `],
+  `,
+  ],
 })
 export class WalletSummaryCardComponent {
   readonly balance = input.required<number>();

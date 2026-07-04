@@ -47,7 +47,16 @@ const TITLE_KEYS: Record<string, string> = {
 
 @Component({
   selector: 'app-shell',
-  imports: [RouterOutlet, SidebarComponent, BottomNavComponent, AppHeaderComponent, AppBreadcrumbComponent, LangSelectorComponent, LoaderComponent, TranslatePipe],
+  imports: [
+    RouterOutlet,
+    SidebarComponent,
+    BottomNavComponent,
+    AppHeaderComponent,
+    AppBreadcrumbComponent,
+    LangSelectorComponent,
+    LoaderComponent,
+    TranslatePipe,
+  ],
   template: `
     <div class="app-shell">
       <app-lang-selector />
@@ -103,11 +112,19 @@ const TITLE_KEYS: Record<string, string> = {
       display: block;
     }
     @media (min-width: 960px) {
-      .app-shell-sidebar { display: flex; }
-      .app-shell-bottom-nav { display: none; }
-      .app-shell-content.with-bottom-nav { padding-bottom: 0; }
+      .app-shell-sidebar {
+        display: flex;
+      }
+      .app-shell-bottom-nav {
+        display: none;
+      }
+      .app-shell-content.with-bottom-nav {
+        padding-bottom: 0;
+      }
       app-breadcrumb,
-      app-lang-selector { display: block; }
+      app-lang-selector {
+        display: block;
+      }
     }
   `,
 })
@@ -130,12 +147,14 @@ export class AppShellComponent {
   );
 
   constructor() {
-    this.router.events.pipe(
-      filter((e): e is NavigationEnd => e instanceof NavigationEnd),
-      startWith({ urlAfterRedirects: this.router.url } as NavigationEnd),
-    ).subscribe((e) => {
-      this.breadcrumbService.setFromUrl(e.urlAfterRedirects);
-    });
+    this.router.events
+      .pipe(
+        filter((e): e is NavigationEnd => e instanceof NavigationEnd),
+        startWith({ urlAfterRedirects: this.router.url } as NavigationEnd),
+      )
+      .subscribe((e) => {
+        this.breadcrumbService.setFromUrl(e.urlAfterRedirects);
+      });
 
     this.router.events.subscribe((event) => {
       if (event instanceof NavigationStart) {

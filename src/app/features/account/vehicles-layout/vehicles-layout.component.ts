@@ -19,7 +19,9 @@ import { SplitViewComponent } from '../../../layout/split-view/split-view.compon
                 <div class="list-item-title">{{ v.plate }}</div>
                 <div class="list-item-subtitle">{{ v.isDefault ? ('account.vehicleFavorite' | translate) : (v.label ?? '') }}</div>
               </div>
-              @if (v.isDefault) { <span class="badge badge-primary">★</span> }
+              @if (v.isDefault) {
+                <span class="badge badge-primary">★</span>
+              }
             </a>
           }
         </ul>

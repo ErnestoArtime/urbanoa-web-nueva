@@ -1,23 +1,7 @@
 import { Injectable, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { ParkingFlowQuery } from './parking-flow.model';
-
-export interface ParkingTimeStep {
-  time: number;
-  quantity: number;
-  timeFormatted: string;
-  hourMinute: string;
-  dayDescriptor: string;
-  datetimeRaw: string;
-  amount: number;
-}
-
-export interface ParkingPaymentSummary {
-  method: 'balance' | 'card' | 'mixed';
-  balanceUsed: number;
-  cardUsed: number;
-  total: number;
-}
+import type { ParkingTimeStep, ParkingPaymentSummary } from './models/parking-time-step.model';
 
 export interface ParkingFlowState {
   city: string;
@@ -26,8 +10,12 @@ export interface ParkingFlowState {
   plate: string;
   zoneId: string;
   zoneName: string;
+  sectorId: string;
+  sectorName: string;
   sectorColor: string;
   street: string;
+  ticketId: string;
+  ticketName: string;
   latitude: string;
   longitude: string;
   tariffId: string;
@@ -54,9 +42,28 @@ export class ParkingFlowStore {
     this.state.set({});
   }
 
-  hasMinimumParkingData(): boolean {
+  hasLocationData(): boolean {
     const s = this.state();
-    return !!s.cityId && !!s.plate;
+    return !!s.cityId && !!s.zoneId && !!s.street;
+  }
+
+  hasTicketData(): boolean {
+    const s = this.state();
+    return !!s.plate && !!s.tariffId;
+  }
+
+  hasTimeStepData(): boolean {
+    const s = this.state();
+    return !!s.minutes && !!s.amount;
+  }
+
+  canConfirm(): boolean {
+    const s = this.state();
+    return !!s.cityId && !!s.plate && !!s.zoneId && !!s.tariffId && !!s.minutes && !!s.amount;
+  }
+
+  hasMinimumParkingData(): boolean {
+    return this.hasLocationData() || this.hasTicketData();
   }
 
   fromStore(): ParkingFlowQuery {
@@ -69,10 +76,10 @@ export class ParkingFlowStore {
       zoneId: s.zoneId ?? '',
       zone: s.zoneName ?? '',
       street: s.street ?? '',
-      sector: s.street ?? '',
+      sector: s.sectorName ?? s.street ?? '',
       sectorColor: s.sectorColor ?? '',
-      sectorId: s.zoneId ?? '',
-      ticketId: '',
+      sectorId: s.sectorId ?? s.zoneId ?? '',
+      ticketId: s.ticketId ?? '',
       latitude: s.latitude ?? '',
       longitude: s.longitude ?? '',
       tariffId: s.tariffId ?? '',
@@ -90,7 +97,9 @@ export class ParkingFlowStore {
   }
 
   fromQueryParams(route: ActivatedRoute): void {
-    const params = Object.fromEntries(route.snapshot.queryParamMap.keys.map(key => [key, route.snapshot.queryParamMap.get(key) ?? ''])) as Record<string, string>;
+    const params = Object.fromEntries(
+      route.snapshot.queryParamMap.keys.map((key) => [key, route.snapshot.queryParamMap.get(key) ?? '']),
+    ) as Record<string, string>;
     this.update({
       city: params['city'] ?? '',
       cityId: params['cityId'] ?? '',
@@ -100,6 +109,10 @@ export class ParkingFlowStore {
       zoneName: params['zone'] ?? '',
       sectorColor: params['sectorColor'] ?? '',
       street: params['street'] ?? '',
+      sectorId: params['sectorId'] ?? '',
+      sectorName: params['sector'] ?? '',
+      ticketId: params['ticketId'] ?? '',
+      ticketName: params['ticketName'] ?? '',
       latitude: params['latitude'] ?? '',
       longitude: params['longitude'] ?? '',
       tariffId: params['tariffId'] ?? '',
@@ -123,6 +136,10 @@ export class ParkingFlowStore {
     if (s.zoneName) result['zone'] = s.zoneName;
     if (s.sectorColor) result['sectorColor'] = s.sectorColor;
     if (s.street) result['street'] = s.street;
+    if (s.sectorId) result['sectorId'] = s.sectorId;
+    if (s.sectorName) result['sector'] = s.sectorName;
+    if (s.ticketId) result['ticketId'] = s.ticketId;
+    if (s.ticketName) result['ticketName'] = s.ticketName;
     if (s.latitude) result['latitude'] = s.latitude;
     if (s.longitude) result['longitude'] = s.longitude;
     if (s.tariffId) result['tariffId'] = s.tariffId;

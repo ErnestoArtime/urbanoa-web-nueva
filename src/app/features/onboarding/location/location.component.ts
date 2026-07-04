@@ -8,7 +8,10 @@ import { APP_BRAND } from '../../../shared/constants/app-brand';
   template: `
     <div class="page">
       <h1 class="page-title">Ubicación</h1>
-      <p class="page-subtitle">Activa la ubicación para que {{ brand.name }} sepa exactamente en qué sector estás. Te ahorramos buscar el nombre de la calle y evitamos errores en tu ticket.</p>
+      <p class="page-subtitle">
+        Activa la ubicación para que {{ brand.name }} sepa exactamente en qué sector estás. Te ahorramos buscar el nombre de la calle y
+        evitamos errores en tu ticket.
+      </p>
       <div class="card card-highlight mt-2">
         <p>📍 Permiso de ubicación</p>
         <p class="card-subtitle mt-1">Mostrarte las zonas de parkings más cercanas automáticamente</p>

@@ -10,17 +10,19 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
       <p>{{ 'account.selectOption' | translate }}</p>
     </div>
   `,
-  styles: [`
-    .empty-state {
-      height: 100%;
-      min-height: 380px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: var(--color-text-muted);
-      padding: 1.5rem;
-      text-align: center;
-    }
-  `],
+  styles: [
+    `
+      .empty-state {
+        height: 100%;
+        min-height: 380px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--color-text-muted);
+        padding: 1.5rem;
+        text-align: center;
+      }
+    `,
+  ],
 })
 export class AccountEmptyComponent {}

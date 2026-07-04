@@ -17,5 +17,3 @@ export const OPERATION_TYPE_LABELS: Record<OperationType, string> = {
   [OperationType.BALANCE_REFUND]: 'ops.type.balanceRefund',
   [OperationType.UNPAID_FINES]: 'ops.type.denuncias',
 };
-
-

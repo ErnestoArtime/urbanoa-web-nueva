@@ -26,7 +26,7 @@ import type { Operation } from '../../../shared/models/operation';
               <div class="list-item-subtitle">{{ op.date }}{{ op.zone ? ' — ' + op.zone : '' }}</div>
             </div>
             <span [class]="op.amount > 0 ? 'badge badge-success' : 'badge'">
-              {{ op.amount > 0 ? '+' : '' }}{{ op.amount | number:'1.2-2' }} €
+              {{ op.amount > 0 ? '+' : '' }}{{ op.amount | number: '1.2-2' }} €
             </span>
           </a>
         }
@@ -34,27 +34,40 @@ import type { Operation } from '../../../shared/models/operation';
       <button type="button" class="btn-text view-all-link" (click)="viewAll.emit()">{{ 'dashboard.viewAll' | translate }}</button>
     </div>
   `,
-  styles: [`
-    .card {
-      border-radius: 12px;
-      border: 1px solid #d4d9cd;
-      box-shadow: 0 1px 0 rgba(28, 44, 39, 0.04), 0 3px 8px rgba(28, 44, 39, 0.07);
-      background: #f8f9f2;
-      padding: 0.8rem 0.9rem;
-    }
-    .card-title { font-size: 1.02rem; margin-bottom: 0.15rem; }
-    .operation-history-card .list-item {
-      display: flex;
-      align-items: center;
-      background: #fbfcf6;
-      border-bottom-color:#e1e6d9;
-    }
-    .operation-history-card .list-item:hover {
-      background: #f1f4ea;
-    }
-    .operation-history-card .card-title { margin-bottom:.35rem; }
-    .view-all-link { display:block; margin-top:1rem; text-align:right; }
-  `],
+  styles: [
+    `
+      .card {
+        border-radius: 12px;
+        border: 1px solid #d4d9cd;
+        box-shadow:
+          0 1px 0 rgba(28, 44, 39, 0.04),
+          0 3px 8px rgba(28, 44, 39, 0.07);
+        background: #f8f9f2;
+        padding: 0.8rem 0.9rem;
+      }
+      .card-title {
+        font-size: 1.02rem;
+        margin-bottom: 0.15rem;
+      }
+      .operation-history-card .list-item {
+        display: flex;
+        align-items: center;
+        background: #fbfcf6;
+        border-bottom-color: #e1e6d9;
+      }
+      .operation-history-card .list-item:hover {
+        background: #f1f4ea;
+      }
+      .operation-history-card .card-title {
+        margin-bottom: 0.35rem;
+      }
+      .view-all-link {
+        display: block;
+        margin-top: 1rem;
+        text-align: right;
+      }
+    `,
+  ],
 })
 export class RecentOperationsCardComponent {
   readonly operations = input.required<Operation[]>();

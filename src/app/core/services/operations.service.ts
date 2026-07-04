@@ -6,6 +6,8 @@ import type { Operation } from '../../shared/models/operation';
 export interface ActiveOperation {
   plate: string;
   zone: string;
+  startTime: string;
+  durationLabel: string;
   timeRemaining: string;
   endTime: string;
 }
@@ -16,6 +18,8 @@ export class OperationsService {
   private readonly _activeOperation = signal<ActiveOperation | null>({
     plate: MOCK_TICKET_ACTIVE.plate,
     zone: MOCK_TICKET_ACTIVE.zone,
+    startTime: MOCK_TICKET_ACTIVE.startTime,
+    durationLabel: MOCK_TICKET_ACTIVE.durationLabel,
     timeRemaining: MOCK_TICKET_ACTIVE.timeRemaining,
     endTime: MOCK_TICKET_ACTIVE.endTime,
   });

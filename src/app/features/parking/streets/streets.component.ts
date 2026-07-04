@@ -8,10 +8,12 @@ import { MOCK_STREETS_ZARAUTZ } from '../../../shared/mock-data';
   imports: [RouterLink, TranslatePipe],
   template: `
     <div class="page">
-      <a [routerLink]="['/app/parking/city-info']" [queryParams]="{id: cityId}" class="back-link">{{ 'parking.streets.back' | translate }}</a>
+      <a [routerLink]="['/app/parking/city-info']" [queryParams]="{ id: cityId }" class="back-link">{{
+        'parking.streets.back' | translate
+      }}</a>
       <h1 class="page-title">{{ 'parking.selectStreet' | translate }}</h1>
       <div class="form-group">
-        <input class="form-input" [placeholder]="('parking.selectStreet' | translate)" />
+        <input class="form-input" [placeholder]="'parking.selectStreet' | translate" />
       </div>
       <ul class="list card" style="padding:0;overflow:hidden">
         @for (street of streets; track street.nombre) {
@@ -26,7 +28,14 @@ import { MOCK_STREETS_ZARAUTZ } from '../../../shared/mock-data';
       </ul>
     </div>
   `,
-  styles: [`.back-link{display:inline-block;margin-bottom:1rem}`],
+  styles: [
+    `
+      .back-link {
+        display: inline-block;
+        margin-bottom: 1rem;
+      }
+    `,
+  ],
 })
 export class ParkingStreetsComponent {
   private readonly route = inject(ActivatedRoute);
@@ -35,7 +44,7 @@ export class ParkingStreetsComponent {
   readonly cityName = this.route.snapshot.queryParamMap.get('cityName') ?? 'Zarautz';
   readonly plate = this.route.snapshot.queryParamMap.get('plate') ?? '1234 ABC';
 
-  streetParams(street: typeof MOCK_STREETS_ZARAUTZ[number]): Record<string, string> {
+  streetParams(street: (typeof MOCK_STREETS_ZARAUTZ)[number]): Record<string, string> {
     return {
       city: this.cityId,
       cityName: this.cityName,

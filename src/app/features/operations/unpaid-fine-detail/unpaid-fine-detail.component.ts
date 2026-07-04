@@ -14,14 +14,22 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
         <h1 class="page-title">{{ 'ops.fineDetail.title' | translate }}</h1>
         @if (fine) {
           <div class="card mt-2">
-            <p><strong>{{ 'ops.fineDetail.plate' | translate }}</strong> {{ fine.plate }}</p>
-            <p class="mt-1"><strong>{{ 'ops.fineDetail.location' | translate }}</strong> {{ fine.location }}</p>
-            <p class="mt-1"><strong>{{ 'ops.fineDetail.date' | translate }}</strong> {{ fine.date }}</p>
-            <p class="mt-1"><strong>{{ 'ops.fineDetail.amount' | translate }}</strong> {{ fine.amount }}</p>
+            <p>
+              <strong>{{ 'ops.fineDetail.plate' | translate }}</strong> {{ fine.plate }}
+            </p>
+            <p class="mt-1">
+              <strong>{{ 'ops.fineDetail.location' | translate }}</strong> {{ fine.location }}
+            </p>
+            <p class="mt-1">
+              <strong>{{ 'ops.fineDetail.date' | translate }}</strong> {{ fine.date }}
+            </p>
+            <p class="mt-1">
+              <strong>{{ 'ops.fineDetail.amount' | translate }}</strong> {{ fine.amount }}
+            </p>
           </div>
           <div class="mt-2 card" style="padding:0.75rem">
             <p style="font-size: var(--text-sm);color:var(--color-muted)">{{ 'ops.fineDetail.availableBalance' | translate }}</p>
-            <p style="font-size: var(--text-xl);font-weight: var(--font-bold)">{{ walletService.balance() | number:'1.2-2' }} €</p>
+            <p style="font-size: var(--text-xl);font-weight: var(--font-bold)">{{ walletService.balance() | number: '1.2-2' }} €</p>
           </div>
           @if (insufficientFunds()) {
             <p class="mt-1" style="color:var(--color-error);font-size:0.875rem">{{ 'ops.fineDetail.insufficientBalance' | translate }}</p>
@@ -38,8 +46,12 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
       <div class="page text-center">
         <div class="success-icon">✓</div>
         <h1 class="page-title">{{ 'ops.fineDetail.paid' | translate }}</h1>
-        <p class="page-subtitle">{{ 'ops.fineDetail.paidDetail' | translate:{plate: fine?.plate ?? '', location: fine?.location ?? ''} }}</p>
-        <p class="mt-2" style="font-size: var(--text-xl);font-weight: var(--font-bold);color:var(--color-primary)">{{ walletService.balance() | number:'1.2-2' }} €</p>
+        <p class="page-subtitle">
+          {{ 'ops.fineDetail.paidDetail' | translate: { plate: fine?.plate ?? '', location: fine?.location ?? '' } }}
+        </p>
+        <p class="mt-2" style="font-size: var(--text-xl);font-weight: var(--font-bold);color:var(--color-primary)">
+          {{ walletService.balance() | number: '1.2-2' }} €
+        </p>
         <a routerLink="/app/operations/unpaid-fines" class="btn btn-primary btn-block mt-2">{{ 'ops.unpaidFines.back' | translate }}</a>
       </div>
     }

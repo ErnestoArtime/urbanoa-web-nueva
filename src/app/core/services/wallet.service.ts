@@ -18,6 +18,6 @@ export class WalletService {
   };
 
   addBalance(amount: number): void {
-    this.balance.update(b => b + amount);
+    this.balance.update((b) => b + amount);
   }
 }
