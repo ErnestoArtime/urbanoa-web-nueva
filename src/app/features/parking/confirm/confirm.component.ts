@@ -4,7 +4,8 @@ import { MOCK_WALLET } from '../../../shared/mock-data';
 import { LoaderComponent } from '../../../shared/components/loader/loader.component';
 import { PaymentSummaryComponent } from '../../../shared/components/payment-summary/payment-summary.component';
 import { SwipeToPayComponent } from '../../../shared/components/swipe-to-pay/swipe-to-pay.component';
-import { readParkingFlowQuery } from '../parking-flow.model';
+import { ParkingFlowStore } from '../parking-flow.store';
+import { ParkingFlowQuery, readParkingFlowQuery } from '../parking-flow.model';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 
 @Component({
@@ -42,7 +43,10 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 export class ParkingConfirmComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
-  readonly query = readParkingFlowQuery(this.route);
+  private readonly store = inject(ParkingFlowStore);
+  readonly query: ParkingFlowQuery = this.store.hasMinimumParkingData()
+    ? this.store.fromStore()
+    : readParkingFlowQuery(this.route);
   readonly wallet = MOCK_WALLET;
   readonly loading = signal(false);
 

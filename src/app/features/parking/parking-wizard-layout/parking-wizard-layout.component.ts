@@ -3,6 +3,7 @@ import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router
 import { toSignal } from '@angular/core/rxjs-interop';
 import { filter, map, startWith } from 'rxjs/operators';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { ParkingFlowStore } from '../parking-flow.store';
 
 interface WizardStep {
   labelKey: string;
@@ -109,6 +110,7 @@ interface WizardStep {
 })
 export class ParkingWizardLayoutComponent {
   private readonly router = inject(Router);
+  private readonly store = inject(ParkingFlowStore);
   readonly steps: WizardStep[] = [
     { labelKey:'parking.wizard.step1.label', hintKey:'parking.wizard.step1.hint', path:'/app/parking' },
     { labelKey:'parking.wizard.step2.label', hintKey:'parking.wizard.step2.hint', path:'/app/parking/tickets' },
@@ -121,7 +123,17 @@ export class ParkingWizardLayoutComponent {
     map(event => event.urlAfterRedirects),
     startWith(this.router.url),
   ), { initialValue:this.router.url });
-  readonly query = computed(() => this.router.parseUrl(this.url()).queryParams as Record<string,string>);
+  readonly query = computed(() => {
+    const urlParams = this.router.parseUrl(this.url()).queryParams as Record<string,string>;
+    const s = this.store.vm();
+    return {
+      ...urlParams,
+      ...(s.cityName ? { cityName: s.cityName } : {}),
+      ...(s.zoneName ? { zone: s.zoneName } : {}),
+      ...(s.plate ? { plate: s.plate } : {}),
+      ...(s.duration ? { duration: s.duration } : {}),
+    };
+  });
   readonly currentStep = computed(() => {
     const path = this.url().split('?')[0];
     if (path.includes('/success')) return 4;

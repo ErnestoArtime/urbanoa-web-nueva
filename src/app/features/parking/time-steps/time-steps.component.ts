@@ -1,7 +1,8 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { LoaderComponent } from '../../../shared/components/loader/loader.component';
-import { readParkingFlowQuery } from '../parking-flow.model';
+import { ParkingFlowStore } from '../parking-flow.store';
+import { ParkingFlowQuery, readParkingFlowQuery } from '../parking-flow.model';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 
 interface ParkingTimeOption {
@@ -62,7 +63,7 @@ interface ParkingTimeOption {
         <strong>{{ amount() }}</strong>
       </div>
       <div class="sticky-actions">
-        <a routerLink="/app/parking/confirm" [queryParams]="confirmationParams()" class="btn btn-primary btn-block">{{ 'parking.timeSteps.continue' | translate }}</a>
+        <a routerLink="/app/parking/confirm" [queryParams]="confirmationParams()" (click)="onContinue()" class="btn btn-primary btn-block">{{ 'parking.timeSteps.continue' | translate }}</a>
       </div>
     </div>
   `,
@@ -77,7 +78,10 @@ interface ParkingTimeOption {
 })
 export class ParkingTimeStepsComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
-  readonly query = readParkingFlowQuery(this.route);
+  private readonly store = inject(ParkingFlowStore);
+  readonly query: ParkingFlowQuery = this.store.hasMinimumParkingData()
+    ? this.store.fromStore()
+    : readParkingFlowQuery(this.route);
   readonly times: ParkingTimeOption[] = [
     { label: '30 min', minutes: 30 },
     { label: '1 h', minutes: 60 },
@@ -109,6 +113,15 @@ export class ParkingTimeStepsComponent implements OnInit {
   }
   confirmationParams(): Record<string, string> {
     return { ...this.query, duration: this.selected().label, minutes: String(this.selected().minutes), amount: this.amount(), endTime: this.endTime() };
+  }
+
+  onContinue(): void {
+    this.store.update({
+      duration: this.selected().label,
+      minutes: String(this.selected().minutes),
+      amount: this.amount(),
+      endTime: this.endTime(),
+    });
   }
 
   private hourlyPrice(): number {

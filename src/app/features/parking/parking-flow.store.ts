@@ -1,5 +1,6 @@
 import { Injectable, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
+import { ParkingFlowQuery } from './parking-flow.model';
 
 export interface ParkingTimeStep {
   time: number;
@@ -19,6 +20,7 @@ export interface ParkingPaymentSummary {
 }
 
 export interface ParkingFlowState {
+  city: string;
   cityId: string;
   cityName: string;
   plate: string;
@@ -52,9 +54,45 @@ export class ParkingFlowStore {
     this.state.set({});
   }
 
+  hasMinimumParkingData(): boolean {
+    const s = this.state();
+    return !!s.cityId && !!s.plate;
+  }
+
+  fromStore(): ParkingFlowQuery {
+    const s = this.state();
+    return {
+      city: s.city ?? '',
+      cityName: s.cityName ?? '',
+      cityId: s.cityId ?? '',
+      plate: s.plate ?? '',
+      zoneId: s.zoneId ?? '',
+      zone: s.zoneName ?? '',
+      street: s.street ?? '',
+      sector: s.street ?? '',
+      sectorColor: s.sectorColor ?? '',
+      sectorId: s.zoneId ?? '',
+      ticketId: '',
+      latitude: s.latitude ?? '',
+      longitude: s.longitude ?? '',
+      tariffId: s.tariffId ?? '',
+      tariff: s.tariffName ?? '',
+      tariffPrice: s.tariffPrice ?? '',
+      duration: s.duration ?? '',
+      minutes: s.minutes ?? '',
+      amount: s.amount ?? '',
+      endTime: s.endTime ?? '',
+    };
+  }
+
+  clear(): void {
+    this.reset();
+  }
+
   fromQueryParams(route: ActivatedRoute): void {
     const params = Object.fromEntries(route.snapshot.queryParamMap.keys.map(key => [key, route.snapshot.queryParamMap.get(key) ?? ''])) as Record<string, string>;
     this.update({
+      city: params['city'] ?? '',
       cityId: params['cityId'] ?? '',
       cityName: params['cityName'] ?? '',
       plate: params['plate'] ?? '',
@@ -77,6 +115,7 @@ export class ParkingFlowStore {
   toQueryParams(): Record<string, string> {
     const s = this.state();
     const result: Record<string, string> = {};
+    if (s.city) result['city'] = s.city;
     if (s.cityId) result['cityId'] = s.cityId;
     if (s.cityName) result['cityName'] = s.cityName;
     if (s.plate) result['plate'] = s.plate;

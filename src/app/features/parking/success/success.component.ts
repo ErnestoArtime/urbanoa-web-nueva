@@ -1,6 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { readParkingFlowQuery } from '../parking-flow.model';
+import { ParkingFlowStore } from '../parking-flow.store';
+import { ParkingFlowQuery, readParkingFlowQuery } from '../parking-flow.model';
 import { AppIconComponent } from '../../../shared/icons/app-icon.component';
 import { OperationIconComponent } from '../../../shared/components/operation-icon/operation-icon.component';
 import { OperationType } from '../../../shared/models/operation-type';
@@ -37,7 +38,10 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 })
 export class ParkingSuccessComponent {
   private readonly route = inject(ActivatedRoute);
-  readonly query = readParkingFlowQuery(this.route);
+  private readonly store = inject(ParkingFlowStore);
+  readonly query: ParkingFlowQuery = this.store.hasMinimumParkingData()
+    ? this.store.fromStore()
+    : readParkingFlowQuery(this.route);
   readonly parkingType = OperationType.PARKING;
   startTime(): string {
     const [hours, minutes] = (this.query.endTime || '00:00').split(':').map(Number);

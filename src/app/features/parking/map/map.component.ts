@@ -4,6 +4,8 @@ import * as L from 'leaflet';
 import { MOCK_MUNICIPIOS, MOCK_VEHICLES, type Vehicle } from '../../../shared/mock-data';
 import { LoaderComponent } from '../../../shared/components/loader/loader.component';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { ParkingFlowStore } from '../parking-flow.store';
+import { ParkingFlowQuery, readParkingFlowQuery } from '../parking-flow.model';
 
 interface MapParkingZone {
   zoneId: number;
@@ -222,13 +224,17 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
   @ViewChild('mapContainer', { static: true }) private readonly mapContainer!: ElementRef<HTMLElement>;
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
-  private map?: L.Map;
-  private zoneLayer?: L.FeatureGroup;
-  private resizeObserver?: ResizeObserver;
-  private resizeFrame?: number;
+  private readonly store = inject(ParkingFlowStore);
+  private readonly query: ParkingFlowQuery = this.store.hasMinimumParkingData()
+    ? this.store.fromStore()
+    : readParkingFlowQuery(this.route);
+  private map?: L.Map
+  private zoneLayer?: L.FeatureGroup
+  private resizeObserver?: ResizeObserver
+  private resizeFrame?: number
   private readonly zones: MapParkingZone[] = [];
   private highlightedZone?: MapParkingZone;
-  readonly selected = MOCK_MUNICIPIOS.find(m => m.id === this.route.snapshot.queryParamMap.get('city')) ?? MOCK_MUNICIPIOS[1];
+  readonly selected = MOCK_MUNICIPIOS.find(m => m.id === this.query.city) ?? MOCK_MUNICIPIOS[1];
   readonly mapLoading = signal(true);
   readonly mapError = signal(false);
   readonly zoneCount = signal(0);
@@ -278,6 +284,18 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
     const zone = this.selectedZone();
     const center = this.map?.getCenter();
     if (!zone || !center) return;
+    this.store.update({
+      city: this.selected.id,
+      cityId: String(this.contractId()),
+      cityName: this.selected.nombre,
+      plate: this.selectedVehicle().plate,
+      zoneId: String(zone.zoneId),
+      zoneName: zone.name,
+      street: zone.street,
+      sectorColor: zone.color,
+      latitude: center.lat.toFixed(7),
+      longitude: center.lng.toFixed(7),
+    });
     void this.router.navigate(['/app/parking/tickets'], { queryParams: {
       city: this.selected.id,
       cityName: this.selected.nombre,
