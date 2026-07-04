@@ -2,6 +2,7 @@ import { Component, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive, Router } from '@angular/router';
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 import { NAV_ITEMS } from '../../shared/mock-data';
+import { APP_BRAND } from '../../shared/constants/app-brand';
 
 @Component({
   selector: 'app-sidebar',
@@ -9,7 +10,7 @@ import { NAV_ITEMS } from '../../shared/mock-data';
   template: `
     <aside class="sidebar">
       <div class="sidebar-brand">
-        <img src="/assets/brand/arinpark-logo.png" alt="ArinPark" class="brand-logo" />
+        <img src="/assets/brand/arinpark-logo.png" [alt]="brand.name" class="brand-logo" />
       </div>
       <nav class="sidebar-nav">
         @for (item of navItems; track item.path) {
@@ -105,6 +106,7 @@ import { NAV_ITEMS } from '../../shared/mock-data';
 })
 export class SidebarComponent {
   private readonly router = inject(Router);
+  readonly brand = APP_BRAND;
   readonly navItems = NAV_ITEMS;
 
   isActiveRoute(path: string): boolean {

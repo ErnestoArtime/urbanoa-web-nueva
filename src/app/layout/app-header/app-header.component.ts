@@ -1,6 +1,7 @@
 import { Component, inject, input } from '@angular/core';
 import { Location } from '@angular/common';
 import { TranslationService } from '../../core/services/translation.service';
+import { APP_BRAND } from '../../shared/constants/app-brand';
 
 @Component({
   selector: 'app-header',
@@ -61,7 +62,7 @@ import { TranslationService } from '../../core/services/translation.service';
 export class AppHeaderComponent {
   private readonly translationService = inject(TranslationService);
 
-  title = input('ArinPark');
+  title = input(APP_BRAND.name);
   showBack = input(true);
 
   constructor(private readonly location: Location) {}

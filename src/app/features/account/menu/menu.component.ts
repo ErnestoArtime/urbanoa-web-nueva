@@ -16,6 +16,8 @@ import { VehicleEditComponent } from '../vehicle-edit/vehicle-edit.component';
 import { PaymentAddComponent } from '../payment-add/payment-add.component';
 import { WebContentComponent } from '../web-content/web-content.component';
 
+import { APP_BRAND } from '../../../shared/constants/app-brand';
+
 const STORE_URL = 'https://play.google.com/store/apps/details?id=com.gerteksa.r.c.mugipark';
 
 @Component({
@@ -125,7 +127,7 @@ const STORE_URL = 'https://play.google.com/store/apps/details?id=com.gerteksa.r.
                 } @else {
                   <div class="page">
                     <div class="wallet-card mb-2">
-                      <p style="opacity:0.9">Monedero ArinPark</p>
+                      <p style="opacity:0.9">Monedero {{ brand.name }}</p>
                       <p class="wallet-balance">{{ user.balance }} €</p>
                     </div>
                     <p class="section-title">Tarjetas</p>
@@ -197,6 +199,7 @@ export class AccountMenuComponent {
   readonly selected = signal<string | null>(null);
   readonly vehiclesSub = signal<string | null>(null);
   readonly paymentSub = signal<string | null>(null);
+  readonly brand = APP_BRAND;
   readonly toast = signal('');
   private toastTimer?: ReturnType<typeof setTimeout>;
   private readonly iconByKey: Record<string, string> = {
@@ -270,7 +273,7 @@ export class AccountMenuComponent {
   private async shareApp(): Promise<void> {
     if (navigator.share) {
       try {
-        await navigator.share({ title: 'ArinPark', text: 'Descarga ArinPark', url: STORE_URL });
+        await navigator.share({ title: this.brand.name, text: `Descarga ${this.brand.name}`, url: STORE_URL });
       } catch { }
     } else {
       try {

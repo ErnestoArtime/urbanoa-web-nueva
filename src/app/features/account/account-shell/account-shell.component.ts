@@ -6,6 +6,7 @@ import { ACCOUNT_MENU, MOCK_USER } from '../../../shared/mock-data';
 import { AppIconComponent } from '../../../shared/icons/app-icon.component';
 import { SplitViewComponent } from '../../../layout/split-view/split-view.component';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { APP_BRAND } from '../../../shared/constants/app-brand';
 
 @Component({
   selector: 'app-account-shell',
@@ -80,6 +81,7 @@ export class AccountShellComponent {
   private readonly router = inject(Router);
   readonly menu = ACCOUNT_MENU;
   readonly user = MOCK_USER;
+  readonly brand = APP_BRAND;
   readonly toast = signal('');
   private toastTimer?: ReturnType<typeof setTimeout>;
 
@@ -113,7 +115,7 @@ export class AccountShellComponent {
   private async shareApp(): Promise<void> {
     if (navigator.share) {
       try {
-        await navigator.share({ title: 'ArinPark', text: 'Descarga ArinPark', url: this.STORE_URL });
+        await navigator.share({ title: this.brand.name, text: `Descarga ${this.brand.name}`, url: this.STORE_URL });
       } catch { }
     } else {
       try {

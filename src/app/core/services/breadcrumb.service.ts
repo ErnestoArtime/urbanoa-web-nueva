@@ -1,4 +1,5 @@
 import { Injectable, signal } from '@angular/core';
+import { APP_BRAND } from '../../shared/constants/app-brand';
 
 export interface BreadcrumbItem {
   label: string;
@@ -39,7 +40,7 @@ export class BreadcrumbService {
 
   private labelForSegment(segment: string): string {
     const map: Record<string, string> = {
-      'app': 'ArinPark',
+      'app': APP_BRAND.name,
       'home': 'Inicio',
       'parking': 'Aparcar',
       'cities': 'Municipios',
@@ -69,7 +70,7 @@ export class BreadcrumbService {
       'tax-data': 'Datos fiscales',
       'support': 'Soporte',
       'support-success': 'Mensaje enviado',
-      'about': 'Sobre ArinPark',
+      'about': `Sobre ${APP_BRAND.name}`,
     };
     return map[segment] ?? segment;
   }

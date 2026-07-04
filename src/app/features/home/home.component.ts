@@ -9,6 +9,7 @@ import { OperationType, OPERATION_TYPE_LABELS } from '../../shared/models/operat
 import { OperationsService } from '../../core/services/operations.service';
 import { OperationIconComponent } from '../../shared/components/operation-icon/operation-icon.component';
 import { AppIconComponent } from '../../shared/icons/app-icon.component';
+import { APP_BRAND } from '../../shared/constants/app-brand';
 
 @Component({
   selector: 'app-home',
@@ -97,7 +98,7 @@ import { AppIconComponent } from '../../shared/icons/app-icon.component';
               <p class="wallet-inline-title">Mi monedero</p>
               <p class="wallet-inline-balance">{{ walletService.balance() | number:'1.2-2' }} €</p>
               <span class="wallet-inline-brand">ap</span>
-              <span class="wallet-inline-mark" aria-hidden="true">ArinPark</span>
+              <span class="wallet-inline-mark" aria-hidden="true">{{ brand.name }}</span>
             </div>
             <div class="wallet-main-card-row">
               <app-icon name="card" class="wallet-card-icon" />
@@ -388,6 +389,7 @@ export class HomeComponent {
   readonly hasActiveTicket = computed(() => this.ticket() !== null);
   readonly showProfileCard = signal(true);
   readonly OperationType = OperationType;
+  readonly brand = APP_BRAND;
   readonly OPERATION_TYPE_LABELS = OPERATION_TYPE_LABELS;
 
   isFinishParking(op: { type: OperationType; plate: string | null }): boolean {

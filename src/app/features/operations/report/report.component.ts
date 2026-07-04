@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { TranslationService } from '../../../core/services/translation.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { OperationType, OPERATION_TYPE_LABELS } from '../../../shared/models/operation-type';
+import { APP_BRAND } from '../../../shared/constants/app-brand';
 import { OperationsService } from '../../../core/services/operations.service';
 import { DateRangeFilterComponent, type DateRange } from '../../../shared/components/date-range-filter/date-range-filter.component';
 import type { Operation } from '../../../shared/models/operation';
@@ -229,7 +230,7 @@ export class ReportComponent {
     <tbody>${rows}</tbody>
   </table>
   <p class="total">${this.translationService.translate('ops.report.total')}: ${total > 0 ? '+' : ''}${total.toFixed(2)} €</p>
-  <p class="footer">ArinPark — ${this.translationService.translate('ops.report.generatedFromApp')}</p>
+  <p class="footer">${APP_BRAND.name} — ${this.translationService.translate('ops.report.generatedFromApp')}</p>
 </body></html>`;
   }
 

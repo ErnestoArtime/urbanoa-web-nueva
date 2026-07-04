@@ -1,5 +1,5 @@
 export const APP_BRAND = {
-  name: 'UrbanoA',
+  name: 'ArinPark',
   developer: 'Gertek S.L.',
   versionName: '1.0',
   versionCode: '1',

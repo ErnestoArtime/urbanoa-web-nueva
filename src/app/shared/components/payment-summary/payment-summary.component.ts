@@ -1,21 +1,38 @@
 import { Component, computed, input } from '@angular/core';
+import { TranslatePipe } from '../../pipes/translate.pipe';
 import type { Wallet } from '../../mock-data';
 
-export type PaymentMethod = 'balance' | 'card' | 'mixed';
+export type PaymentMethod = 'none' | 'balance' | 'card' | 'mixed';
 
 @Component({
   selector: 'app-payment-summary',
   standalone: true,
+  imports: [TranslatePipe],
   template: `
     <div class="card payment-section">
-      <p class="section-label">Método de pago</p>
-      @if (method() === 'balance') {
+      <p class="section-label">{{ 'payment.methodLabel' | translate }}</p>
+
+      @if (method() === 'none') {
+        <div class="payment-summary">
+          <div class="payment-summary-row">
+            <span class="payment-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></span>
+            <div class="payment-summary-info">
+              <strong>{{ 'payment.free' | translate }}</strong>
+              <small>{{ 'payment.freeDesc' | translate }}</small>
+            </div>
+          </div>
+        </div>
+      } @else if (method() === 'balance') {
         <div class="payment-summary">
           <div class="payment-summary-row">
             <span class="payment-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7.5h14a2 2 0 0 1 2 2v8H6a3 3 0 0 1-3-3v-9a2.5 2.5 0 0 1 2.5-2.5H17v4.5"/><path d="M15 12h5"/><circle cx="15" cy="12" r=".7"/></svg></span>
             <div class="payment-summary-info">
-              <strong>Monedero</strong>
-              <small>{{ wallet().balance.toFixed(2) }} € disponibles · Se usará todo</small>
+              <strong>{{ 'payment.wallet' | translate }}</strong>
+              @if (balanceAfter() > 0) {
+                <small>{{ 'payment.walletUsed' | translate:{amount: balanceUsedFormatted()} }}</small>
+              } @else {
+                <small>{{ 'payment.walletAvailable' | translate:{balance: walletBalanceFormatted()} }}</small>
+              }
             </div>
           </div>
         </div>
@@ -25,7 +42,7 @@ export type PaymentMethod = 'balance' | 'card' | 'mixed';
             <span class="card-brand"><img [src]="cardBrandAsset()" [alt]="wallet().mainCard.brand" /></span>
             <div class="payment-summary-info">
               <strong>{{ wallet().mainCard.brand }} •••• {{ wallet().mainCard.last4 }}</strong>
-              <small>Expira {{ wallet().mainCard.expiryDate }}</small>
+              <small>{{ 'payment.cardExpiry' | translate:{date: wallet().mainCard.expiryDate} }}</small>
             </div>
           </div>
         </div>
@@ -34,18 +51,20 @@ export type PaymentMethod = 'balance' | 'card' | 'mixed';
           <div class="payment-summary-row">
             <span class="payment-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="14" height="10" rx="2"/><path d="M7 9h6M8 19h11a2 2 0 0 0 2-2V9"/></svg></span>
             <div class="payment-summary-info">
-              <strong>Combinado</strong>
-              <small>Monedero + tarjeta</small>
+              <strong>{{ 'payment.mixed' | translate }}</strong>
+              <small>{{ 'payment.mixedDesc' | translate }}</small>
             </div>
           </div>
           <div class="payment-breakdown">
-            <span>Monedero <em>Se usará primero</em></span><strong>-{{ wallet().balance.toFixed(2) }} €</strong>
+            <span>{{ 'payment.wallet' | translate }} <em>{{ 'payment.usedFirst' | translate }}</em></span>
+            <strong>-{{ balanceUsedFormatted() }}</strong>
           </div>
           <div class="payment-breakdown">
-            <span>{{ wallet().mainCard.brand }} •••• {{ wallet().mainCard.last4 }}</span><strong>-{{ remaining() }} €</strong>
+            <span>{{ wallet().mainCard.brand }} •••• {{ wallet().mainCard.last4 }}</span>
+            <strong>-{{ cardUsedFormatted() }}</strong>
           </div>
           <div class="payment-breakdown payment-breakdown-total">
-            <span>Total</span><strong>{{ totalFormatted() }}</strong>
+            <span>{{ 'payment.total' | translate }}</span><strong>{{ totalFormatted() }}</strong>
           </div>
         </div>
       }
@@ -59,27 +78,51 @@ export class PaymentSummaryComponent {
   readonly wallet = input.required<Wallet>();
   readonly totalAmount = input.required<number>();
 
-  readonly method = computed<PaymentMethod>(() => {
-    const balance = this.wallet().balance;
+  readonly balanceUsed = computed(() => {
     const total = this.totalAmount();
-    if (total <= 0) return 'balance';
-    if (balance <= 0) return 'card';
-    if (balance >= total) return 'balance';
+    const balance = this.wallet().balance;
+    if (total <= 0) return 0;
+    return Math.min(balance, total);
+  });
+
+  readonly cardUsed = computed(() => {
+    const total = this.totalAmount();
+    const balance = this.wallet().balance;
+    if (total <= 0) return 0;
+    return Math.max(0, total - balance);
+  });
+
+  readonly balanceAfter = computed(() => {
+    return Math.max(0, this.wallet().balance - this.balanceUsed());
+  });
+
+  readonly method = computed<PaymentMethod>(() => {
+    const total = this.totalAmount();
+    if (total <= 0) return 'none';
+    if (this.cardUsed() <= 0) return 'balance';
+    if (this.balanceUsed() <= 0) return 'card';
     return 'mixed';
   });
 
-  readonly remaining = computed(() => {
-    const total = this.totalAmount();
-    const balance = this.wallet().balance;
-    if (total <= balance) return '0,00';
-    return (total - balance).toFixed(2).replace('.', ',');
-  });
+  readonly balanceUsedFormatted = computed(() =>
+    this.balanceUsed().toFixed(2).replace('.', ',') + ' €'
+  );
 
-  readonly totalFormatted = computed(() => {
-    return this.totalAmount().toFixed(2).replace('.', ',') + ' €';
-  });
+  readonly cardUsedFormatted = computed(() =>
+    this.cardUsed().toFixed(2).replace('.', ',') + ' €'
+  );
+
+  readonly walletBalanceFormatted = computed(() =>
+    this.wallet().balance.toFixed(2).replace('.', ',') + ' €'
+  );
+
+  readonly totalFormatted = computed(() =>
+    this.totalAmount().toFixed(2).replace('.', ',') + ' €'
+  );
 
   cardBrandAsset(): string {
-    return this.wallet().mainCard.brand.toLowerCase().includes('master') ? '/assets/payment/mastercard.svg' : '/assets/payment/visa.svg';
+    return this.wallet().mainCard.brand.toLowerCase().includes('master')
+      ? '/assets/payment/mastercard.svg'
+      : '/assets/payment/visa.svg';
   }
 }
