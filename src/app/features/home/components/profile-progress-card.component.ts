@@ -30,7 +30,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
     .profile-progress-card {
       background:#f7f8f1;
     }
-    .profile-progress-head { display:flex; justify-content:space-between; color:var(--color-text-muted); font-size:.72rem; }
+    .profile-progress-head { display:flex; justify-content:space-between; color:var(--color-text-muted); font-size: var(--text-xs); }
     .profile-progress { height:6px; margin:.45rem 0 .8rem; overflow:hidden; border-radius:999px; background:var(--color-border); }
     .profile-progress span { display:block; height:100%; background:var(--color-primary-light); }
   `],

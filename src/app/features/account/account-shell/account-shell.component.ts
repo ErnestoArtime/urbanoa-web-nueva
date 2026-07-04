@@ -55,7 +55,7 @@ import { APP_BRAND } from '../../../shared/constants/app-brand';
     .account-profile { display:flex; align-items:center; gap:.7rem; margin:.8rem 0 1rem; }
     .account-avatar { display:grid; place-items:center; width:38px; height:38px; border-radius:50%; background:var(--color-accent-soft); color:var(--color-primary); font-weight:var(--font-extra); }
     .account-profile div { display:flex; flex-direction:column; font-size:var(--text-xs); }
-    .account-profile span { color:var(--color-text-muted); line-height:1.3; }
+    .account-profile span { color:var(--color-text-muted); line-height: var(--line-normal); }
     .menu-group { list-style:none; margin:.75rem 0 .25rem; font-size:var(--text-2xs); font-weight:var(--font-extra); padding:0 .9rem; color:var(--color-text); text-transform:uppercase; letter-spacing:.04em; }
     .account-list { overflow:hidden; border:1px solid var(--color-border); border-radius:var(--radius-md); background:var(--color-surface); }
     .account-item { width:100%; border:0; text-align:left; text-decoration:none; color:inherit; }
@@ -65,7 +65,7 @@ import { APP_BRAND } from '../../../shared/constants/app-brand';
       box-shadow:inset 4px 0 0 var(--color-primary);
     }
     .account-list .list-item.active .list-item-title { font-weight:var(--font-extra); }
-    .account-list .list-item.active .list-item-chevron { color:var(--color-primary); font-weight:900; }
+    .account-list .list-item.active .list-item-chevron { color:var(--color-primary); font-weight: var(--font-extra); }
     .account-item-icon { width:20px; height:20px; flex-shrink:0; fill:var(--color-secondary); }
     .account-item.active .account-item-icon { fill:var(--color-primary); }
     .toast { position:fixed; bottom:2rem; left:50%; transform:translateX(-50%); padding:.65rem 1.25rem; border-radius:999px; background:var(--color-primary-dark); color:#fff; font-size:var(--text-sm); font-weight:var(--font-medium); z-index:2000; animation:fadeInUp .25s ease-out; }

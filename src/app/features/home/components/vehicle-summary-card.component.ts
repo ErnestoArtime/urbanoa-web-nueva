@@ -38,13 +38,13 @@ import type { Vehicle } from '../../../shared/mock-data';
       flex-shrink:0;
     }
     .vehicle-summary-icon svg { width:100%; height:100%; fill:currentColor; }
-    .vehicle-summary-label { color:#465149; font-size:.78rem; font-weight:700; }
+    .vehicle-summary-label { color:#465149; font-size: var(--text-xs); font-weight: var(--font-bold); }
     .vehicle-plate {
-      font-size: 1.15rem;
-      font-weight: 700;
+      font-size: var(--text-lg);
+      font-weight: var(--font-bold);
       letter-spacing: 0.03em;
       color: #1f2b27;
-      line-height: 1.05;
+      line-height: var(--line-tight);
       margin-top: 0.15rem;
     }
   `],

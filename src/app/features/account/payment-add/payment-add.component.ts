@@ -18,7 +18,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
     </div>
   `,
   styles: [`
-    .form-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.5rem}.secure-badge{display:flex;justify-content:space-between;margin-top:.65rem;padding:.5rem .75rem;border:1px solid var(--color-border);border-radius:var(--radius-md);font-size:.72rem;color:var(--color-text-muted)}
+    .form-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.5rem}.secure-badge{display:flex;justify-content:space-between;margin-top:.65rem;padding:.5rem .75rem;border:1px solid var(--color-border);border-radius:var(--radius-md);font-size: var(--text-xs);color:var(--color-text-muted)}
   `],
 })
 export class PaymentAddComponent {}

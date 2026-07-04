@@ -86,11 +86,11 @@ import type { TicketActive } from '../../../shared/mock-data';
       height:19px;
       fill:currentColor;
     }
-    .ticket-plate { font-size:1.12rem; font-weight:700; letter-spacing:.04em; line-height:1; }
-    .ticket-timer { color:var(--color-text-muted); font-size:.78rem; margin-top:.22rem; }
+    .ticket-plate { font-size: var(--text-lg); font-weight: var(--font-bold); letter-spacing:.04em; line-height: var(--line-tight); }
+    .ticket-timer { color:var(--color-text-muted); font-size: var(--text-xs); margin-top:.22rem; }
     .ticket-location { display:flex; min-width:0; flex:1; flex-direction:column; margin-left:auto; padding-left:.5rem; }
-    .ticket-location small { color:var(--color-text-muted); font-size:.72rem; }
-    .ticket-location strong { overflow:hidden; margin-top:.1rem; font-size:.82rem; text-overflow:ellipsis; white-space:nowrap; }
+    .ticket-location small { color:var(--color-text-muted); font-size: var(--text-xs); }
+    .ticket-location strong { overflow:hidden; margin-top:.1rem; font-size: var(--text-sm); text-overflow:ellipsis; white-space:nowrap; }
     .ticket-time-row {
       display:flex;
       align-items:center;
@@ -99,16 +99,16 @@ import type { TicketActive } from '../../../shared/mock-data';
       text-align:center;
     }
     .ticket-time-row div { display:flex; flex-direction:column; }
-    .ticket-time-row small { font-size:.8rem; color:var(--color-text-muted); }
-    .ticket-time-row strong { font-size:1.12rem; font-weight:700; line-height:1.1; }
+    .ticket-time-row small { font-size: var(--text-sm); color:var(--color-text-muted); }
+    .ticket-time-row strong { font-size: var(--text-lg); font-weight: var(--font-bold); line-height: var(--line-tight); }
     .ticket-time-row p {
       margin:0 .35rem;
       border:1px solid #bfc8bb;
       border-radius:10px;
       padding:.28rem .7rem;
       color:#4d5b52;
-      font-weight:700;
-      font-size:.95rem;
+      font-weight: var(--font-bold);
+      font-size: var(--text-md);
       white-space:nowrap;
       background:#f3f6ed;
     }
@@ -145,7 +145,7 @@ import type { TicketActive } from '../../../shared/mock-data';
     .action-row .btn-secondary { grid-column:1/-1; }
     .action-row .btn {
       border-radius: 999px;
-      font-weight: 700;
+      font-weight: var(--font-bold);
       border: 1px solid transparent;
     }
     .action-btn-icon {

@@ -33,7 +33,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
     </div>
   `,
   styles: [`
-    .recharge-options{display:flex;gap:.5rem;margin:.8rem 0}.recharge-option{flex:1;padding:.6rem;border:1px solid var(--color-border);border-radius:12px;background:var(--color-surface);font-weight:700;cursor:pointer;text-align:center}.recharge-option.active{border-color:var(--color-primary);background:var(--color-active);color:var(--color-primary-dark)}.card-row{display:flex;justify-content:space-between;padding:.5rem 0}.toast{position:fixed;bottom:2rem;left:50%;transform:translateX(-50%);padding:.65rem 1.25rem;border-radius:999px;background:var(--color-primary-dark);color:#fff;z-index:2000;text-align:center}
+    .recharge-options{display:flex;gap:.5rem;margin:.8rem 0}.recharge-option{flex:1;padding:.6rem;border:1px solid var(--color-border);border-radius:12px;background:var(--color-surface);font-weight: var(--font-bold);cursor:pointer;text-align:center}.recharge-option.active{border-color:var(--color-primary);background:var(--color-active);color:var(--color-primary-dark)}.card-row{display:flex;justify-content:space-between;padding:.5rem 0}.toast{position:fixed;bottom:2rem;left:50%;transform:translateX(-50%);padding:.65rem 1.25rem;border-radius:999px;background:var(--color-primary-dark);color:#fff;z-index:2000;text-align:center}
   `],
 })
 export class AccountRechargeComponent {

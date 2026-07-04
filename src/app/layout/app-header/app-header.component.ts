@@ -35,17 +35,17 @@ import { APP_BRAND } from '../../shared/constants/app-brand';
       height: 44px;
       border: none;
       background: none;
-      font-size: 1.75rem;
+      font-size: var(--text-2xl);
       color: var(--color-primary);
       cursor: pointer;
-      line-height: 1;
+      line-height: var(--line-tight);
       padding: 0;
     }
     .app-header-title {
       flex: 1;
       text-align: center;
-      font-size: 1rem;
-      font-weight: 600;
+      font-size: var(--text-base)
+      font-weight: var(--font-medium);
     }
     .app-header-right {
       width: 44px;

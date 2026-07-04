@@ -97,7 +97,7 @@ interface ReportRangeItem {
     .report-submit { flex-shrink:0; margin-top:1.1rem; }
     .page-subtitle { color: var(--color-text-muted); margin-bottom: 1rem; }
     .report-section { margin-top: 1rem; }
-    .section-label { margin:0 0 .55rem; color:var(--color-text); font-size:.76rem; font-weight:800; text-transform:uppercase; letter-spacing:.06em; }
+    .section-label { margin:0 0 .55rem; color:var(--color-text); font-size: var(--text-xs); font-weight: var(--font-extra); text-transform:uppercase; letter-spacing:.06em; }
     .toggle-row, .filter-row, .range-row {
       display:grid;
       grid-template-columns:1fr auto auto;
@@ -111,8 +111,8 @@ interface ReportRangeItem {
       box-shadow:var(--shadow-sm);
     }
     .toggle-row, .filter-row { margin-bottom:.75rem; position:relative; overflow:hidden; }
-    .toggle-row strong, .filter-copy strong { display:block; font-size:1rem; }
-    .toggle-row span, .filter-copy span { display:block; margin-top:.2rem; color:var(--color-text-muted); font-size:.85rem; line-height:1.35; }
+    .toggle-row strong, .filter-copy strong { display:block; font-size: var(--text-base) }
+    .toggle-row span, .filter-copy span { display:block; margin-top:.2rem; color:var(--color-text-muted); font-size: var(--text-sm); line-height: var(--line-normal); }
     .filter-copy { padding-right:.5rem; }
     .toggle-row input, .filter-row input { position:absolute; inset:auto 1rem auto auto; opacity:0; pointer-events:none; }
     .switch {
@@ -131,10 +131,10 @@ interface ReportRangeItem {
     .range-grid { display:grid; grid-template-columns:1fr 1fr; gap:.55rem; margin-bottom:.9rem; }
     .range-chip {
       padding:.7rem .8rem; border-radius:14px; border:1px solid var(--color-border);
-      background:var(--color-background); color:var(--color-text); text-align:left; font-weight:700;
+      background:var(--color-background); color:var(--color-text); text-align:left; font-weight: var(--font-bold);
     }
     .range-chip.active { background:rgba(93,154,150,.16); border-color:var(--color-primary); color:var(--color-primary-dark); }
-    .chevron { color:var(--color-text-muted); font-size:1.15rem; }
+    .chevron { color:var(--color-text-muted); font-size: var(--text-lg); }
   `],
 })
 export class ReportComponent {
@@ -216,13 +216,13 @@ export class ReportComponent {
 <head><meta charset="utf-8"><title>${title}</title>
 <style>
   body { font-family: 'Segoe UI', Arial, sans-serif; margin: 2rem; color: #222; }
-  h1 { font-size: 1.5rem; margin-bottom: 0.25rem; }
+  h1 { font-size: var(--text-2xl); margin-bottom: 0.25rem; }
   .sub { color: #666; font-size: 0.875rem; margin-bottom: 1.5rem; }
   table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
-  th { text-align: left; padding: 0.5rem; background: #f5f5f5; font-weight: 600; }
+  th { text-align: left; padding: 0.5rem; background: #f5f5f5; font-weight: var(--font-medium); }
   td { padding: 0.5rem; border-bottom: 1px solid #eee; }
-  .total { margin-top: 1.5rem; font-weight: 700; font-size: 1rem; text-align: right; }
-  .footer { margin-top: 2rem; font-size: 0.75rem; color: #999; text-align: center; }
+  .total { margin-top: 1.5rem; font-weight: var(--font-bold); font-size: var(--text-base); text-align: right; }
+  .footer { margin-top: 2rem; font-size: var(--text-xs); color: #999; text-align: center; }
 </style></head>
 <body>
   <h1>${title}</h1>

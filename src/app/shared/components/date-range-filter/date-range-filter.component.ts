@@ -100,7 +100,7 @@ export interface DateRange {
       padding: 0.3rem 0.75rem;
       border-radius: 1rem;
       font-size: 0.8125rem;
-      font-weight: 600;
+      font-weight: var(--font-medium);
       border: 1px solid var(--color-border, #e5e7eb);
       background: var(--color-surface, #fff);
       color: var(--color-secondary);
@@ -140,7 +140,7 @@ export interface DateRange {
       color: var(--color-primary, #006a68);
     }
     .cal-icon { display: block; }
-    .cal-label { font-weight: 600; }
+    .cal-label { font-weight: var(--font-medium); }
     .date-filter-inputs {
       display: flex;
       gap: 0.75rem;
@@ -153,7 +153,7 @@ export interface DateRange {
       gap: 0.25rem;
     }
     .date-picker-label {
-      font-size: 0.75rem;
+      font-size: var(--text-xs);
       color: var(--color-muted, #9ca3af);
     }
     .date-display {
@@ -177,7 +177,7 @@ export interface DateRange {
       background: none;
       color: var(--color-primary, #006a68);
       font-size: 0.8125rem;
-      font-weight: 600;
+      font-weight: var(--font-medium);
       cursor: pointer;
       padding: 0.25rem 0.5rem;
     }
@@ -208,25 +208,25 @@ export interface DateRange {
     .cal-nav button {
       border: none;
       background: none;
-      font-size: 1.25rem;
+      font-size: var(--text-xl);
       cursor: pointer;
       padding: 0.25rem 0.5rem;
       color: var(--color-secondary);
-      line-height: 1;
+      line-height: var(--line-tight);
     }
     .cal-nav button:hover {
       color: var(--color-primary, #006a68);
     }
     .cal-nav-title {
-      font-weight: 600;
+      font-weight: var(--font-medium);
       font-size: 0.875rem;
     }
     .cal-weekdays {
       display: grid;
       grid-template-columns: repeat(7, 1fr);
       text-align: center;
-      font-size: 0.7rem;
-      font-weight: 600;
+      font-size: var(--text-2xs);
+      font-weight: var(--font-medium);
       color: var(--color-muted, #9ca3af);
       margin-bottom: 0.25rem;
     }
@@ -255,7 +255,7 @@ export interface DateRange {
     .cal-day-selected {
       background: var(--color-primary, #006a68);
       color: #fff;
-      font-weight: 600;
+      font-weight: var(--font-medium);
     }
   `],
 })

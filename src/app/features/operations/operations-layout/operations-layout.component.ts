@@ -95,8 +95,8 @@ import { SplitViewComponent } from '../../../layout/split-view/split-view.compon
   `,
   styles: [`
     .list-item.active { background:rgba(93,154,150,.16); color:var(--color-primary-dark); box-shadow:inset 4px 0 0 var(--color-primary); }
-    .op-icon { font-size: 1.1rem; margin-right: 0.25rem; }
-    .section-label { margin:.85rem 0 .4rem; color:var(--color-text-muted); font-size:.72rem; font-weight:800; text-transform:uppercase; letter-spacing:.06em; }
+    .op-icon { font-size: var(--text-base); margin-right: 0.25rem; }
+    .section-label { margin:.85rem 0 .4rem; color:var(--color-text-muted); font-size: var(--text-xs); font-weight: var(--font-extra); text-transform:uppercase; letter-spacing:.06em; }
     .history-filter-panel { margin:1rem 0 .7rem; padding:.8rem; border:1px solid var(--color-border); border-radius:var(--radius-md); background:var(--color-background); }
     .history-label { margin:0 0 .25rem; }
     .history-list { margin:0; overflow:hidden; border:1px solid var(--color-border); border-radius:var(--radius-md); background:var(--color-surface); }
@@ -104,24 +104,24 @@ import { SplitViewComponent } from '../../../layout/split-view/split-view.compon
       list-style:none;
       padding:.65rem .8rem .4rem;
       color:var(--color-text-muted);
-      font-size:.75rem;
-      font-weight:800;
+      font-size: var(--text-xs);
+      font-weight: var(--font-extra);
       text-transform:uppercase;
       letter-spacing:.05em;
       background:var(--color-background);
     }
     .finish-op-title {
       color: var(--color-primary-dark);
-      font-weight: 700;
+      font-weight: var(--font-bold);
     }
     .active-operation { overflow:hidden; border:1px solid var(--color-primary-light); border-top:5px solid var(--color-primary); border-radius:var(--radius-md); background:var(--color-surface); box-shadow:var(--shadow-sm); }
     .empty-active-operation { border-top-width:1px; padding:.8rem; color:var(--color-text-muted); }
     .active-operation-head { display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:.65rem; padding:.75rem; }
     .active-operation-head div { display:flex; flex-direction:column; }
-    .active-operation-head small { color:var(--color-text-muted); font-size:.72rem; }
+    .active-operation-head small { color:var(--color-text-muted); font-size: var(--text-xs); }
     .car-icon { display:grid; place-items:center; width:32px; height:32px; border-radius:50%; background:var(--color-accent-soft); color:var(--color-primary); }
-    .running-badge { padding:.28rem .5rem; border-radius:999px; background:var(--color-active); color:var(--color-primary-dark); font-size:.72rem; font-weight:800; }
-    .active-times { display:flex; justify-content:space-between; padding:.55rem .75rem; border-top:1px dashed var(--color-border); font-size:.8rem; }
+    .running-badge { padding:.28rem .5rem; border-radius:999px; background:var(--color-active); color:var(--color-primary-dark); font-size: var(--text-xs); font-weight: var(--font-extra); }
+    .active-times { display:flex; justify-content:space-between; padding:.55rem .75rem; border-top:1px dashed var(--color-border); font-size: var(--text-sm); }
     .active-actions { display:grid; grid-template-columns:1fr 1fr; gap:.5rem; padding:.65rem .75rem; background:rgba(93,154,150,.07); }
     .actions-section {
       margin-top: 1rem;
@@ -149,8 +149,8 @@ import { SplitViewComponent } from '../../../layout/split-view/split-view.compon
       color:var(--color-primary-dark);
       box-shadow:inset 4px 0 0 var(--color-primary);
     }
-    .action-item.active .list-item-title { font-weight:800; }
-    .action-item.active .list-item-chevron { color:var(--color-primary); font-weight:900; }
+    .action-item.active .list-item-title { font-weight: var(--font-extra); }
+    .action-item.active .list-item-chevron { color:var(--color-primary); font-weight: var(--font-extra); }
     :host ::ng-deep .history-filter-panel .date-filter { padding:.35rem 0 0; }
     :host ::ng-deep .history-filter-panel .date-filter-chips { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.4rem; margin-bottom:.65rem; }
     :host ::ng-deep .history-filter-panel .chip { display:flex; align-items:center; justify-content:center; min-width:0; padding:.35rem .4rem; white-space:nowrap; }

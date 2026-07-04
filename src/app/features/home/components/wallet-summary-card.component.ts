@@ -52,14 +52,14 @@ import { APP_BRAND } from '../../../shared/constants/app-brand';
       margin-bottom: .8rem;
       overflow:hidden;
     }
-    .wallet-inline-title { font-size: .9rem; font-weight:700; opacity:.95; }
-    .wallet-inline-balance { font-size: 2.15rem; font-weight: 700; letter-spacing: .01em; margin-top: .22rem; }
+    .wallet-inline-title { font-size: var(--text-md); font-weight: var(--font-bold); opacity:.95; }
+    .wallet-inline-balance { font-size: 2.15rem; font-weight: var(--font-bold); letter-spacing: .01em; margin-top: .22rem; }
     .wallet-inline-mark {
       position:absolute;
       right:.85rem;
       top:.35rem;
-      font-size:2rem;
-      font-weight:800;
+      font-size: var(--text-display)
+      font-weight: var(--font-extra);
       opacity:.09;
       transform:rotate(-19deg);
       pointer-events:none;
@@ -69,8 +69,8 @@ import { APP_BRAND } from '../../../shared/constants/app-brand';
       position:absolute;
       right:.55rem;
       bottom:.42rem;
-      font-size:.95rem;
-      font-weight:700;
+      font-size: var(--text-md);
+      font-weight: var(--font-bold);
       opacity:.82;
       text-transform:lowercase;
     }
@@ -82,9 +82,9 @@ import { APP_BRAND } from '../../../shared/constants/app-brand';
       flex-shrink:0;
     }
     .wallet-card-icon svg { width:100%; height:100%; fill:currentColor; }
-    .wallet-main-label { color:#49544c; font-size:.86rem; font-weight:700; }
-    .wallet-main-value { font-size:1.05rem; font-weight:700; line-height:1.08; margin-top:.1rem; }
-    .wallet-main-expiry { color:var(--color-text-muted); font-size:.9rem; margin-top:.14rem; }
+    .wallet-main-label { color:#49544c; font-size: var(--text-sm); font-weight: var(--font-bold); }
+    .wallet-main-value { font-size: var(--text-base); font-weight: var(--font-bold); line-height: var(--line-tight); margin-top:.1rem; }
+    .wallet-main-expiry { color:var(--color-text-muted); font-size: var(--text-md); margin-top:.14rem; }
     .wallet-actions .btn { min-width: 136px; }
     .wallet-actions .btn-secondary { background:#f3f6ed; border-color:#c5cec1; color:#3c4a41; }
     .wallet-actions .btn-primary { background:#2f6f71; }

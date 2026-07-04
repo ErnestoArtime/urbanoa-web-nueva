@@ -74,8 +74,8 @@ interface MapParkingZone {
     :host { display:block; height:100%; }
     .parking-map-page { min-height:100%; padding:1rem; }
     .map-heading { display:flex; align-items:end; justify-content:space-between; gap:1rem; margin-bottom:1rem; }
-    .map-heading p { color:var(--color-primary); font-size:.7rem; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
-    .map-heading h1 { margin:.15rem 0; font-size:1.5rem; }
+    .map-heading p { color:var(--color-primary); font-size: var(--text-2xs); font-weight: var(--font-extra); letter-spacing:.08em; text-transform:uppercase; }
+    .map-heading h1 { margin:.15rem 0; font-size: var(--text-2xl); }
     .map-heading span { color:var(--color-text-muted); }
     .map-frame { position:relative; min-height:540px; overflow:hidden; border:1px solid var(--color-border); border-radius:var(--radius-lg); background:#dce7dc; }
     .leaflet-map { width:100%; min-height:540px; }
@@ -120,11 +120,11 @@ interface MapParkingZone {
     .search-control small,
     .vehicle-control small {
       color:var(--color-text-muted);
-      line-height:1.1;
+      line-height: var(--line-tight);
     }
     .search-control strong,
     .vehicle-control strong {
-      line-height:1.1;
+      line-height: var(--line-tight);
     }
     .search-control b,
     .vehicle-control b {
@@ -163,12 +163,12 @@ interface MapParkingZone {
       background: rgba(93, 154, 150, 0.1);
     }
     .vehicle-option span:first-child {
-      font-weight: 600;
-      font-size: 1rem;
+      font-weight: var(--font-medium);
+      font-size: var(--text-base)
     }
     .vehicle-label {
       color: var(--color-text-muted);
-      font-size: 0.8rem;
+      font-size: var(--text-sm);
     }
     .vehicle-option .badge {
       flex-shrink: 0;
@@ -185,11 +185,11 @@ interface MapParkingZone {
     .selected-zone { display:flex; align-items:center; gap:.65rem; padding:.55rem .7rem; border-radius:12px; background:#fff; }
     .selected-zone>span { width:8px; align-self:stretch; border-radius:999px; }
     .selected-zone div { display:flex; min-width:0; flex-direction:column; }
-    .selected-zone small,.selected-zone em { overflow:hidden; color:var(--color-text-muted); font-size:.7rem; font-style:normal; text-overflow:ellipsis; white-space:nowrap; }
+    .selected-zone small,.selected-zone em { overflow:hidden; color:var(--color-text-muted); font-size: var(--text-2xs); font-style:normal; text-overflow:ellipsis; white-space:nowrap; }
     .selected-zone strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    .select-hint { padding:.25rem .4rem; color:var(--color-text-muted); font-size:.75rem; text-align:center; }
+    .select-hint { padding:.25rem .4rem; color:var(--color-text-muted); font-size: var(--text-xs); text-align:center; }
     .btn:disabled { opacity:.45; cursor:not-allowed; }
-    .map-status { position:absolute; z-index:500; right:1rem; bottom:1rem; padding:.45rem .7rem; border-radius:999px; background:rgba(249,250,239,.94); color:var(--color-primary-dark); font-size:.72rem; font-weight:700; box-shadow:var(--shadow-sm); }
+    .map-status { position:absolute; z-index:500; right:1rem; bottom:1rem; padding:.45rem .7rem; border-radius:999px; background:rgba(249,250,239,.94); color:var(--color-primary-dark); font-size: var(--text-xs); font-weight: var(--font-bold); box-shadow:var(--shadow-sm); }
     .map-status.error { color:var(--color-error); }
     :host ::ng-deep .leaflet-popup-content { margin:.7rem .85rem; }
     :host ::ng-deep .zone-popup strong { color:var(--color-primary-dark); }
@@ -207,16 +207,16 @@ interface MapParkingZone {
     @media (max-width:600px) {
       .parking-map-page { padding:.65rem; }
       .map-heading { align-items:start; flex-direction:column; gap:.5rem; margin-bottom:.65rem; }
-      .map-heading h1 { font-size:1.2rem; }
-      .map-heading p { margin:0; font-size:.65rem; }
-      .map-heading span { font-size:.75rem; }
-      .map-heading .btn { width:100%; padding:.5rem .75rem; font-size:.8rem; }
+      .map-heading h1 { font-size: var(--text-lg); }
+      .map-heading p { margin:0; font-size: var(--text-2xs); }
+      .map-heading span { font-size: var(--text-xs); }
+      .map-heading .btn { width:100%; padding:.5rem .75rem; font-size: var(--text-sm); }
       .map-frame,.leaflet-map { min-height:380px; }
       .parking-controls { top:.5rem; left:.5rem; width:calc(100% - 1rem); padding:.6rem; gap:.35rem; }
       .parking-controls .search-control,
       .parking-controls .vehicle-control { min-height:42px; padding:.4rem .6rem; }
-      .parking-controls .btn { padding:.55rem; font-size:.82rem; }
-      .map-status { right:.5rem; bottom:.5rem; font-size:.65rem; padding:.35rem .55rem; }
+      .parking-controls .btn { padding:.55rem; font-size: var(--text-sm); }
+      .map-status { right:.5rem; bottom:.5rem; font-size: var(--text-2xs); padding:.35rem .55rem; }
     }
   `],
 })

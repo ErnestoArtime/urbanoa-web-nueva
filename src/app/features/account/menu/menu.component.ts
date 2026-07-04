@@ -154,10 +154,10 @@ const STORE_URL = 'https://play.google.com/store/apps/details?id=com.gerteksa.r.
     .account-layout { min-height:100%; }
     .account-master { padding:1rem; background:var(--color-surface); }
     .account-profile { display:flex; align-items:center; gap:.7rem; margin:.8rem 0 1rem; }
-    .account-avatar { display:grid; place-items:center; width:38px; height:38px; border-radius:50%; background:var(--color-accent-soft); color:var(--color-primary); font-weight:800; }
-    .account-profile div { display:flex; flex-direction:column; font-size:.8rem; }
-    .account-profile span { color:var(--color-text-muted); line-height:1.3; }
-    .menu-group { list-style:none; margin:.75rem 0 .25rem; font-size:.76rem; font-weight:800; padding:0 .9rem; color:var(--color-text); }
+    .account-avatar { display:grid; place-items:center; width:38px; height:38px; border-radius:50%; background:var(--color-accent-soft); color:var(--color-primary); font-weight: var(--font-extra); }
+    .account-profile div { display:flex; flex-direction:column; font-size: var(--text-sm); }
+    .account-profile span { color:var(--color-text-muted); line-height: var(--line-normal); }
+    .menu-group { list-style:none; margin:.75rem 0 .25rem; font-size: var(--text-xs); font-weight: var(--font-extra); padding:0 .9rem; color:var(--color-text); }
     .account-list { overflow:hidden; border:1px solid var(--color-border); border-radius:var(--radius-md); background:var(--color-surface); }
     .account-item { width:100%; border:0; text-align:left; }
     .account-list .list-item.active {
@@ -165,18 +165,18 @@ const STORE_URL = 'https://play.google.com/store/apps/details?id=com.gerteksa.r.
       color:var(--color-primary-dark);
       box-shadow:inset 4px 0 0 var(--color-primary);
     }
-    .account-list .list-item.active .list-item-title { font-weight:800; }
-    .account-list .list-item.active .list-item-chevron { color:var(--color-primary); font-weight:900; }
+    .account-list .list-item.active .list-item-title { font-weight: var(--font-extra); }
+    .account-list .list-item.active .list-item-chevron { color:var(--color-primary); font-weight: var(--font-extra); }
     .account-item-icon { width:20px; height:20px; flex-shrink:0; fill:var(--color-secondary); }
     .account-item.active .account-item-icon { fill:var(--color-primary); }
     .account-detail { display:none; }
-    .back-btn { cursor:pointer; font-size:1.2rem; padding:.2rem .5rem; }
+    .back-btn { cursor:pointer; font-size: var(--text-lg); padding:.2rem .5rem; }
     .detail-toolbar { display:grid; grid-template-columns:auto 1fr auto; gap:.8rem; align-items:center; padding:1rem; border-bottom:1px solid var(--color-border); }
     .detail-toolbar strong { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .detail-toolbar-actions { display:flex; align-items:center; gap:.7rem; color:var(--color-text-muted); font-size:1rem; }
+    .detail-toolbar-actions { display:flex; align-items:center; gap:.7rem; color:var(--color-text-muted); font-size: var(--text-base) }
     .detail-placeholder { height:100%; min-height:380px; display:flex; align-items:center; justify-content:center; color:var(--color-text-muted); padding:1.5rem; text-align:center; }
     .detail-content { flex:1; overflow:hidden; }
-    .toast { position:fixed; bottom:2rem; left:50%; transform:translateX(-50%); padding:.65rem 1.25rem; border-radius:999px; background:var(--color-primary-dark); color:#fff; font-size:.85rem; font-weight:600; z-index:2000; animation:fadeInUp .25s ease-out; }
+    .toast { position:fixed; bottom:2rem; left:50%; transform:translateX(-50%); padding:.65rem 1.25rem; border-radius:999px; background:var(--color-primary-dark); color:#fff; font-size: var(--text-sm); font-weight: var(--font-medium); z-index:2000; animation:fadeInUp .25s ease-out; }
     @keyframes fadeInUp { from { opacity:0; transform:translateX(-50%) translateY(10px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }
     @media (min-width:960px) {
       .account-layout { display:grid; grid-template-columns:420px minmax(0,1fr); height:100%; min-height:0; overflow:hidden; }

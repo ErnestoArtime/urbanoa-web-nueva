@@ -47,7 +47,7 @@ import { NAV_ITEMS } from '../../shared/mock-data';
       text-decoration: none;
       color: var(--color-secondary);
       font-size: 0.625rem;
-      font-weight: 600;
+      font-weight: var(--font-medium);
       padding: 0.3rem;
     }
     .bottom-nav-item.active { color: var(--color-primary); }

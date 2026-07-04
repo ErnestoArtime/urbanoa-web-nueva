@@ -60,18 +60,18 @@ import { MOCK_MUNICIPIOS } from '../../../shared/mock-data';
     .municipio-card.active { border-color:var(--color-primary); box-shadow:0 0 0 2px rgba(43,103,103,.12); }
     .municipio-img { display:flex; position:relative; align-items:center; justify-content:center; min-height:100px; overflow:hidden; background:linear-gradient(145deg, #dce9df, #cbdedb); }
     .municipio-img img { width:100%; height:118px; object-fit:cover; filter:saturate(.72) contrast(.94); }
-    .municipio-map-label { position:absolute; left:.6rem; bottom:.55rem; padding:.2rem .45rem; border-radius:4px; background:rgba(249,250,239,.9); color:var(--color-primary-dark); font-size:.78rem; font-weight:800; }
+    .municipio-map-label { position:absolute; left:.6rem; bottom:.55rem; padding:.2rem .45rem; border-radius:4px; background:rgba(249,250,239,.9); color:var(--color-primary-dark); font-size: var(--text-xs); font-weight: var(--font-extra); }
     .municipio-body { padding:.75rem; }
-    .municipio-name { margin:0; font-size:1rem; font-weight:700; }
-    .municipio-provincia { margin:.125rem 0 0; color:var(--color-muted, #6b7280); font-size:.8rem; }
-    .municipio-zonas { margin:.25rem 0 0; color:var(--color-primary); font-size:.8rem; font-weight:600; }
+    .municipio-name { margin:0; font-size: var(--text-base); font-weight: var(--font-bold); }
+    .municipio-provincia { margin:.125rem 0 0; color:var(--color-muted, #6b7280); font-size: var(--text-sm); }
+    .municipio-zonas { margin:.25rem 0 0; color:var(--color-primary); font-size: var(--text-sm); font-weight: var(--font-medium); }
     .municipio-detail { padding:1rem; border:1px solid var(--color-border); border-radius:var(--radius-md); background:var(--color-surface); }
-    .detail-kicker { color:var(--color-primary); font-size:.7rem; font-weight:800; text-transform:uppercase; letter-spacing:.06em; }
-    .municipio-detail h2 { margin:.2rem 0; font-size:1.4rem; }
+    .detail-kicker { color:var(--color-primary); font-size: var(--text-2xs); font-weight: var(--font-extra); text-transform:uppercase; letter-spacing:.06em; }
+    .municipio-detail h2 { margin:.2rem 0; font-size: var(--text-xl); }
     .municipio-detail > p { color:var(--color-text-muted); }
-    .municipio-detail h3 { margin:1.2rem 0 .4rem; font-size:.85rem; }
+    .municipio-detail h3 { margin:1.2rem 0 .4rem; font-size: var(--text-sm); }
     .municipio-detail ul { margin:0 0 1rem; padding:0; list-style:none; }
-    .municipio-detail li { display:flex; justify-content:space-between; gap:1rem; padding:.65rem 0; border-bottom:1px solid var(--color-border); font-size:.8rem; }
+    .municipio-detail li { display:flex; justify-content:space-between; gap:1rem; padding:.65rem 0; border-bottom:1px solid var(--color-border); font-size: var(--text-sm); }
     .municipio-detail li strong { color:var(--color-primary); }
     .municipio-detail .btn + .btn { margin-top:.65rem; }
     .empty-result { grid-column:1/-1; padding:2rem; border:1px dashed var(--color-border); border-radius:var(--radius-md); color:var(--color-text-muted); text-align:center; }

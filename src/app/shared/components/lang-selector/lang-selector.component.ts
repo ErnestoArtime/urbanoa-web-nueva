@@ -27,7 +27,7 @@ import { TranslationService, type SupportedLang } from '../../../core/services/t
       border-radius: 6px;
       padding: 4px 8px;
       font-size: 0.8125rem;
-      font-weight: 700;
+      font-weight: var(--font-bold);
       background: var(--color-surface, #fff);
       color: var(--color-primary, #006a68);
       cursor: pointer;

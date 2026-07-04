@@ -67,8 +67,8 @@ import { APP_BRAND } from '../../shared/constants/app-brand';
       padding: 0.55rem .25rem;
       color: var(--color-text);
       text-decoration: none;
-      font-weight: 600;
-      font-size: 0.7rem;
+      font-weight: var(--font-medium);
+      font-size: var(--text-2xs);
       text-align:center;
       transition: background 0.15s;
     }
