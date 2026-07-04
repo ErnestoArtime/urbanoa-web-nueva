@@ -53,7 +53,7 @@ import { TranslationService } from '../../core/services/translation.service';
       justify-content: center;
     }
     .app-header-spacer { width: 44px; }
-    @media (min-width: 768px) {
+    @media (min-width: 960px) {
       .app-header { display: none; }
     }
   `,

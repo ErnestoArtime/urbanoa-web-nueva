@@ -1,9 +1,10 @@
 import { Component, input } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
+import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 
 @Component({
   selector: 'app-split-view',
-  imports: [RouterOutlet],
+  imports: [RouterOutlet, TranslatePipe],
   template: `
     <div class="split-view">
       <div class="split-view-list" [class.split-hidden]="hideList()">
@@ -14,7 +15,7 @@ import { RouterOutlet } from '@angular/router';
           <router-outlet />
         } @else {
           <div class="split-view-detail-empty">
-            <p>Selecciona un elemento de la lista</p>
+            <p>{{ 'layout.splitView.empty' | translate }}</p>
           </div>
         }
       </div>

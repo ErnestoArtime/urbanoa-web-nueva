@@ -44,7 +44,7 @@ import { BreadcrumbService } from '../../../core/services/breadcrumb.service';
     .breadcrumb-current {
       color: var(--color-muted, #6b7280);
     }
-    @media (min-width: 768px) {
+    @media (min-width: 960px) {
       .breadcrumb {
         padding: 0.5rem 2rem;
       }

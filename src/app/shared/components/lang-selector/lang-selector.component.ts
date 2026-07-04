@@ -33,7 +33,7 @@ import { TranslationService, type SupportedLang } from '../../../core/services/t
       cursor: pointer;
       appearance: auto;
     }
-    @media (min-width: 768px) {
+    @media (min-width: 960px) {
       .lang-selector-fixed {
         top: 0.75rem;
       }

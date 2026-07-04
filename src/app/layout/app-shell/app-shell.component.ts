@@ -8,6 +8,7 @@ import { AppHeaderComponent } from '../app-header/app-header.component';
 import { AppBreadcrumbComponent } from '../../shared/components/breadcrumb/breadcrumb.component';
 import { LangSelectorComponent } from '../../shared/components/lang-selector/lang-selector.component';
 import { LoaderComponent } from '../../shared/components/loader/loader.component';
+import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 import { BreadcrumbService } from '../../core/services/breadcrumb.service';
 import { TranslationService } from '../../core/services/translation.service';
 
@@ -46,13 +47,13 @@ const TITLE_KEYS: Record<string, string> = {
 
 @Component({
   selector: 'app-shell',
-  imports: [RouterOutlet, SidebarComponent, BottomNavComponent, AppHeaderComponent, AppBreadcrumbComponent, LangSelectorComponent, LoaderComponent],
+  imports: [RouterOutlet, SidebarComponent, BottomNavComponent, AppHeaderComponent, AppBreadcrumbComponent, LangSelectorComponent, LoaderComponent, TranslatePipe],
   template: `
     <div class="app-shell">
       <app-lang-selector />
       <app-sidebar class="app-shell-sidebar" />
       <div class="app-shell-main">
-        <app-loader [visible]="routeTransitionLoading()" message="Cargando..." imageSrc="/assets/brand/login-logo.jpg" />
+        <app-loader [visible]="routeTransitionLoading()" [message]="'common.loading' | translate" imageSrc="/assets/brand/login-logo.jpg" />
         @if (showHeader()) {
           <app-header [title]="headerTitle()" [showBack]="showBack()" />
         }
@@ -101,7 +102,7 @@ const TITLE_KEYS: Record<string, string> = {
     app-lang-selector {
       display: block;
     }
-    @media (min-width: 768px) {
+    @media (min-width: 960px) {
       .app-shell-sidebar { display: flex; }
       .app-shell-bottom-nav { display: none; }
       .app-shell-content.with-bottom-nav { padding-bottom: 0; }
