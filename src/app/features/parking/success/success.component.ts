@@ -1,18 +1,19 @@
 import { Component, inject } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { readParkingFlowQuery } from '../parking-flow.model';
+import { AppIconComponent } from '../../../shared/icons/app-icon.component';
 import { OperationIconComponent } from '../../../shared/components/operation-icon/operation-icon.component';
 import { OperationType } from '../../../shared/models/operation-type';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 
 @Component({
   selector: 'app-parking-success',
-  imports: [RouterLink, OperationIconComponent, TranslatePipe],
+  imports: [RouterLink, OperationIconComponent, TranslatePipe, AppIconComponent],
   template: `
     <div class="page success-page">
       <div class="success-content text-center">
         <p class="flow-step">{{ 'parking.success.step' | translate }}</p>
-        <div class="success-mark"><span>✓</span><svg viewBox="0 0 24 24"><path d="M5 8h14v10H5zM9 12h.01M15 12h.01M8 5h8"/></svg></div>
+        <div class="success-mark"><span>✓</span><app-icon name="parkingSlip" /></div>
         <h1 class="page-title">{{ 'parking.success.title' | translate }}</h1>
         <p class="page-subtitle">{{ 'parking.success.subtitle' | translate }}</p>
         <article class="success-ticket">

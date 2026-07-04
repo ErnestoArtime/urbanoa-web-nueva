@@ -1,6 +1,7 @@
 import { TitleCasePipe } from '@angular/common';
 import { Component, computed, inject, input, output, signal } from '@angular/core';
 import { TranslatePipe } from '../../pipes/translate.pipe';
+import { AppIconComponent } from '../../icons/app-icon.component';
 import { TranslationService } from '../../../core/services/translation.service';
 
 export interface DateRange {
@@ -10,7 +11,7 @@ export interface DateRange {
 
 @Component({
   selector: 'app-date-range-filter',
-  imports: [TranslatePipe, TitleCasePipe],
+  imports: [TranslatePipe, TitleCasePipe, AppIconComponent],
   template: `
     <div class="date-filter">
       @if (!simple()) {
@@ -25,9 +26,7 @@ export interface DateRange {
       <div class="date-filter-cal-row">
         @if (!simple()) {
           <button type="button" class="date-filter-toggle" (click)="showCalendar.set(!showCalendar())">
-            <svg class="cal-icon" viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
-              <path d="M19 4h-1V2h-2v2H8V2H6v2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm0 16H5V10h14v10zm0-12H5V6h14v2z"/>
-            </svg>
+            <app-icon name="dateRange" />
             <span class="cal-label">{{ 'ops.filterDate' | translate }}</span>
           </button>
         }

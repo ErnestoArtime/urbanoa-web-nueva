@@ -24,6 +24,15 @@ export const ICON_PATHS: Record<string, string> = {
   parkingType: 'M18.92 6.01C18.72 5.42 18.16 5 17.52 5H6.48c-.64 0-1.2.42-1.4 1.01L3 12v8a1 1 0 0 0 1 1h1a1 1 0 0 0 1-1v-1h12v1a1 1 0 0 0 1 1h1a1 1 0 0 0 1-1v-8l-2.08-5.99zM6.85 7h10.29l1.04 3H5.81l1.04-3zM6.5 16A1.5 1.5 0 1 1 6.5 13a1.5 1.5 0 0 1 0 3zm11 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z',
   chevron: 'm8 5 7 7-7 7',
   check: 'M20 6L9 17l-5-5',
+  parkingSlip: 'M5 8h14v10H5zM9 12h.01M15 12h.01M8 5h8',
+  dateRange: 'M19 4h-1V2h-2v2H8V2H6v2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm0 16H5V10h14v10zm0-12H5V6h14v2z',
+  operationParking: 'M6 20V9l2-5h8l2 5v11M5 12h14M8 16h.01M16 16h.01M7 20v-2h10v2',
+  operationExtension: 'M5 20V9l2-5h7l2 5v3M4 12h13M7 16h.01M14 20a5 5 0 1 0 0-10 5 5 0 0 0 0 10Zm0-7v2l1.5 1',
+  operationRefund: 'M9 7H5v-4M5 7a8 8 0 1 1-1 8M12 8v8M15 10.5c0-1.4-1.3-2.5-3-2.5s-3 1-3 2.3c0 3.5 6 1.4 6 4.2 0 1.4-1.3 2.5-3 2.5s-3-1.1-3-2.5',
+  operationFine: 'M7 3h10v18l-2-1.5L13 21l-2-1.5L9 21l-2-1.5L5 21V5a2 2 0 0 1 2-2Zm2 5h6M9 12h6M9 16h3',
+  operationTopUp: 'M4 7h16v12H4zM4 10h16M8 15h4M18 3v4M16 5h4',
+  operationBalanceRefund: 'M9 7H5v-4M5 7a8 8 0 1 1-1 8M12 8v8M9 12h6',
+  operationDefault: 'M12 3 3 7v6c0 4.5 3.8 7.5 9 8 5.2-.5 9-3.5 9-8V7l-9-4Zm0 5v5M12 17h.01',
 };
 
 export type IconName = keyof typeof ICON_PATHS;

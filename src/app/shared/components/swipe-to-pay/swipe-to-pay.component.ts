@@ -1,8 +1,10 @@
 import { Component, computed, input, output, signal, ElementRef, ViewChild, HostListener } from '@angular/core';
+import { AppIconComponent } from '../../icons/app-icon.component';
 
 @Component({
   selector: 'app-swipe-to-pay',
   standalone: true,
+  imports: [AppIconComponent],
   template: `
     <div class="swipe-area" #swipeArea>
       <div class="swipe-track"
@@ -19,7 +21,7 @@ import { Component, computed, input, output, signal, ElementRef, ViewChild, Host
           [class.disabled]="disabled()"
           [style.left.px]="thumbX()"
           (pointerdown)="startSwipe($event)">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5 7 7-7 7"/></svg>
+          <app-icon name="chevron" [stroke]="true" />
         </div>
         <span class="swipe-label">{{ swipeComplete() ? completedLabel : label() }}</span>
       </div>
