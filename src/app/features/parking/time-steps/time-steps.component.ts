@@ -3,12 +3,8 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { LoaderComponent } from '../../../shared/components/loader/loader.component';
 import { ParkingFlowStore } from '../parking-flow.store';
 import { ParkingFlowQuery, readParkingFlowQuery } from '../parking-flow.model';
+import { ParkingTimeStepsService, type ParkingTimeStep } from '../parking-time-steps.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
-
-interface ParkingTimeOption {
-  label: string;
-  minutes: number;
-}
 
 @Component({
   selector: 'app-parking-time-steps',
@@ -33,7 +29,7 @@ interface ParkingTimeOption {
       <div class="time-line card">
         <div><small>{{ 'parking.timeSteps.start' | translate }}</small><strong>{{ startTime() }}</strong></div>
         <span class="line"></span>
-        <div class="duration-pill">{{ selected().label }}</div>
+        <div class="duration-pill">{{ selectedStep().timeFormatted }}</div>
         <span class="line"></span>
         <div><small>{{ 'parking.timeSteps.end' | translate }}</small><strong>{{ endTime() }}</strong></div>
       </div>
@@ -43,24 +39,24 @@ interface ParkingTimeOption {
         <div class="time-wheel" [style.background]="wheelBackground()">
           <div class="wheel-content">
             <small>{{ 'parking.timeSteps.time' | translate }}</small>
-            <strong>{{ selected().label }}</strong>
-            <span>{{ amount() }}</span>
+            <strong>{{ selectedStep().timeFormatted }}</strong>
+            <span>{{ amountFormatted() }}</span>
           </div>
         </div>
-        <button type="button" class="step-control" [attr.aria-label]="'parking.timeSteps.increaseDuration' | translate" (click)="changeTime(1)" [disabled]="selectedIndex() === times.length - 1">+</button>
+        <button type="button" class="step-control" [attr.aria-label]="'parking.timeSteps.increaseDuration' | translate" (click)="changeTime(1)" [disabled]="selectedIndex() === steps.length - 1">+</button>
       </section>
 
       <div class="step-options" [attr.aria-label]="'parking.timeSteps.title' | translate">
-        @for (option of times; track option.minutes) {
-          <button type="button" [class.active]="option.minutes === selected().minutes" (click)="selected.set(option)">
-            {{ option.label }}
+        @for (step of steps; track step.time) {
+          <button type="button" [class.active]="step.time === selectedStep().time" (click)="selectStep(step)">
+            {{ step.timeFormatted }}
           </button>
         }
       </div>
 
       <div class="price-card card">
         <span>{{ 'parking.timeSteps.estimatedPrice' | translate }}</span>
-        <strong>{{ amount() }}</strong>
+        <strong>{{ amountFormatted() }}</strong>
       </div>
       <div class="sticky-actions">
         <a routerLink="/app/parking/confirm" [queryParams]="confirmationParams()" (click)="onContinue()" class="btn btn-primary btn-block">{{ 'parking.timeSteps.continue' | translate }}</a>
@@ -79,53 +75,64 @@ interface ParkingTimeOption {
 export class ParkingTimeStepsComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly store = inject(ParkingFlowStore);
+  private readonly timeStepsService = inject(ParkingTimeStepsService);
   readonly query: ParkingFlowQuery = this.store.hasMinimumParkingData()
     ? this.store.fromStore()
     : readParkingFlowQuery(this.route);
-  readonly times: ParkingTimeOption[] = [
-    { label: '30 min', minutes: 30 },
-    { label: '1 h', minutes: 60 },
-    { label: '1 h 30 min', minutes: 90 },
-    { label: '2 h', minutes: 120 },
-    { label: '3 h', minutes: 180 },
-  ];
-  readonly selected = signal(this.times[1]);
-  readonly selectedIndex = computed(() => this.times.findIndex(option => option.minutes === this.selected().minutes));
+
+  readonly steps = signal<ParkingTimeStep[]>([]);
+  readonly selectedStep = signal<ParkingTimeStep>({ time: 60, quantity: 1, timeFormatted: '1 h', hourMinute: '1:00', dayDescriptor: 'hoy', datetimeRaw: '', amount: 0 });
+  readonly selectedIndex = computed(() => this.steps().findIndex(s => s.time === this.selectedStep().time));
   readonly loading = signal(true);
   private readonly startedAt = new Date();
 
   ngOnInit(): void {
+    const hourlyPrice = this.parsePrice(this.query.tariffPrice);
+    const generatedSteps = this.timeStepsService.generateSteps({
+      tariffId: this.query.tariffId || '1',
+      tariffPrice: hourlyPrice,
+      startDate: this.startedAt,
+    });
+    this.steps.set(generatedSteps);
+    const defaultIndex = generatedSteps.length > 1 ? 1 : 0;
+    this.selectedStep.set(generatedSteps[defaultIndex]);
     setTimeout(() => this.loading.set(false), 700);
   }
 
+  selectStep(step: ParkingTimeStep): void {
+    this.selectedStep.set(step);
+  }
+
   changeTime(direction: -1 | 1): void {
-    const nextIndex = Math.max(0, Math.min(this.times.length - 1, this.selectedIndex() + direction));
-    this.selected.set(this.times[nextIndex]);
+    const nextIndex = Math.max(0, Math.min(this.steps().length - 1, this.selectedIndex() + direction));
+    this.selectedStep.set(this.steps()[nextIndex]);
   }
 
   startTime(): string { return this.formatTime(this.startedAt); }
-  endTime(): string { return this.formatTime(new Date(this.startedAt.getTime() + this.selected().minutes * 60000)); }
-  amount(): string { return `${(this.selected().minutes * this.hourlyPrice() / 60).toFixed(2).replace('.', ',')} €`; }
+  endTime(): string { return this.formatTime(new Date(this.startedAt.getTime() + this.selectedStep().time * 60000)); }
+  amountFormatted(): string { return `${this.selectedStep().amount.toFixed(2).replace('.', ',')} €`; }
   sectorColor(): string { return this.query.sectorColor ? `#${this.query.sectorColor.replace('#', '')}` : 'var(--color-primary)'; }
   wheelBackground(): string {
-    const progress = ((this.selectedIndex() + 1) / this.times.length) * 360;
+    const progress = ((this.selectedIndex() + 1) / this.steps().length) * 360;
     return `conic-gradient(var(--color-primary) 0deg ${progress}deg, var(--color-border) ${progress}deg 360deg)`;
   }
   confirmationParams(): Record<string, string> {
-    return { ...this.query, duration: this.selected().label, minutes: String(this.selected().minutes), amount: this.amount(), endTime: this.endTime() };
+    const step = this.selectedStep();
+    return { ...this.query, duration: step.timeFormatted, minutes: String(step.time), amount: this.amountFormatted(), endTime: this.endTime() };
   }
 
   onContinue(): void {
+    const step = this.selectedStep();
     this.store.update({
-      duration: this.selected().label,
-      minutes: String(this.selected().minutes),
-      amount: this.amount(),
+      duration: step.timeFormatted,
+      minutes: String(step.time),
+      amount: this.amountFormatted(),
       endTime: this.endTime(),
     });
   }
 
-  private hourlyPrice(): number {
-    const parsed = Number((this.query.tariffPrice.match(/[\d,.]+/)?.[0] ?? '0.60').replace(',', '.'));
+  private parsePrice(tariffPrice: string | undefined): number {
+    const parsed = Number((tariffPrice?.match(/[\d,.]+/)?.[0] ?? '0.60').replace(',', '.'));
     return Number.isFinite(parsed) && parsed > 0 ? parsed : 0.60;
   }
   private formatTime(date: Date): string { return date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }); }
