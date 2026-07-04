@@ -1,78 +1,31 @@
-import { Component, inject, signal } from '@angular/core';
-import { RouterLink, Router } from '@angular/router';
-import { FormsModule } from '@angular/forms';
-import { UserService, type UserData } from '../../../core/services/user.service';
+import { Component, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
+import { MOCK_USER } from '../../../shared/mock-data';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 
 @Component({
   selector: 'app-account-profile',
-  imports: [RouterLink, FormsModule],
+  imports: [RouterLink, TranslatePipe],
   template: `
-    @if (!saved()) {
-      <div class="page">
-        <form #profileForm="ngForm" (ngSubmit)="save()">
-          <div class="form-group">
-            <label class="form-label">Nombre</label>
-            <input class="form-input" [(ngModel)]="form.name" name="name" #name="ngModel" required />
-            @if (name.invalid && (name.dirty || name.touched)) {
-              <span class="form-error">El nombre es obligatorio</span>
-            }
-          </div>
-          <div class="form-group">
-            <label class="form-label">Primer apellido</label>
-            <input class="form-input" [(ngModel)]="form.surname" name="surname" #surname="ngModel" required />
-            @if (surname.invalid && (surname.dirty || surname.touched)) {
-              <span class="form-error">El apellido es obligatorio</span>
-            }
-          </div>
-          <div class="form-group">
-            <label class="form-label">NIF</label>
-            <input class="form-input" [(ngModel)]="form.nif" name="nif" #nif="ngModel" required />
-            @if (nif.invalid && (nif.dirty || nif.touched)) {
-              <span class="form-error">El NIF es obligatorio</span>
-            }
-          </div>
-          <div class="form-group">
-            <label class="form-label">Teléfono</label>
-            <input class="form-input" [(ngModel)]="form.phone" name="phone" #phone="ngModel" />
-          </div>
-          <div class="form-group">
-            <label class="form-label">Email</label>
-            <input class="form-input" [(ngModel)]="form.email" name="email" #email="ngModel" required email />
-            @if (email.invalid && (email.dirty || email.touched)) {
-              @if (email.errors?.['required']) { <span class="form-error">El email es obligatorio</span> }
-              @if (email.errors?.['email']) { <span class="form-error">Email no válido</span> }
-            }
-          </div>
-          <button type="submit" class="btn btn-primary btn-block" [disabled]="profileForm.invalid">Guardar</button>
-        </form>
-        <a routerLink="/app/account/change-password" class="btn btn-ghost btn-block mt-1">Cambiar contraseña</a>
+    <div class="page account-static-page">
+      <h1 class="page-title">{{ 'account.profile.title' | translate }}</h1>
+      <div class="card">
+        <div class="form-group"><label>{{ 'account.profile.name' | translate }}</label><input class="form-input" [placeholder]="'account.profile.name' | translate" [value]="user.name"/><small class="form-error">{{ 'account.profile.nameRequired' | translate }}</small></div>
+        <div class="form-group"><label>{{ 'account.profile.surname' | translate }}</label><input class="form-input" [placeholder]="'account.profile.surname' | translate" [value]="user.surname"/><small class="form-error">{{ 'account.profile.surnameRequired' | translate }}</small></div>
+        <div class="form-group"><label>{{ 'account.profile.nif' | translate }}</label><input class="form-input" [placeholder]="'account.profile.nif' | translate" [value]="user.nif"/><small class="form-error">{{ 'account.profile.nifRequired' | translate }}</small></div>
+        <div class="form-group"><label>{{ 'account.profile.phone' | translate }}</label><input class="form-input" [placeholder]="'account.profile.phone' | translate" [value]="user.phone"/></div>
+        <div class="form-group"><label>{{ 'account.profile.email' | translate }}</label><input class="form-input" type="email" [placeholder]="'account.profile.email' | translate" [value]="user.email"/><small class="form-error">{{ 'account.profile.emailRequired' | translate }}</small></div>
+        <button class="btn btn-primary btn-block">{{ 'common.save' | translate }}</button>
       </div>
-    } @else {
-      <div class="page text-center">
-        <div class="success-icon">✓</div>
-        <h1 class="page-title">Perfil guardado</h1>
-        <p class="page-subtitle">Los datos de tu perfil se han actualizado correctamente.</p>
-        <a routerLink="/app/home" class="btn btn-primary btn-block mt-2">Volver al inicio</a>
-      </div>
-    }
+      <a routerLink="/app/account/change-password" class="btn btn-secondary btn-block mt-2">{{ 'account.menu.changePassword' | translate }}</a>
+      @if (saved()) {
+        <div class="toast">{{ 'account.profile.saveSuccess' | translate }}</div>
+      }
+    </div>
   `,
+  styles: ['.toast{position:fixed;bottom:2rem;left:50%;transform:translateX(-50%);padding:.65rem 1.25rem;border-radius:999px;background:var(--color-primary-dark);color:#fff;z-index:2000}'],
 })
 export class AccountProfileComponent {
-  private readonly userService = inject(UserService);
-  private readonly router = inject(Router);
-
+  readonly user = MOCK_USER;
   readonly saved = signal(false);
-
-  form: UserData = {
-    name: this.userService.user().name,
-    surname: this.userService.user().surname,
-    email: this.userService.user().email,
-    nif: this.userService.user().nif,
-    phone: this.userService.user().phone,
-  };
-
-  save(): void {
-    this.userService.updateUser({ ...this.form });
-    this.saved.set(true);
-  }
 }

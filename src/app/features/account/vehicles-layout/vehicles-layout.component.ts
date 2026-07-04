@@ -3,10 +3,11 @@ import { RouterLink, RouterOutlet, NavigationEnd, Router } from '@angular/router
 import { filter, map, startWith } from 'rxjs/operators';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { MOCK_VEHICLES } from '../../../shared/mock-data';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 
 @Component({
   selector: 'app-vehicles-layout',
-  imports: [RouterLink, RouterOutlet],
+  imports: [RouterLink, RouterOutlet, TranslatePipe],
   template: `
     <div class="split-view">
       <div class="split-view-list" [class.split-hidden]="isChildRoute()">
@@ -16,13 +17,13 @@ import { MOCK_VEHICLES } from '../../../shared/mock-data';
               <a routerLink="/app/account/vehicles/edit" class="list-item">
                 <div class="list-item-content">
                   <div class="list-item-title">{{ v.plate }}</div>
-                  <div class="list-item-subtitle">{{ v.isDefault ? 'Vehículo favorito' : (v.label ?? '') }}</div>
+                  <div class="list-item-subtitle">{{ v.isDefault ? ('account.vehicleFavorite' | translate) : (v.label ?? '') }}</div>
                 </div>
                 @if (v.isDefault) { <span class="badge badge-primary">★</span> }
               </a>
             }
           </ul>
-          <a routerLink="/app/account/vehicles/add" class="btn btn-primary btn-block mt-2">Añadir vehículo</a>
+          <a routerLink="/app/account/vehicles/add" class="btn btn-primary btn-block mt-2">{{ 'account.addVehicle' | translate }}</a>
         </div>
       </div>
       <div class="split-view-detail" [class.split-hidden]="!isChildRoute()">
@@ -30,7 +31,7 @@ import { MOCK_VEHICLES } from '../../../shared/mock-data';
       </div>
     </div>
   `,
-  styles: `@media (min-width:768px){.split-view-detail.split-hidden{display:flex!important}}`,
+  styles: `@media (min-width:960px){.split-view-detail.split-hidden{display:flex!important}}`,
 })
 export class VehiclesLayoutComponent {
   readonly vehicles = MOCK_VEHICLES;

@@ -57,7 +57,7 @@ const STORE_URL = 'https://play.google.com/store/apps/details?id=com.gerteksa.r.
               <svg class="account-item-icon" viewBox="0 0 24 24" aria-hidden="true">
                 <path [attr.d]="iconPath(item.icon)"></path>
               </svg>
-              <div class="list-item-content"><div class="list-item-title">{{ item.label }}</div></div>
+              <div class="list-item-content"><div class="list-item-title">{{ item.labelKey }}</div></div>
               <span class="list-item-chevron">›</span>
             </button>
           }
@@ -176,7 +176,7 @@ const STORE_URL = 'https://play.google.com/store/apps/details?id=com.gerteksa.r.
     .detail-content { flex:1; overflow:hidden; }
     .toast { position:fixed; bottom:2rem; left:50%; transform:translateX(-50%); padding:.65rem 1.25rem; border-radius:999px; background:var(--color-primary-dark); color:#fff; font-size:.85rem; font-weight:600; z-index:2000; animation:fadeInUp .25s ease-out; }
     @keyframes fadeInUp { from { opacity:0; transform:translateX(-50%) translateY(10px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }
-    @media (min-width:768px) {
+    @media (min-width:960px) {
       .account-layout { display:grid; grid-template-columns:420px minmax(0,1fr); height:100%; min-height:0; overflow:hidden; }
       .account-master { min-height:0; overflow-y:auto; overscroll-behavior:contain; scrollbar-gutter:stable; border-right:1px solid var(--color-border); }
       .mobile-wallet { display:none; }
@@ -184,7 +184,7 @@ const STORE_URL = 'https://play.google.com/store/apps/details?id=com.gerteksa.r.
       .account-list .list-item { padding:.76rem .3rem; background:transparent; }
       .account-detail { display:flex; min-height:0; flex-direction:column; margin:.55rem; border:1px solid var(--color-border); border-radius:22px; box-shadow:var(--shadow-sm); overflow:hidden; }
     }
-    @media (max-width:767px) {
+    @media (max-width:959px) {
       .account-detail { display:block; border-top:1px solid var(--color-border); }
     }
   `],
@@ -227,13 +227,13 @@ export class AccountMenuComponent {
     const s = this.selected();
     if (!s) return '';
     const item = this.menu.find(m => m.key === s);
-    return item?.label ?? '';
+    return item?.labelKey ?? '';
   };
 
   readonly itemGroupLabel = (index: number) => {
     const item = this.menu[index];
     const prev = this.menu[index - 1];
-    return index === 0 || prev.group !== item.group ? item.group : null;
+    return index === 0 || prev.groupKey !== item.groupKey ? item.groupKey : null;
   };
 
   iconPath(icon: string): string {

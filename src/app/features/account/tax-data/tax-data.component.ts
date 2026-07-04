@@ -1,89 +1,29 @@
 import { Component, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
-import { FormsModule } from '@angular/forms';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 
 @Component({
   selector: 'app-account-tax-data',
-  imports: [RouterLink, FormsModule],
+  imports: [TranslatePipe],
   template: `
-    @if (!saved()) {
-      <div class="page">
-        <form #taxForm="ngForm" (ngSubmit)="save()">
-          <div class="form-group">
-            <label class="form-label">NIF</label>
-            <input class="form-input" [(ngModel)]="form.nif" name="nif" #nif="ngModel" required />
-            @if (nif.invalid && (nif.dirty || nif.touched)) {
-              <span class="form-error">El NIF es obligatorio</span>
-            }
-          </div>
-          <div class="form-group">
-            <label class="form-label">Calle</label>
-            <input class="form-input" [(ngModel)]="form.street" name="street" #street="ngModel" required />
-            @if (street.invalid && (street.dirty || street.touched)) {
-              <span class="form-error">La calle es obligatoria</span>
-            }
-          </div>
-          <div class="row">
-            <div class="form-group" style="flex:1">
-              <label class="form-label">Número</label>
-              <input class="form-input" [(ngModel)]="form.number" name="number" #number="ngModel" required />
-              @if (number.invalid && (number.dirty || number.touched)) {
-                <span class="form-error">Obligatorio</span>
-              }
-            </div>
-            <div class="form-group" style="flex:1">
-              <label class="form-label">Piso</label>
-              <input class="form-input" [(ngModel)]="form.floor" name="floor" />
-            </div>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Ciudad</label>
-            <input class="form-input" [(ngModel)]="form.city" name="city" #city="ngModel" required />
-            @if (city.invalid && (city.dirty || city.touched)) {
-              <span class="form-error">La ciudad es obligatoria</span>
-            }
-          </div>
-          <div class="form-group">
-            <label class="form-label">Provincia</label>
-            <input class="form-input" [(ngModel)]="form.province" name="province" #province="ngModel" required />
-            @if (province.invalid && (province.dirty || province.touched)) {
-              <span class="form-error">La provincia es obligatoria</span>
-            }
-          </div>
-          <div class="form-group">
-            <label class="form-label">Código postal</label>
-            <input class="form-input" [(ngModel)]="form.zip" name="zip" #zip="ngModel" required />
-            @if (zip.invalid && (zip.dirty || zip.touched)) {
-              <span class="form-error">El código postal es obligatorio</span>
-            }
-          </div>
-          <button type="submit" class="btn btn-primary btn-block" [disabled]="taxForm.invalid">Guardar</button>
-        </form>
+    <div class="page account-static-page">
+      <h1 class="page-title">{{ 'account.taxData.title' | translate }}</h1>
+      <div class="card">
+        <div class="form-group"><label>{{ 'account.taxData.nif' | translate }} <span class="text-error">*</span></label><input class="form-input" [placeholder]="'account.taxData.nif' | translate"/><small class="form-error">{{ 'account.taxData.nifRequired' | translate }}</small></div>
+        <div class="form-group"><label>{{ 'account.taxData.street' | translate }} <span class="text-error">*</span></label><input class="form-input" [placeholder]="'account.taxData.street' | translate"/><small class="form-error">{{ 'account.taxData.streetRequired' | translate }}</small></div>
+        <div class="form-group"><label>{{ 'account.taxData.number' | translate }} <span class="text-error">*</span></label><input class="form-input" [placeholder]="'account.taxData.numberRequired' | translate"/></div>
+        <div class="form-group"><label>{{ 'account.taxData.floor' | translate }}</label><input class="form-input" [placeholder]="'account.taxData.floor' | translate"/></div>
+        <div class="form-group"><label>{{ 'account.taxData.city' | translate }} <span class="text-error">*</span></label><input class="form-input" [placeholder]="'account.taxData.city' | translate"/><small class="form-error">{{ 'account.taxData.cityRequired' | translate }}</small></div>
+        <div class="form-group"><label>{{ 'account.taxData.province' | translate }} <span class="text-error">*</span></label><input class="form-input" [placeholder]="'account.taxData.province' | translate"/><small class="form-error">{{ 'account.taxData.provinceRequired' | translate }}</small></div>
+        <div class="form-group"><label>{{ 'account.taxData.postalCode' | translate }} <span class="text-error">*</span></label><input class="form-input" [placeholder]="'account.taxData.postalCode' | translate"/><small class="form-error">{{ 'account.taxData.postalCodeRequired' | translate }}</small></div>
+        <button class="btn btn-primary btn-block">{{ 'common.save' | translate }}</button>
       </div>
-    } @else {
-      <div class="page text-center">
-        <div class="success-icon">✓</div>
-        <h1 class="page-title">Datos fiscales guardados</h1>
-        <p class="page-subtitle">Los datos fiscales se han actualizado correctamente.</p>
-        <a routerLink="/app/home" class="btn btn-primary btn-block mt-2">Volver al inicio</a>
-      </div>
-    }
+      @if (saved()) {
+        <div class="toast"><strong>{{ 'account.taxData.saveSuccess' | translate }}</strong><br>{{ 'account.taxData.saveSuccessDetail' | translate }}</div>
+      }
+    </div>
   `,
+  styles: ['.toast{position:fixed;bottom:2rem;left:50%;transform:translateX(-50%);padding:.65rem 1.25rem;border-radius:999px;background:var(--color-primary-dark);color:#fff;z-index:2000;text-align:center}'],
 })
 export class AccountTaxDataComponent {
   readonly saved = signal(false);
-
-  form = {
-    nif: '',
-    street: '',
-    number: '',
-    floor: '',
-    city: '',
-    province: '',
-    zip: '',
-  };
-
-  save(): void {
-    this.saved.set(true);
-  }
 }
