@@ -37,7 +37,7 @@ import { ICON_PATHS, type IconName } from './icon-paths';
 export class AppIconComponent {
   readonly name = input.required<IconName>();
   readonly size = input(20);
-  readonly stroke = input(false);
+  readonly stroke = input(true);
   readonly ariaLabel = input<string>();
 
   readonly path = computed(() => ICON_PATHS[this.name()] ?? ICON_PATHS['about']);
