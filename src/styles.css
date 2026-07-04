@@ -421,6 +421,28 @@ a:hover { text-decoration: underline; }
   font-variant-numeric: tabular-nums;
 }
 
+/* Mobile sticky action bar */
+@media (max-width: 959px) {
+  .has-sticky-actions { padding-bottom: 5rem; }
+  .sticky-actions {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: flex;
+    gap: .65rem;
+    padding: .75rem 1rem calc(.75rem + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid var(--color-border);
+    background: var(--color-surface);
+    box-shadow: 0 -2px 12px rgba(0,0,0,.08);
+    z-index: 100;
+  }
+  .sticky-actions .btn {
+    flex: 1;
+    margin: 0 !important;
+  }
+}
+
 /* Timeline */
 .timeline { padding-left: 1rem; border-left: 2px solid var(--color-border); }
 .timeline-item { padding-bottom: 1rem; position: relative; }

@@ -11,7 +11,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
   template: `
     <div class="split-view">
       <div class="split-view-list" [class.split-hidden]="isChildRoute()">
-        <div class="page">
+        <div class="page has-sticky-actions">
           <ul class="list card" style="padding:0;overflow:hidden">
             @for (v of vehicles; track v.id) {
               <a routerLink="/app/account/vehicles/edit" class="list-item">
@@ -23,7 +23,9 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
               </a>
             }
           </ul>
-          <a routerLink="/app/account/vehicles/add" class="btn btn-primary btn-block mt-2">{{ 'account.addVehicle' | translate }}</a>
+          <div class="sticky-actions">
+            <a routerLink="/app/account/vehicles/add" class="btn btn-primary btn-block">{{ 'account.addVehicle' | translate }}</a>
+          </div>
         </div>
       </div>
       <div class="split-view-detail" [class.split-hidden]="!isChildRoute()">

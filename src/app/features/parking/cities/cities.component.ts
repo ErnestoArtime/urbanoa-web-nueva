@@ -7,7 +7,7 @@ import { MOCK_MUNICIPIOS } from '../../../shared/mock-data';
   selector: 'app-parking-cities',
   imports: [RouterLink, TranslatePipe],
   template: `
-    <div class="page">
+    <div class="page has-sticky-actions">
       <h1 class="page-title">{{ 'parking.selectMunicipio' | translate }}</h1>
       <label class="municipio-search">
         <span aria-hidden="true">⌕</span>
@@ -41,8 +41,10 @@ import { MOCK_MUNICIPIOS } from '../../../shared/mock-data';
             <li><span>{{ 'parking.cities.cascoHistorico' | translate }}</span><strong>{{ 'parking.cities.rotacion' | translate }}</strong></li>
             <li><span>{{ 'parking.cities.areaResidencial' | translate }}</span><strong>{{ 'parking.cities.residentes' | translate }}</strong></li>
           </ul>
-          <a routerLink="/app/parking" [queryParams]="{city: selected().id}" class="btn btn-primary btn-block">{{ 'parking.cities.viewMap' | translate }}</a>
-          <a routerLink="/app/parking/streets" [queryParams]="{municipio: selected().id}" class="btn btn-secondary btn-block">{{ 'parking.cities.viewStreets' | translate }}</a>
+          <div class="sticky-actions">
+            <a routerLink="/app/parking" [queryParams]="{city: selected().id}" class="btn btn-primary btn-block">{{ 'parking.cities.viewMap' | translate }}</a>
+            <a routerLink="/app/parking/streets" [queryParams]="{municipio: selected().id}" class="btn btn-secondary btn-block">{{ 'parking.cities.viewStreets' | translate }}</a>
+          </div>
         </aside>
       </div>
     </div>
@@ -77,6 +79,7 @@ import { MOCK_MUNICIPIOS } from '../../../shared/mock-data';
     @media (min-width:1024px) {
       .municipios-layout { grid-template-columns:minmax(0, 1fr) 320px; align-items:start; }
       .municipio-detail { position:sticky; top:1rem; }
+      .sticky-actions { display:grid; gap:.65rem; }
     }
   `],
 })
