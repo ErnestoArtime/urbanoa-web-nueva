@@ -8,10 +8,11 @@ import { MOCK_VEHICLE_PRINCIPAL } from '../../shared/mock-data';
 import { OperationType, OPERATION_TYPE_LABELS } from '../../shared/models/operation-type';
 import { OperationsService } from '../../core/services/operations.service';
 import { OperationIconComponent } from '../../shared/components/operation-icon/operation-icon.component';
+import { AppIconComponent } from '../../shared/icons/app-icon.component';
 
 @Component({
   selector: 'app-home',
-  imports: [RouterLink, DecimalPipe, TranslatePipe, OperationIconComponent],
+  imports: [RouterLink, DecimalPipe, TranslatePipe, OperationIconComponent, AppIconComponent],
   template: `
     <div class="page">
       <h1 class="page-title">{{ 'dashboard.greeting' | translate:{ name: fullName() } }}</h1>
@@ -23,7 +24,7 @@ import { OperationIconComponent } from '../../shared/components/operation-icon/o
             <div class="card active-ticket-card">
               <div class="ticket-main-row">
                 <div class="ticket-main-icon">
-                  <svg viewBox="0 0 24 24" aria-hidden="true"><path [attr.d]="dashboardIcon('car')"></path></svg>
+                  <app-icon name="vehicle" />
                 </div>
                 <div>
                   <p class="ticket-plate">{{ active.plate }}</p>
@@ -41,12 +42,12 @@ import { OperationIconComponent } from '../../shared/components/operation-icon/o
               </div>
               <div class="row mt-2 action-row" style="gap:0.5rem;flex-wrap:wrap">
                 <a class="btn btn-secondary btn-sm">
-                  <svg class="action-btn-icon" viewBox="0 0 24 24" aria-hidden="true"><g transform="translate(0,2.5)"><path [attr.d]="dashboardIcon('goToCar')"></path></g></svg>
+                  <app-icon name="goToCar" class="action-btn-icon" />
                   {{ 'dashboard.howToGetThere' | translate }}
                 </a>
                 <button type="button" class="btn btn-danger btn-sm" (click)="unparkFromDashboard()">{{ 'dashboard.unpark' | translate }}</button>
                 <a routerLink="/app/parking/time-steps" class="btn btn-primary btn-sm">
-                  <svg class="action-btn-icon" viewBox="0 0 24 24" aria-hidden="true"><g transform="translate(0,2)"><path [attr.d]="dashboardIcon('extend')"></path></g></svg>
+                  <app-icon name="extend" class="action-btn-icon" />
                   {{ 'dashboard.extendTime' | translate }}
                 </a>
               </div>
@@ -84,9 +85,7 @@ import { OperationIconComponent } from '../../shared/components/operation-icon/o
 
         <div class="dashboard-col-right">
           <div class="card compact-card vehicle-summary-card">
-            <span class="vehicle-summary-icon">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path [attr.d]="dashboardIcon('car')"></path></svg>
-            </span>
+            <app-icon name="vehicle" class="vehicle-summary-icon" />
             <div>
               <p class="vehicle-summary-label">Vehículo principal</p>
               <p class="vehicle-plate">{{ vehicle.plate }}</p>
@@ -101,9 +100,7 @@ import { OperationIconComponent } from '../../shared/components/operation-icon/o
               <span class="wallet-inline-mark" aria-hidden="true">ArinPark</span>
             </div>
             <div class="wallet-main-card-row">
-              <span class="wallet-card-icon">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path [attr.d]="dashboardIcon('payment')"></path></svg>
-              </span>
+              <app-icon name="card" class="wallet-card-icon" />
               <div>
                 <p class="wallet-main-label">Tarjeta principal</p>
                 <p class="wallet-main-value">{{ walletService.mainCard.brand }} Debit ·{{ walletService.mainCard.last4 }}</p>
@@ -347,7 +344,7 @@ import { OperationIconComponent } from '../../shared/components/operation-icon/o
     .profile-progress-head { display:flex; justify-content:space-between; color:var(--color-text-muted); font-size:.72rem; }
     .profile-progress { height:6px; margin:.45rem 0 .8rem; overflow:hidden; border-radius:999px; background:var(--color-border); }
     .profile-progress span { display:block; width:75%; height:100%; background:var(--color-primary-light); }
-    @media (min-width: 768px) {
+    @media (min-width: 960px) {
       :host > .page {
         max-width: 1120px;
         margin: 0 auto;
@@ -375,13 +372,6 @@ import { OperationIconComponent } from '../../shared/components/operation-icon/o
   `],
 })
 export class HomeComponent {
-  private readonly iconPaths: Record<string, string> = {
-    car: 'M18.92 6.01C18.72 5.42 18.16 5 17.52 5H6.48c-.64 0-1.2.42-1.4 1.01L3 12v8a1 1 0 0 0 1 1h1a1 1 0 0 0 1-1v-1h12v1a1 1 0 0 0 1 1h1a1 1 0 0 0 1-1v-8l-2.08-5.99zM6.85 7h10.29l1.04 3H5.81l1.04-3zM6.5 16A1.5 1.5 0 1 1 6.5 13a1.5 1.5 0 0 1 0 3zm11 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z',
-    payment: 'M22 6V18C22 18.55 21.804 19.021 21.413 19.413C21.021 19.804 20.55 20 20 20H4C3.45 20 2.979 19.804 2.588 19.413C2.196 19.021 2 18.55 2 18V6C2 5.45 2.196 4.979 2.588 4.587C2.979 4.196 3.45 4 4 4H20C20.55 4 21.021 4.196 21.413 4.587C21.804 4.979 22 5.45 22 6ZM20 8H4V18H20V8ZM20 6H4V7H20V6ZM8 15H6V13H8V15ZM12 15H10V13H12V15Z',
-    extend: 'M6.239 16.917C5.33 16.528 4.535 15.993 3.854 15.312C3.173 14.63 2.638 13.835 2.25 12.926C1.861 12.017 1.667 11.042 1.667 10C1.667 8.958 1.861 7.983 2.25 7.074C2.638 6.165 3.173 5.37 3.854 4.688C4.535 4.007 5.33 3.472 6.239 3.083L6.885 4.688C6.163 5.014 5.531 5.451 4.99 5.998C4.449 6.544 4.026 7.176 3.719 7.896C3.412 8.617 3.258 9.318 3.258 10C3.258 10.682 3.412 11.383 3.719 12.104C4.026 12.824 4.449 13.456 4.99 14.002C5.531 14.549 6.163 14.986 6.885 15.312L6.239 16.917ZM17.761 16.917L17.115 15.312C17.837 14.986 18.469 14.549 19.01 14.002C19.551 13.456 19.974 12.824 20.281 12.104C20.588 11.383 20.742 10.682 20.742 10C20.742 9.318 20.588 8.617 20.281 7.896C19.974 7.176 19.551 6.544 19.01 5.998C18.469 5.451 17.837 5.014 17.115 4.688L17.761 3.083C18.67 3.472 19.465 4.007 20.146 4.688C20.827 5.37 21.362 6.165 21.75 7.074C22.139 7.983 22.333 8.958 22.333 10C22.333 11.042 22.139 12.017 21.75 12.926C21.362 13.835 20.827 14.63 20.146 15.312C19.465 15.993 18.67 16.528 17.761 16.917ZM11 15V11H7V9H11V5H13V9H17V11H13V15H11Z',
-    goToCar: 'M4.167 17.5L3.333 16.667L10 1.667L16.667 16.667L15.833 17.5L10 4.417L4.167 17.5ZM10 15.833C11.15 15.833 12.13 15.428 12.94 14.619C13.749 13.809 14.154 12.829 14.154 11.679C14.154 10.529 13.749 9.548 12.94 8.738C12.13 7.929 11.15 7.525 10 7.525C8.85 7.525 7.87 7.929 7.06 8.738C6.251 9.548 5.846 10.529 5.846 11.679C5.846 12.829 6.251 13.809 7.06 14.619C7.87 15.428 8.85 15.833 10 15.833ZM10 14.167C9.312 14.167 8.726 13.923 8.242 13.44C7.759 12.956 7.517 12.369 7.517 11.679C7.517 10.99 7.759 10.403 8.242 9.919C8.726 9.436 9.312 9.192 10 9.192C10.688 9.192 11.274 9.436 11.758 9.919C12.241 10.403 12.483 10.99 12.483 11.679C12.483 12.369 12.241 12.956 11.758 13.44C11.274 13.923 10.688 14.167 10 14.167Z',
-
-  };
   readonly walletService = inject(WalletService);
   private readonly operationsService = inject(OperationsService);
   private readonly userService = inject(UserService);
@@ -399,10 +389,6 @@ export class HomeComponent {
   readonly showProfileCard = signal(true);
   readonly OperationType = OperationType;
   readonly OPERATION_TYPE_LABELS = OPERATION_TYPE_LABELS;
-
-  dashboardIcon(icon: string): string {
-    return this.iconPaths[icon] ?? this.iconPaths['payment'];
-  }
 
   isFinishParking(op: { type: OperationType; plate: string | null }): boolean {
     return op.type === OperationType.BALANCE_REFUND && !!op.plate;

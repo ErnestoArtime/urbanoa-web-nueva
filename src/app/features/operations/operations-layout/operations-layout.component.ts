@@ -1,6 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
-import { RouterLink, RouterLinkActive, RouterOutlet, NavigationEnd, Router } from '@angular/router';
+import { RouterLink, RouterLinkActive, NavigationEnd, Router } from '@angular/router';
 import { filter, map, startWith } from 'rxjs/operators';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
@@ -10,92 +10,88 @@ import { UnpaidFinesService } from '../../../core/services/unpaid-fines.service'
 import { OperationsService } from '../../../core/services/operations.service';
 import type { Operation } from '../../../shared/models/operation';
 import { OperationIconComponent } from '../../../shared/components/operation-icon/operation-icon.component';
+import { SplitViewComponent } from '../../../layout/split-view/split-view.component';
 
 @Component({
   selector: 'app-operations-layout',
-  imports: [RouterLink, RouterLinkActive, RouterOutlet, TranslatePipe, DecimalPipe, DateRangeFilterComponent, OperationIconComponent],
+  imports: [RouterLink, RouterLinkActive, TranslatePipe, DecimalPipe, DateRangeFilterComponent, OperationIconComponent, SplitViewComponent],
   template: `
-    <div class="split-view" style="min-height:calc(100dvh - var(--bottom-nav-height))">
-      <div class="split-view-list" [class.split-hidden]="isDetailRoute()">
-        <div class="page" style="padding-bottom:0">
-          <h1 class="page-title">{{ 'ops.title' | translate }}</h1>
+    <app-split-view [hideList]="isDetailRoute()" [hideDetail]="!isDetailRoute()">
+      <div splitList class="page" style="padding-bottom:0">
+        <h1 class="page-title">{{ 'ops.title' | translate }}</h1>
 
-          <section class="current-section">
-            <p class="section-label">En curso</p>
-            @if (activeTicket(); as active) {
-              <article class="active-operation">
-                <div class="active-operation-head">
-                  <span class="car-icon">▣</span>
-                  <div><strong>{{ active.plate }}</strong><small>{{ active.zone }}</small></div>
-                  <span class="running-badge">{{ active.timeRemaining }}</span>
-                </div>
-                <div class="active-times"><span>Finaliza</span><strong>{{ active.endTime }}</strong></div>
-                <div class="active-actions">
-                  <button type="button" class="btn btn-danger btn-sm" (click)="onUnpark()">Desaparcar</button>
-                  <a routerLink="/app/parking/time-steps" class="btn btn-primary btn-sm">Ampliar</a>
-                </div>
-              </article>
-            } @else {
-              <article class="active-operation empty-active-operation">
-                <p>No hay operaciones en curso.</p>
-              </article>
-            }
-          </section>
-
-          <section class="actions-section">
-            <a routerLink="/app/operations/unpaid-fines" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: false }" ariaCurrentWhenActive="page" class="list-item action-item">
-              <div class="list-item-content">
-                <div class="list-item-title">
-                  Denuncias por pagar <span class="badge badge-error">{{ unpaidFinesCount() }}</span>
-                </div>
+        <section class="current-section">
+          <p class="section-label">En curso</p>
+          @if (activeTicket(); as active) {
+            <article class="active-operation">
+              <div class="active-operation-head">
+                <span class="car-icon">▣</span>
+                <div><strong>{{ active.plate }}</strong><small>{{ active.zone }}</small></div>
+                <span class="running-badge">{{ active.timeRemaining }}</span>
               </div>
-              <span class="list-item-chevron">›</span>
-            </a>
-            <a routerLink="/app/operations/report" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: false }" ariaCurrentWhenActive="page" class="list-item action-item">
-              <div class="list-item-content"><div class="list-item-title">{{ 'ops.report' | translate }}</div></div>
-              <span class="list-item-chevron">›</span>
-            </a>
-          </section>
+              <div class="active-times"><span>Finaliza</span><strong>{{ active.endTime }}</strong></div>
+              <div class="active-actions">
+                <button type="button" class="btn btn-danger btn-sm" (click)="onUnpark()">Desaparcar</button>
+                <a routerLink="/app/parking/time-steps" class="btn btn-primary btn-sm">Ampliar</a>
+              </div>
+            </article>
+          } @else {
+            <article class="active-operation empty-active-operation">
+              <p>No hay operaciones en curso.</p>
+            </article>
+          }
+        </section>
 
-          <section class="history-filter-panel">
-            <p class="section-label history-label">Historial</p>
-            <app-date-range-filter (rangeChange)="onRangeChange($event)" />
-          </section>
+        <section class="actions-section">
+          <a routerLink="/app/operations/unpaid-fines" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: false }" ariaCurrentWhenActive="page" class="list-item action-item">
+            <div class="list-item-content">
+              <div class="list-item-title">
+                Denuncias por pagar <span class="badge badge-error">{{ unpaidFinesCount() }}</span>
+              </div>
+            </div>
+            <span class="list-item-chevron">›</span>
+          </a>
+          <a routerLink="/app/operations/report" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: false }" ariaCurrentWhenActive="page" class="list-item action-item">
+            <div class="list-item-content"><div class="list-item-title">{{ 'ops.report' | translate }}</div></div>
+            <span class="list-item-chevron">›</span>
+          </a>
+        </section>
 
-          <ul class="list history-list">
-            @for (group of groupedHistory(); track group.label) {
-              <li class="history-group-label">{{ group.label }}</li>
-              @for (op of group.items; track op.id) {
-                <a [routerLink]="['/app/operations/detail', op.id]" class="list-item" routerLinkActive="active">
-                  <app-operation-icon [type]="op.type" />
-                  <div class="list-item-content">
-                    @if (isFinishParking(op)) {
-                      <div class="list-item-title finish-op-title">Fin de estacionamiento</div>
-                    } @else {
-                      <div class="list-item-title">
-                        {{ OPERATION_TYPE_LABELS[op.type] | translate }}
-                      </div>
-                    }
-                    <div class="list-item-subtitle">{{ op.date }}{{ op.zone ? ' — ' + op.zone : '' }}</div>
-                  </div>
-                  <span [class]="op.amount > 0 ? 'badge badge-success' : ''">
-                    {{ op.amount > 0 ? '+' : '' }}{{ op.amount | number:'1.2-2' }} €
-                  </span>
-                </a>
-              }
+        <section class="history-filter-panel">
+          <p class="section-label history-label">Historial</p>
+          <app-date-range-filter (rangeChange)="onRangeChange($event)" />
+        </section>
+
+        <ul class="list history-list">
+          @for (group of groupedHistory(); track group.label) {
+            <li class="history-group-label">{{ group.label }}</li>
+            @for (op of group.items; track op.id) {
+              <a [routerLink]="['/app/operations/detail', op.id]" class="list-item" routerLinkActive="active">
+                <app-operation-icon [type]="op.type" />
+                <div class="list-item-content">
+                  @if (isFinishParking(op)) {
+                    <div class="list-item-title finish-op-title">Fin de estacionamiento</div>
+                  } @else {
+                    <div class="list-item-title">
+                      {{ OPERATION_TYPE_LABELS[op.type] | translate }}
+                    </div>
+                  }
+                  <div class="list-item-subtitle">{{ op.date }}{{ op.zone ? ' — ' + op.zone : '' }}</div>
+                </div>
+                <span [class]="op.amount > 0 ? 'badge badge-success' : ''">
+                  {{ op.amount > 0 ? '+' : '' }}{{ op.amount | number:'1.2-2' }} €
+                </span>
+              </a>
             }
-            @if (groupedHistory().length === 0) {
-              <li class="list-item" style="justify-content:center;color:var(--color-muted)">
-                {{ 'ops.empty' | translate }}
-              </li>
-            }
-          </ul>
-        </div>
+          }
+          @if (groupedHistory().length === 0) {
+            <li class="list-item" style="justify-content:center;color:var(--color-muted)">
+              {{ 'ops.empty' | translate }}
+            </li>
+          }
+        </ul>
       </div>
-      <div class="split-view-detail" [class.split-hidden]="!isDetailRoute()">
-        <router-outlet />
-      </div>
-    </div>
+    </app-split-view>
   `,
   styles: [`
     .list-item.active { background:rgba(93,154,150,.16); color:var(--color-primary-dark); box-shadow:inset 4px 0 0 var(--color-primary); }
@@ -164,12 +160,6 @@ import { OperationIconComponent } from '../../../shared/components/operation-ico
     :host ::ng-deep .history-filter-panel .date-picker-field { min-width:0; }
     :host ::ng-deep .history-filter-panel .date-display { min-width:0; width:100%; }
     :host ::ng-deep .history-filter-panel .date-filter-clear { grid-column:1/-1; justify-self:end; }
-    @media (min-width: 768px) {
-      .split-view { min-width:0; overflow:hidden; }
-      .split-view-list { width:420px; min-width:0; overflow-x:hidden; }
-      .split-view-list>.page { min-width:0; }
-      .split-view-detail.split-hidden { display: flex !important; }
-    }
   `],
 })
 export class OperationsLayoutComponent {

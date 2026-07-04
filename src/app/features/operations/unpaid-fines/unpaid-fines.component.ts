@@ -1,13 +1,14 @@
 import { Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { UnpaidFinesService } from '../../../core/services/unpaid-fines.service';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 
 @Component({
   selector: 'app-unpaid-fines',
-  imports: [RouterLink],
+  imports: [RouterLink, TranslatePipe],
   template: `
     <div class="page">
-      <h1 class="page-title">Denuncias</h1>
+      <h1 class="page-title">{{ 'ops.unpaidFines.title' | translate }}</h1>
       <ul class="list card" style="padding:0;overflow:hidden">
         @for (fine of fines(); track fine.id) {
           <a [routerLink]="['/app/operations/unpaid-fine-detail', fine.id]" class="list-item">

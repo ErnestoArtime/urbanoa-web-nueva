@@ -1,10 +1,12 @@
 import { Component } from '@angular/core';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 
 @Component({
   selector: 'app-operations-empty',
+  imports: [TranslatePipe],
   template: `
     <div class="empty-state">
-      <p>Selecciona una operación para ver el detalle</p>
+      <p>{{ 'ops.empty' | translate }}</p>
     </div>
   `,
   styles: [`
