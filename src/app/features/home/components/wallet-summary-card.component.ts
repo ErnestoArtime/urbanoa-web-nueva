@@ -18,7 +18,7 @@ import { APP_BRAND } from '../../../shared/constants/app-brand';
         <span class="wallet-inline-mark" aria-hidden="true">{{ brand.name }}</span>
       </div>
       <div class="wallet-main-card-row">
-        <app-icon name="card" class="wallet-card-icon" />
+        <app-icon name="card" class="wallet-card-icon" [stroke]="false" />
         <div>
           <p class="wallet-main-label">Tarjeta principal</p>
           <p class="wallet-main-value">{{ mainCard().brand }} Debit ·{{ mainCard().last4 }}</p>

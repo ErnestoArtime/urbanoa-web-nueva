@@ -26,7 +26,7 @@ export type PaymentMethod = 'none' | 'balance' | 'card' | 'mixed';
       } @else if (method() === 'balance') {
         <div class="payment-summary">
           <div class="payment-summary-row">
-            <app-icon name="wallet" [stroke]="true" />
+            <app-icon name="wallet" [stroke]="false" />
             <div class="payment-summary-info">
               <strong>{{ 'payment.wallet' | translate }}</strong>
               @if (balanceAfter() > 0) {
@@ -50,7 +50,7 @@ export type PaymentMethod = 'none' | 'balance' | 'card' | 'mixed';
       } @else {
         <div class="payment-summary">
           <div class="payment-summary-row">
-            <app-icon name="card" [stroke]="true" />
+            <app-icon name="card" [stroke]="false" />
             <div class="payment-summary-info">
               <strong>{{ 'payment.mixed' | translate }}</strong>
               <small>{{ 'payment.mixedDesc' | translate }}</small>
