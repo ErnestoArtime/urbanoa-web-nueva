@@ -18,15 +18,6 @@ import type { Vehicle } from '../../../shared/mock-data';
   `,
   styles: [
     `
-      .card {
-        border-radius: 12px;
-        border: 1px solid #d4d9cd;
-        box-shadow:
-          0 1px 0 rgba(28, 44, 39, 0.04),
-          0 3px 8px rgba(28, 44, 39, 0.07);
-        background: #f8f9f2;
-        padding: 0.8rem 0.9rem;
-      }
       .compact-card {
         min-height: 76px;
       }

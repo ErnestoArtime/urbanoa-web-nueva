@@ -249,6 +249,10 @@ interface MapParkingZone {
       }
       @media (max-width: 600px) {
         .vehicle-selector-dropdown {
+          top: auto;
+          bottom: 100%;
+          margin-top: 0;
+          margin-bottom: 0.35rem;
           left: -0.5rem;
           right: -0.5rem;
         }
@@ -385,6 +389,7 @@ interface MapParkingZone {
       @media (max-width: 600px) {
         .parking-map-page {
           padding: 0.65rem;
+          padding-bottom: 14rem;
         }
         .map-heading {
           align-items: start;
@@ -409,23 +414,29 @@ interface MapParkingZone {
         }
         .map-frame,
         .leaflet-map {
-          min-height: 380px;
+          min-height: 320px;
         }
         .parking-controls {
-          top: 0.5rem;
-          left: 0.5rem;
-          width: calc(100% - 1rem);
-          padding: 0.6rem;
-          gap: 0.35rem;
+          position: fixed;
+          z-index: 1000;
+          top: auto;
+          left: 0;
+          bottom: 58px;
+          width: 100%;
+          padding: 0.65rem 0.75rem calc(0.35rem + env(safe-area-inset-bottom, 0px));
+          gap: 0.4rem;
+          border-radius: 20px 20px 0 0;
+          background: rgba(249, 250, 239, 0.98);
+          box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.12);
         }
         .parking-controls .search-control,
         .parking-controls .vehicle-control {
-          min-height: 42px;
-          padding: 0.4rem 0.6rem;
+          min-height: 44px;
+          padding: 0.45rem 0.7rem;
         }
         .parking-controls .btn {
-          padding: 0.55rem;
-          font-size: var(--text-sm);
+          padding: 0.65rem;
+          font-size: var(--text-md);
         }
         .map-status {
           right: 0.5rem;

@@ -50,6 +50,12 @@ import { ProfileProgressCardComponent } from './components/profile-progress-card
         flex-direction: column;
         gap: 0.8rem;
       }
+      .dashboard-col-left,
+      .dashboard-col-right {
+        display: flex;
+        flex-direction: column;
+        gap: 0.78rem;
+      }
       @media (min-width: 960px) {
         :host > .page {
           max-width: 1120px;
@@ -65,16 +71,6 @@ import { ProfileProgressCardComponent } from './components/profile-progress-card
           grid-template-columns: minmax(300px, 0.82fr) minmax(410px, 1.18fr);
           align-items: start;
           gap: 0.75rem;
-        }
-        .dashboard-col-left {
-          display: flex;
-          flex-direction: column;
-          gap: 0.75rem;
-        }
-        .dashboard-col-right {
-          display: flex;
-          flex-direction: column;
-          gap: 0.78rem;
         }
       }
     `,

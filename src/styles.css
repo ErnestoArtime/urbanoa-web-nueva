@@ -43,6 +43,7 @@
   --card-border: #d4d9cd;
   --card-bg: #f8f9f2;
   --card-shadow: 0 1px 0 rgba(28, 44, 39, 0.04), 0 3px 8px rgba(28, 44, 39, 0.07);
+  --card-padding: 0.8rem 0.9rem;
 
   --breakpoint-split: 960px;
   --sidebar-width: 108px;
@@ -229,11 +230,11 @@ a:hover {
 
 /* Card */
 .card {
-  background: var(--color-surface);
-  border-radius: var(--radius-md);
-  padding: 0.85rem 0.9rem;
-  box-shadow: var(--shadow-sm);
-  border: 1px solid #d3d8cc;
+  background: var(--card-bg);
+  border-radius: var(--card-radius);
+  padding: var(--card-padding);
+  box-shadow: var(--card-shadow);
+  border: 1px solid var(--card-border);
 }
 .card-highlight {
   border-color: var(--color-primary);
@@ -484,20 +485,6 @@ a:hover {
   }
   .split-view-list.split-hidden {
     display: none;
-  }
-}
-
-/* Dashboard grid */
-.dashboard-grid {
-  display: grid;
-  gap: 1rem;
-}
-@media (min-width: 960px) {
-  .dashboard-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  .dashboard-grid .card-span-2 {
-    grid-column: span 2;
   }
 }
 

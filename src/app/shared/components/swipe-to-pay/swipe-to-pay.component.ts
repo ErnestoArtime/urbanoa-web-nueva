@@ -36,6 +36,10 @@ import { AppIconComponent } from '../../icons/app-icon.component';
   `,
   styles: [
     `
+      :host {
+        display: block;
+        width: 100%;
+      }
       .swipe-area {
         width: 100%;
       }

@@ -10,7 +10,7 @@ import type { TicketActive } from '../../../shared/mock-data';
   imports: [RouterLink, TranslatePipe, AppIconComponent],
   template: `
     @if (ticket(); as active) {
-      <div class="active-ticket-card">
+      <div class="card active-ticket-card">
         <div class="ticket-main-row">
           <div class="ticket-main-icon">
             <app-icon name="vehicle" />
