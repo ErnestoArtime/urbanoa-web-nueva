@@ -10,9 +10,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
       <div class="card">
         <div class="form-group">
           <label>{{ 'account.vehicleAdd.plate' | translate }} <span class="text-error">*</span></label
-          ><input class="form-input" [placeholder]="'account.vehicleAdd.plate' | translate" /><small class="form-error">{{
-            'account.vehicleAdd.plateRequired' | translate
-          }}</small>
+          ><input class="form-input" [placeholder]="'account.vehicleAdd.plate' | translate" />
         </div>
         <label class="switch-row"
           ><span>{{ 'account.vehicleAdd.foreignPlate' | translate }}</span

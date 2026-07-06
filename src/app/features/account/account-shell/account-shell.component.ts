@@ -66,6 +66,11 @@ import { APP_BRAND } from '../../../shared/constants/app-brand';
   `,
   styles: [
     `
+      :host {
+        display: block;
+        height: 100%;
+        min-height: 0;
+      }
       .account-master {
         padding: 1rem;
         background: var(--color-surface);

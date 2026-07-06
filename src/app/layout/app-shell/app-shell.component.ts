@@ -59,14 +59,18 @@ const TITLE_KEYS: Record<string, string> = {
   ],
   template: `
     <div class="app-shell">
-      <app-lang-selector />
       <app-sidebar class="app-shell-sidebar" />
       <div class="app-shell-main">
         <app-loader [visible]="routeTransitionLoading()" [message]="'common.loading' | translate" imageSrc="/assets/brand/login-logo.jpg" />
         @if (showHeader()) {
           <app-header [title]="headerTitle()" [showBack]="showBack()" />
         }
-        <app-breadcrumb />
+        <div class="app-shell-toolbar">
+          <app-breadcrumb />
+          <div class="app-shell-toolbar-actions">
+            <app-lang-selector />
+          </div>
+        </div>
         <main class="app-shell-content" [class.with-bottom-nav]="showBottomNav()">
           <router-outlet />
         </main>
@@ -79,8 +83,12 @@ const TITLE_KEYS: Record<string, string> = {
   styles: `
     .app-shell {
       display: flex;
+      position: fixed;
+      inset: 0;
+      width: 100%;
       height: 100dvh;
       background: var(--color-background);
+      overflow: hidden;
     }
     .app-shell-sidebar {
       display: none;
@@ -91,6 +99,7 @@ const TITLE_KEYS: Record<string, string> = {
       flex-direction: column;
       min-width: 0;
       height: 100%;
+      overflow: hidden;
     }
     :host {
       position: relative;
@@ -98,6 +107,7 @@ const TITLE_KEYS: Record<string, string> = {
     .app-shell-content {
       flex: 1;
       overflow-y: auto;
+      min-height: 0;
     }
     .app-shell-content.with-bottom-nav {
       padding-bottom: var(--bottom-nav-height);
@@ -105,10 +115,14 @@ const TITLE_KEYS: Record<string, string> = {
     .app-shell-bottom-nav {
       display: block;
     }
-    app-breadcrumb {
+    .app-shell-toolbar {
       display: none;
     }
+    app-breadcrumb,
     app-lang-selector {
+      display: none;
+    }
+    app-header {
       display: block;
     }
     @media (min-width: 960px) {
@@ -121,9 +135,33 @@ const TITLE_KEYS: Record<string, string> = {
       .app-shell-content.with-bottom-nav {
         padding-bottom: 0;
       }
-      app-breadcrumb,
+      app-header {
+        display: none;
+      }
+      .app-shell-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        min-height: 42px;
+        padding: 0.35rem 1rem 0.35rem 1.25rem;
+        border-bottom: 1px solid var(--color-border);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0));
+        position: sticky;
+        top: 0;
+        z-index: 25;
+      }
+      .app-shell-toolbar-actions {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
       app-lang-selector {
         display: block;
+      }
+      app-breadcrumb {
+        display: block;
+        flex: 1;
       }
     }
   `,

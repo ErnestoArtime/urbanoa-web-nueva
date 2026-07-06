@@ -1,55 +1,220 @@
-import { Component, inject, input, signal } from '@angular/core';
+import { Component, computed, inject, input, signal } from '@angular/core';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { DomSanitizer } from '@angular/platform-browser';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { APP_BRAND } from '../../../shared/constants/app-brand';
 
 @Component({
   selector: 'app-web-content',
-  imports: [TranslatePipe],
+  imports: [RouterLink, TranslatePipe],
   template: `
-    @if (loading()) {
-      <p class="text-center text-muted">{{ 'account.webContent.loading' | translate: { title: title() } }}</p>
-    }
-    @if (error()) {
-      <div class="web-content-error">
-        <p class="text-muted">{{ 'account.webContent.error' | translate }}</p>
-        <a [href]="rawUrl" target="_blank" class="btn btn-primary btn-block mt-2">Abrir en navegador</a>
-      </div>
-    }
-    @if (!error()) {
-      <iframe
-        #iframe
-        [src]="sanitizedUrl()"
-        (load)="onLoad()"
-        (error)="onError()"
-        style="width:100%;height:100%;border:0"
-        title="{{ title() }}"
-      ></iframe>
-    }
+    <div class="web-content-shell">
+      <header class="web-content-header">
+        @if (resolvedBackLink()) {
+          <a
+            [routerLink]="resolvedBackLink()"
+            class="web-content-back"
+            [attr.aria-label]="'common.back' | translate"
+          >
+            <span aria-hidden="true">‹</span>
+          </a>
+        } @else {
+          <span class="web-content-header-space"></span>
+        }
+        <h1>{{ resolvedTitle() }}</h1>
+        <a [href]="rawUrl()" target="_blank" rel="noopener" class="web-content-open" aria-label="Abrir en una pestaña nueva">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M14 3h7v7h-2V6.41l-9.29 9.3-1.42-1.42L17.59 5H14V3ZM5 5h6v2H5v12h12v-6h2v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z" />
+          </svg>
+        </a>
+      </header>
+
+      <section class="web-content-frame" [attr.aria-busy]="loading()">
+        @if (loading()) {
+          <div class="web-content-state">
+            <span class="web-content-spinner" aria-hidden="true"></span>
+            <p>{{ 'account.webContent.loading' | translate: { title: resolvedTitle() } }}</p>
+          </div>
+        }
+        @if (error()) {
+          <div class="web-content-error">
+            <strong>No se pudo mostrar el contenido</strong>
+            <p class="text-muted">{{ 'account.webContent.error' | translate }}</p>
+            <a [href]="rawUrl()" target="_blank" rel="noopener" class="btn btn-primary">Abrir en navegador</a>
+          </div>
+        } @else {
+          <iframe
+            [src]="iframeUrl()"
+            (load)="onLoad()"
+            (error)="onError()"
+            [title]="resolvedTitle()"
+            scrolling="yes"
+          ></iframe>
+        }
+      </section>
+    </div>
   `,
-  styles: [':host{display:block;height:100%;position:relative} .web-content-error{padding:2rem;text-align:center}'],
+  styles: [
+    `
+      :host {
+        display: block;
+        width: 100%;
+        height: 100%;
+        min-height: 0;
+        background: var(--color-background);
+      }
+      .web-content-shell {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        min-height: 0;
+        overflow: hidden;
+        background: var(--color-background);
+      }
+      .web-content-header {
+        display: grid;
+        grid-template-columns: 44px minmax(0, 1fr) 44px;
+        align-items: center;
+        min-height: var(--header-height);
+        padding: 0 0.4rem;
+        background: var(--color-background);
+        border-bottom: 1px solid var(--color-border);
+        flex-shrink: 0;
+      }
+      .web-content-header h1 {
+        overflow: hidden;
+        margin: 0;
+        font-size: var(--text-base);
+        font-weight: var(--font-bold);
+        line-height: var(--line-normal);
+        text-align: center;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .web-content-back,
+      .web-content-open {
+        display: grid;
+        place-items: center;
+        width: 44px;
+        height: 44px;
+        color: var(--color-primary);
+        border-radius: 50%;
+        text-decoration: none;
+      }
+      .web-content-back:hover,
+      .web-content-open:hover {
+        background: var(--color-accent-soft);
+        text-decoration: none;
+      }
+      .web-content-back span {
+        margin-top: -0.15rem;
+        font-size: var(--text-2xl);
+        line-height: 1;
+      }
+      .web-content-open svg {
+        width: 20px;
+        height: 20px;
+        fill: currentColor;
+      }
+      .web-content-frame {
+        position: relative;
+        flex: 1;
+        min-height: 0;
+        overflow: hidden;
+        overscroll-behavior: contain;
+        touch-action: pan-x pan-y;
+        background: #fff;
+      }
+      .web-content-frame iframe {
+        display: block;
+        width: 100%;
+        height: 100%;
+        border: 0;
+        background: #fff;
+        overscroll-behavior: contain;
+        touch-action: pan-x pan-y;
+      }
+      .web-content-state,
+      .web-content-error {
+        position: absolute;
+        inset: 0;
+        z-index: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.75rem;
+        padding: 1.5rem;
+        text-align: center;
+        background: var(--color-background);
+      }
+      .web-content-state p,
+      .web-content-error p {
+        color: var(--color-text-muted);
+      }
+      .web-content-spinner {
+        width: 30px;
+        height: 30px;
+        border: 3px solid var(--color-border);
+        border-top-color: var(--color-primary);
+        border-radius: 50%;
+        animation: web-content-spin 0.8s linear infinite;
+      }
+      @keyframes web-content-spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      @media (min-width: 960px) {
+        .web-content-header {
+          grid-template-columns: minmax(0, 1fr) 44px;
+          min-height: 58px;
+          padding-left: 1.1rem;
+        }
+        .web-content-header h1 {
+          font-size: var(--text-lg);
+          text-align: left;
+        }
+        .web-content-back,
+        .web-content-header-space {
+          display: none;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .web-content-spinner {
+          animation: none;
+        }
+      }
+    `,
+  ],
 })
 export class WebContentComponent {
-  readonly brand = APP_BRAND;
-  readonly url = input(`/external-content`);
-  readonly title = input('Contenido');
+  readonly url = input('/external-content');
+  readonly title = input('');
+  readonly backLink = input<string | null>(null);
   readonly loading = signal(true);
   readonly error = signal(false);
   private readonly sanitizer = inject(DomSanitizer);
+  private readonly route = inject(ActivatedRoute);
 
-  get rawUrl(): string {
-    return this.url().startsWith('/external-content')
-      ? `https://${this.brand.name.toLowerCase()}.gerteksa.eus${this.url().replace('/external-content', '')}`
-      : this.url();
-  }
+  readonly resolvedTitle = computed(() => this.title() || this.route.snapshot.data['title'] || 'Contenido');
+  readonly resolvedBackLink = computed(() => this.backLink() || this.route.snapshot.data['backLink'] || null);
+  readonly resolvedUrl = computed(() => {
+    const routeUrl = this.route.snapshot.data['url'];
+    const value = this.url() === '/external-content' && typeof routeUrl === 'string' ? routeUrl : this.url();
+    return value.startsWith('/external-content')
+      ? `https://${APP_BRAND.name.toLowerCase()}.gerteksa.eus${value.replace('/external-content', '')}`
+      : value;
+  });
 
-  sanitizedUrl() {
-    return this.sanitizer.bypassSecurityTrustResourceUrl(this.url());
-  }
+  readonly rawUrl = computed(() => this.resolvedUrl());
+
+  readonly iframeUrl = computed(() => this.sanitizer.bypassSecurityTrustResourceUrl(this.resolvedUrl()));
 
   onLoad(): void {
     this.loading.set(false);
   }
+
   onError(): void {
     this.error.set(true);
     this.loading.set(false);

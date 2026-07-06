@@ -98,7 +98,11 @@ const STORE_URL = 'https://play.google.com/store/apps/details?id=com.gerteksa.r.
                 <app-account-tax-data />
               }
               @case ('help') {
-                <app-web-content title="Ayuda" url="https://arinpark.gerteksa.eus/Arinpark/ArinparkFAQ-ESP.html" />
+                <app-web-content
+                  title="Ayuda"
+                  backLink="/app/account"
+                  url="/external-content/Arinpark/ArinparkFAQ-ESP.html"
+                />
               }
               @case ('about') {
                 <app-account-about />
@@ -110,10 +114,14 @@ const STORE_URL = 'https://play.google.com/store/apps/details?id=com.gerteksa.r.
                 <app-account-support-success />
               }
               @case ('terms-and-conditions') {
-                <app-web-content title="Términos y condiciones" url="https://arinpark.gerteksa.eus/arinpark/CU_es.html" />
+                <app-web-content
+                  title="Términos y condiciones"
+                  backLink="/app/account"
+                  url="/external-content/arinpark/CU_es.html"
+                />
               }
               @case ('privacy-policy') {
-                <app-web-content title="Política de privacidad" url="https://arinpark.gerteksa.eus/arinpark/es.html" />
+                <app-web-content title="Política de privacidad" backLink="/app/account" url="/external-content/arinpark/es.html" />
               }
               @case ('delete-account') {
                 <div class="page account-static-page">

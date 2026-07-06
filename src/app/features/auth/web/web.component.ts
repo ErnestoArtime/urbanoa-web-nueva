@@ -1,23 +1,27 @@
 import { Component, inject } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
-import { APP_BRAND } from '../../../shared/constants/app-brand';
+import { ActivatedRoute } from '@angular/router';
+import { WebContentComponent } from '../../account/web-content/web-content.component';
 
 @Component({
   selector: 'app-web',
-  imports: [RouterLink],
+  imports: [WebContentComponent],
   template: `
-    <div class="page">
-      <h1 class="page-title">{{ title }}</h1>
-      <div class="card mt-2">
-        <p>Contenido legal de {{ brand.name }}.</p>
-        <p class="text-muted mt-1">Gertek — gestión de aparcamiento regulado.</p>
-      </div>
-      <a routerLink="/auth/login" class="btn btn-secondary btn-block mt-2">Cerrar</a>
-    </div>
+    <app-web-content [title]="title" [url]="url" backLink="/auth/login" />
+  `,
+  styles: `
+    :host {
+      display: block;
+      height: 100dvh;
+      min-height: 0;
+    }
   `,
 })
 export class WebComponent {
-  readonly brand = APP_BRAND;
   private readonly route = inject(ActivatedRoute);
-  title = this.route.snapshot.paramMap.get('type') === 'privacy' ? 'Política de privacidad' : 'Términos y condiciones';
+
+  readonly title = this.route.snapshot.paramMap.get('type') === 'privacy' ? 'Política de privacidad' : 'Términos y condiciones';
+  readonly url =
+    this.route.snapshot.paramMap.get('type') === 'privacy'
+      ? '/external-content/arinpark/es.html'
+      : '/external-content/arinpark/CU_es.html';
 }

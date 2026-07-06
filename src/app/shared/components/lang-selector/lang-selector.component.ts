@@ -6,7 +6,7 @@ import { TranslationService, type SupportedLang } from '../../../core/services/t
   selector: 'app-lang-selector',
   imports: [FormsModule],
   template: `
-    <div class="lang-selector-fixed">
+    <div class="lang-selector">
       <select class="lang-select" [(ngModel)]="selectedLang" (change)="onChange()">
         <option value="es">ES</option>
         <option value="eu">EU</option>
@@ -16,27 +16,28 @@ import { TranslationService, type SupportedLang } from '../../../core/services/t
     </div>
   `,
   styles: `
-    .lang-selector-fixed {
-      position: fixed;
-      top: 0.5rem;
-      right: 0.75rem;
-      z-index: 999;
+    .lang-selector {
+      display: inline-flex;
+      align-items: center;
+      justify-content: flex-end;
     }
     .lang-select {
-      border: 1px solid var(--color-border, #ddd);
-      border-radius: 6px;
-      padding: 4px 8px;
-      font-size: 0.8125rem;
+      min-width: 64px;
+      height: 32px;
+      padding: 0 1.5rem 0 0.7rem;
+      border: 1px solid var(--color-border, #d9ddd2);
+      border-radius: 10px;
+      font-size: var(--text-xs);
       font-weight: var(--font-bold);
-      background: var(--color-surface, #fff);
+      background: var(--color-surface, #f9faef);
       color: var(--color-primary, #006a68);
       cursor: pointer;
-      appearance: auto;
-    }
-    @media (min-width: 960px) {
-      .lang-selector-fixed {
-        top: 0.75rem;
-      }
+      appearance: none;
+      box-shadow: var(--shadow-sm);
+      background-image: linear-gradient(45deg, transparent 50%, var(--color-primary) 50%), linear-gradient(135deg, var(--color-primary) 50%, transparent 50%);
+      background-position: calc(100% - 0.85rem) calc(50% - 1px), calc(100% - 0.55rem) calc(50% - 1px);
+      background-size: 5px 5px, 5px 5px;
+      background-repeat: no-repeat;
     }
   `,
 })

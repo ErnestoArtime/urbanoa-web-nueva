@@ -25,10 +25,11 @@ import { BreadcrumbService } from '../../../core/services/breadcrumb.service';
         display: flex;
         align-items: center;
         gap: 0.375rem;
-        padding: 0.5rem 1.25rem;
+        min-width: 0;
+        padding: 0;
         font-size: 0.8125rem;
-        background: var(--color-surface, #fff);
-        border-bottom: 1px solid var(--color-border, #e5e7eb);
+        background: transparent;
+        border: none;
         overflow-x: auto;
         white-space: nowrap;
       }
@@ -44,11 +45,6 @@ import { BreadcrumbService } from '../../../core/services/breadcrumb.service';
       }
       .breadcrumb-current {
         color: var(--color-muted, #6b7280);
-      }
-      @media (min-width: 960px) {
-        .breadcrumb {
-          padding: 0.5rem 2rem;
-        }
       }
     `,
   ],

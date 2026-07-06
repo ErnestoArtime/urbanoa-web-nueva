@@ -10,15 +10,11 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
       <div class="card">
         <div class="form-group">
           <label>{{ 'account.taxData.nif' | translate }} <span class="text-error">*</span></label
-          ><input class="form-input" [placeholder]="'account.taxData.nif' | translate" /><small class="form-error">{{
-            'account.taxData.nifRequired' | translate
-          }}</small>
+          ><input class="form-input" [placeholder]="'account.taxData.nif' | translate" />
         </div>
         <div class="form-group">
           <label>{{ 'account.taxData.street' | translate }} <span class="text-error">*</span></label
-          ><input class="form-input" [placeholder]="'account.taxData.street' | translate" /><small class="form-error">{{
-            'account.taxData.streetRequired' | translate
-          }}</small>
+          ><input class="form-input" [placeholder]="'account.taxData.street' | translate" />
         </div>
         <div class="form-group">
           <label>{{ 'account.taxData.number' | translate }} <span class="text-error">*</span></label
@@ -30,21 +26,15 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
         </div>
         <div class="form-group">
           <label>{{ 'account.taxData.city' | translate }} <span class="text-error">*</span></label
-          ><input class="form-input" [placeholder]="'account.taxData.city' | translate" /><small class="form-error">{{
-            'account.taxData.cityRequired' | translate
-          }}</small>
+          ><input class="form-input" [placeholder]="'account.taxData.city' | translate" />
         </div>
         <div class="form-group">
           <label>{{ 'account.taxData.province' | translate }} <span class="text-error">*</span></label
-          ><input class="form-input" [placeholder]="'account.taxData.province' | translate" /><small class="form-error">{{
-            'account.taxData.provinceRequired' | translate
-          }}</small>
+          ><input class="form-input" [placeholder]="'account.taxData.province' | translate" />
         </div>
         <div class="form-group">
           <label>{{ 'account.taxData.postalCode' | translate }} <span class="text-error">*</span></label
-          ><input class="form-input" [placeholder]="'account.taxData.postalCode' | translate" /><small class="form-error">{{
-            'account.taxData.postalCodeRequired' | translate
-          }}</small>
+          ><input class="form-input" [placeholder]="'account.taxData.postalCode' | translate" />
         </div>
         <button class="btn btn-primary btn-block">{{ 'common.save' | translate }}</button>
       </div>

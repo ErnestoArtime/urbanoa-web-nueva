@@ -55,12 +55,12 @@ import { APP_BRAND } from '../../shared/constants/app-brand';
       .sidebar-brand {
         display: flex;
         justify-content: center;
-        padding: 1rem 0.35rem;
+        padding: 1.1rem 0.5rem 0.9rem;
         border-bottom: 1px solid var(--color-border);
       }
       .brand-logo {
         display: block;
-        width: 88px;
+        width: 78px;
         height: auto;
         object-fit: contain;
       }

@@ -12,22 +12,15 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
       <div class="card">
         <div class="form-group">
           <label>{{ 'account.profile.name' | translate }}</label
-          ><input class="form-input" [placeholder]="'account.profile.name' | translate" [value]="user.name" /><small class="form-error">{{
-            'account.profile.nameRequired' | translate
-          }}</small>
+          ><input class="form-input" [placeholder]="'account.profile.name' | translate" [value]="user.name" />
         </div>
         <div class="form-group">
           <label>{{ 'account.profile.surname' | translate }}</label
-          ><input class="form-input" [placeholder]="'account.profile.surname' | translate" [value]="user.surname" /><small
-            class="form-error"
-            >{{ 'account.profile.surnameRequired' | translate }}</small
-          >
+          ><input class="form-input" [placeholder]="'account.profile.surname' | translate" [value]="user.surname" />
         </div>
         <div class="form-group">
           <label>{{ 'account.profile.nif' | translate }}</label
-          ><input class="form-input" [placeholder]="'account.profile.nif' | translate" [value]="user.nif" /><small class="form-error">{{
-            'account.profile.nifRequired' | translate
-          }}</small>
+          ><input class="form-input" [placeholder]="'account.profile.nif' | translate" [value]="user.nif" />
         </div>
         <div class="form-group">
           <label>{{ 'account.profile.phone' | translate }}</label
@@ -35,10 +28,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
         </div>
         <div class="form-group">
           <label>{{ 'account.profile.email' | translate }}</label
-          ><input class="form-input" type="email" [placeholder]="'account.profile.email' | translate" [value]="user.email" /><small
-            class="form-error"
-            >{{ 'account.profile.emailRequired' | translate }}</small
-          >
+          ><input class="form-input" type="email" [placeholder]="'account.profile.email' | translate" [value]="user.email" />
         </div>
         <button class="btn btn-primary btn-block">{{ 'common.save' | translate }}</button>
       </div>
