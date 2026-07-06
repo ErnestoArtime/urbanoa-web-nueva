@@ -9,7 +9,7 @@ import type { Vehicle } from '../../../shared/mock-data';
   imports: [TranslatePipe, AppIconComponent],
   template: `
     <div class="card compact-card vehicle-summary-card">
-      <app-icon name="vehicle" class="vehicle-summary-icon" />
+      <app-icon name="vehicle" class="vehicle-summary-icon" [stroke]="false" />
       <div>
         <p class="vehicle-summary-label">Vehículo principal</p>
         <p class="vehicle-plate">{{ vehicle().plate }}</p>

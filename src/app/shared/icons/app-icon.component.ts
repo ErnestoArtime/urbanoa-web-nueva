@@ -7,7 +7,7 @@ import { ICON_PATHS, type IconName } from './icon-paths';
   template: `
     <svg
       class="app-icon"
-      viewBox="0 0 24 24"
+      viewBox="0 -960 960 960"
       [attr.aria-hidden]="ariaLabel() ? undefined : true"
       [attr.aria-label]="ariaLabel() ?? undefined"
       [style.width]="size() + 'px'"
@@ -27,7 +27,7 @@ import { ICON_PATHS, type IconName } from './icon-paths';
       .app-icon-stroke {
         fill: none;
         stroke: currentColor;
-        stroke-width: 1.8;
+        stroke-width: 72;
         stroke-linecap: round;
         stroke-linejoin: round;
       }

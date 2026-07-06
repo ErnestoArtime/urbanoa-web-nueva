@@ -34,7 +34,7 @@ import { APP_BRAND } from '../../../shared/constants/app-brand';
             }
             @if (item.key === 'share' || item.key === 'review') {
               <button type="button" class="list-item account-item" (click)="handleAction(item.key)">
-                <app-icon [name]="item.icon" class="account-item-icon" />
+                <app-icon [name]="item.icon" class="account-item-icon" [stroke]="false" />
                 <div class="list-item-content">
                   <div class="list-item-title">{{ item.labelKey | translate }}</div>
                 </div>
@@ -47,7 +47,7 @@ import { APP_BRAND } from '../../../shared/constants/app-brand';
                 routerLinkActive="active"
                 [routerLinkActiveOptions]="{ exact: item.path === '/app/account' }"
               >
-                <app-icon [name]="item.icon" class="account-item-icon" />
+                <app-icon [name]="item.icon" class="account-item-icon" [stroke]="false" />
                 <div class="list-item-content">
                   <div class="list-item-title">{{ item.labelKey | translate }}</div>
                 </div>

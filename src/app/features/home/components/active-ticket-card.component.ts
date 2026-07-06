@@ -13,7 +13,7 @@ import type { TicketActive } from '../../../shared/mock-data';
       <div class="card active-ticket-card">
         <div class="ticket-main-row">
           <div class="ticket-main-icon">
-            <app-icon name="vehicle" />
+            <app-icon name="vehicle" [stroke]="false" />
           </div>
           <div>
             <p class="ticket-plate">{{ active.plate }}</p>
@@ -40,12 +40,12 @@ import type { TicketActive } from '../../../shared/mock-data';
         </div>
         <div class="row mt-2 action-row">
           <a class="btn btn-secondary btn-sm">
-            <app-icon name="goToCar" class="action-btn-icon" />
+            <app-icon name="goToCar" class="action-btn-icon" [stroke]="false" />
             {{ 'dashboard.howToGetThere' | translate }}
           </a>
           <button type="button" class="btn btn-danger btn-sm" (click)="unpark.emit()">{{ 'dashboard.unpark' | translate }}</button>
           <button type="button" class="btn btn-primary btn-sm" (click)="extend.emit()">
-            <app-icon name="extend" class="action-btn-icon" />
+            <app-icon name="extend" class="action-btn-icon" [stroke]="false" />
             {{ 'dashboard.extendTime' | translate }}
           </button>
         </div>

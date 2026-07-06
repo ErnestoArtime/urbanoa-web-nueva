@@ -8,7 +8,7 @@ import { OperationType } from '../../models/operation-type';
   imports: [AppIconComponent],
   template: `
     <span class="operation-icon" [attr.data-type]="type()" aria-hidden="true">
-      <app-icon [name]="iconName()" />
+      <app-icon [name]="iconName()" [stroke]="false" />
     </span>
   `,
   styles: [

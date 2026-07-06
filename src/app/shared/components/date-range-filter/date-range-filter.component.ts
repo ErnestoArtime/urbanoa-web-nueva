@@ -26,7 +26,7 @@ export interface DateRange {
       <div class="date-filter-cal-row">
         @if (!simple()) {
           <button type="button" class="date-filter-toggle" (click)="showCalendar.set(!showCalendar())">
-            <app-icon name="dateRange" />
+            <app-icon name="dateRange" [stroke]="false" />
             <span class="cal-label">{{ 'ops.filterDate' | translate }}</span>
           </button>
         }
