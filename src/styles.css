@@ -509,7 +509,7 @@ a:hover {
 @media (max-width: 959px) {
   .split-view-detail:not(.split-hidden) {
     height: 100%;
-    overflow: hidden;
+    overflow-y: auto;
   }
   .split-view-list {
     display: block;
