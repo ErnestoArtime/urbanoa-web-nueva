@@ -93,7 +93,7 @@ export const MOCK_TICKET_ACTIVE: TicketActive = {
 
 export const MOCK_MUNICIPIOS: Municipio[] = [
   { id: 'durango', nombre: 'Durango', provincia: 'Bizkaia', zonas: 3, imagen: 'durango.jpg' },
-  { id: 'zarautz', nombre: 'Zarautz', provincia: 'Gipuzkoa', zonas: 4, imagen: 'zarautz.jpg' },
+  { id: 'zarautz', nombre: 'Zarautz', provincia: 'Gipuzkoa', zonas: 3, imagen: 'zarautz.jpg' },
   { id: 'tolosa', nombre: 'Tolosa', provincia: 'Gipuzkoa', zonas: 2, imagen: 'tolosa.jpg' },
   { id: 'bergara', nombre: 'Bergara', provincia: 'Gipuzkoa', zonas: 3, imagen: 'bergara.jpg' },
   { id: 'arrasate', nombre: 'Arrasate', provincia: 'Gipuzkoa', zonas: 3, imagen: 'arrasate.jpg' },
@@ -103,16 +103,16 @@ export const MOCK_MUNICIPIOS: Municipio[] = [
 ];
 
 export const MOCK_STREETS_ZARAUTZ: Street[] = [
-  { nombre: 'Nagusia Kalea', zona: 'Casco histórico', tarifa: '0,60 €/h' },
-  { nombre: 'Nafarroa Kalea', zona: 'Centro', tarifa: '0,60 €/h' },
-  { nombre: 'Zigordia Kalea', zona: 'Casco histórico', tarifa: '0,60 €/h' },
-  { nombre: 'Azara Kalea', zona: 'Casco histórico', tarifa: '0,50 €/h' },
-  { nombre: 'Mendilauta Kalea', zona: 'Mendilauta', tarifa: '0,40 €/h' },
-  { nombre: 'Santa Marina Kalea', zona: 'Centro', tarifa: '0,60 €/h' },
-  { nombre: 'Gipuzkoa Kalea', zona: 'Centro', tarifa: '0,60 €/h' },
-  { nombre: 'Lapurdi Kalea', zona: 'Centro', tarifa: '0,60 €/h' },
-  { nombre: 'Itsas Pasealekua', zona: 'Playa', tarifa: '0,70 €/h' },
-  { nombre: 'Salbide Kalea', zona: 'Salbide', tarifa: '0,30 €/h' },
+  { nombre: 'AITZA KALEA', zona: 'Z2 AZUL', tarifa: '' },
+  { nombre: 'ARABA KALEA', zona: 'Z2 ALTA ROTACION', tarifa: '' },
+  { nombre: 'ARPANTZADI KALEA', zona: 'Z2 RESIDENTES', tarifa: '' },
+  { nombre: 'AROTZ KALEA', zona: 'Z2 AZUL', tarifa: '' },
+  { nombre: 'ASTI BIDEA', zona: 'Z2 RESIDENTES', tarifa: '' },
+  { nombre: 'AXULAR KALEA', zona: 'Z2 RESIDENTES', tarifa: '' },
+  { nombre: 'AZKEN KALEA', zona: 'Z2 RESIDENTES', tarifa: '' },
+  { nombre: 'BARANDIARAN KALEA', zona: 'Z2 RESIDENTES', tarifa: '' },
+  { nombre: 'BARATZALDE KALEA', zona: 'Z1 RESIDENTES', tarifa: '' },
+  { nombre: 'BIZKAIA KALEA', zona: 'Z1 ALTA ROTACION', tarifa: '' },
 ];
 
 export const MOCK_STREETS = MOCK_STREETS_ZARAUTZ.map((s) => s.nombre);
@@ -207,8 +207,8 @@ export const ACCOUNT_MENU = [
     groupKey: 'account.menu.group.other',
   },
   { key: 'help', path: '/app/account/help', labelKey: 'account.menu.help', icon: 'help', groupKey: 'account.menu.group.other' },
-  { key: 'share', path: '/app/account/share', labelKey: 'account.menu.share', icon: 'share', groupKey: 'account.menu.group.other' },
-  { key: 'review', path: '/app/account/review', labelKey: 'account.menu.review', icon: 'review', groupKey: 'account.menu.group.other' },
+  // { key: 'share', path: '/app/account/share', labelKey: 'account.menu.share', icon: 'share', groupKey: 'account.menu.group.other' },
+  // { key: 'review', path: '/app/account/review', labelKey: 'account.menu.review', icon: 'review', groupKey: 'account.menu.group.other' },
   {
     key: 'terms-and-conditions',
     path: '/app/account/terms-and-conditions',

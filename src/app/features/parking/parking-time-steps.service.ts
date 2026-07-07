@@ -11,13 +11,13 @@ export class ParkingTimeStepsService {
     const hourlyPrice = input.tariffPrice;
     const maxMinutes = input.maxMinutes ?? 180;
 
-    const durations: { minutes: number; label: string }[] = [
-      { minutes: 30, label: '30 min' },
-      { minutes: 60, label: '1 h' },
-      { minutes: 90, label: '1 h 30 min' },
-      { minutes: 120, label: '2 h' },
-      { minutes: 180, label: '3 h' },
-    ];
+    const durations = Array.from({ length: Math.floor(maxMinutes / 5) }, (_, index) => {
+      const minutes = (index + 1) * 5;
+      const hours = Math.floor(minutes / 60);
+      const remainder = minutes % 60;
+      const label = hours === 0 ? `${minutes} min` : remainder === 0 ? `${hours} h` : `${hours} h ${remainder} min`;
+      return { minutes, label };
+    });
 
     const steps = durations
       .filter((d) => d.minutes <= maxMinutes)

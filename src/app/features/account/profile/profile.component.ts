@@ -4,6 +4,7 @@ import { RouterLink } from '@angular/router';
 import { MOCK_USER } from '../../../shared/mock-data';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
+import { UserService } from '../../../core/services/user.service';
 
 @Component({
   selector: 'app-account-profile',
@@ -54,8 +55,9 @@ export class AccountProfileComponent {
   readonly saved = signal(false);
   readonly saving = signal(false);
   private readonly fb = inject(FormBuilder);
+  private readonly userService = inject(UserService);
 
-  readonly form = this.fb.group({
+  readonly form = this.fb.nonNullable.group({
     name: ['', Validators.required],
     surname: ['', Validators.required],
     nif: [''],
@@ -64,7 +66,7 @@ export class AccountProfileComponent {
   });
 
   constructor() {
-    this.form.patchValue(MOCK_USER);
+    this.form.patchValue(this.userService.user());
   }
 
   onSave(): void {
@@ -73,7 +75,10 @@ export class AccountProfileComponent {
 
     this.saving.set(true);
     setTimeout(() => {
-      Object.assign(MOCK_USER, this.form.value);
+      const raw = this.form.getRawValue();
+      const data = { name: raw.name || '', surname: raw.surname || '', email: raw.email || '', nif: raw.nif || '', phone: raw.phone || '' };
+      Object.assign(MOCK_USER, data);
+      this.userService.updateUser(data);
       this.saving.set(false);
       this.saved.set(true);
       setTimeout(() => this.saved.set(false), 3000);

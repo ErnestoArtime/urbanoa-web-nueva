@@ -1,7 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
-import { Router } from '@angular/router';
-import { MOCK_WALLET } from '../../../shared/mock-data';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { WalletService } from '../../../core/services/wallet.service';
+import { OperationsService } from '../../../core/services/operations.service';
 
 @Component({
   selector: 'app-account-recharge',
@@ -11,7 +11,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
       <h1 class="page-title">{{ 'account.recharge.title' | translate }}</h1>
       <div class="card">
         <p class="text-muted">
-          {{ 'account.recharge.currentBalance' | translate }} <strong>{{ wallet.balance }} €</strong>
+          {{ 'account.recharge.currentBalance' | translate }} <strong>{{ walletService.balance() }} €</strong>
         </p>
         <div class="recharge-options">
           <button type="button" class="recharge-option" [class.active]="selected() === 5" (click)="selected.set(5)">5 €</button>
@@ -21,19 +21,19 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
         </div>
         <div class="form-group">
           <label>{{ 'account.recharge.otherAmount' | translate }}</label
-          ><input class="form-input" type="number" min="1" />
+          ><input class="form-input" type="number" min="1" [value]="selected()" (input)="setCustomAmount($event)" />
         </div>
       </div>
       <div class="card mt-1">
         <p>{{ 'account.recharge.cardForRecharge' | translate }}</p>
         <div class="card-row">
-          <span>Visa •••• {{ wallet.mainCard.last4 }}</span
-          ><span class="text-muted">{{ 'account.recharge.expires' | translate }} {{ wallet.mainCard.expiryDate }}</span>
+          <span>Visa •••• {{ walletService.mainCard.last4 }}</span
+          ><span class="text-muted">{{ 'account.recharge.expires' | translate }} {{ walletService.mainCard.expiryDate }}</span>
         </div>
       </div>
       <div class="card mt-1">
         <p>
-          {{ 'account.recharge.balanceAfter' | translate }} <strong>{{ wallet.balance + selected() }},00 €</strong>
+          {{ 'account.recharge.balanceAfter' | translate }} <strong>{{ walletService.balance() + selected() }} €</strong>
         </p>
       </div>
       <button class="btn btn-primary btn-block mt-2" (click)="confirm()">{{ 'account.recharge.button' | translate }}</button>
@@ -88,12 +88,19 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
   ],
 })
 export class AccountRechargeComponent {
-  private readonly router = inject(Router);
-  readonly wallet = MOCK_WALLET;
+  readonly walletService = inject(WalletService);
+  private readonly operationsService = inject(OperationsService);
   readonly selected = signal(10);
   readonly done = signal(false);
   confirm(): void {
+    if (this.done() || this.selected() <= 0) return;
+    this.walletService.addBalance(this.selected());
+    this.operationsService.registerTopUp(this.selected());
     this.done.set(true);
     setTimeout(() => this.done.set(false), 3000);
+  }
+  setCustomAmount(event: Event): void {
+    const amount = Number((event.target as HTMLInputElement).value);
+    if (Number.isFinite(amount) && amount > 0) this.selected.set(amount);
   }
 }

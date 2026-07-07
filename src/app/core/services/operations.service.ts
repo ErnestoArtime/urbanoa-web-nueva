@@ -45,6 +45,44 @@ export class OperationsService {
     this._operations.update((list) => [operation, ...list]);
   }
 
+  registerTopUp(amount: number): void {
+    this._operations.update((list) => [
+      {
+        id: this.nextId(),
+        type: OperationType.TOP_UP,
+        plate: null,
+        date: this.todayDateString(),
+        amount: Math.abs(amount),
+        zone: null,
+      },
+      ...list,
+    ]);
+  }
+
+  startParking(input: ActiveOperation & { amount: number }): boolean {
+    if (this._activeOperation()) return false;
+    this._activeOperation.set({
+      plate: input.plate,
+      zone: input.zone,
+      startTime: input.startTime,
+      durationLabel: input.durationLabel,
+      timeRemaining: input.timeRemaining,
+      endTime: input.endTime,
+    });
+    this._operations.update((list) => [
+      {
+        id: this.nextId(),
+        type: OperationType.PARKING,
+        plate: input.plate,
+        date: this.todayDateString(),
+        amount: -Math.abs(input.amount),
+        zone: input.zone,
+      },
+      ...list,
+    ]);
+    return true;
+  }
+
   unparkActiveOperation(): boolean {
     const active = this._activeOperation();
     if (!active) return false;

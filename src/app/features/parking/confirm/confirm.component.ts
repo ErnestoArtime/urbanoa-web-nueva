@@ -7,6 +7,8 @@ import { SwipeToPayComponent } from '../../../shared/components/swipe-to-pay/swi
 import { ParkingFlowStore } from '../parking-flow.store';
 import { ParkingFlowQuery, readParkingFlowQuery } from '../parking-flow.model';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { OperationsService } from '../../../core/services/operations.service';
+import { WalletService } from '../../../core/services/wallet.service';
 
 @Component({
   selector: 'app-parking-confirm',
@@ -143,6 +145,8 @@ export class ParkingConfirmComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly store = inject(ParkingFlowStore);
+  private readonly operationsService = inject(OperationsService);
+  private readonly walletService = inject(WalletService);
   readonly query: ParkingFlowQuery = this.store.hasMinimumParkingData() ? this.store.fromStore() : readParkingFlowQuery(this.route);
   readonly wallet = MOCK_WALLET;
   readonly loading = signal(false);
@@ -157,6 +161,27 @@ export class ParkingConfirmComponent {
   }
 
   onSwipeComplete(): void {
+    if (this.loading()) return;
+    const amount = this.totalAmount();
+    if (this.walletService.balance() < amount) return;
+
+    const minutes = Number(this.query.minutes || 0);
+    const hoursPart = String(Math.floor(minutes / 60)).padStart(2, '0');
+    const minutesPart = String(minutes % 60).padStart(2, '0');
+    const started = this.operationsService.startParking({
+      plate: this.query.plate,
+      zone: `${this.query.zone} — ${this.query.cityName}`,
+      startTime: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
+      durationLabel: this.query.duration,
+      timeRemaining: `${hoursPart}:${minutesPart}:00`,
+      endTime: this.query.endTime,
+      amount,
+    });
+    if (!started) {
+      void this.router.navigate(['/app/home']);
+      return;
+    }
+    this.walletService.addBalance(-amount);
     this.loading.set(true);
     setTimeout(() => void this.router.navigate(['/app/parking/success'], { queryParams: this.query }), 1500);
   }

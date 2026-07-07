@@ -1,4 +1,5 @@
-import { Component, input, output } from '@angular/core';
+import { Component, input } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { AppIconComponent } from '../../../shared/icons/app-icon.component';
 import type { Vehicle } from '../../../shared/mock-data';
@@ -6,7 +7,7 @@ import type { Vehicle } from '../../../shared/mock-data';
 @Component({
   selector: 'app-vehicle-summary-card',
   standalone: true,
-  imports: [TranslatePipe, AppIconComponent],
+  imports: [RouterLink, TranslatePipe, AppIconComponent],
   template: `
     <div class="card compact-card vehicle-summary-card">
       <app-icon name="vehicle" class="vehicle-summary-icon" [stroke]="false" />
@@ -14,6 +15,7 @@ import type { Vehicle } from '../../../shared/mock-data';
         <p class="vehicle-summary-label">Vehículo principal</p>
         <p class="vehicle-plate">{{ vehicle().plate }}</p>
       </div>
+      <a routerLink="/app/account/vehicles" class="manage-vehicles">{{ 'account.menu.vehicles' | translate }}</a>
     </div>
   `,
   styles: [
@@ -51,10 +53,15 @@ import type { Vehicle } from '../../../shared/mock-data';
         line-height: var(--line-tight);
         margin-top: 0.15rem;
       }
+      .manage-vehicles {
+        margin-left: auto;
+        font-size: var(--text-xs);
+        font-weight: var(--font-bold);
+        white-space: nowrap;
+      }
     `,
   ],
 })
 export class VehicleSummaryCardComponent {
   readonly vehicle = input.required<Vehicle>();
-  readonly manageVehicles = output<void>();
 }

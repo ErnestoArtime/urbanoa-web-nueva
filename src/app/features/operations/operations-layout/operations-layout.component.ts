@@ -15,7 +15,16 @@ import { AppIconComponent } from '../../../shared/icons/app-icon.component';
 
 @Component({
   selector: 'app-operations-layout',
-  imports: [RouterLink, RouterLinkActive, TranslatePipe, DecimalPipe, DateRangeFilterComponent, OperationIconComponent, SplitViewComponent, AppIconComponent],
+  imports: [
+    RouterLink,
+    RouterLinkActive,
+    TranslatePipe,
+    DecimalPipe,
+    DateRangeFilterComponent,
+    OperationIconComponent,
+    SplitViewComponent,
+    AppIconComponent,
+  ],
   template: `
     <app-split-view [hideList]="isDetailRoute()" [hideDetail]="!isDetailRoute()">
       <div splitList class="page" style="padding-bottom:0">
@@ -34,7 +43,8 @@ import { AppIconComponent } from '../../../shared/icons/app-icon.component';
                 <span class="running-badge">{{ active.timeRemaining }}</span>
               </div>
               <div class="active-times">
-                <span>{{ 'ops.endsAt' | translate }}</span><strong>{{ active.endTime }}</strong>
+                <span>{{ 'ops.endsAt' | translate }}</span
+                ><strong>{{ active.endTime }}</strong>
               </div>
               <div class="active-actions">
                 <button type="button" class="btn btn-danger btn-sm" (click)="onUnpark()">{{ 'dashboard.unpark' | translate }}</button>
@@ -51,14 +61,13 @@ import { AppIconComponent } from '../../../shared/icons/app-icon.component';
         <section class="actions-section">
           <a
             routerLink="/app/operations/unpaid-fines"
-            routerLinkActive="active"
-            [routerLinkActiveOptions]="{ exact: false }"
-            ariaCurrentWhenActive="page"
+            [class.active]="isUnpaidFinesRoute()"
+            [attr.aria-current]="isUnpaidFinesRoute() ? 'page' : null"
             class="list-item action-item"
           >
             <div class="list-item-content">
               <div class="list-item-title">
-                {{ 'ops.unpaidFines.title' | translate }} <span class="badge badge-error">{{ unpaidFinesCount() }}</span>
+                {{ 'ops.unpaidFines.title' | translate }} <span class="badge badge-error">({{ unpaidFinesCount() }})</span>
               </div>
             </div>
             <span class="list-item-chevron">›</span>
@@ -327,6 +336,11 @@ export class OperationsLayoutComponent {
   isDetailRoute = () => {
     const path = this.url().split('?')[0].replace(/\/$/, '');
     return path !== '/app/operations';
+  };
+
+  isUnpaidFinesRoute = () => {
+    const path = this.url().split('?')[0];
+    return path.startsWith('/app/operations/unpaid-fines') || path.startsWith('/app/operations/unpaid-fine-detail');
   };
 
   onRangeChange(range: DateRange): void {

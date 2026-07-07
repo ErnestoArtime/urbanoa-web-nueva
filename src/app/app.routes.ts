@@ -1,4 +1,6 @@
+import { inject } from '@angular/core';
 import { Routes } from '@angular/router';
+import { OperationsService } from './core/services/operations.service';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'auth/login', pathMatch: 'full' },
@@ -14,7 +16,7 @@ export const routes: Routes = [
     path: 'app',
     loadComponent: () => import('./layout/app-shell/app-shell.component').then((m) => m.AppShellComponent),
     children: [
-      { path: '', redirectTo: 'home', pathMatch: 'full' },
+      { path: '', redirectTo: 'parking', pathMatch: 'full' },
       { path: 'home', loadComponent: () => import('./features/home/home.component').then((m) => m.HomeComponent) },
       {
         path: 'parking',

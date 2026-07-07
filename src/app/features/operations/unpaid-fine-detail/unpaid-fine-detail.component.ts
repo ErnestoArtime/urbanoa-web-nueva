@@ -33,7 +33,9 @@ import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/
             <p style="font-size: var(--text-xl);font-weight: var(--font-bold)">{{ walletService.balance() | number: '1.2-2' }} €</p>
           </div>
           @if (insufficientFunds()) {
-            <p class="mt-1" style="color:var(--color-error);font-size:var(--text-sm)">{{ 'ops.fineDetail.insufficientBalance' | translate }}</p>
+            <p class="mt-1" style="color:var(--color-error);font-size:var(--text-sm)">
+              {{ 'ops.fineDetail.insufficientBalance' | translate }}
+            </p>
           }
           <button type="button" class="btn btn-primary btn-block mt-2" (click)="pay()" [disabled]="insufficientFunds()">
             {{ 'ops.fineDetail.pay' | translate }} {{ fine.amount }}
@@ -75,7 +77,6 @@ export class UnpaidFineDetailComponent {
 
   pay(): void {
     if (!this.fine) return;
-    this.unpaidFinesService.payFine(this.fineId);
-    this.paid.set(true);
+    this.paid.set(this.unpaidFinesService.payFine(this.fineId));
   }
 }

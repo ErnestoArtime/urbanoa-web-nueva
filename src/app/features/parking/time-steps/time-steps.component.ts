@@ -335,7 +335,8 @@ export class ParkingTimeStepsComponent implements OnInit {
       startDate: this.startedAt,
     });
     this.steps.set(generatedSteps);
-    const defaultIndex = generatedSteps.length > 1 ? 1 : 0;
+    const oneHourIndex = generatedSteps.findIndex((step) => step.time === 60);
+    const defaultIndex = oneHourIndex >= 0 ? oneHourIndex : 0;
     this.selectedStep.set(generatedSteps[defaultIndex]);
     setTimeout(() => this.loading.set(false), 700);
   }

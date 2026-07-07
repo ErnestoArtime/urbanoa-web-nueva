@@ -11,7 +11,7 @@ import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/
   template: `
     <div class="web-content-shell">
       <header class="web-content-header">
-        <a [routerLink]="backLink() ?? '/app/account'" class="back-btn">←</a>
+        <a [routerLink]="backLink() ?? '/app/account'" class="web-content-back">←</a>
         <h1 class="page-title">{{ resolvedTitle() }}</h1>
       </header>
 
@@ -68,12 +68,14 @@ import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/
         flex-shrink: 0;
       }
       .web-content-header h1 {
+        display: block;
+        grid-column: 2;
         overflow: hidden;
         margin: 0;
         font-size: var(--text-base);
         font-weight: var(--font-bold);
         line-height: var(--line-normal);
-        text-align: center;
+        text-align: left;
         text-overflow: ellipsis;
         white-space: nowrap;
       }
@@ -158,6 +160,7 @@ import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/
           padding-left: 1.1rem;
         }
         .web-content-header h1 {
+          grid-column: 1;
           font-size: var(--text-lg);
           text-align: left;
         }

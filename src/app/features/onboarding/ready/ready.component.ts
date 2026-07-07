@@ -12,7 +12,7 @@ import { APP_BRAND } from '../../../shared/constants/app-brand';
       <p class="page-subtitle">
         Hemos configurado tu perfil, tu vehículo y tu método de pago. Ahora {{ brand.name }} hará el trabajo duro por ti.
       </p>
-      <a routerLink="/app/home" class="btn btn-primary btn-block mt-2">Empezar</a>
+      <a routerLink="/app" class="btn btn-primary btn-block mt-2">Empezar</a>
     </div>
   `,
 })
