@@ -513,6 +513,7 @@ a:hover {
   }
   .split-view-list {
     display: block;
+    padding-bottom: var(--bottom-nav-height);
   }
   .split-view-detail.split-hidden {
     display: none;

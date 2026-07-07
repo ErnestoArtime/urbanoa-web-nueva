@@ -28,7 +28,7 @@ import { AppIconComponent } from '../../../shared/icons/app-icon.component';
   ],
   template: `
     <app-split-view [hideList]="isDetailRoute()" [hideDetail]="!isDetailRoute()">
-      <div splitList class="page" style="padding-bottom:0">
+      <div splitList class="page">
         <h1 class="page-title">{{ 'ops.title' | translate }}</h1>
 
         <section class="current-section">

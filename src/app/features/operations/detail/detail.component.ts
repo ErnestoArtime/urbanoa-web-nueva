@@ -16,7 +16,7 @@ import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/
   imports: [DecimalPipe, OperationIconComponent, AppIconComponent, TranslatePipe, DetailPanelHeaderComponent],
   template: `
     <div class="page operation-detail-page">
-      <app-detail-panel-header [title]="'#' + id()" backRoute="/app/operations" />
+      <app-detail-panel-header [title]="detailTitle() | translate" backRoute="/app/operations" />
       @if (op(); as operation) {
         <header class="detail-heading">
           <app-operation-icon [type]="operation.type" />
