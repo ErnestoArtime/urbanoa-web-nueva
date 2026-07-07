@@ -56,7 +56,13 @@ import { APP_BRAND } from '../../../shared/constants/app-brand';
             }
           }
         </ul>
-        <a routerLink="/auth/login" class="btn btn-ghost btn-block mt-2">{{ 'account.logout' | translate }}</a>
+        <a routerLink="/auth/login" class="list-item account-item logout-item">
+          <app-icon name="logout" class="account-item-icon" [stroke]="false" />
+          <div class="list-item-content">
+            <div class="list-item-title">{{ 'account.logout' | translate }}</div>
+          </div>
+          <span class="list-item-chevron">›</span>
+        </a>
       </div>
     </app-split-view>
 
@@ -73,6 +79,13 @@ import { APP_BRAND } from '../../../shared/constants/app-brand';
       }
       .account-master {
         padding: 1rem;
+        padding-bottom: 5rem;
+        background: var(--color-surface);
+      }
+      .logout-item {
+        margin-top: -1px;
+        border: 1px solid var(--color-border);
+        border-radius: 0 0 var(--radius-md) var(--radius-md);
         background: var(--color-surface);
       }
       .account-profile {

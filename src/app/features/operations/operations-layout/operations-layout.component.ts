@@ -11,21 +11,22 @@ import { OperationsService } from '../../../core/services/operations.service';
 import type { Operation } from '../../../shared/models/operation';
 import { OperationIconComponent } from '../../../shared/components/operation-icon/operation-icon.component';
 import { SplitViewComponent } from '../../../layout/split-view/split-view.component';
+import { AppIconComponent } from '../../../shared/icons/app-icon.component';
 
 @Component({
   selector: 'app-operations-layout',
-  imports: [RouterLink, RouterLinkActive, TranslatePipe, DecimalPipe, DateRangeFilterComponent, OperationIconComponent, SplitViewComponent],
+  imports: [RouterLink, RouterLinkActive, TranslatePipe, DecimalPipe, DateRangeFilterComponent, OperationIconComponent, SplitViewComponent, AppIconComponent],
   template: `
     <app-split-view [hideList]="isDetailRoute()" [hideDetail]="!isDetailRoute()">
       <div splitList class="page" style="padding-bottom:0">
         <h1 class="page-title">{{ 'ops.title' | translate }}</h1>
 
         <section class="current-section">
-          <p class="section-label">En curso</p>
+          <p class="section-label">{{ 'ops.inProgress' | translate }}</p>
           @if (activeTicket(); as active) {
             <article class="active-operation">
               <div class="active-operation-head">
-                <span class="car-icon">▣</span>
+                <app-icon name="vehicle" class="car-icon" [stroke]="false" />
                 <div>
                   <strong>{{ active.plate }}</strong
                   ><small>{{ active.zone }}</small>
@@ -33,16 +34,16 @@ import { SplitViewComponent } from '../../../layout/split-view/split-view.compon
                 <span class="running-badge">{{ active.timeRemaining }}</span>
               </div>
               <div class="active-times">
-                <span>Finaliza</span><strong>{{ active.endTime }}</strong>
+                <span>{{ 'ops.endsAt' | translate }}</span><strong>{{ active.endTime }}</strong>
               </div>
               <div class="active-actions">
-                <button type="button" class="btn btn-danger btn-sm" (click)="onUnpark()">Desaparcar</button>
-                <a routerLink="/app/parking/time-steps" class="btn btn-primary btn-sm">Ampliar</a>
+                <button type="button" class="btn btn-danger btn-sm" (click)="onUnpark()">{{ 'dashboard.unpark' | translate }}</button>
+                <a routerLink="/app/parking/time-steps" class="btn btn-primary btn-sm">{{ 'dashboard.extendTime' | translate }}</a>
               </div>
             </article>
           } @else {
             <article class="active-operation empty-active-operation">
-              <p>No hay operaciones en curso.</p>
+              <p>{{ 'ops.noActive' | translate }}</p>
             </article>
           }
         </section>
@@ -57,7 +58,7 @@ import { SplitViewComponent } from '../../../layout/split-view/split-view.compon
           >
             <div class="list-item-content">
               <div class="list-item-title">
-                Denuncias por pagar <span class="badge badge-error">{{ unpaidFinesCount() }}</span>
+                {{ 'ops.unpaidFines.title' | translate }} <span class="badge badge-error">{{ unpaidFinesCount() }}</span>
               </div>
             </div>
             <span class="list-item-chevron">›</span>
@@ -89,7 +90,7 @@ import { SplitViewComponent } from '../../../layout/split-view/split-view.compon
                 <app-operation-icon [type]="op.type" />
                 <div class="list-item-content">
                   @if (isFinishParking(op)) {
-                    <div class="list-item-title finish-op-title">Fin de estacionamiento</div>
+                    <div class="list-item-title finish-op-title">{{ 'ops.detail.parkingEnd' | translate }}</div>
                   } @else {
                     <div class="list-item-title">
                       {{ OPERATION_TYPE_LABELS[op.type] | translate }}

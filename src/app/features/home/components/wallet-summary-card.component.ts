@@ -47,7 +47,7 @@ import { APP_BRAND } from '../../../shared/constants/app-brand';
       overflow:hidden;
     }
     .wallet-inline-title { font-size: var(--text-md); font-weight: var(--font-bold); opacity:.95; }
-    .wallet-inline-balance { font-size: 2.15rem; font-weight: var(--font-bold); letter-spacing: .01em; margin-top: .22rem; }
+    .wallet-inline-balance { font-size: var(--text-display); font-weight: var(--font-bold); letter-spacing: .01em; margin-top: .22rem; }
     .wallet-inline-mark {
       position:absolute;
       right:.85rem;

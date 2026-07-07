@@ -9,10 +9,11 @@ import { OperationIconComponent } from '../../../shared/components/operation-ico
 import { AppIconComponent } from '../../../shared/icons/app-icon.component';
 import type { IconName } from '../../../shared/icons/icon-paths';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
 
 @Component({
   selector: 'app-operations-detail',
-  imports: [DecimalPipe, OperationIconComponent, AppIconComponent, TranslatePipe],
+  imports: [DecimalPipe, OperationIconComponent, AppIconComponent, TranslatePipe, DetailPanelHeaderComponent],
   template: `
     <div class="page operation-detail-page">
       @if (op(); as operation) {

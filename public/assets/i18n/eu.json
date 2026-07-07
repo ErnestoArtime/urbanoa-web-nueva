@@ -1,5 +1,5 @@
 {
-  "app.title": "UrbanOA",
+  "app.title": "ArinPark",
   "nav.home": "Hasiera",
   "nav.park": "Aparkatu",
   "nav.operations": "Eragiketak",
@@ -224,6 +224,7 @@
   "common.loading": "Kargatzen...",
   "common.error": "Errorea",
   "common.save": "Gorde",
+  "common.saving": "Gordetzen…",
   "common.delete": "Ezabatu",
   "common.edit": "Editatu",
   "common.add": "Gehitu",
@@ -424,5 +425,8 @@
   "ops.fineDetail.paid": "Salaketa ordaindu da",
   "ops.fineDetail.paidDetail": "{{plate}}-(r)en salaketa {{location}}-(e)n ordaindu da.",
   "layout.splitView.empty": "Hautatu zerrendako elementu bat",
+  "ops.inProgress": "Martxan",
+  "ops.endsAt": "Amaitzen da",
+  "ops.noActive": "Ez dago martxan dagoen operaziorik.",
   "ops.report.generateButton": "Sortu"
 }

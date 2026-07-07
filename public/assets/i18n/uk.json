@@ -1,5 +1,5 @@
 {
-  "app.title": "UrbanOA",
+  "app.title": "ArinPark",
   "nav.home": "Головна",
   "nav.park": "Припаркувати",
   "nav.operations": "Операції",
@@ -224,6 +224,7 @@
   "common.loading": "Завантаження...",
   "common.error": "Помилка",
   "common.save": "Зберегти",
+  "common.saving": "Збереження…",
   "common.delete": "Видалити",
   "common.edit": "Редагувати",
   "common.add": "Додати",
@@ -424,5 +425,8 @@
   "ops.fineDetail.paid": "Штраф сплачено",
   "ops.fineDetail.paidDetail": "Штраф для {{plate}} у {{location}} сплачено.",
   "layout.splitView.empty": "Виберіть елемент зі списку",
+  "ops.inProgress": "Активні",
+  "ops.endsAt": "Закінчується",
+  "ops.noActive": "Немає активних операцій.",
   "ops.report.generateButton": "Згенерувати"
 }

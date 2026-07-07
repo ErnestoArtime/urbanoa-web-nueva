@@ -71,8 +71,10 @@ const STORE_URL = 'https://play.google.com/store/apps/details?id=com.gerteksa.r.
             </button>
           }
         </ul>
-        <a routerLink="/auth/login" class="btn btn-ghost btn-block mt-2">Cerrar sesión</a>
-        <button type="button" class="btn btn-danger btn-block mt-2" (click)="select('delete-account')">Eliminar cuenta</button>
+        <div class="account-actions">
+          <a routerLink="/auth/login" class="btn btn-ghost btn-block">Cerrar sesión</a>
+          <button type="button" class="btn btn-danger btn-block" (click)="select('delete-account')">Eliminar cuenta</button>
+        </div>
       </section>
       <aside class="account-detail">
         @if (!selected()) {
@@ -366,7 +368,30 @@ const STORE_URL = 'https://play.google.com/store/apps/details?id=com.gerteksa.r.
           overflow: hidden;
         }
       }
+      .account-actions {
+        padding: 0.75rem 0.35rem 0;
+      }
       @media (max-width: 959px) {
+        .account-master {
+          padding-bottom: 5rem;
+        }
+        .account-actions {
+          position: fixed;
+          right: 0;
+          bottom: 0;
+          left: 0;
+          display: flex;
+          gap: 0.65rem;
+          padding: 0.65rem 1rem calc(0.65rem + env(safe-area-inset-bottom, 0px));
+          background: var(--color-surface);
+          border-top: 1px solid var(--color-border);
+          box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.08);
+          z-index: 100;
+        }
+        .account-actions .btn {
+          flex: 1;
+          margin: 0 !important;
+        }
         .account-detail {
           display: block;
           border-top: 1px solid var(--color-border);

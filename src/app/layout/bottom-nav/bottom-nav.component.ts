@@ -1,7 +1,11 @@
 import { Component, inject } from '@angular/core';
-import { RouterLink, RouterLinkActive, Router } from '@angular/router';
+import { RouterLink, RouterLinkActive, Router, NavigationEnd } from '@angular/router';
+import { filter, map, startWith } from 'rxjs/operators';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
-import { NAV_ITEMS } from '../../shared/mock-data';
+import { NAV_ITEMS, ACCOUNT_MENU } from '../../shared/mock-data';
+
+const CHILD_LABELS = new Map(ACCOUNT_MENU.map((m) => [m.path, m.labelKey]));
 
 @Component({
   selector: 'app-bottom-nav',
@@ -24,10 +28,10 @@ import { NAV_ITEMS } from '../../shared/mock-data';
               <span class="bottom-nav-label">{{ 'nav.park' | translate }}</span>
             }
             @case ('/app/operations') {
-              <span class="bottom-nav-label">{{ 'nav.operations' | translate }}</span>
+              <span class="bottom-nav-label">{{ childLabelFor(item.path) ?? ('nav.operations' | translate) }}</span>
             }
             @case ('/app/account') {
-              <span class="bottom-nav-label">{{ 'nav.account' | translate }}</span>
+              <span class="bottom-nav-label">{{ childLabelFor(item.path) ?? ('nav.account' | translate) }}</span>
             }
           }
         </a>
@@ -57,7 +61,7 @@ import { NAV_ITEMS } from '../../shared/mock-data';
         gap: 0.12rem;
         text-decoration: none;
         color: var(--color-secondary);
-        font-size: 0.625rem;
+        font-size: var(--text-2xs);
         font-weight: var(--font-medium);
         padding: 0.3rem;
       }
@@ -79,13 +83,13 @@ import { NAV_ITEMS } from '../../shared/mock-data';
         outline-offset: -3px;
         border-radius: 50%;
       }
-      .bottom-nav-icon[data-icon='home'] {
-        mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960' fill='currentColor'%3E%3Cpath d='M240-200h120v-200q0-17 11.5-28.5T400-440h160q17 0 28.5 11.5T600-400v200h120v-360L480-740 240-560v360Zm-80 0v-360q0-19 8.5-36t23.5-28l240-180q21-16 48-16t48 16l240 180q15 11 23.5 28t8.5 36v360q0 33-23.5 56.5T720-120H560q-17 0-28.5-11.5T520-160v-200h-80v200q0 17-11.5 28.5T400-120H240q-33 0-56.5-23.5T160-200Z'/%3E%3C/svg%3E");
-        -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960' fill='currentColor'%3E%3Cpath d='M240-200h120v-200q0-17 11.5-28.5T400-440h160q17 0 28.5 11.5T600-400v200h120v-360L480-740 240-560v360Zm-80 0v-360q0-19 8.5-36t23.5-28l240-180q21-16 48-16t48 16l240 180q15 11 23.5 28t8.5 36v360q0 33-23.5 56.5T720-120H560q-17 0-28.5-11.5T520-160v-200h-80v200q0 17-11.5 28.5T400-120H240q-33 0-56.5-23.5T160-200Z'/%3E%3C/svg%3E");
+      .bottom-nav-icon[data-icon='dashboard'] {
+        mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960' fill='currentColor'%3E%3Cpath d='M240-840h200q33 0 56.5 23.5T520-760v200q0 33-23.5 56.5T440-480H240q-33 0-56.5-23.5T160-560v-200q0-33 23.5-56.5T240-840Zm0 480h200q33 0 56.5 23.5T520-280v120q0 33-23.5 56.5T440-80H240q-33 0-56.5-23.5T160-160v-120q0-33 23.5-56.5T240-360Zm280-480h200q33 0 56.5 23.5T800-760v200q0 33-23.5 56.5T720-480H520q-33 0-56.5-23.5T440-560v-200q0-33 23.5-56.5T520-840Zm0 480h200q33 0 56.5 23.5T800-280v120q0 33-23.5 56.5T720-80H520q-33 0-56.5-23.5T440-160v-120q0-33 23.5-56.5T520-360Z'/%3E%3C/svg%3E");
+        -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960' fill='currentColor'%3E%3Cpath d='M240-840h200q33 0 56.5 23.5T520-760v200q0 33-23.5 56.5T440-480H240q-33 0-56.5-23.5T160-560v-200q0-33 23.5-56.5T240-840Zm0 480h200q33 0 56.5 23.5T520-280v120q0 33-23.5 56.5T440-80H240q-33 0-56.5-23.5T160-160v-120q0-33 23.5-56.5T240-360Zm280-480h200q33 0 56.5 23.5T800-760v200q0 33-23.5 56.5T720-480H520q-33 0-56.5-23.5T440-560v-200q0-33 23.5-56.5T520-840Zm0 480h200q33 0 56.5 23.5T800-280v120q0 33-23.5 56.5T720-80H520q-33 0-56.5-23.5T440-160v-120q0-33 23.5-56.5T520-360Z'/%3E%3C/svg%3E");
       }
-      .bottom-nav-icon[data-icon='parking'] {
-        mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960' fill='currentColor'%3E%3Cpath d='M400-360v160q0 33-23.5 56.5T320-120q-33 0-56.5-23.5T240-200v-560q0-33 23.5-56.5T320-840h200q100 0 170 70t70 170q0 100-70 170t-170 70H400Zm0-160h128q33 0 56.5-23.5T608-600q0-33-23.5-56.5T528-680H400v160Z'/%3E%3C/svg%3E");
-        -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960' fill='currentColor'%3E%3Cpath d='M400-360v160q0 33-23.5 56.5T320-120q-33 0-56.5-23.5T240-200v-560q0-33 23.5-56.5T320-840h200q100 0 170 70t70 170q0 100-70 170t-170 70H400Zm0-160h128q33 0 56.5-23.5T608-600q0-33-23.5-56.5T528-680H400v160Z'/%3E%3C/svg%3E");
+      .bottom-nav-icon[data-icon='directions_car'] {
+        mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960' fill='currentColor'%3E%3Cpath d='M240-200v20q0 25-17.5 42.5T180-120q-25 0-42.5-17.5T120-180v-286q0-7 1-14t3-13l75-213q8-24 29-39t47-15h410q26 0 47 15t29 39l75 213q2 6 3 13t1 14v286q0 25-17.5 42.5T780-120q-25 0-42.5-17.5T720-180v-20H240Zm-8-360h496l-42-120H274l-42 120Zm-32 80v200-200Zm100 160q25 0 42.5-17.5T360-380q0-25-17.5-42.5T300-440q-25 0-42.5 17.5T240-380q0 25 17.5 42.5T300-320Zm360 0q25 0 42.5-17.5T720-380q0-25-17.5-42.5T660-440q-25 0-42.5 17.5T600-380q0 25 17.5 42.5T660-320Zm-460 40h560v-200H200v200Z'/%3E%3C/svg%3E");
+        -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960' fill='currentColor'%3E%3Cpath d='M240-200v20q0 25-17.5 42.5T180-120q-25 0-42.5-17.5T120-180v-286q0-7 1-14t3-13l75-213q8-24 29-39t47-15h410q26 0 47 15t29 39l75 213q2 6 3 13t1 14v286q0 25-17.5 42.5T780-120q-25 0-42.5-17.5T720-180v-20H240Zm-8-360h496l-42-120H274l-42 120Zm-32 80v200-200Zm100 160q25 0 42.5-17.5T360-380q0-25-17.5-42.5T300-440q-25 0-42.5 17.5T240-380q0 25 17.5 42.5T300-320Zm360 0q25 0 42.5-17.5T720-380q0-25-17.5-42.5T660-440q-25 0-42.5 17.5T600-380q0 25 17.5 42.5T660-320Zm-460 40h560v-200H200v200Z'/%3E%3C/svg%3E");
       }
       .bottom-nav-icon[data-icon='operations'] {
         mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960' fill='currentColor'%3E%3Cpath d='M480-120q-126 0-223-76.5T131-392q-4-15 6-27.5t27-14.5q16-2 29 6t18 24q24 90 99 147t170 57q117 0 198.5-81.5T760-480q0-117-81.5-198.5T480-760q-69 0-129 32t-101 88h70q17 0 28.5 11.5T360-600q0 17-11.5 28.5T320-560H160q-17 0-28.5-11.5T120-600v-160q0-17 11.5-28.5T160-800q17 0 28.5 11.5T200-760v54q51-64 124.5-99T480-840q75 0 140.5 28.5t114 77q48.5 48.5 77 114T840-480q0 75-28.5 140.5t-77 114q-48.5 48.5-114 77T480-120Zm40-376 100 100q11 11 11 28t-11 28q-11 11-28 11t-28-11L452-452q-6-6-9-13.5t-3-15.5v-159q0-17 11.5-28.5T480-680q17 0 28.5 11.5T520-640v144Z'/%3E%3C/svg%3E");
@@ -101,6 +105,24 @@ import { NAV_ITEMS } from '../../shared/mock-data';
 export class BottomNavComponent {
   private readonly router = inject(Router);
   readonly navItems = NAV_ITEMS;
+
+  private readonly currentUrl = toSignal(
+    this.router.events.pipe(
+      filter((e): e is NavigationEnd => e instanceof NavigationEnd),
+      map((e) => e.urlAfterRedirects),
+      startWith(this.router.url),
+    ),
+  );
+
+  /** Returns the child label key if current URL is a child of \`parentPath\`, else null. */
+  childLabelFor(parentPath: string): string | null {
+    const url = this.currentUrl();
+    if (!url || url === parentPath) return null;
+    const prefix = parentPath + '/';
+    if (!url.startsWith(prefix)) return null;
+    const childPath = url.split('?')[0];
+    return CHILD_LABELS.get(childPath) ?? null;
+  }
 
   isExactPath(path: string): boolean {
     return path === '/app/home';

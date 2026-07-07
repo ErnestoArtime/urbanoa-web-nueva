@@ -1,5 +1,5 @@
 {
-  "app.title": "UrbanOA",
+  "app.title": "ArinPark",
   "nav.home": "Accueil",
   "nav.park": "Stationner",
   "nav.operations": "Opérations",
@@ -224,6 +224,7 @@
   "common.loading": "Chargement...",
   "common.error": "Erreur",
   "common.save": "Enregistrer",
+  "common.saving": "Enregistrement…",
   "common.delete": "Supprimer",
   "common.edit": "Modifier",
   "common.add": "Ajouter",
@@ -424,5 +425,8 @@
   "ops.fineDetail.paid": "Amende payée",
   "ops.fineDetail.paidDetail": "L'amende de {{plate}} à {{location}} a été payée.",
   "layout.splitView.empty": "Sélectionnez un élément de la liste",
+  "ops.inProgress": "En cours",
+  "ops.endsAt": "Se termine",
+  "ops.noActive": "Aucune opération en cours.",
   "ops.report.generateButton": "Générer"
 }

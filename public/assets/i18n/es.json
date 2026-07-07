@@ -1,5 +1,5 @@
 {
-  "app.title": "UrbanOA",
+  "app.title": "ArinPark",
   "nav.home": "Inicio",
   "nav.park": "Aparcar",
   "nav.operations": "Operaciones",
@@ -12,7 +12,7 @@
   "dashboard.timeRemaining": "Tiempo restante",
   "dashboard.endTime": "Finaliza",
   "dashboard.howToGetThere": "Cómo llegar hasta mi coche",
-  "dashboard.unpark": "Desaparcar",
+  "dashboard.unpark": "Dejar aparcamiento",
   "dashboard.extendTime": "Ampliar tiempo",
   "dashboard.vehicle": "Vehículo Principal",
   "dashboard.wallet": "Monedero",
@@ -123,8 +123,8 @@
   "parking.ticketDetail.end": "Fin previsto",
   "parking.ticketDetail.paymentMethod": "Método de pago",
   "parking.ticketDetail.wallet": "Monedero — {{balance}} €",
-  "parking.ticketDetail.extend": "Ampliar aparcamiento",
-  "parking.ticketDetail.unpark": "Desaparcar",
+  "parking.ticketDetail.extend": "Ampliar tiempo",
+  "parking.ticketDetail.unpark": "Dejar aparcamiento",
   "parking.cities.searchPlaceholder": "Buscar municipio o provincia",
   "parking.cities.empty": "No se encontraron municipios.",
   "parking.cities.selected": "Municipio seleccionado",
@@ -224,6 +224,7 @@
   "common.loading": "Cargando...",
   "common.error": "Error",
   "common.save": "Guardar",
+  "common.saving": "Guardando…",
   "common.delete": "Eliminar",
   "common.edit": "Editar",
   "common.add": "Añadir",
@@ -425,5 +426,8 @@
   "ops.fineDetail.paid": "Denuncia pagada",
   "ops.fineDetail.paidDetail": "La denuncia de {{plate}} en {{location}} ha sido pagada.",
   "layout.splitView.empty": "Selecciona un elemento de la lista",
+  "ops.inProgress": "En curso",
+  "ops.endsAt": "Finaliza",
+  "ops.noActive": "No hay operaciones en curso.",
   "ops.report.generateButton": "Generar"
 }

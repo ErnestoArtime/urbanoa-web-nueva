@@ -6,6 +6,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { OperationType, OPERATION_TYPE_LABELS } from '../../../shared/models/operation-type';
 import { APP_BRAND } from '../../../shared/constants/app-brand';
 import { OperationsService } from '../../../core/services/operations.service';
+import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
 import { DateRangeFilterComponent, type DateRange } from '../../../shared/components/date-range-filter/date-range-filter.component';
 import type { Operation } from '../../../shared/models/operation';
 
@@ -29,12 +30,12 @@ interface ReportRangeItem {
 
 @Component({
   selector: 'app-report',
-  imports: [FormsModule, TranslatePipe, DateRangeFilterComponent],
+  imports: [FormsModule, TranslatePipe, DateRangeFilterComponent, DetailPanelHeaderComponent],
   template: `
     <div class="report-page has-sticky-actions">
       <div class="report-scroll">
         <h1 class="page-title">{{ 'ops.report' | translate }}</h1>
-        <p class="page-subtitle">{{ 'ops.report.subtitle' | translate }}</p>
+      <p class="page-subtitle">{{ 'ops.report.subtitle' | translate }}</p>
 
         <section class="report-section">
           <p class="section-label">{{ 'ops.report.rangeTitle' | translate }}</p>
@@ -170,8 +171,8 @@ interface ReportRangeItem {
         width: 3.1rem;
         height: 1.85rem;
         border-radius: 999px;
-        background: #cbbfd0;
-        border: 2px solid rgba(77, 67, 89, 0.35);
+        background: var(--color-border);
+        border: 2px solid var(--color-border);
         position: relative;
         flex: none;
         transition: background 0.2s ease;
@@ -323,8 +324,8 @@ export class ReportComponent {
 <style>
   body { font-family: 'Segoe UI', Arial, sans-serif; margin: 2rem; color: #222; }
   h1 { font-size: var(--text-2xl); margin-bottom: 0.25rem; }
-  .sub { color: #666; font-size: 0.875rem; margin-bottom: 1.5rem; }
-  table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+  .sub { color: var(--color-text-muted); font-size: var(--text-sm); margin-bottom: 1.5rem; }
+  table { width: 100%; border-collapse: collapse; font-size: var(--text-sm); }
   th { text-align: left; padding: 0.5rem; background: #f5f5f5; font-weight: var(--font-medium); }
   td { padding: 0.5rem; border-bottom: 1px solid #eee; }
   .total { margin-top: 1.5rem; font-weight: var(--font-bold); font-size: var(--text-base); text-align: right; }

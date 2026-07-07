@@ -2,10 +2,11 @@ import { Component, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { MOCK_MUNICIPIOS } from '../../../shared/mock-data';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
 
 @Component({
   selector: 'app-account-support',
-  imports: [TranslatePipe],
+  imports: [TranslatePipe, DetailPanelHeaderComponent],
   template: `
     <div class="page account-static-page has-sticky-actions">
       <h1 class="page-title">{{ 'account.support.title' | translate }}</h1>

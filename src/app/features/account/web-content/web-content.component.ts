@@ -3,30 +3,16 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { DomSanitizer } from '@angular/platform-browser';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { APP_BRAND } from '../../../shared/constants/app-brand';
+import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
 
 @Component({
   selector: 'app-web-content',
-  imports: [RouterLink, TranslatePipe],
+  imports: [RouterLink, TranslatePipe, DetailPanelHeaderComponent],
   template: `
     <div class="web-content-shell">
       <header class="web-content-header">
-        @if (resolvedBackLink()) {
-          <a
-            [routerLink]="resolvedBackLink()"
-            class="web-content-back"
-            [attr.aria-label]="'common.back' | translate"
-          >
-            <span aria-hidden="true">‹</span>
-          </a>
-        } @else {
-          <span class="web-content-header-space"></span>
-        }
-        <h1>{{ resolvedTitle() }}</h1>
-        <a [href]="rawUrl()" target="_blank" rel="noopener" class="web-content-open" aria-label="Abrir en una pestaña nueva">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M14 3h7v7h-2V6.41l-9.29 9.3-1.42-1.42L17.59 5H14V3ZM5 5h6v2H5v12h12v-6h2v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z" />
-          </svg>
-        </a>
+        <a [routerLink]="backLink() ?? '/app/account'" class="back-btn">←</a>
+        <h1 class="page-title">{{ resolvedTitle() }}</h1>
       </header>
 
       <section class="web-content-frame" [attr.aria-busy]="loading()">

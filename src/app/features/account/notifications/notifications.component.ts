@@ -1,9 +1,10 @@
 import { Component } from '@angular/core';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
 
 @Component({
   selector: 'app-account-notifications',
-  imports: [TranslatePipe],
+  imports: [TranslatePipe, DetailPanelHeaderComponent],
   template: `
     <div class="page account-static-page">
       <h1 class="page-title">{{ 'account.notifications.title' | translate }}</h1>

@@ -5,20 +5,33 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { MOCK_USER } from '../../../shared/mock-data';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { SplitViewComponent } from '../../../layout/split-view/split-view.component';
+import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
+import { AppIconComponent } from '../../../shared/icons/app-icon.component';
 
 @Component({
   selector: 'app-payment-layout',
-  imports: [RouterLink, SplitViewComponent, TranslatePipe],
+  imports: [RouterLink, SplitViewComponent, TranslatePipe, DetailPanelHeaderComponent, AppIconComponent],
   template: `
     <app-split-view [hideList]="isChildRoute()" [hideDetail]="!isChildRoute()">
       <div splitList class="page">
+        <h1 class="page-title">{{ 'account.menu.paymentMethods' | translate }}</h1>
         <div class="wallet-card mb-2">
-          <p style="opacity:0.9">{{ 'account.wallet' | translate }}</p>
-          <p class="wallet-balance">{{ user.balance }} €</p>
+          <div class="wallet-section">
+            <strong>Mi monedero</strong>
+            <p class="wallet-balance-large">{{ user.balance }} €</p>
+          </div>
         </div>
         <p class="section-title">{{ 'account.cards' | translate }}</p>
         <div class="card">
-          💳 Visa •••• 4242 <span class="badge badge-primary">{{ 'account.cardPrimary' | translate }}</span>
+          <div class="card-item">
+            <app-icon name="payment" class="card-icon" [stroke]="false" />
+            <div class="card-info">
+              <strong>Visa Debit •••• 4242</strong>
+              <span>{{ user.name }} {{ user.surname }}</span>
+              <small>12/28</small>
+            </div>
+            <span class="badge badge-primary">{{ 'account.cardPrimary' | translate }}</span>
+          </div>
         </div>
         <div class="row mt-2">
           <a routerLink="/app/account/recharge" class="btn btn-primary btn-sm">{{ 'dashboard.recharge' | translate }}</a>
@@ -28,6 +41,7 @@ import { SplitViewComponent } from '../../../layout/split-view/split-view.compon
       </div>
     </app-split-view>
   `,
+  styles: `.wallet-section{padding:.5rem 0}.wallet-balance-large{font-size:var(--text-2xl);font-weight:var(--font-extra);color:var(--color-primary);margin:.25rem 0 0}.card-item{display:flex;align-items:center;gap:.75rem;padding:.75rem}.card-icon{width:32px;height:32px;flex-shrink:0;fill:var(--color-primary)}.card-info{flex:1;display:flex;flex-direction:column;gap:2px}.card-info strong{font-size:var(--text-sm)}.card-info span{font-size:var(--text-xs);color:var(--color-text-muted)}.card-info small{font-size:var(--text-2xs);color:var(--color-text-muted)}`,
 })
 export class PaymentLayoutComponent {
   readonly user = MOCK_USER;

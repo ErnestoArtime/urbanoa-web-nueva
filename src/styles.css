@@ -520,6 +520,9 @@ a:hover {
   .split-view-list.split-hidden {
     display: none;
   }
+  .page-title {
+    display: none;
+  }
 }
 
 /* Auth page */

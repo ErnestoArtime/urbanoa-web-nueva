@@ -1,12 +1,14 @@
 import { Component } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
 
 @Component({
   selector: 'app-vehicle-add',
-  imports: [TranslatePipe],
+  imports: [RouterLink, TranslatePipe, DetailPanelHeaderComponent],
   template: `
     <div class="page account-static-page">
-      <h1 class="page-title">{{ 'account.vehicleAdd.title' | translate }}</h1>
+      <app-detail-panel-header backRoute="/app/account/vehicles" title="Añadir vehículo" [backDesktop]="true" />
       <div class="card">
         <div class="form-group">
           <label>{{ 'account.vehicleAdd.plate' | translate }} <span class="text-error">*</span></label

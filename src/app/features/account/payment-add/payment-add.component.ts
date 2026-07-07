@@ -2,15 +2,17 @@ import { Component, computed, signal } from '@angular/core';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { AppIconComponent } from '../../../shared/icons/app-icon.component';
 import { NgStyle } from '@angular/common';
+import { RouterLink } from '@angular/router';
+import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
 
 type CardBrand = 'visa' | 'mastercard' | 'amex' | null;
 
 @Component({
   selector: 'app-payment-add',
-  imports: [TranslatePipe, AppIconComponent, NgStyle],
+  imports: [RouterLink, TranslatePipe, AppIconComponent, NgStyle, DetailPanelHeaderComponent],
   template: `
     <div class="page account-static-page">
-      <h1 class="page-title">{{ 'account.addCard.title' | translate }}</h1>
+      <app-detail-panel-header backRoute="/app/account/payment-methods" title="Añadir tarjeta" [backDesktop]="true" />
       <div class="card">
         <div class="form-group">
           <label>{{ 'account.addCard.cardholder' | translate }}</label

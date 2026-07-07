@@ -4,10 +4,11 @@ import { DecimalPipe } from '@angular/common';
 import { UnpaidFinesService } from '../../../core/services/unpaid-fines.service';
 import { WalletService } from '../../../core/services/wallet.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
 
 @Component({
   selector: 'app-unpaid-fine-detail',
-  imports: [RouterLink, DecimalPipe, TranslatePipe],
+  imports: [RouterLink, DecimalPipe, TranslatePipe, DetailPanelHeaderComponent],
   template: `
     @if (!paid()) {
       <div class="page">
@@ -32,7 +33,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
             <p style="font-size: var(--text-xl);font-weight: var(--font-bold)">{{ walletService.balance() | number: '1.2-2' }} €</p>
           </div>
           @if (insufficientFunds()) {
-            <p class="mt-1" style="color:var(--color-error);font-size:0.875rem">{{ 'ops.fineDetail.insufficientBalance' | translate }}</p>
+            <p class="mt-1" style="color:var(--color-error);font-size:var(--text-sm)">{{ 'ops.fineDetail.insufficientBalance' | translate }}</p>
           }
           <button type="button" class="btn btn-primary btn-block mt-2" (click)="pay()" [disabled]="insufficientFunds()">
             {{ 'ops.fineDetail.pay' | translate }} {{ fine.amount }}
