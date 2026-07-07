@@ -5,6 +5,7 @@ import { ParkingFlowStore } from '../parking-flow.store';
 import { ParkingFlowQuery, readParkingFlowQuery } from '../parking-flow.model';
 import { ParkingTimeStepsService } from '../parking-time-steps.service';
 import type { ParkingTimeStep } from '../models/parking-time-step.model';
+import { OperationsService } from '../../../core/services/operations.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 
 @Component({
@@ -21,9 +22,9 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
       <div class="context-card card">
         <span class="sector-mark" [style.background]="sectorColor()"></span>
         <div>
-          <strong>{{ query.zone }}</strong>
-          <p>{{ query.street }} · {{ query.cityName }}</p>
-          <small>{{ query.plate }} · {{ query.tariff }}</small>
+          <strong>{{ context().zone }}</strong>
+          <p>{{ context().street }}{{ context().cityName ? ' · ' + context().cityName : '' }}</p>
+          <small>{{ context().plate }}{{ context().tariff ? ' · ' + context().tariff : '' }}</small>
         </div>
       </div>
 
@@ -71,7 +72,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
         </section>
 
         <div class="step-options" [attr.aria-label]="'parking.timeSteps.title' | translate">
-          @for (step of steps(); track step.time) {
+          @for (step of milestoneSteps(); track step.time) {
             <button type="button" [class.active]="step.time === selectedStep().time" (click)="selectStep(step)">
               {{ step.timeFormatted }}
             </button>
@@ -311,9 +312,26 @@ export class ParkingTimeStepsComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly store = inject(ParkingFlowStore);
   private readonly timeStepsService = inject(ParkingTimeStepsService);
+  private readonly operationsService = inject(OperationsService);
   readonly query: ParkingFlowQuery = this.store.hasMinimumParkingData() ? this.store.fromStore() : readParkingFlowQuery(this.route);
+  readonly hasFlowData = computed(() => !!this.query.plate);
+  readonly activeOp = this.operationsService.activeOperation;
+  readonly context = computed(() => {
+    if (this.hasFlowData()) return this.query;
+    const op = this.activeOp();
+    if (!op) return this.query;
+    return {
+      ...this.query,
+      zone: this.query.zone || op.zone,
+      street: this.query.street || op.street || '',
+      plate: this.query.plate || op.plate,
+      cityName: this.query.cityName || '',
+      tariff: this.query.tariff || '',
+    } as ParkingFlowQuery;
+  });
 
   readonly steps = signal<ParkingTimeStep[]>([]);
+  readonly milestoneSteps = computed(() => this.steps().filter((s) => s.time % 30 === 0));
   readonly selectedStep = signal<ParkingTimeStep>({
     time: 60,
     quantity: 1,
