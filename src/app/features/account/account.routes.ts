@@ -41,16 +41,20 @@ export const ACCOUNT_ROUTES: Routes = [
       {
         path: 'vehicles',
         loadComponent: () => import('./vehicles-layout/vehicles-layout.component').then((m) => m.VehiclesLayoutComponent),
+        children: [
+          { path: 'add', loadComponent: () => import('./vehicle-add/vehicle-add.component').then((m) => m.VehicleAddComponent) },
+          { path: 'edit', loadComponent: () => import('./vehicle-edit/vehicle-edit.component').then((m) => m.VehicleEditComponent) },
+        ],
       },
-      { path: 'vehicles/add', loadComponent: () => import('./vehicle-add/vehicle-add.component').then((m) => m.VehicleAddComponent) },
-      { path: 'vehicles/edit', loadComponent: () => import('./vehicle-edit/vehicle-edit.component').then((m) => m.VehicleEditComponent) },
       {
         path: 'payment-methods',
         loadComponent: () => import('./payment-layout/payment-layout.component').then((m) => m.PaymentLayoutComponent),
-      },
-      {
-        path: 'payment-methods/add',
-        loadComponent: () => import('./payment-add/payment-add.component').then((m) => m.PaymentAddComponent),
+        children: [
+          {
+            path: 'add',
+            loadComponent: () => import('./payment-add/payment-add.component').then((m) => m.PaymentAddComponent),
+          },
+        ],
       },
       { path: 'recharge', loadComponent: () => import('./recharge/recharge.component').then((m) => m.AccountRechargeComponent) },
       { path: 'refund', loadComponent: () => import('./refund/refund.component').then((m) => m.AccountRefundComponent) },

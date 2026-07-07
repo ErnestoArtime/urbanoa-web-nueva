@@ -2,11 +2,13 @@ import { Component, inject, signal } from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { filter, map, startWith } from 'rxjs/operators';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { ACCOUNT_MENU, MOCK_USER } from '../../../shared/mock-data';
+import { ACCOUNT_MENU } from '../../../shared/mock-data';
 import { AppIconComponent } from '../../../shared/icons/app-icon.component';
 import { SplitViewComponent } from '../../../layout/split-view/split-view.component';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { APP_BRAND } from '../../../shared/constants/app-brand';
+import { UserService } from '../../../core/services/user.service';
+import { WalletService } from '../../../core/services/wallet.service';
 
 @Component({
   selector: 'app-account-shell',
@@ -16,16 +18,16 @@ import { APP_BRAND } from '../../../shared/constants/app-brand';
       <div splitList class="account-master">
         <h1 class="page-title">{{ 'account.title' | translate }}</h1>
         <div class="account-profile">
-          <span class="account-avatar">{{ user.name.charAt(0) }}</span>
+          <span class="account-avatar">{{ user().name.charAt(0) }}</span>
           <div>
-            <strong>{{ user.name }} {{ user.surname }}</strong
-            ><span>{{ user.email }}</span
-            ><span>{{ user.balance }} €</span>
+            <strong>{{ user().name }} {{ user().surname }}</strong
+            ><span>{{ user().email }}</span
+            ><span>{{ walletService.balance() }} €</span>
           </div>
         </div>
         <div class="card wallet-card mb-2 mobile-wallet">
           <p>{{ 'account.walletBalance' | translate }}</p>
-          <p class="wallet-balance">{{ user.balance }} €</p>
+          <p class="wallet-balance">{{ walletService.balance() }} €</p>
         </div>
         <ul class="list account-list">
           @for (item of menu; track item.key; let i = $index) {
@@ -199,8 +201,10 @@ import { APP_BRAND } from '../../../shared/constants/app-brand';
 })
 export class AccountShellComponent {
   private readonly router = inject(Router);
+  private readonly userService = inject(UserService);
+  readonly walletService = inject(WalletService);
   readonly menu = ACCOUNT_MENU;
-  readonly user = MOCK_USER;
+  readonly user = this.userService.user;
   readonly brand = APP_BRAND;
   readonly toast = signal('');
   private toastTimer?: ReturnType<typeof setTimeout>;

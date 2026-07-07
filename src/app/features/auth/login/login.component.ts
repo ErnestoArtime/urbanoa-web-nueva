@@ -18,7 +18,7 @@ import { APP_BRAND } from '../../../shared/constants/app-brand';
           ><span>Contraseña</span><input type="password" placeholder="••••••••" autocomplete="current-password"
         /></label>
         <a routerLink="/auth/reset-password" class="recover-link">¿Olvidaste tu contraseña?</a>
-        <a routerLink="/app/home" class="btn btn-primary btn-block login-button">Iniciar sesión</a>
+        <a routerLink="/app" class="btn btn-primary btn-block login-button">Iniciar sesión</a>
         <p class="register-link">¿No tienes cuenta? <a routerLink="/auth/register">Regístrate</a></p>
       </section>
     </main>

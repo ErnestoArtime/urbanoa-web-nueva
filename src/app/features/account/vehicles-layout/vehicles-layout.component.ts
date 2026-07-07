@@ -41,6 +41,9 @@ import { AppIconComponent } from '../../../shared/icons/app-icon.component';
     .vehicle-icon{width:36px;height:36px;flex-shrink:0;fill:var(--color-primary);background:var(--color-accent-soft);border-radius:var(--radius-md);padding:6px}
     .vehicle-badge{font-size:var(--text-2xs);padding:2px 8px;border-radius:999px;margin-left:.5rem}
     .vehicle-item .list-item-content{gap:2px}
+    @media (min-width: 960px) {
+      .sticky-actions { margin-top: 1.5rem; }
+    }
   `],
 })
 export class VehiclesLayoutComponent {
