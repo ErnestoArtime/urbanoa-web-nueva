@@ -1,6 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { NavigationEnd, Router, RouterLink } from '@angular/router';
 import { ACCOUNT_MENU, MOCK_USER, MOCK_VEHICLES } from '../../../shared/mock-data';
+import { WalletService } from '../../../core/services/wallet.service';
 import { AccountProfileComponent } from '../profile/profile.component';
 import { AccountSettingsComponent } from '../settings/settings.component';
 import { AccountNotificationsComponent } from '../notifications/notifications.component';
@@ -48,12 +49,12 @@ const STORE_URL = 'https://play.google.com/store/apps/details?id=com.gerteksa.r.
           <div>
             <strong>{{ user.name }} {{ user.surname }}</strong
             ><span>{{ user.email }}</span
-            ><span>{{ user.balance }} €</span>
+            ><span>{{ walletService.balance() }} €</span>
           </div>
         </div>
         <div class="card wallet-card mb-2 mobile-wallet">
           <p>Saldo monedero</p>
-          <p class="wallet-balance">{{ user.balance }} €</p>
+          <p class="wallet-balance">{{ walletService.balance() }} €</p>
         </div>
         <ul class="list account-list">
           @for (item of menu; track item.key; let i = $index) {
@@ -402,15 +403,15 @@ const STORE_URL = 'https://play.google.com/store/apps/details?id=com.gerteksa.r.
 })
 export class AccountMenuComponent {
   private readonly router = inject(Router);
-  readonly menu = ACCOUNT_MENU;
+  readonly walletService = inject(WalletService);
   readonly user = MOCK_USER;
+  readonly menu = ACCOUNT_MENU;
   readonly vehicles = MOCK_VEHICLES;
   readonly selected = signal<string | null>(null);
   readonly vehiclesSub = signal<string | null>(null);
   readonly paymentSub = signal<string | null>(null);
   readonly brand = APP_BRAND;
   readonly toast = signal('');
-  private toastTimer?: ReturnType<typeof setTimeout>;
   private readonly iconByKey: Record<string, string> = {
     profile:
       'M480-480q-66 0-113-47t-47-113q0-66 47-113t113-47q66 0 113 47t47 113q0 66-47 113t-113 47ZM160-240v-32q0-34 17.5-62.5T224-378q62-31 126-46.5T480-440q66 0 130 15.5T736-378q29 15 46.5 43.5T800-272v32q0 33-23.5 56.5T720-160H240q-33 0-56.5-23.5T160-240Zm80 0h480v-32q0-11-5.5-20T700-306q-54-27-109-40.5T480-360q-56 0-111 13.5T260-306q-9 5-14.5 14t-5.5 20v32Z',
@@ -512,9 +513,7 @@ export class AccountMenuComponent {
   }
 
   private showToast(msg: string): void {
-    if (this.toastTimer) clearTimeout(this.toastTimer);
     this.toast.set(msg);
-    this.toastTimer = setTimeout(() => this.toast.set(''), 2500);
   }
 
   private syncFromUrl(url: string): void {

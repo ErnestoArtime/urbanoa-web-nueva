@@ -207,7 +207,6 @@ export class AccountShellComponent {
   readonly user = this.userService.user;
   readonly brand = APP_BRAND;
   readonly toast = signal('');
-  private toastTimer?: ReturnType<typeof setTimeout>;
 
   private readonly url = toSignal(
     this.router.events.pipe(
@@ -258,8 +257,6 @@ export class AccountShellComponent {
   }
 
   private showToast(msg: string): void {
-    if (this.toastTimer) clearTimeout(this.toastTimer);
     this.toast.set(msg);
-    this.toastTimer = setTimeout(() => this.toast.set(''), 2500);
   }
 }

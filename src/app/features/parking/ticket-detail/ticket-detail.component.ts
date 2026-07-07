@@ -1,7 +1,8 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { MOCK_TICKET_ACTIVE, MOCK_USER } from '../../../shared/mock-data';
+import { MOCK_TICKET_ACTIVE } from '../../../shared/mock-data';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { WalletService } from '../../../core/services/wallet.service';
 
 @Component({
   selector: 'app-parking-ticket-detail',
@@ -32,7 +33,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
         </div>
       </div>
       <p class="section-title">{{ 'parking.ticketDetail.paymentMethod' | translate }}</p>
-      <div class="card">{{ 'parking.ticketDetail.wallet' | translate: { balance: '' + user.balance } }}</div>
+      <div class="card">{{ 'parking.ticketDetail.wallet' | translate: { balance: '' + walletService.balance() } }}</div>
       <a
         [routerLink]="['/app/parking/time-steps']"
         [queryParams]="{ plate: ticket.plate, zone: ticket.zone }"
@@ -53,5 +54,5 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 })
 export class ParkingTicketDetailComponent {
   readonly ticket = MOCK_TICKET_ACTIVE;
-  readonly user = MOCK_USER;
+  readonly walletService = inject(WalletService);
 }

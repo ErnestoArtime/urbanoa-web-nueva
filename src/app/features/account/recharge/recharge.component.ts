@@ -97,7 +97,6 @@ export class AccountRechargeComponent {
     this.walletService.addBalance(this.selected());
     this.operationsService.registerTopUp(this.selected());
     this.done.set(true);
-    setTimeout(() => this.done.set(false), 3000);
   }
   setCustomAmount(event: Event): void {
     const amount = Number((event.target as HTMLInputElement).value);
