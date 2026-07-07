@@ -6,11 +6,13 @@ import { map } from 'rxjs/operators';
 import { OperationsService } from '../../../core/services/operations.service';
 import { OperationType } from '../../../shared/models/operation-type';
 import { OperationIconComponent } from '../../../shared/components/operation-icon/operation-icon.component';
+import { AppIconComponent } from '../../../shared/icons/app-icon.component';
+import type { IconName } from '../../../shared/icons/icon-paths';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 
 @Component({
   selector: 'app-operations-detail',
-  imports: [DecimalPipe, OperationIconComponent, TranslatePipe],
+  imports: [DecimalPipe, OperationIconComponent, AppIconComponent, TranslatePipe],
   template: `
     <div class="page operation-detail-page">
       @if (op(); as operation) {
@@ -18,7 +20,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
           <app-operation-icon [type]="operation.type" />
           <div>
             <span>{{ 'ops.detail.title' | translate: { id: id() } }}</span>
-            <h1>{{ detailTitle() }}</h1>
+            <h1>{{ detailTitle() | translate }}</h1>
           </div>
         </header>
         @if (isTicketOperation()) {
@@ -69,10 +71,10 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
             @for (row of detailRows(); track row.label) {
               <div class="info-row">
                 <span class="row-icon"
-                  ><svg viewBox="0 0 24 24"><path [attr.d]="row.icon" /></svg
-                ></span>
+                  ><app-icon [name]="row.icon" [stroke]="false" />
+                </span>
                 <div>
-                  <span>{{ row.label }}</span
+                  <span>{{ row.label | translate }}</span
                   ><strong [class.positive]="row.positive">{{ row.value }}</strong>
                 </div>
               </div>
@@ -220,12 +222,17 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
       .info-row:last-child {
         border: 0;
       }
-      .info-row span {
+      .info-row > div {
+        display: flex;
         flex: 1;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.5rem;
+      }
+      .info-row span {
         color: var(--color-text-muted);
       }
       .info-row strong {
-        flex: 1;
         text-align: right;
         font-weight: var(--font-bold);
       }
@@ -235,12 +242,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
       .row-icon {
         width: 20px;
         height: 20px;
-        fill: var(--color-text-muted);
         flex: none;
-      }
-      .row-icon svg {
-        width: 100%;
-        height: 100%;
       }
     `,
   ],
@@ -275,32 +277,32 @@ export class OperationsDetailComponent {
   readonly detailRows = computed(() => {
     const o = this.op();
     if (!o) return [];
-    const car = 'M5 17h14v3h-2v-2H7v2H5v-3Zm1-5 2-6h8l2 6M5 12h14v5H5z';
-    const calendar = 'M4 5h16v16H4zM8 3v4M16 3v4M4 9h16';
-    const clock = 'M12 7v5l3 2M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z';
-    const money = 'M4 7h16v10H4zM8 12h.01M16 12h.01M12 9v6';
+    const car = 'vehicle' as const;
+    const calendar = 'dateRange' as const;
+    const clock = 'schedule' as const;
+    const money = 'wallet' as const;
     if (o.type === OperationType.REFUND)
       return [
-        { label: 'ops.detail.plate', value: o.plate ?? '5678 DEF', icon: car },
-        { label: 'ops.detail.datetime', value: o.date, icon: calendar },
-        { label: 'ops.detail.totalTime', value: '5 h 45 min', icon: clock },
+        { label: 'ops.detail.plate', value: o.plate ?? '5678 DEF', icon: car, positive: undefined },
+        { label: 'ops.detail.datetime', value: o.date, icon: calendar, positive: undefined },
+        { label: 'ops.detail.totalTime', value: '5 h 45 min', icon: clock, positive: undefined },
         { label: 'ops.detail.refund', value: `+${this.absoluteAmount().toFixed(2).replace('.', ',')} €`, icon: money, positive: true },
       ];
     if (o.type === OperationType.TOP_UP)
       return [
-        { label: 'ops.detail.datetime', value: o.date, icon: calendar },
-        { label: 'ops.detail.paymentMethod', value: 'Visa •••• 1234', icon: money },
+        { label: 'ops.detail.datetime', value: o.date, icon: calendar, positive: undefined },
+        { label: 'ops.detail.paymentMethod', value: 'Visa •••• 1234', icon: money, positive: undefined },
         { label: 'ops.detail.recharge', value: `+${this.absoluteAmount().toFixed(2).replace('.', ',')} €`, icon: money, positive: true },
       ];
     if (o.type === OperationType.FINE_PAYMENT)
       return [
-        { label: 'ops.detail.plate', value: o.plate ?? '', icon: car },
-        { label: 'ops.detail.datetime', value: o.date, icon: calendar },
-        { label: 'ops.detail.location', value: o.zone ?? '', icon: calendar },
-        { label: 'ops.detail.total', value: `${this.absoluteAmount().toFixed(2).replace('.', ',')} €`, icon: money },
+        { label: 'ops.detail.plate', value: o.plate ?? '', icon: car, positive: undefined },
+        { label: 'ops.detail.datetime', value: o.date, icon: calendar, positive: undefined },
+        { label: 'ops.detail.location', value: o.zone ?? '', icon: calendar, positive: undefined },
+        { label: 'ops.detail.total', value: `${this.absoluteAmount().toFixed(2).replace('.', ',')} €`, icon: money, positive: undefined },
       ];
     return [
-      { label: 'ops.detail.datetime', value: o.date, icon: calendar },
+      { label: 'ops.detail.datetime', value: o.date, icon: calendar, positive: undefined },
       { label: 'ops.detail.balanceRefund', value: `+${this.absoluteAmount().toFixed(2).replace('.', ',')} €`, icon: money, positive: true },
     ];
   });
