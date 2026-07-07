@@ -3,7 +3,6 @@ import { Router } from '@angular/router';
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 import { WalletService } from '../../core/services/wallet.service';
 import { UserService } from '../../core/services/user.service';
-import { MOCK_VEHICLE_PRINCIPAL } from '../../shared/mock-data';
 import { OperationsService } from '../../core/services/operations.service';
 import { NavigationToCarService } from '../../core/services/navigation-to-car.service';
 import { OperationType } from '../../shared/models/operation-type';
@@ -13,6 +12,8 @@ import { WalletSummaryCardComponent } from './components/wallet-summary-card.com
 import { VehicleSummaryCardComponent } from './components/vehicle-summary-card.component';
 import { RecentOperationsCardComponent } from './components/recent-operations-card.component';
 import { ProfileProgressCardComponent } from './components/profile-progress-card.component';
+import { ResultModalComponent } from '../../shared/components/result-modal/result-modal.component';
+import { VehicleService } from '../../core/services/vehicle.service';
 
 @Component({
   selector: 'app-home',
@@ -23,6 +24,7 @@ import { ProfileProgressCardComponent } from './components/profile-progress-card
     VehicleSummaryCardComponent,
     RecentOperationsCardComponent,
     ProfileProgressCardComponent,
+    ResultModalComponent,
   ],
   template: `
     <div class="page">
@@ -36,13 +38,20 @@ import { ProfileProgressCardComponent } from './components/profile-progress-card
         </div>
 
         <div class="dashboard-col-right">
-          <app-vehicle-summary-card [vehicle]="vehicle" />
+          @if (vehicle(); as mainVehicle) {
+            <app-vehicle-summary-card [vehicle]="mainVehicle" />
+          }
           <app-wallet-summary-card [balance]="walletService.balance()" [mainCard]="walletService.mainCard" (recharge)="onRecharge()" />
           @if (showProfileCard()) {
             <app-profile-progress-card [progress]="75" />
           }
         </div>
       </div>
+      @if (unparked()) {
+        <app-result-modal type="success" title="Aparcamiento finalizado"
+          message="La devolución de saldo se ha añadido al monedero."
+          primaryText="Aceptar" (primaryAction)="unparked.set(false)" />
+      }
     </div>
   `,
   styles: [
@@ -84,10 +93,11 @@ export class HomeComponent {
   private readonly operationsService = inject(OperationsService);
   private readonly userService = inject(UserService);
   private readonly navigationToCar = inject(NavigationToCarService);
+  private readonly vehicleService = inject(VehicleService);
   readonly user = this.userService.user;
   readonly fullName = computed(() => `${this.user().name} ${this.user().surname}`);
   readonly ticket = computed(() => this.operationsService.activeOperation());
-  readonly vehicle = MOCK_VEHICLE_PRINCIPAL;
+  readonly vehicle = this.vehicleService.mainVehicle;
   readonly recentOps = computed(() => {
     const list = this.operationsService
       .operations()
@@ -96,9 +106,10 @@ export class HomeComponent {
     return list.slice(0, 3);
   });
   readonly showProfileCard = signal(true);
+  readonly unparked = signal(false);
 
   unparkFromDashboard(): void {
-    this.operationsService.unparkActiveOperation();
+    if (this.operationsService.unparkActiveOperation()) this.unparked.set(true);
   }
 
   onExtend(): void {

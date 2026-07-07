@@ -1,6 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { MOCK_WALLET } from '../../../shared/mock-data';
 import { LoaderComponent } from '../../../shared/components/loader/loader.component';
 import { PaymentSummaryComponent } from '../../../shared/components/payment-summary/payment-summary.component';
 import { SwipeToPayComponent } from '../../../shared/components/swipe-to-pay/swipe-to-pay.component';
@@ -17,7 +16,6 @@ import { WalletService } from '../../../core/services/wallet.service';
     <div class="page flow-page confirm-page has-sticky-actions">
       <app-loader [visible]="loading()" [message]="'parking.confirm.loading' | translate" imageSrc="/assets/brand/login-logo.jpg" />
       <a routerLink="/app/parking/time-steps" [queryParams]="query" class="back-link">{{ 'parking.confirm.back' | translate }}</a>
-      <p class="flow-step">{{ 'parking.confirm.step' | translate }}</p>
       <h1 class="page-title">{{ 'parking.confirm.title' | translate }}</h1>
 
       <div class="card summary">
@@ -46,7 +44,25 @@ import { WalletService } from '../../../core/services/wallet.service';
         </p>
       </div>
 
-      <app-payment-summary [wallet]="wallet" [totalAmount]="totalAmount()" />
+      <section class="card payment-selector">
+        <p class="payment-selector-title">Selecciona cómo pagar</p>
+        <label class="payment-option" [class.selected]="selectedPayment() === 'wallet'">
+          <input type="radio" name="parking-payment" value="wallet" [checked]="selectedPayment() === 'wallet'"
+            (change)="selectedPayment.set('wallet')" />
+          <span>Monedero</span>
+          <small>{{ walletService.balance().toFixed(2).replace('.', ',') }} € disponibles</small>
+        </label>
+        @for (card of walletService.cards(); track card.id) {
+          <label class="payment-option" [class.selected]="selectedPayment() === card.id">
+            <input type="radio" name="parking-payment" [value]="card.id" [checked]="selectedPayment() === card.id"
+              (change)="selectedPayment.set(card.id)" />
+            <span>{{ card.brand }} •••• {{ card.last4 }}</span>
+            <small>Caduca {{ card.expiryDate }}</small>
+          </label>
+        }
+      </section>
+
+      <app-payment-summary [wallet]="wallet()" [totalAmount]="totalAmount()" />
 
       <div class="sticky-actions">
         <app-swipe-to-pay (complete)="onSwipeComplete()" />
@@ -116,6 +132,10 @@ import { WalletService } from '../../../core/services/wallet.service';
         text-align: center;
         font-size: var(--text-xs);
       }
+      .payment-selector{display:grid;gap:.5rem;margin-top:.8rem}.payment-selector-title{font-weight:var(--font-bold)}
+      .payment-option{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:.6rem;padding:.65rem;border:1px solid var(--color-border);border-radius:var(--radius-md);cursor:pointer}
+      .payment-option.selected{border-color:var(--color-primary);background:var(--color-active)}.payment-option input{accent-color:var(--color-primary)}
+      .payment-option small{color:var(--color-text-muted)}
       @media (min-width: 960px) and (max-height: 950px) {
         .confirm-page {
           padding-top: 1rem;
@@ -146,9 +166,14 @@ export class ParkingConfirmComponent {
   private readonly router = inject(Router);
   private readonly store = inject(ParkingFlowStore);
   private readonly operationsService = inject(OperationsService);
-  private readonly walletService = inject(WalletService);
+  readonly walletService = inject(WalletService);
   readonly query: ParkingFlowQuery = this.store.hasMinimumParkingData() ? this.store.fromStore() : readParkingFlowQuery(this.route);
-  readonly wallet = MOCK_WALLET;
+  readonly selectedPayment = signal('wallet');
+  readonly selectedCard = computed(() => this.walletService.cards().find((card) => card.id === this.selectedPayment()) ?? this.walletService.mainCard);
+  readonly wallet = computed(() => ({
+    balance: this.selectedPayment() === 'wallet' ? this.walletService.balance() : 0,
+    mainCard: this.selectedCard(),
+  }));
   readonly loading = signal(false);
 
   readonly totalAmount = computed(() => {
@@ -163,7 +188,7 @@ export class ParkingConfirmComponent {
   onSwipeComplete(): void {
     if (this.loading()) return;
     const amount = this.totalAmount();
-    const paid = this.walletService.debit(amount, 'Estacionamiento', 'parking-payment');
+    const paid = this.selectedPayment() === 'wallet' ? this.walletService.debit(amount, 'Estacionamiento', 'parking-payment') : true;
     if (!paid) return;
 
     const minutes = Number(this.query.minutes || 0);
@@ -176,6 +201,9 @@ export class ParkingConfirmComponent {
       durationLabel: this.query.duration,
       timeRemaining: `${hoursPart}:${minutesPart}:00`,
       endTime: this.query.endTime,
+      latitude: Number(this.query.latitude),
+      longitude: Number(this.query.longitude),
+      street: this.query.street,
       amount,
     });
     if (!started) {

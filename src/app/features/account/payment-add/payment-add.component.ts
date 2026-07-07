@@ -1,22 +1,25 @@
-import { Component, computed, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { AppIconComponent } from '../../../shared/icons/app-icon.component';
-import { NgStyle } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
+import { ResultModalComponent } from '../../../shared/components/result-modal/result-modal.component';
+import { WalletService } from '../../../core/services/wallet.service';
 
 type CardBrand = 'visa' | 'mastercard' | 'amex' | null;
 
 @Component({
   selector: 'app-payment-add',
-  imports: [RouterLink, TranslatePipe, AppIconComponent, NgStyle, DetailPanelHeaderComponent],
+  imports: [TranslatePipe, AppIconComponent, DetailPanelHeaderComponent, ResultModalComponent],
   template: `
     <div class="page account-static-page">
       <app-detail-panel-header backRoute="/app/account/payment-methods" title="Añadir tarjeta" [backDesktop]="true" />
       <div class="card">
         <div class="form-group">
           <label>{{ 'account.addCard.cardholder' | translate }}</label
-          ><input class="form-input" [placeholder]="'account.addCard.cardholder' | translate" />
+          ><input class="form-input" [class.invalid]="submitted() && !cardholder().trim()" [value]="cardholder()"
+            (input)="cardholder.set(valueOf($event))" [placeholder]="'account.addCard.cardholder' | translate" />
+          @if (submitted() && !cardholder().trim()) { <p class="form-error">El titular es obligatorio.</p> }
         </div>
         <div class="form-group">
           <label>{{ 'account.addCard.cardNumber' | translate }}</label>
@@ -27,6 +30,7 @@ type CardBrand = 'visa' | 'mastercard' | 'amex' | null;
               placeholder="1234 5678 9012 3456"
               (input)="onCardInput(cardInput)"
               maxlength="19"
+              [class.invalid]="submitted() && rawCardNumber().length < 15"
             />
             @if (cardBrand(); as brand) {
               <span class="card-brand-icon">
@@ -42,7 +46,7 @@ type CardBrand = 'visa' | 'mastercard' | 'amex' | null;
         <div class="expiry-row">
           <div class="form-group">
             <label>{{ 'account.addCard.expiry' | translate }}</label
-            ><select class="form-input">
+            ><select class="form-input" [class.invalid]="submitted() && !expiryMonth()" [value]="expiryMonth()" (change)="expiryMonth.set(valueOf($event))">
               <option value="">{{ 'account.addCard.month' | translate }}</option>
               @for (m of months(); track m.value) {
                 <option [value]="m.value">{{ m.label }}</option>
@@ -51,7 +55,7 @@ type CardBrand = 'visa' | 'mastercard' | 'amex' | null;
           </div>
           <div class="form-group">
             <label>&nbsp;</label
-            ><select class="form-input">
+            ><select class="form-input" [class.invalid]="submitted() && !expiryYear()" [value]="expiryYear()" (change)="expiryYear.set(valueOf($event))">
               <option value="">{{ 'account.addCard.year' | translate }}</option>
               @for (y of years(); track y.value) {
                 <option [value]="y.value">{{ y.label }}</option>
@@ -61,14 +65,23 @@ type CardBrand = 'visa' | 'mastercard' | 'amex' | null;
         </div>
         <div class="form-group">
           <label>{{ 'account.addCard.cvc' | translate }}</label
-          ><input class="form-input" [placeholder]="'account.addCard.cvc' | translate" maxlength="4" />
+          ><input class="form-input" [class.invalid]="submitted() && cvc().length < 3" [value]="cvc()"
+            (input)="cvc.set(digitsOf($event, 4))" [placeholder]="'account.addCard.cvc' | translate" maxlength="4" />
+          @if (submitted() && cvc().length < 3) { <p class="form-error">Introduce un CVC válido.</p> }
         </div>
         <div class="form-group">
           <label>{{ 'account.addCard.alias' | translate }}</label
-          ><input class="form-input" [placeholder]="'account.addCard.alias' | translate" />
+          ><input class="form-input" [value]="alias()" (input)="alias.set(valueOf($event))" [placeholder]="'account.addCard.alias' | translate" />
         </div>
-        <button class="btn btn-primary btn-block">{{ 'account.addCard.button' | translate }}</button>
+        @if (submitted() && !valid()) {
+          <p class="form-error form-summary">Revisa los campos obligatorios de la tarjeta.</p>
+        }
+        <button type="button" class="btn btn-primary btn-block" (click)="save()">{{ 'account.addCard.button' | translate }}</button>
       </div>
+      @if (saved()) {
+        <app-result-modal type="success" title="Tarjeta añadida" message="La tarjeta se ha guardado correctamente."
+          primaryText="Volver a métodos de pago" (primaryAction)="goBack()" />
+      }
       <div class="secure-badge">
         <app-icon name="lock" [size]="16" [stroke]="false" />
         <div>
@@ -86,6 +99,8 @@ type CardBrand = 'visa' | 'mastercard' | 'amex' | null;
       .card-input-wrapper {
         position: relative;
       }
+      .form-input.invalid{border-color:var(--color-error)}.form-error{margin-top:.3rem;color:var(--color-error);font-size:var(--text-xs)}
+      .form-summary{margin-bottom:.65rem;text-align:center}
       .card-number-input {
         letter-spacing: 0.08em;
         font-variant-numeric: tabular-nums;
@@ -137,7 +152,24 @@ type CardBrand = 'visa' | 'mastercard' | 'amex' | null;
   ],
 })
 export class PaymentAddComponent {
-  private readonly rawCardNumber = signal('');
+  private readonly walletService = inject(WalletService);
+  private readonly router = inject(Router);
+  readonly rawCardNumber = signal('');
+  readonly cardholder = signal('');
+  readonly expiryMonth = signal('');
+  readonly expiryYear = signal('');
+  readonly cvc = signal('');
+  readonly alias = signal('');
+  readonly submitted = signal(false);
+  readonly saved = signal(false);
+  readonly valid = computed(
+    () =>
+      !!this.cardholder().trim() &&
+      this.rawCardNumber().length >= 15 &&
+      !!this.expiryMonth() &&
+      !!this.expiryYear() &&
+      this.cvc().length >= 3,
+  );
 
   readonly cardBrand = computed<CardBrand>(() => {
     const d = this.rawCardNumber();
@@ -178,5 +210,33 @@ export class PaymentAddComponent {
     }
     input.value = formatted;
     input.setSelectionRange(newPos, newPos);
+  }
+
+  valueOf(event: Event): string {
+    return (event.target as HTMLInputElement).value;
+  }
+
+  digitsOf(event: Event, maxLength: number): string {
+    const input = event.target as HTMLInputElement;
+    const value = input.value.replace(/\D/g, '').slice(0, maxLength);
+    input.value = value;
+    return value;
+  }
+
+  save(): void {
+    this.submitted.set(true);
+    if (!this.valid()) return;
+    const brand = this.cardBrand() === 'mastercard' ? 'Mastercard' : this.cardBrand() === 'amex' ? 'Amex' : 'Visa';
+    this.walletService.addCard({
+      brand,
+      last4: this.rawCardNumber().slice(-4),
+      expiryDate: `${this.expiryMonth()}/${this.expiryYear().slice(-2)}`,
+      cardholderName: this.cardholder().trim(),
+    });
+    this.saved.set(true);
+  }
+
+  goBack(): void {
+    void this.router.navigate(['/app/account/payment-methods']);
   }
 }

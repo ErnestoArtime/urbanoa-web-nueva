@@ -1,6 +1,7 @@
-import { Injectable, signal } from '@angular/core';
+import { computed, Injectable, signal } from '@angular/core';
 
 export interface MainCard {
+  id: string;
   brand: string;
   last4: string;
   expiryDate: string;
@@ -19,14 +20,47 @@ export interface WalletMovement {
 
 @Injectable({ providedIn: 'root' })
 export class WalletService {
+  private readonly cardsStorageKey = 'urbanoa.payment-cards';
+  private readonly defaultCardStorageKey = 'urbanoa.default-payment-card';
   readonly balance = signal(12.5);
   readonly movements = signal<WalletMovement[]>([]);
-  readonly mainCard: MainCard = {
-    brand: 'Visa',
-    last4: '1234',
-    expiryDate: '12/28',
-    cardholderName: 'Juan García',
-  };
+  private readonly fallbackCards: MainCard[] = [
+    {
+      id: 'visa-1234',
+      brand: 'Visa',
+      last4: '1234',
+      expiryDate: '12/28',
+      cardholderName: 'Juan García',
+    },
+    {
+      id: 'mastercard-5678',
+      brand: 'Mastercard',
+      last4: '5678',
+      expiryDate: '09/29',
+      cardholderName: 'Juan García',
+    },
+  ];
+  readonly cards = signal<MainCard[]>(this.readCards());
+  readonly defaultCardId = signal(this.readDefaultCardId());
+  readonly defaultCard = computed(() => this.cards().find((card) => card.id === this.defaultCardId()) ?? this.cards()[0]);
+
+  get mainCard(): MainCard {
+    return this.defaultCard() ?? this.fallbackCards[0];
+  }
+
+  addCard(card: Omit<MainCard, 'id'>): MainCard {
+    const created = { ...card, id: crypto.randomUUID() };
+    this.cards.update((cards) => [...cards, created]);
+    if (!this.defaultCardId()) this.defaultCardId.set(created.id);
+    this.persistCards();
+    return created;
+  }
+
+  setDefaultCard(id: string): void {
+    if (!this.cards().some((card) => card.id === id)) return;
+    this.defaultCardId.set(id);
+    this.writeStorage(this.defaultCardStorageKey, id);
+  }
 
   addBalance(amount: number): void {
     this.balance.update((b) => b + amount);
@@ -50,5 +84,35 @@ export class WalletService {
       ...list,
     ]);
     return true;
+  }
+
+  private readCards(): MainCard[] {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(this.cardsStorageKey) ?? 'null') as MainCard[] | null;
+      return Array.isArray(parsed) && parsed.length ? parsed : this.fallbackCards.map((card) => ({ ...card }));
+    } catch {
+      return this.fallbackCards.map((card) => ({ ...card }));
+    }
+  }
+
+  private readDefaultCardId(): string {
+    try {
+      return localStorage.getItem(this.defaultCardStorageKey) ?? this.readCards()[0]?.id ?? '';
+    } catch {
+      return this.fallbackCards[0].id;
+    }
+  }
+
+  private persistCards(): void {
+    this.writeStorage(this.cardsStorageKey, JSON.stringify(this.cards()));
+    this.writeStorage(this.defaultCardStorageKey, this.defaultCardId());
+  }
+
+  private writeStorage(key: string, value: string): void {
+    try {
+      localStorage.setItem(key, value);
+    } catch {
+      // Storage can be unavailable in private or restricted contexts.
+    }
   }
 }

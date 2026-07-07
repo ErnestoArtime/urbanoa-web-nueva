@@ -5,13 +5,14 @@ import { MOCK_USER } from '../../../shared/mock-data';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
 import { UserService } from '../../../core/services/user.service';
+import { ResultModalComponent } from '../../../shared/components/result-modal/result-modal.component';
 
 @Component({
   selector: 'app-account-profile',
-  imports: [ReactiveFormsModule, RouterLink, TranslatePipe, DetailPanelHeaderComponent],
+  imports: [ReactiveFormsModule, RouterLink, TranslatePipe, DetailPanelHeaderComponent, ResultModalComponent],
   template: `
     <div class="page account-static-page">
-      <h1 class="page-title">{{ 'account.profile.title' | translate }}</h1>
+      <app-detail-panel-header [title]="'account.profile.title' | translate" backRoute="/app/account" />
       <form [formGroup]="form" (ngSubmit)="onSave()">
         <div class="card">
           <div class="form-group">
@@ -43,13 +44,11 @@ import { UserService } from '../../../core/services/user.service';
         'account.menu.changePassword' | translate
       }}</a>
       @if (saved()) {
-        <div class="toast">{{ 'account.profile.saveSuccess' | translate }}</div>
+        <app-result-modal type="success" [title]="'account.profile.saveSuccess' | translate" primaryText="Aceptar" (primaryAction)="saved.set(false)" />
       }
     </div>
   `,
-  styles: [
-    '.toast{position:fixed;bottom:2rem;left:50%;transform:translateX(-50%);padding:.65rem 1.25rem;border-radius:999px;background:var(--color-primary-dark);color:#fff;z-index:2000}',
-  ],
+  styles: [':host{display:block}'],
 })
 export class AccountProfileComponent {
   readonly saved = signal(false);
@@ -81,7 +80,6 @@ export class AccountProfileComponent {
       this.userService.updateUser(data);
       this.saving.set(false);
       this.saved.set(true);
-      setTimeout(() => this.saved.set(false), 3000);
     }, 1500);
   }
 }

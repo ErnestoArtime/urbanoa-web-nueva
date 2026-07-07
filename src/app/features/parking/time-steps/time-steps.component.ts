@@ -15,7 +15,6 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
     <app-loader [visible]="loading()" [message]="'parking.timeSteps.loading' | translate" imageSrc="/assets/brand/login-logo.jpg" />
     <div class="page flow-page has-sticky-actions">
       <a routerLink="/app/parking/tickets" [queryParams]="query" class="back-link">{{ 'parking.timeSteps.back' | translate }}</a>
-      <p class="flow-step">{{ 'parking.timeSteps.step' | translate }}</p>
       <h1 class="page-title">{{ 'parking.timeSteps.title' | translate }}</h1>
       <p class="page-subtitle">{{ 'parking.timeSteps.subtitle' | translate }}</p>
 

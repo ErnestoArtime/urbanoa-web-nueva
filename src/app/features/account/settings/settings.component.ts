@@ -1,20 +1,21 @@
 import { Component, signal } from '@angular/core';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
+import { ResultModalComponent } from '../../../shared/components/result-modal/result-modal.component';
 
 @Component({
   selector: 'app-account-settings',
-  imports: [TranslatePipe, DetailPanelHeaderComponent],
+  imports: [TranslatePipe, DetailPanelHeaderComponent, ResultModalComponent],
   template: `
     <div class="page account-static-page">
-      <h1 class="page-title">{{ 'account.settings.title' | translate }}</h1>
+      <app-detail-panel-header [title]="'account.settings.title' | translate" backRoute="/app/account" />
       <div class="card">
         <label class="switch-row"
           ><span>{{ 'account.settings.fingerprint' | translate }}</span
           ><input type="checkbox" [checked]="fingerprint()" (change)="toggleFingerprint()" /><span class="switch"></span
         ></label>
       </div>
-      <button class="btn btn-primary btn-block mt-2">
+      <button type="button" class="btn btn-primary btn-block mt-2" (click)="saved.set(true)">
         {{ saving() ? ('account.settings.saving' | translate) : ('account.settings.save' | translate) }}
       </button>
       @if (showConfirm()) {
@@ -26,6 +27,10 @@ import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/
             <button class="btn btn-ghost btn-block" (click)="showConfirm.set(false)">{{ 'common.cancel' | translate }}</button>
           </div>
         </div>
+      }
+      @if (saved()) {
+        <app-result-modal type="success" title="Ajustes guardados" message="Los ajustes se han actualizado correctamente."
+          primaryText="Aceptar" (primaryAction)="saved.set(false)" />
       }
     </div>
   `,
@@ -85,6 +90,7 @@ export class AccountSettingsComponent {
   readonly fingerprint = signal(true);
   readonly saving = signal(false);
   readonly showConfirm = signal(false);
+  readonly saved = signal(false);
   toggleFingerprint(): void {
     this.fingerprint.update((v) => !v);
     this.showConfirm.set(true);

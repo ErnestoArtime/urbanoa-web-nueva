@@ -1,11 +1,12 @@
 import { AfterViewInit, Component, ElementRef, OnDestroy, ViewChild, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import * as L from 'leaflet';
-import { MOCK_MUNICIPIOS, MOCK_VEHICLES, type Vehicle } from '../../../shared/mock-data';
+import { MOCK_MUNICIPIOS, type Vehicle } from '../../../shared/mock-data';
 import { LoaderComponent } from '../../../shared/components/loader/loader.component';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { ParkingFlowStore } from '../parking-flow.store';
 import { ParkingFlowQuery, readParkingFlowQuery } from '../parking-flow.model';
+import { VehicleService } from '../../../core/services/vehicle.service';
 
 interface MapParkingZone {
   zoneId: number;
@@ -56,7 +57,7 @@ interface MapParkingZone {
 
             @if (showVehicleSelector()) {
               <div class="vehicle-selector-dropdown">
-                @for (v of vehicles; track v.id) {
+                @for (v of vehicles(); track v.id) {
                   <button type="button" class="vehicle-option" [class.selected]="v === selectedVehicle()" (click)="selectVehicle(v)">
                     <span>{{ v.plate }}</span>
                     <span class="vehicle-label">{{ v.label }}</span>
@@ -453,6 +454,7 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly store = inject(ParkingFlowStore);
+  private readonly vehicleService = inject(VehicleService);
   private readonly query: ParkingFlowQuery = this.store.hasMinimumParkingData() ? this.store.fromStore() : readParkingFlowQuery(this.route);
   private map?: L.Map;
   private zoneLayer?: L.FeatureGroup;
@@ -465,8 +467,8 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
   readonly mapError = signal(false);
   readonly zoneCount = signal(0);
   readonly selectedZone = signal<MapParkingZone | null>(null);
-  readonly vehicles = MOCK_VEHICLES;
-  readonly selectedVehicle = signal<Vehicle>(MOCK_VEHICLES[0]);
+  readonly vehicles = this.vehicleService.vehicles;
+  readonly selectedVehicle = signal<Vehicle>(this.vehicleService.mainVehicle() ?? this.vehicleService.vehicles()[0]);
   readonly showVehicleSelector = signal(false);
 
   toggleVehicleSelector(): void {

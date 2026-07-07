@@ -13,7 +13,6 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
     <app-loader [visible]="loading()" [message]="'parking.tickets.loading' | translate" />
     <div class="page flow-page">
       <a routerLink="/app/parking" [queryParams]="{ city: query.city }" class="back-link">{{ 'parking.tickets.back' | translate }}</a>
-      <p class="flow-step">{{ 'parking.tickets.step' | translate }}</p>
       <h1 class="page-title">{{ 'parking.tickets.title' | translate }}</h1>
       <div class="selection-summary card">
         <span class="zone-color" [style.background]="'#' + query.sectorColor"></span>

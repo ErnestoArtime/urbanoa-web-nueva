@@ -13,6 +13,7 @@ import type { Operation } from '../../../shared/models/operation';
 import { OperationIconComponent } from '../../../shared/components/operation-icon/operation-icon.component';
 import { SplitViewComponent } from '../../../layout/split-view/split-view.component';
 import { AppIconComponent } from '../../../shared/icons/app-icon.component';
+import { ResultModalComponent } from '../../../shared/components/result-modal/result-modal.component';
 
 @Component({
   selector: 'app-operations-layout',
@@ -25,6 +26,7 @@ import { AppIconComponent } from '../../../shared/icons/app-icon.component';
     OperationIconComponent,
     SplitViewComponent,
     AppIconComponent,
+    ResultModalComponent,
   ],
   template: `
     <app-split-view [hideList]="isDetailRoute()" [hideDetail]="!isDetailRoute()">
@@ -110,13 +112,9 @@ import { AppIconComponent } from '../../../shared/icons/app-icon.component';
               <a [routerLink]="['/app/operations/detail', op.id]" class="list-item" routerLinkActive="active">
                 <app-operation-icon [type]="op.type" />
                 <div class="list-item-content">
-                  @if (isFinishParking(op)) {
-                    <div class="list-item-title finish-op-title">{{ 'ops.detail.parkingEnd' | translate }}</div>
-                  } @else {
-                    <div class="list-item-title">
-                      {{ OPERATION_TYPE_LABELS[op.type] | translate }}
-                    </div>
-                  }
+                  <div class="list-item-title" [class.finish-op-title]="isFinishParking(op)">
+                    {{ OPERATION_TYPE_LABELS[op.type] | translate }}
+                  </div>
                   <div class="list-item-subtitle">{{ op.date }}{{ op.zone ? ' — ' + op.zone : '' }}</div>
                 </div>
                 <span [class]="op.amount > 0 ? 'badge badge-success' : ''">
@@ -132,6 +130,11 @@ import { AppIconComponent } from '../../../shared/icons/app-icon.component';
           }
         </ul>
       </div>
+      @if (unparked()) {
+        <app-result-modal type="success" title="Aparcamiento finalizado"
+          message="La devolución de saldo se ha añadido al monedero."
+          primaryText="Aceptar" (primaryAction)="unparked.set(false)" />
+      }
     </app-split-view>
   `,
   styles: [
@@ -345,6 +348,7 @@ export class OperationsLayoutComponent {
   readonly OperationType = OperationType;
   readonly OPERATION_TYPE_LABELS = OPERATION_TYPE_LABELS;
   readonly activeTicket = this.operationsService.activeOperation;
+  readonly unparked = signal(false);
   readonly filteredOps = computed(() => this.applyFilter(this.operations()));
   readonly groupedHistory = computed(() => this.groupByPeriod(this.filteredOps()));
 
@@ -372,7 +376,7 @@ export class OperationsLayoutComponent {
   }
 
   onUnpark(): void {
-    this.operationsService.unparkActiveOperation();
+    if (this.operationsService.unparkActiveOperation()) this.unparked.set(true);
   }
 
   onGoToCar(active: ActiveOperation): void {

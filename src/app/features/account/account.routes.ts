@@ -43,7 +43,7 @@ export const ACCOUNT_ROUTES: Routes = [
         loadComponent: () => import('./vehicles-layout/vehicles-layout.component').then((m) => m.VehiclesLayoutComponent),
         children: [
           { path: 'add', loadComponent: () => import('./vehicle-add/vehicle-add.component').then((m) => m.VehicleAddComponent) },
-          { path: 'edit', loadComponent: () => import('./vehicle-edit/vehicle-edit.component').then((m) => m.VehicleEditComponent) },
+          { path: 'edit/:id', loadComponent: () => import('./vehicle-edit/vehicle-edit.component').then((m) => m.VehicleEditComponent) },
         ],
       },
       {

@@ -19,7 +19,9 @@ const CHILD_LABELS = new Map(ACCOUNT_MENU.map((m) => [m.path, m.labelKey]));
           [routerLinkActiveOptions]="{ exact: isExactPath(item.path) }"
           class="bottom-nav-item"
         >
-          <span class="bottom-nav-icon" [attr.data-icon]="item.icon"></span>
+          <span class="bottom-nav-pill">
+            <span class="bottom-nav-icon" [attr.data-icon]="item.icon"></span>
+          </span>
           @switch (item.path) {
             @case ('/app/home') {
               <span class="bottom-nav-label">{{ 'nav.home' | translate }}</span>
@@ -77,11 +79,21 @@ const CHILD_LABELS = new Map(ACCOUNT_MENU.map((m) => [m.path, m.labelKey]));
         mask-position: center;
         -webkit-mask-size: contain;
         -webkit-mask-repeat: no-repeat;
+        -webkit-mask-position: center;
       }
-      .bottom-nav-item.active .bottom-nav-icon {
-        outline: 7px solid var(--color-active);
-        outline-offset: -3px;
-        border-radius: 50%;
+      .bottom-nav-pill {
+        display: grid;
+        place-items: center;
+        width: 52px;
+        height: 32px;
+        border-radius: 999px;
+      }
+      .bottom-nav-item.active .bottom-nav-pill {
+        background: var(--color-active);
+      }
+      .bottom-nav-icon[data-icon='home'] {
+        mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M240-200h120v-200q0-17 11.5-28.5T400-440h160q17 0 28.5 11.5T600-400v200h120v-360L480-740 240-560v360Zm-80 0v-360q0-19 8.5-36t23.5-28l240-180q21-16 48-16t48 16l240 180q15 11 23.5 28t8.5 36v360q0 33-23.5 56.5T720-120H560q-17 0-28.5-11.5T520-160v-200h-80v200q0 17-11.5 28.5T400-120H240q-33 0-56.5-23.5T160-200Z'/%3E%3C/svg%3E");
+        -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M240-200h120v-200q0-17 11.5-28.5T400-440h160q17 0 28.5 11.5T600-400v200h120v-360L480-740 240-560v360Zm-80 0v-360q0-19 8.5-36t23.5-28l240-180q21-16 48-16t48 16l240 180q15 11 23.5 28t8.5 36v360q0 33-23.5 56.5T720-120H560q-17 0-28.5-11.5T520-160v-200h-80v200q0 17-11.5 28.5T400-120H240q-33 0-56.5-23.5T160-200Z'/%3E%3C/svg%3E");
       }
       .bottom-nav-icon[data-icon='dashboard'] {
         mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960' fill='currentColor'%3E%3Cpath d='M240-840h200q33 0 56.5 23.5T520-760v200q0 33-23.5 56.5T440-480H240q-33 0-56.5-23.5T160-560v-200q0-33 23.5-56.5T240-840Zm0 480h200q33 0 56.5 23.5T520-280v120q0 33-23.5 56.5T440-80H240q-33 0-56.5-23.5T160-160v-120q0-33 23.5-56.5T240-360Zm280-480h200q33 0 56.5 23.5T800-760v200q0 33-23.5 56.5T720-480H520q-33 0-56.5-23.5T440-560v-200q0-33 23.5-56.5T520-840Zm0 480h200q33 0 56.5 23.5T800-280v120q0 33-23.5 56.5T720-80H520q-33 0-56.5-23.5T440-160v-120q0-33 23.5-56.5T520-360Z'/%3E%3C/svg%3E");

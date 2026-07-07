@@ -14,7 +14,6 @@ import { OperationsService } from '../../../core/services/operations.service';
   template: `
     <div class="page success-page">
       <div class="success-content text-center">
-        <p class="flow-step">{{ 'parking.success.step' | translate }}</p>
         <div class="success-mark"><span>✓</span><app-icon name="parkingSlip" [stroke]="false" /></div>
         <h1 class="page-title">{{ 'parking.success.title' | translate }}</h1>
         <p class="page-subtitle">{{ 'parking.success.subtitle' | translate }}</p>

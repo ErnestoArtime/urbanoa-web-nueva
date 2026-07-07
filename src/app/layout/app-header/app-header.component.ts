@@ -2,6 +2,7 @@ import { Component, inject, input } from '@angular/core';
 import { Location } from '@angular/common';
 import { TranslationService } from '../../core/services/translation.service';
 import { APP_BRAND } from '../../shared/constants/app-brand';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-header',
@@ -44,7 +45,7 @@ import { APP_BRAND } from '../../shared/constants/app-brand';
     .app-header-title {
       flex: 1;
       text-align: center;
-      font-size: var(--text-base)
+      font-size: var(--text-base);
       font-weight: var(--font-medium);
     }
     .app-header-right {
@@ -62,6 +63,7 @@ import { APP_BRAND } from '../../shared/constants/app-brand';
 export class AppHeaderComponent {
   private readonly translationService = inject(TranslationService);
   private readonly location = inject(Location);
+  private readonly router = inject(Router);
 
   title = input(APP_BRAND.name);
   showBack = input(true);
@@ -69,6 +71,19 @@ export class AppHeaderComponent {
   backAriaLabel = () => this.translationService.translate('common.back');
 
   goBack(): void {
+    const current = this.router.url.split('?')[0];
+    const previousSteps: Record<string, string> = {
+      '/app/parking/tickets': '/app/parking',
+      '/app/parking/ticket': '/app/parking/tickets',
+      '/app/parking/time-steps': '/app/parking/tickets',
+      '/app/parking/confirm': '/app/parking/time-steps',
+    };
+    const previous = previousSteps[current];
+    if (previous) {
+      const queryParams = this.router.parseUrl(this.router.url).queryParams;
+      void this.router.navigate([previous], { queryParams });
+      return;
+    }
     this.location.back();
   }
 }

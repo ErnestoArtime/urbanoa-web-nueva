@@ -2,11 +2,11 @@ import { Component, inject } from '@angular/core';
 import { RouterLink, NavigationEnd, Router } from '@angular/router';
 import { filter, map, startWith } from 'rxjs/operators';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { MOCK_VEHICLES } from '../../../shared/mock-data';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { SplitViewComponent } from '../../../layout/split-view/split-view.component';
 import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
 import { AppIconComponent } from '../../../shared/icons/app-icon.component';
+import { VehicleService } from '../../../core/services/vehicle.service';
 
 @Component({
   selector: 'app-vehicles-layout',
@@ -16,9 +16,9 @@ import { AppIconComponent } from '../../../shared/icons/app-icon.component';
       <div splitList class="page has-sticky-actions">
         <h1 class="page-title">{{ 'account.menu.vehicles' | translate }}</h1>
         <ul class="list card" style="padding:0;overflow:hidden">
-          @for (v of vehicles; track v.id) {
-            <a routerLink="/app/account/vehicles/edit" class="list-item vehicle-item">
-              <app-icon name="vehicle" class="vehicle-icon" [stroke]="false" />
+          @for (v of vehicles(); track v.id) {
+            <a [routerLink]="['/app/account/vehicles/edit', v.id]" class="list-item vehicle-item">
+              <span class="vehicle-icon-wrap"><app-icon name="vehicle" class="vehicle-icon" [stroke]="false" /></span>
               <div class="list-item-content">
                 <div class="list-item-title">{{ v.plate }}</div>
                 <div class="list-item-subtitle">{{ v.isDefault ? ('account.vehicleFavorite' | translate) : (v.label ?? '') }}</div>
@@ -38,7 +38,8 @@ import { AppIconComponent } from '../../../shared/icons/app-icon.component';
   `,
   styles: [`
     .vehicle-item{gap:.75rem!important}
-    .vehicle-icon{width:36px;height:36px;flex-shrink:0;fill:var(--color-primary);background:var(--color-accent-soft);border-radius:var(--radius-md);padding:6px}
+    .vehicle-icon-wrap{display:grid;place-items:center;width:40px;height:40px;flex:none;border-radius:var(--radius-md);background:var(--color-accent-soft);color:var(--color-primary)}
+    .vehicle-icon{display:block;width:24px;height:24px;fill:currentColor}
     .vehicle-badge{font-size:var(--text-2xs);padding:2px 8px;border-radius:999px;margin-left:.5rem}
     .vehicle-item .list-item-content{gap:2px}
     @media (min-width: 960px) {
@@ -47,7 +48,8 @@ import { AppIconComponent } from '../../../shared/icons/app-icon.component';
   `],
 })
 export class VehiclesLayoutComponent {
-  readonly vehicles = MOCK_VEHICLES;
+  private readonly vehicleService = inject(VehicleService);
+  readonly vehicles = this.vehicleService.vehicles;
   private readonly router = inject(Router);
   private readonly url = toSignal(
     this.router.events.pipe(

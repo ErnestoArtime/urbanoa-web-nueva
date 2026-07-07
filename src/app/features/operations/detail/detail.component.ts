@@ -265,6 +265,7 @@ export class OperationsDetailComponent {
       [OperationType.REFUND]: 'ops.detail.parkingEnd',
       [OperationType.FINE_PAYMENT]: 'ops.detail.finePayment',
       [OperationType.TOP_UP]: 'ops.detail.walletRecharge',
+      [OperationType.PARKING_END]: 'ops.type.parkingEnd',
       [OperationType.BALANCE_REFUND]: 'ops.detail.balanceRefundLabel',
       [OperationType.UNPAID_FINES]: 'ops.detail.pendingFine',
     };

@@ -1,26 +1,36 @@
-import { Component } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Component, inject, signal } from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
+import { ResultModalComponent } from '../../../shared/components/result-modal/result-modal.component';
+import { VehicleService } from '../../../core/services/vehicle.service';
 
 @Component({
   selector: 'app-vehicle-edit',
-  imports: [RouterLink, TranslatePipe, DetailPanelHeaderComponent],
+  imports: [TranslatePipe, DetailPanelHeaderComponent, ResultModalComponent],
   template: `
     <div class="page account-static-page">
       <app-detail-panel-header backRoute="/app/account/vehicles" title="Editar vehículo" [backDesktop]="true" />
       <div class="card">
         <div class="form-group">
           <label>{{ 'account.vehicleEdit.plate' | translate }}</label
-          ><input class="form-input" value="1234 ABC" />
+          ><input class="form-input" [class.invalid]="plateError()" [value]="plate()" (input)="setPlate($event)" />
+          @if (plateError()) {
+            <p class="form-error">La matrícula es obligatoria.</p>
+          }
         </div>
         <label class="switch-row"
           ><span>{{ 'account.vehicleEdit.favorite' | translate }}</span
-          ><input type="checkbox" checked /><span class="switch"></span
+          ><input type="checkbox" [checked]="favorite()" (change)="favorite.set(checked($event))" /><span class="switch"></span
         ></label>
-        <button class="btn btn-primary btn-block mt-2">{{ 'account.vehicleEdit.save' | translate }}</button>
-        <button class="btn btn-danger btn-block mt-1">{{ 'account.vehicleEdit.delete' | translate }}</button>
+        <button type="button" class="btn btn-primary btn-block mt-2" (click)="save()">{{ 'account.vehicleEdit.save' | translate }}</button>
+        <button type="button" class="btn btn-danger btn-block mt-1" (click)="remove()">{{ 'account.vehicleEdit.delete' | translate }}</button>
       </div>
+      @if (result(); as state) {
+        <app-result-modal type="success" [title]="state === 'saved' ? 'Vehículo actualizado' : 'Vehículo eliminado'"
+          [message]="state === 'saved' ? 'Los datos del vehículo se han guardado correctamente.' : 'El vehículo se ha eliminado correctamente.'"
+          primaryText="Volver a vehículos" (primaryAction)="goBack()" />
+      }
     </div>
   `,
   styles: [
@@ -33,6 +43,7 @@ import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/
         padding: 0.65rem 0;
         cursor: pointer;
       }
+      .form-input.invalid{border-color:var(--color-error)}.form-error{margin-top:.35rem;color:var(--color-error);font-size:var(--text-xs)}
       .switch {
         position: relative;
         width: 44px;
@@ -62,4 +73,41 @@ import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/
     `,
   ],
 })
-export class VehicleEditComponent {}
+export class VehicleEditComponent {
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly vehicleService = inject(VehicleService);
+  readonly id = this.route.snapshot.paramMap.get('id') ?? '';
+  private readonly vehicle = this.vehicleService.getById(this.id);
+  readonly plate = signal(this.vehicle?.plate ?? '');
+  readonly favorite = signal(this.vehicle?.isDefault ?? false);
+  readonly plateError = signal(false);
+  readonly result = signal<'saved' | 'deleted' | null>(null);
+
+  setPlate(event: Event): void {
+    this.plate.set((event.target as HTMLInputElement).value.toUpperCase());
+    if (this.plate().trim()) this.plateError.set(false);
+  }
+
+  checked(event: Event): boolean {
+    return (event.target as HTMLInputElement).checked;
+  }
+
+  save(): void {
+    const plate = this.plate().trim();
+    if (!plate) {
+      this.plateError.set(true);
+      return;
+    }
+    if (this.vehicleService.update(this.id, { plate, isDefault: this.favorite() })) this.result.set('saved');
+  }
+
+  remove(): void {
+    this.vehicleService.remove(this.id);
+    this.result.set('deleted');
+  }
+
+  goBack(): void {
+    void this.router.navigate(['/app/account/vehicles']);
+  }
+}

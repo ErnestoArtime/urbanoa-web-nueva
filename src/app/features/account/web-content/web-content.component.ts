@@ -67,6 +67,11 @@ import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/
         border-bottom: 1px solid var(--color-border);
         flex-shrink: 0;
       }
+      @media (max-width: 959px) {
+        .web-content-header {
+          display: none;
+        }
+      }
       .web-content-header h1 {
         display: block;
         grid-column: 2;

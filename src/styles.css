@@ -511,14 +511,15 @@ a:hover {
     height: 100%;
     overflow-y: auto;
   }
-  .split-view-list {
-    display: block;
-    padding-bottom: var(--bottom-nav-height);
-  }
-  .split-view-detail.split-hidden {
-    display: none;
+  .split-view-list:not(.split-hidden) {
+    overflow-y: auto;
+    height: 100%;
+    padding-bottom: calc(var(--bottom-nav-height) + 1rem);
   }
   .split-view-list.split-hidden {
+    display: none;
+  }
+  .split-view-detail.split-hidden {
     display: none;
   }
   .page-title {

@@ -1,10 +1,11 @@
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
+import { ResultModalComponent } from '../../../shared/components/result-modal/result-modal.component';
 
 @Component({
   selector: 'app-account-notifications',
-  imports: [TranslatePipe, DetailPanelHeaderComponent],
+  imports: [TranslatePipe, DetailPanelHeaderComponent, ResultModalComponent],
   template: `
     <div class="page account-static-page">
       <h1 class="page-title">{{ 'account.notifications.title' | translate }}</h1>
@@ -13,7 +14,7 @@ import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/
         @for (notif of appNotifications; track notif.key) {
           <label class="switch-row"
             ><span>{{ notif.labelKey | translate }}</span
-            ><input type="checkbox" [checked]="notif.enabled" /><span class="switch"></span
+            ><input type="checkbox" [checked]="notif.enabled" (change)="notif.enabled = checked($event)" /><span class="switch"></span
           ></label>
         }
       </div>
@@ -23,11 +24,16 @@ import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/
         @for (notif of emailNotifications; track notif.key) {
           <label class="switch-row"
             ><span>{{ notif.labelKey | translate }}</span
-            ><input type="checkbox" [checked]="notif.enabled" /><span class="switch"></span
+            ><input type="checkbox" [checked]="notif.enabled" (change)="notif.enabled = checked($event)" /><span class="switch"></span
           ></label>
         }
       </div>
-      <button class="btn btn-primary btn-block mt-2">{{ 'account.notifications.save' | translate }}</button>
+      <button type="button" class="btn btn-primary btn-block mt-2" (click)="saved.set(true)">{{ 'account.notifications.save' | translate }}</button>
+      @if (saved()) {
+        <app-result-modal type="success" title="Notificaciones guardadas"
+          message="Tus preferencias de notificación se han actualizado correctamente."
+          primaryText="Aceptar" (primaryAction)="saved.set(false)" />
+      }
     </div>
   `,
   styles: [
@@ -70,6 +76,7 @@ import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/
   ],
 })
 export class AccountNotificationsComponent {
+  readonly saved = signal(false);
   readonly appNotifications = [
     { key: 'ending-parking', labelKey: 'account.notifications.endingParking', enabled: true },
     { key: 'fine-warning', labelKey: 'account.notifications.fineWarning', enabled: true },
@@ -81,4 +88,8 @@ export class AccountNotificationsComponent {
     { key: 'fine-warning', labelKey: 'account.notifications.fineWarning', enabled: false },
     { key: 'recharge-confirm', labelKey: 'account.notifications.rechargeConfirm', enabled: false },
   ];
+
+  checked(event: Event): boolean {
+    return (event.target as HTMLInputElement).checked;
+  }
 }

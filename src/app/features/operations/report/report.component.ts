@@ -261,7 +261,7 @@ export class ReportComponent {
     { key: 'extends', labelKey: 'ops.report.extension', descKey: 'ops.report.extensionDesc', type: OperationType.PARKING_EXTENSION },
     { key: 'refunds', labelKey: 'ops.report.refunds', descKey: 'ops.report.refundsDesc', type: OperationType.REFUND },
     { key: 'recharges', labelKey: 'ops.report.topUps', descKey: 'ops.report.topUpsDesc', type: OperationType.TOP_UP },
-    { key: 'parkingEnd', labelKey: 'ops.report.parkingEnd', descKey: 'ops.report.parkingEndDesc', type: OperationType.PARKING_END },
+    { key: 'parkingEnd', labelKey: 'ops.type.parkingEnd', descKey: 'ops.report.parkingEndDesc', type: OperationType.PARKING_END },
     {
       key: 'balanceRefunds',
       labelKey: 'ops.report.balanceRefunds',

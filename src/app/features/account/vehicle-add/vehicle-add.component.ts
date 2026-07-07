@@ -1,29 +1,39 @@
-import { Component } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Component, inject, signal } from '@angular/core';
+import { Router } from '@angular/router';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
+import { ResultModalComponent } from '../../../shared/components/result-modal/result-modal.component';
+import { VehicleService } from '../../../core/services/vehicle.service';
 
 @Component({
   selector: 'app-vehicle-add',
-  imports: [RouterLink, TranslatePipe, DetailPanelHeaderComponent],
+  imports: [TranslatePipe, DetailPanelHeaderComponent, ResultModalComponent],
   template: `
     <div class="page account-static-page">
       <app-detail-panel-header backRoute="/app/account/vehicles" title="Añadir vehículo" [backDesktop]="true" />
       <div class="card">
         <div class="form-group">
           <label>{{ 'account.vehicleAdd.plate' | translate }} <span class="text-error">*</span></label
-          ><input class="form-input" [placeholder]="'account.vehicleAdd.plate' | translate" />
+          ><input class="form-input" [class.invalid]="plateError()" [value]="plate()" (input)="setPlate($event)"
+            [placeholder]="'account.vehicleAdd.plate' | translate" />
+          @if (plateError()) {
+            <p class="form-error">La matrícula es obligatoria.</p>
+          }
         </div>
         <label class="switch-row"
           ><span>{{ 'account.vehicleAdd.foreignPlate' | translate }}</span
-          ><input type="checkbox" /><span class="switch"></span
+          ><input type="checkbox" [checked]="foreignPlate()" (change)="foreignPlate.set(checked($event))" /><span class="switch"></span
         ></label>
         <label class="switch-row"
           ><span>{{ 'account.vehicleAdd.favorite' | translate }}</span
-          ><input type="checkbox" /><span class="switch"></span
+          ><input type="checkbox" [checked]="favorite()" (change)="favorite.set(checked($event))" /><span class="switch"></span
         ></label>
-        <button class="btn btn-primary btn-block mt-2">{{ 'account.vehicleAdd.save' | translate }}</button>
+        <button type="button" class="btn btn-primary btn-block mt-2" (click)="save()">{{ 'account.vehicleAdd.save' | translate }}</button>
       </div>
+      @if (saved()) {
+        <app-result-modal type="success" title="Vehículo añadido" message="El vehículo se ha guardado correctamente."
+          primaryText="Volver a vehículos" (primaryAction)="goBack()" />
+      }
     </div>
   `,
   styles: [
@@ -36,6 +46,7 @@ import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/
         padding: 0.65rem 0;
         cursor: pointer;
       }
+      .form-input.invalid{border-color:var(--color-error)}.form-error{margin-top:.35rem;color:var(--color-error);font-size:var(--text-xs)}
       .switch {
         position: relative;
         width: 44px;
@@ -65,4 +76,35 @@ import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/
     `,
   ],
 })
-export class VehicleAddComponent {}
+export class VehicleAddComponent {
+  private readonly vehicleService = inject(VehicleService);
+  private readonly router = inject(Router);
+  readonly plate = signal('');
+  readonly foreignPlate = signal(false);
+  readonly favorite = signal(false);
+  readonly plateError = signal(false);
+  readonly saved = signal(false);
+
+  setPlate(event: Event): void {
+    this.plate.set((event.target as HTMLInputElement).value.toUpperCase());
+    if (this.plate().trim()) this.plateError.set(false);
+  }
+
+  checked(event: Event): boolean {
+    return (event.target as HTMLInputElement).checked;
+  }
+
+  save(): void {
+    const plate = this.plate().trim();
+    if (!plate) {
+      this.plateError.set(true);
+      return;
+    }
+    this.vehicleService.add({ plate, isDefault: this.favorite(), label: this.foreignPlate() ? 'Matrícula extranjera' : undefined });
+    this.saved.set(true);
+  }
+
+  goBack(): void {
+    void this.router.navigate(['/app/account/vehicles']);
+  }
+}

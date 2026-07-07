@@ -114,7 +114,8 @@ export interface DateRange {
         border-color: var(--color-primary, #006a68);
         color: var(--color-primary, #006a68);
       }
-      .chip-active {
+      .chip-active,
+      .chip-active:hover {
         background: var(--color-primary, #006a68);
         color: #fff;
         border-color: var(--color-primary, #006a68);
