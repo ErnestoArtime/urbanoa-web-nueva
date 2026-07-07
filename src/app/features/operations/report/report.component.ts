@@ -66,6 +66,9 @@ interface ReportRangeItem {
             }
           } @else {
             <app-date-range-filter [simple]="true" (rangeChange)="onDateRangeChange($event)" />
+            @if (dateRangeError(); as err) {
+              <p class="form-error">{{ err }}</p>
+            }
           }
         </section>
 
@@ -245,6 +248,7 @@ export class ReportComponent {
   selectedRange: ReportRange = 'last30';
   fromDate = '';
   toDate = '';
+  readonly dateRangeError = signal<string | null>(null);
   readonly ranges: ReportRangeItem[] = [
     { key: 'last7', labelKey: 'ops.report.last7Days', days: 7 },
     { key: 'last14', labelKey: 'ops.report.last14Days', days: 14 },
@@ -302,6 +306,15 @@ export class ReportComponent {
   onDateRangeChange(range: DateRange): void {
     this.fromDate = range.from;
     this.toDate = range.to;
+    if (range.from && range.to) {
+      const [d, m, y] = range.from.split('/').map(Number);
+      const [d2, m2, y2] = range.to.split('/').map(Number);
+      const from = new Date(y, m - 1, d);
+      const to = new Date(y2, m2 - 1, d2);
+      this.dateRangeError.set(from > to ? 'La fecha Desde debe ser menor que Hasta' : null);
+    } else {
+      this.dateRangeError.set(null);
+    }
   }
 
   private buildReportHtml(operations: Operation[]): string {
@@ -346,6 +359,7 @@ export class ReportComponent {
   }
 
   generateReport(): void {
+    if (this.dateRangeError()) return;
     this.isGenerating.set(true);
     const operations = this.buildFilteredOperations();
     const html = this.buildReportHtml(operations);

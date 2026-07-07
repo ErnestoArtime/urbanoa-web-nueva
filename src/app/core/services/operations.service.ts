@@ -1,6 +1,7 @@
-import { Injectable, computed, signal } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
 import { MOCK_OPERATIONS, MOCK_TICKET_ACTIVE } from '../../shared/mock-data';
 import { OperationType } from '../../shared/models/operation-type';
+import { WalletService } from './wallet.service';
 import type { Operation } from '../../shared/models/operation';
 
 export interface ActiveOperation {
@@ -17,6 +18,7 @@ export interface ActiveOperation {
 
 @Injectable({ providedIn: 'root' })
 export class OperationsService {
+  private readonly walletService = inject(WalletService);
   private readonly _operations = signal<Operation[]>([...MOCK_OPERATIONS]);
   private readonly _activeOperation = signal<ActiveOperation | null>({
     plate: MOCK_TICKET_ACTIVE.plate,
@@ -117,6 +119,7 @@ export class OperationsService {
       zone: active.zone,
     };
 
+    this.walletService.credit(0.4, 'Devolución de saldo (Fin de estacionamiento)', 'parking-refund');
     this._operations.update((list) => [finishParking, parkingClosed, ...list]);
     this._activeOperation.set(null);
     return true;

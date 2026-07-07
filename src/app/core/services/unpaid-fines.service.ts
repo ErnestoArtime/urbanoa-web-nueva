@@ -31,7 +31,7 @@ export class UnpaidFinesService {
     const numericAmount = Number.parseFloat(fine.amount.replace(',', '.').replace(/[^0-9.,]/g, ''));
     if (this.walletService.balance() < numericAmount) return false;
 
-    this.walletService.addBalance(-numericAmount);
+    this.walletService.debit(numericAmount, 'Pago de denuncia', 'fine-payment');
     this.fines.update((list) => list.filter((f) => f.id !== id));
     this.operationsService.registerFinePayment({
       plate: fine.plate,

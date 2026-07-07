@@ -10,8 +10,8 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
       <div class="success-icon">✓</div>
       <h1 class="page-title">{{ 'ops.report.success' | translate }}</h1>
       <p class="page-subtitle">{{ 'ops.report.successDetail' | translate }}</p>
-      <a routerLink="/app/operations/report" class="btn btn-primary btn-block mt-2">{{ 'ops.report.generateAnother' | translate }}</a>
-      <a routerLink="/app/operations" class="btn btn-ghost btn-block mt-1">{{ 'ops.report.backToOps' | translate }}</a>
+      <a routerLink="/app/operations" class="btn btn-primary btn-block mt-2">{{ 'ops.report.goToOperations' | translate }}</a>
+      <a routerLink="/app/operations/report" class="btn btn-ghost btn-block mt-1">{{ 'ops.report.backToReport' | translate }}</a>
     </div>
   `,
   styles: [

@@ -79,7 +79,7 @@ import { AppIconComponent } from '../../../shared/icons/app-icon.component';
           >
             <div class="list-item-content">
               <div class="list-item-title">
-                {{ 'ops.unpaidFines.title' | translate }} <span class="badge badge-error">({{ unpaidFinesCount() }})</span>
+                {{ 'ops.unpaidFines.title' | translate: { count: '' + unpaidFinesCount() } }}
               </div>
             </div>
             <span class="list-item-chevron">›</span>

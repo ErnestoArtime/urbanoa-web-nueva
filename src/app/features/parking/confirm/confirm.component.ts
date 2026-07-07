@@ -163,7 +163,8 @@ export class ParkingConfirmComponent {
   onSwipeComplete(): void {
     if (this.loading()) return;
     const amount = this.totalAmount();
-    if (this.walletService.balance() < amount) return;
+    const paid = this.walletService.debit(amount, 'Estacionamiento', 'parking-payment');
+    if (!paid) return;
 
     const minutes = Number(this.query.minutes || 0);
     const hoursPart = String(Math.floor(minutes / 60)).padStart(2, '0');
@@ -181,7 +182,6 @@ export class ParkingConfirmComponent {
       void this.router.navigate(['/app/home']);
       return;
     }
-    this.walletService.addBalance(-amount);
     this.loading.set(true);
     setTimeout(() => void this.router.navigate(['/app/parking/success'], { queryParams: this.query }), 1500);
   }

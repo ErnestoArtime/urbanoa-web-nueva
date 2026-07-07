@@ -1,5 +1,5 @@
 import { Component, inject } from '@angular/core';
-import { DecimalPipe } from '@angular/common';
+import { DecimalPipe, DatePipe } from '@angular/common';
 import { RouterLink, NavigationEnd, Router } from '@angular/router';
 import { filter, map, startWith } from 'rxjs/operators';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -12,7 +12,7 @@ import { WalletService } from '../../../core/services/wallet.service';
 
 @Component({
   selector: 'app-payment-layout',
-  imports: [RouterLink, SplitViewComponent, TranslatePipe, DetailPanelHeaderComponent, AppIconComponent, DecimalPipe],
+  imports: [RouterLink, SplitViewComponent, TranslatePipe, DetailPanelHeaderComponent, AppIconComponent, DecimalPipe, DatePipe],
   template: `
     <app-split-view [hideList]="isChildRoute()" [hideDetail]="!isChildRoute()">
       <div splitList class="page">
@@ -40,6 +40,21 @@ import { WalletService } from '../../../core/services/wallet.service';
           <a routerLink="/app/account/refund" class="btn btn-secondary btn-sm">{{ 'account.withdrawBalance' | translate }}</a>
         </div>
         <a routerLink="/app/account/payment-methods/add" class="btn btn-secondary btn-block mt-2">{{ 'account.addCard' | translate }}</a>
+
+        <section class="card mt-2">
+          <p class="section-title">{{ 'account.movements' | translate }}</p>
+          @for (movement of walletService.movements().slice(0, 5); track movement.id) {
+            <div class="wallet-movement">
+              <div class="movement-info">
+                <strong>{{ movement.description }}</strong>
+                <span class="movement-date">{{ movement.date | date: 'dd/MM/yyyy' }}</span>
+              </div>
+              <strong class="movement-amount" [class.positive]="movement.amount > 0">
+                {{ movement.amount > 0 ? '+' : '' }}{{ movement.amount | number: '1.2-2' }} €
+              </strong>
+            </div>
+          }
+        </section>
       </div>
     </app-split-view>
   `,
@@ -82,6 +97,35 @@ import { WalletService } from '../../../core/services/wallet.service';
     .card-info small {
       font-size: var(--text-2xs);
       color: var(--color-text-muted);
+    }
+    .wallet-movement {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid var(--color-border);
+    }
+    .wallet-movement:last-child {
+      border-bottom: none;
+    }
+    .movement-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .movement-info strong {
+      font-size: var(--text-sm);
+    }
+    .movement-date {
+      font-size: var(--text-xs);
+      color: var(--color-text-muted);
+    }
+    .movement-amount {
+      font-size: var(--text-sm);
+      color: var(--color-error);
+    }
+    .movement-amount.positive {
+      color: var(--color-success);
     }
   `,
 })
