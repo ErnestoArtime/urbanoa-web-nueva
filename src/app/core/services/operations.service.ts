@@ -10,6 +10,9 @@ export interface ActiveOperation {
   durationLabel: string;
   timeRemaining: string;
   endTime: string;
+  latitude?: number;
+  longitude?: number;
+  street?: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -22,6 +25,9 @@ export class OperationsService {
     durationLabel: MOCK_TICKET_ACTIVE.durationLabel,
     timeRemaining: MOCK_TICKET_ACTIVE.timeRemaining,
     endTime: MOCK_TICKET_ACTIVE.endTime,
+    latitude: MOCK_TICKET_ACTIVE.latitude,
+    longitude: MOCK_TICKET_ACTIVE.longitude,
+    street: MOCK_TICKET_ACTIVE.street,
   });
 
   readonly operations = this._operations.asReadonly();
@@ -61,6 +67,7 @@ export class OperationsService {
 
   startParking(input: ActiveOperation & { amount: number }): boolean {
     if (this._activeOperation()) return false;
+
     this._activeOperation.set({
       plate: input.plate,
       zone: input.zone,
@@ -68,7 +75,11 @@ export class OperationsService {
       durationLabel: input.durationLabel,
       timeRemaining: input.timeRemaining,
       endTime: input.endTime,
+      latitude: input.latitude,
+      longitude: input.longitude,
+      street: input.street,
     });
+
     this._operations.update((list) => [
       {
         id: this.nextId(),

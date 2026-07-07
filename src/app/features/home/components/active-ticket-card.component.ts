@@ -39,10 +39,15 @@ import type { TicketActive } from '../../../shared/mock-data';
           <div class="ticket-divider-line"></div>
         </div>
         <div class="row mt-2 action-row">
-          <a class="btn btn-secondary btn-sm">
+          <button
+            type="button"
+            class="btn btn-secondary btn-sm"
+            [disabled]="!hasCoordinates(active)"
+            (click)="goToCar.emit(active)"
+          >
             <app-icon name="goToCar" class="action-btn-icon" [stroke]="false" />
             {{ 'dashboard.howToGetThere' | translate }}
-          </a>
+          </button>
           <button type="button" class="btn btn-danger btn-sm" (click)="unpark.emit()">{{ 'dashboard.unpark' | translate }}</button>
           <button type="button" class="btn btn-primary btn-sm" (click)="extend.emit()">
             <app-icon name="extend" class="action-btn-icon" [stroke]="false" />
@@ -222,4 +227,9 @@ export class ActiveTicketCardComponent {
   readonly ticket = input<TicketActive | null>(null);
   readonly unpark = output<void>();
   readonly extend = output<void>();
+  readonly goToCar = output<TicketActive>();
+
+  hasCoordinates(ticket: TicketActive): boolean {
+    return Number.isFinite(ticket.latitude) && Number.isFinite(ticket.longitude);
+  }
 }

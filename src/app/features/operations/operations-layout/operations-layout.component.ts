@@ -7,7 +7,8 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { DateRangeFilterComponent, type DateRange } from '../../../shared/components/date-range-filter/date-range-filter.component';
 import { OperationType, OPERATION_TYPE_LABELS } from '../../../shared/models/operation-type';
 import { UnpaidFinesService } from '../../../core/services/unpaid-fines.service';
-import { OperationsService } from '../../../core/services/operations.service';
+import { OperationsService, type ActiveOperation } from '../../../core/services/operations.service';
+import { NavigationToCarService } from '../../../core/services/navigation-to-car.service';
 import type { Operation } from '../../../shared/models/operation';
 import { OperationIconComponent } from '../../../shared/components/operation-icon/operation-icon.component';
 import { SplitViewComponent } from '../../../layout/split-view/split-view.component';
@@ -45,6 +46,17 @@ import { AppIconComponent } from '../../../shared/icons/app-icon.component';
               <div class="active-times">
                 <span>{{ 'ops.endsAt' | translate }}</span
                 ><strong>{{ active.endTime }}</strong>
+              </div>
+              <div class="go-to-car-row">
+                <button
+                  type="button"
+                  class="btn btn-secondary btn-sm"
+                  [disabled]="!hasCoordinates(active)"
+                  (click)="onGoToCar(active)"
+                >
+                  <app-icon name="goToCar" class="action-btn-icon" [stroke]="false" />
+                  {{ 'dashboard.howToGetThere' | translate }}
+                </button>
               </div>
               <div class="active-actions">
                 <button type="button" class="btn btn-danger btn-sm" (click)="onUnpark()">{{ 'dashboard.unpark' | translate }}</button>
@@ -224,6 +236,17 @@ import { AppIconComponent } from '../../../shared/icons/app-icon.component';
         border-top: 1px dashed var(--color-border);
         font-size: var(--text-sm);
       }
+      .go-to-car-row {
+        padding: 0.55rem 0.75rem;
+        border-top: 1px dashed var(--color-border);
+      }
+      .go-to-car-row .btn {
+        width: 100%;
+        border-radius: 999px;
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        color: var(--color-text);
+      }
       .active-actions {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -314,6 +337,7 @@ import { AppIconComponent } from '../../../shared/icons/app-icon.component';
 export class OperationsLayoutComponent {
   private readonly router = inject(Router);
   private readonly operationsService = inject(OperationsService);
+  private readonly navigationToCar = inject(NavigationToCarService);
   private readonly operations = this.operationsService.operations;
   private readonly rangeFilter = signal<DateRange>({ from: '', to: '' });
   private readonly unpaidFinesService = inject(UnpaidFinesService);
@@ -349,6 +373,18 @@ export class OperationsLayoutComponent {
 
   onUnpark(): void {
     this.operationsService.unparkActiveOperation();
+  }
+
+  onGoToCar(active: ActiveOperation): void {
+    this.navigationToCar.open({
+      latitude: active.latitude,
+      longitude: active.longitude,
+      label: active.plate,
+    });
+  }
+
+  hasCoordinates(active: ActiveOperation): boolean {
+    return Number.isFinite(active.latitude) && Number.isFinite(active.longitude);
   }
 
   isFinishParking(op: Operation): boolean {

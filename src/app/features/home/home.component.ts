@@ -5,7 +5,9 @@ import { WalletService } from '../../core/services/wallet.service';
 import { UserService } from '../../core/services/user.service';
 import { MOCK_VEHICLE_PRINCIPAL } from '../../shared/mock-data';
 import { OperationsService } from '../../core/services/operations.service';
+import { NavigationToCarService } from '../../core/services/navigation-to-car.service';
 import { OperationType } from '../../shared/models/operation-type';
+import type { TicketActive } from '../../shared/mock-data';
 import { ActiveTicketCardComponent } from './components/active-ticket-card.component';
 import { WalletSummaryCardComponent } from './components/wallet-summary-card.component';
 import { VehicleSummaryCardComponent } from './components/vehicle-summary-card.component';
@@ -29,7 +31,7 @@ import { ProfileProgressCardComponent } from './components/profile-progress-card
 
       <div class="dashboard-grid mt-2">
         <div class="dashboard-col-left">
-          <app-active-ticket-card [ticket]="ticket()" (unpark)="unparkFromDashboard()" (extend)="onExtend()" />
+          <app-active-ticket-card [ticket]="ticket()" (unpark)="unparkFromDashboard()" (extend)="onExtend()" (goToCar)="onGoToCar($event)" />
           <app-recent-operations-card [operations]="recentOps()" (viewAll)="onViewAll()" />
         </div>
 
@@ -81,6 +83,7 @@ export class HomeComponent {
   readonly walletService = inject(WalletService);
   private readonly operationsService = inject(OperationsService);
   private readonly userService = inject(UserService);
+  private readonly navigationToCar = inject(NavigationToCarService);
   readonly user = this.userService.user;
   readonly fullName = computed(() => `${this.user().name} ${this.user().surname}`);
   readonly ticket = computed(() => this.operationsService.activeOperation());
@@ -104,6 +107,14 @@ export class HomeComponent {
 
   onRecharge(): void {
     this.router.navigate(['/app/account/recharge']);
+  }
+
+  onGoToCar(ticket: TicketActive): void {
+    const ok = this.navigationToCar.open({
+      latitude: ticket.latitude,
+      longitude: ticket.longitude,
+      label: ticket.plate,
+    });
   }
 
   onViewAll(): void {

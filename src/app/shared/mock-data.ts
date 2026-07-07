@@ -15,6 +15,9 @@ export interface TicketActive {
   durationLabel: string;
   timeRemaining: string;
   endTime: string;
+  latitude?: number;
+  longitude?: number;
+  street?: string;
 }
 
 export interface Municipio {
@@ -89,6 +92,9 @@ export const MOCK_TICKET_ACTIVE: TicketActive = {
   durationLabel: '1h 4min',
   timeRemaining: '01:24:35',
   endTime: '16:55',
+  latitude: 43.2854,
+  longitude: -2.1746,
+  street: 'Nagusia Kalea',
 };
 
 export const MOCK_MUNICIPIOS: Municipio[] = [

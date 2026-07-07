@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ParkingFlowStore } from '../parking-flow.store';
 import { ParkingFlowQuery, readParkingFlowQuery } from '../parking-flow.model';
@@ -6,6 +6,7 @@ import { AppIconComponent } from '../../../shared/icons/app-icon.component';
 import { OperationIconComponent } from '../../../shared/components/operation-icon/operation-icon.component';
 import { OperationType } from '../../../shared/models/operation-type';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { OperationsService } from '../../../core/services/operations.service';
 
 @Component({
   selector: 'app-parking-success',
@@ -192,11 +193,29 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
     `,
   ],
 })
-export class ParkingSuccessComponent {
+export class ParkingSuccessComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly store = inject(ParkingFlowStore);
+  private readonly operationsService = inject(OperationsService);
   readonly query: ParkingFlowQuery = this.store.hasMinimumParkingData() ? this.store.fromStore() : readParkingFlowQuery(this.route);
   readonly parkingType = OperationType.PARKING;
+
+  ngOnInit(): void {
+    const parsedAmount = parseFloat(this.query.amount.replace('€', '').replace(',', '.').trim()) || 0;
+    this.operationsService.startParking({
+      plate: this.query.plate,
+      zone: `${this.query.zone} — ${this.query.cityName}`,
+      startTime: this.startTime(),
+      durationLabel: this.query.duration,
+      timeRemaining: '01:00:00',
+      endTime: this.query.endTime,
+      amount: parsedAmount,
+      latitude: Number(this.query.latitude) || undefined,
+      longitude: Number(this.query.longitude) || undefined,
+      street: this.query.street,
+    });
+  }
+
   startTime(): string {
     const [hours, minutes] = (this.query.endTime || '00:00').split(':').map(Number);
     const end = new Date(2026, 0, 1, hours, minutes);
