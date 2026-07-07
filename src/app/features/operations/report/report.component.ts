@@ -6,7 +6,6 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { OperationType, OPERATION_TYPE_LABELS } from '../../../shared/models/operation-type';
 import { APP_BRAND } from '../../../shared/constants/app-brand';
 import { OperationsService } from '../../../core/services/operations.service';
-import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
 import { DateRangeFilterComponent, type DateRange } from '../../../shared/components/date-range-filter/date-range-filter.component';
 import type { Operation } from '../../../shared/models/operation';
 
@@ -30,7 +29,7 @@ interface ReportRangeItem {
 
 @Component({
   selector: 'app-report',
-  imports: [FormsModule, TranslatePipe, DateRangeFilterComponent, DetailPanelHeaderComponent],
+  imports: [FormsModule, TranslatePipe, DateRangeFilterComponent],
   template: `
     <div class="report-page has-sticky-actions">
       <div class="report-scroll">

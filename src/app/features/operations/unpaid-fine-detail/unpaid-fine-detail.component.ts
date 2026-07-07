@@ -1,18 +1,19 @@
 import { Component, inject, signal } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { DecimalPipe } from '@angular/common';
 import { UnpaidFinesService } from '../../../core/services/unpaid-fines.service';
 import { WalletService } from '../../../core/services/wallet.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
+import { ResultModalComponent } from '../../../shared/components/result-modal/result-modal.component';
 
 @Component({
   selector: 'app-unpaid-fine-detail',
-  imports: [RouterLink, DecimalPipe, TranslatePipe, DetailPanelHeaderComponent],
+  imports: [RouterLink, DecimalPipe, TranslatePipe, DetailPanelHeaderComponent, ResultModalComponent],
   template: `
     @if (!paid()) {
       <div class="page">
-        <h1 class="page-title">{{ 'ops.fineDetail.title' | translate }}</h1>
+        <app-detail-panel-header title="Detalle de denuncia" backRoute="/app/operations/unpaid-fines" />
         @if (fine) {
           <div class="card mt-2">
             <p>
@@ -33,9 +34,7 @@ import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/
             <p style="font-size: var(--text-xl);font-weight: var(--font-bold)">{{ walletService.balance() | number: '1.2-2' }} €</p>
           </div>
           @if (insufficientFunds()) {
-            <p class="mt-1" style="color:var(--color-error);font-size:var(--text-sm)">
-              {{ 'ops.fineDetail.insufficientBalance' | translate }}
-            </p>
+            <p class="form-error">{{ 'ops.fineDetail.insufficientBalance' | translate }}</p>
           }
           <button type="button" class="btn btn-primary btn-block mt-2" (click)="pay()" [disabled]="insufficientFunds()">
             {{ 'ops.fineDetail.pay' | translate }} {{ fine.amount }}
@@ -46,22 +45,19 @@ import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/
         }
       </div>
     } @else {
-      <div class="page text-center">
-        <div class="success-icon">✓</div>
-        <h1 class="page-title">{{ 'ops.fineDetail.paid' | translate }}</h1>
-        <p class="page-subtitle">
-          {{ 'ops.fineDetail.paidDetail' | translate: { plate: fine?.plate ?? '', location: fine?.location ?? '' } }}
-        </p>
-        <p class="mt-2" style="font-size: var(--text-xl);font-weight: var(--font-bold);color:var(--color-primary)">
-          {{ walletService.balance() | number: '1.2-2' }} €
-        </p>
-        <a routerLink="/app/operations/unpaid-fines" class="btn btn-primary btn-block mt-2">{{ 'ops.unpaidFines.back' | translate }}</a>
-      </div>
+      <app-result-modal
+        type="success"
+        title="Denuncia pagada"
+        [message]="'La denuncia de ' + (fine?.plate ?? '') + ' en ' + (fine?.location ?? '') + ' ha sido pagada.'"
+        primaryText="Volver a denuncias"
+        (primaryAction)="onBackToFines()"
+      />
     }
   `,
 })
 export class UnpaidFineDetailComponent {
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly unpaidFinesService = inject(UnpaidFinesService);
   readonly walletService = inject(WalletService);
 
@@ -77,6 +73,11 @@ export class UnpaidFineDetailComponent {
 
   pay(): void {
     if (!this.fine) return;
-    this.paid.set(this.unpaidFinesService.payFine(this.fineId));
+    const ok = this.unpaidFinesService.payFine(this.fineId);
+    if (ok) this.paid.set(true);
+  }
+
+  onBackToFines(): void {
+    void this.router.navigate(['/app/operations/unpaid-fines']);
   }
 }

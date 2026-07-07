@@ -94,7 +94,7 @@ export class AccountRechargeComponent {
   readonly done = signal(false);
   confirm(): void {
     if (this.done() || this.selected() <= 0) return;
-    this.walletService.addBalance(this.selected());
+    this.walletService.credit(this.selected(), 'Recarga de saldo', 'top-up');
     this.operationsService.registerTopUp(this.selected());
     this.done.set(true);
   }

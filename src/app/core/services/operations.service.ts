@@ -119,7 +119,7 @@ export class OperationsService {
       zone: active.zone,
     };
 
-    this.walletService.credit(0.4, 'Devolución de saldo (Fin de estacionamiento)', 'parking-refund');
+    this.walletService.credit(0.4, 'Devolución de saldo', 'parking-refund');
     this._operations.update((list) => [finishParking, parkingClosed, ...list]);
     this._activeOperation.set(null);
     return true;

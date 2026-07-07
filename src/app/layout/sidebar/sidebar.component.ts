@@ -20,7 +20,9 @@ import { APP_BRAND } from '../../shared/constants/app-brand';
             [routerLinkActiveOptions]="{ exact: isExactPath(item.path) }"
             class="sidebar-link"
           >
-            <span class="sidebar-icon" [attr.data-icon]="item.icon"></span>
+            <span class="sidebar-pill">
+              <span class="sidebar-icon" [attr.data-icon]="item.icon"></span>
+            </span>
             @switch (item.path) {
               @case ('/app/home') {
                 <span>{{ 'nav.home' | translate }}</span>
@@ -91,10 +93,18 @@ import { APP_BRAND } from '../../shared/constants/app-brand';
         text-decoration: none;
       }
       .sidebar-link.active {
-        background: var(--color-active);
         color: var(--color-primary);
-        border-right: none;
+      }
+      .sidebar-pill {
+        display: grid;
+        place-items: center;
+        width: 58px;
+        height: 38px;
         border-radius: 999px;
+        transition: background 0.15s;
+      }
+      .sidebar-link.active .sidebar-pill {
+        background: #fde0a4;
       }
       .sidebar-icon {
         width: 25px;
