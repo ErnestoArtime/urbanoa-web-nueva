@@ -179,7 +179,7 @@
   "ops.report.generating": "Génération du rapport...",
   "ops.report.success": "Rapport généré",
   "ops.report.successDetail": "Sélectionnez une option pour télécharger ou visualiser le rapport.",
-  "ops.report.back": "Retour aux opérations",
+  "ops.report.back": "Générer un autre rapport",
   "ops.report.rangeTitle": "Plage de jours",
   "ops.report.customDates": "Utiliser des dates personnalisées",
   "ops.report.customDatesDesc": "Activez cette option pour choisir manuellement le début et la fin.",

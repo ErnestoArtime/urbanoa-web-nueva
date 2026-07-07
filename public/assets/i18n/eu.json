@@ -179,7 +179,7 @@
   "ops.report.generating": "Txostena sortzen...",
   "ops.report.success": "Txostena sortu da",
   "ops.report.successDetail": "Hautatu aukera bat txostena deskargatu edo ikusteko.",
-  "ops.report.back": "Itzuli eragiketetara",
+  "ops.report.back": "Sortu beste txosten bat",
   "ops.report.rangeTitle": "Egunen tartea",
   "ops.report.customDates": "Erabili data pertsonalizatuak",
   "ops.report.customDatesDesc": "Gaitu aukera hau hasiera eta amaiera eskuz aukeratzeko.",

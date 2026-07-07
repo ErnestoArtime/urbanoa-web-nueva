@@ -179,7 +179,7 @@
   "ops.report.generating": "Генерація звіту...",
   "ops.report.success": "Звіт згенеровано",
   "ops.report.successDetail": "Виберіть опцію, щоб завантажити або переглянути звіт.",
-  "ops.report.back": "Повернутися до операцій",
+  "ops.report.back": "Створити інший звіт",
   "ops.report.rangeTitle": "Діапазон днів",
   "ops.report.customDates": "Використати власні дати",
   "ops.report.customDatesDesc": "Увімкніть цю опцію, щоб вручну вибрати початок і кінець.",
