@@ -58,13 +58,10 @@ import { WalletService } from '../../../core/services/wallet.service';
             }
           }
         </ul>
-        <a routerLink="/auth/login" class="list-item account-item logout-item">
-          <app-icon name="logout" class="account-item-icon" [stroke]="false" />
-          <div class="list-item-content">
-            <div class="list-item-title">{{ 'account.logout' | translate }}</div>
-          </div>
-          <span class="list-item-chevron">›</span>
-        </a>
+        <button type="button" class="account-logout" (click)="logout()">
+          <app-icon name="logout" class="logout-icon" [stroke]="false" />
+          {{ 'account.logout' | translate }}
+        </button>
       </div>
     </app-split-view>
 
@@ -84,11 +81,32 @@ import { WalletService } from '../../../core/services/wallet.service';
         padding-bottom: 5rem;
         background: var(--color-surface);
       }
-      .logout-item {
-        margin-top: -1px;
-        border: 1px solid var(--color-border);
-        border-radius: 0 0 var(--radius-md) var(--radius-md);
-        background: var(--color-surface);
+      .account-logout {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        width: 100%;
+        margin-top: 1.5rem;
+        padding: 0.75rem;
+        border: 1px solid var(--color-error, #dc2626);
+        border-radius: 999px;
+        background: transparent;
+        color: var(--color-error, #dc2626);
+        font-family: var(--font-family);
+        font-size: var(--text-sm);
+        font-weight: var(--font-medium);
+        cursor: pointer;
+        transition: background 0.2s, color 0.2s;
+      }
+      .account-logout:hover {
+        background: var(--color-error, #dc2626);
+        color: #fff;
+      }
+      .logout-icon {
+        width: 18px;
+        height: 18px;
+        fill: currentColor;
       }
       .account-profile {
         display: flex;
@@ -226,6 +244,10 @@ export class AccountShellComponent {
     const prev = this.menu[index - 1];
     return index === 0 || prev.groupKey !== item.groupKey ? item.groupKey : null;
   };
+
+  logout(): void {
+    void this.router.navigate(['/auth/login']);
+  }
 
   handleAction(key: string): void {
     if (key === 'share') {
