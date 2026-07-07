@@ -19,18 +19,10 @@ export interface ActiveOperation {
 @Injectable({ providedIn: 'root' })
 export class OperationsService {
   private readonly walletService = inject(WalletService);
-  private readonly _operations = signal<Operation[]>([...MOCK_OPERATIONS]);
-  private readonly _activeOperation = signal<ActiveOperation | null>({
-    plate: MOCK_TICKET_ACTIVE.plate,
-    zone: MOCK_TICKET_ACTIVE.zone,
-    startTime: MOCK_TICKET_ACTIVE.startTime,
-    durationLabel: MOCK_TICKET_ACTIVE.durationLabel,
-    timeRemaining: MOCK_TICKET_ACTIVE.timeRemaining,
-    endTime: MOCK_TICKET_ACTIVE.endTime,
-    latitude: MOCK_TICKET_ACTIVE.latitude,
-    longitude: MOCK_TICKET_ACTIVE.longitude,
-    street: MOCK_TICKET_ACTIVE.street,
-  });
+  private readonly storageKey = 'urbanoa.operations';
+  private readonly activeKey = 'urbanoa.operations.active';
+  private readonly _operations = signal<Operation[]>(this.readOps());
+  private readonly _activeOperation = signal<ActiveOperation | null>(this.readActive());
 
   readonly operations = this._operations.asReadonly();
   readonly activeOperation = this._activeOperation.asReadonly();
@@ -51,6 +43,7 @@ export class OperationsService {
       zone: input.location,
     };
     this._operations.update((list) => [operation, ...list]);
+    this.persistOps();
   }
 
   registerTopUp(amount: number): void {
@@ -65,6 +58,7 @@ export class OperationsService {
       },
       ...list,
     ]);
+    this.persistOps();
   }
 
   startParking(input: ActiveOperation & { amount: number }): boolean {
@@ -93,6 +87,8 @@ export class OperationsService {
       },
       ...list,
     ]);
+    this.persistOps();
+    this.persistActive();
     return true;
   }
 
@@ -122,7 +118,54 @@ export class OperationsService {
     this.walletService.credit(0.4, 'Devolución de saldo', 'parking-refund');
     this._operations.update((list) => [finishParking, parkingClosed, ...list]);
     this._activeOperation.set(null);
+    this.persistOps();
+    this.persistActive();
     return true;
+  }
+
+  private readOps(): Operation[] {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(this.storageKey) ?? 'null') as Operation[] | null;
+      if (Array.isArray(parsed) && parsed.length) return parsed;
+    } catch { /* fall through */ }
+    return MOCK_OPERATIONS.map((op) => ({ ...op }));
+  }
+
+  private readActive(): ActiveOperation | null {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(this.activeKey) ?? 'null') as ActiveOperation | null;
+      if (parsed && typeof parsed.plate === 'string') return parsed;
+    } catch { /* fall through */ }
+    return MOCK_TICKET_ACTIVE
+      ? {
+          plate: MOCK_TICKET_ACTIVE.plate,
+          zone: MOCK_TICKET_ACTIVE.zone,
+          startTime: MOCK_TICKET_ACTIVE.startTime,
+          durationLabel: MOCK_TICKET_ACTIVE.durationLabel,
+          timeRemaining: MOCK_TICKET_ACTIVE.timeRemaining,
+          endTime: MOCK_TICKET_ACTIVE.endTime,
+          latitude: MOCK_TICKET_ACTIVE.latitude,
+          longitude: MOCK_TICKET_ACTIVE.longitude,
+          street: MOCK_TICKET_ACTIVE.street,
+        }
+      : null;
+  }
+
+  private persistOps(): void {
+    try {
+      localStorage.setItem(this.storageKey, JSON.stringify(this._operations()));
+    } catch { /* storage unavailable */ }
+  }
+
+  private persistActive(): void {
+    try {
+      const val = this._activeOperation();
+      if (val) {
+        localStorage.setItem(this.activeKey, JSON.stringify(val));
+      } else {
+        localStorage.removeItem(this.activeKey);
+      }
+    } catch { /* storage unavailable */ }
   }
 
   private todayDateString(): string {
