@@ -1,5 +1,5 @@
-import { Component, inject } from '@angular/core';
-import { RouterLink, RouterLinkActive, Router } from '@angular/router';
+import { Component } from '@angular/core';
+import { RouterLink, RouterLinkActive } from '@angular/router';
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 import { NAV_ITEMS } from '../../shared/mock-data';
 import { APP_BRAND } from '../../shared/constants/app-brand';
@@ -93,8 +93,8 @@ import { APP_BRAND } from '../../shared/constants/app-brand';
       .sidebar-link.active {
         background: var(--color-active);
         color: var(--color-primary);
-        border-right: 3px solid var(--color-primary);
-        border-radius: 18px 0 0 18px;
+        border-right: none;
+        border-radius: 999px;
       }
       .sidebar-icon {
         width: 25px;
@@ -129,15 +129,8 @@ import { APP_BRAND } from '../../shared/constants/app-brand';
   ],
 })
 export class SidebarComponent {
-  private readonly router = inject(Router);
   readonly brand = APP_BRAND;
   readonly navItems = NAV_ITEMS;
-
-  isActiveRoute(path: string): boolean {
-    const url = this.router.url;
-    if (path === '/app/home') return url === '/app/home' || url === '/app/home/';
-    return url.startsWith(path);
-  }
 
   isExactPath(path: string): boolean {
     return path === '/app/home';

@@ -11,7 +11,7 @@ import { DateRangeFilterComponent, type DateRange } from '../../../shared/compon
 import type { Operation } from '../../../shared/models/operation';
 
 type ReportRange = 'last7' | 'last14' | 'last30' | 'last6m' | 'last12m' | 'last5y';
-type ReportFilterKey = 'parks' | 'extends' | 'refunds' | 'recharges' | 'balanceRefunds' | 'fines';
+type ReportFilterKey = 'parks' | 'extends' | 'refunds' | 'recharges' | 'parkingEnd' | 'balanceRefunds' | 'fines';
 
 interface ReportFilterItem {
   key: ReportFilterKey;
@@ -258,6 +258,7 @@ export class ReportComponent {
     { key: 'extends', labelKey: 'ops.report.extension', descKey: 'ops.report.extensionDesc', type: OperationType.PARKING_EXTENSION },
     { key: 'refunds', labelKey: 'ops.report.refunds', descKey: 'ops.report.refundsDesc', type: OperationType.REFUND },
     { key: 'recharges', labelKey: 'ops.report.topUps', descKey: 'ops.report.topUpsDesc', type: OperationType.TOP_UP },
+    { key: 'parkingEnd', labelKey: 'ops.report.parkingEnd', descKey: 'ops.report.parkingEndDesc', type: OperationType.PARKING_END },
     {
       key: 'balanceRefunds',
       labelKey: 'ops.report.balanceRefunds',
@@ -271,6 +272,7 @@ export class ReportComponent {
     extends: true,
     refunds: true,
     recharges: true,
+    parkingEnd: true,
     balanceRefunds: true,
     fines: true,
   };
@@ -404,6 +406,8 @@ export class ReportComponent {
         return 'refunds';
       case OperationType.TOP_UP:
         return 'recharges';
+      case OperationType.PARKING_END:
+        return 'parkingEnd';
       case OperationType.BALANCE_REFUND:
         return 'balanceRefunds';
       case OperationType.FINE_PAYMENT:

@@ -110,7 +110,7 @@ export class OperationsService {
 
     const finishParking: Operation = {
       id: this.nextId(),
-      type: OperationType.BALANCE_REFUND,
+      type: OperationType.PARKING_END,
       plate: active.plate,
       date: today,
       amount: 0.4,

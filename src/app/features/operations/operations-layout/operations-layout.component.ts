@@ -388,7 +388,7 @@ export class OperationsLayoutComponent {
   }
 
   isFinishParking(op: Operation): boolean {
-    return op.type === OperationType.BALANCE_REFUND && !!op.plate;
+    return op.type === OperationType.PARKING_END;
   }
 
   private applyFilter(list: Operation[]): Operation[] {
