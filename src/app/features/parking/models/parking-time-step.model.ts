@@ -13,6 +13,7 @@ export interface ParkingTimeStepInput {
   tariffPrice: number;
   startDate?: Date;
   maxMinutes?: number;
+  stepMinutes?: number;
 }
 
 export interface ParkingPaymentSummary {

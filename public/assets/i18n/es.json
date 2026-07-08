@@ -91,6 +91,7 @@
   "parking.timeSteps.decreaseDuration": "Reducir duración",
   "parking.timeSteps.time": "Tiempo",
   "parking.timeSteps.increaseDuration": "Aumentar duración",
+  "parking.timeSteps.vehicle": "Matrícula",
   "parking.timeSteps.estimatedPrice": "Importe estimado",
   "parking.timeSteps.continue": "Continuar",
   "parking.tickets.loading": "Cargando tarifas...",

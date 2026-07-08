@@ -106,6 +106,9 @@ import { OperationsService } from '../../../core/services/operations.service';
         stroke-width: 1.8;
       }
       .success-ticket {
+        --ticket-notch-r: 10px;
+        --ticket-cut-y: calc(100% - 68px);
+        position: relative;
         overflow: hidden;
         width: 100%;
         margin-top: 1.2rem;
@@ -114,6 +117,16 @@ import { OperationsService } from '../../../core/services/operations.service';
         background: var(--color-surface);
         box-shadow: var(--shadow-md);
         text-align: left;
+        -webkit-mask:
+          radial-gradient(circle at 0 var(--ticket-cut-y), transparent 0 var(--ticket-notch-r), #000 calc(var(--ticket-notch-r) + 1px)) left
+            top / 51% 100% no-repeat,
+          radial-gradient(circle at 100% var(--ticket-cut-y), transparent 0 var(--ticket-notch-r), #000 calc(var(--ticket-notch-r) + 1px))
+            right top / 51% 100% no-repeat;
+        mask:
+          radial-gradient(circle at 0 var(--ticket-cut-y), transparent 0 var(--ticket-notch-r), #000 calc(var(--ticket-notch-r) + 1px)) left
+            top / 51% 100% no-repeat,
+          radial-gradient(circle at 100% var(--ticket-cut-y), transparent 0 var(--ticket-notch-r), #000 calc(var(--ticket-notch-r) + 1px))
+            right top / 51% 100% no-repeat;
       }
       .ticket-accent {
         height: 14px;

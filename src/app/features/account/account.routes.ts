@@ -54,10 +54,18 @@ export const ACCOUNT_ROUTES: Routes = [
             path: 'add',
             loadComponent: () => import('./payment-add/payment-add.component').then((m) => m.PaymentAddComponent),
           },
+          {
+            path: 'recharge',
+            loadComponent: () => import('./recharge/recharge.component').then((m) => m.AccountRechargeComponent),
+          },
+          {
+            path: 'refund',
+            loadComponent: () => import('./refund/refund.component').then((m) => m.AccountRefundComponent),
+          },
         ],
       },
-      { path: 'recharge', loadComponent: () => import('./recharge/recharge.component').then((m) => m.AccountRechargeComponent) },
-      { path: 'refund', loadComponent: () => import('./refund/refund.component').then((m) => m.AccountRefundComponent) },
+      { path: 'recharge', redirectTo: 'payment-methods/recharge', pathMatch: 'full' },
+      { path: 'refund', redirectTo: 'payment-methods/refund', pathMatch: 'full' },
     ],
   },
 ];

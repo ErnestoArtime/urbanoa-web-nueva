@@ -1,10 +1,11 @@
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { APP_BRAND } from '../../../shared/constants/app-brand';
+import { LucideEye, LucideEyeOff } from '@lucide/angular';
 
 @Component({
   selector: 'app-login',
-  imports: [RouterLink],
+  imports: [RouterLink, LucideEye, LucideEyeOff],
   template: `
     <main class="auth-page apk-auth-page">
       <section class="auth-panel">
@@ -15,8 +16,20 @@ import { APP_BRAND } from '../../../shared/constants/app-brand';
           ><span>Correo electrónico</span><input type="email" placeholder="xxx@yyy.zzz" autocomplete="email"
         /></label>
         <label class="outlined-field"
-          ><span>Contraseña</span><input type="password" placeholder="••••••••" autocomplete="current-password"
-        /></label>
+          ><span>Contraseña</span>
+          <div class="password-field">
+            <input [type]="showPassword() ? 'text' : 'password'" placeholder="••••••••" autocomplete="current-password" /><button
+              type="button"
+              (click)="togglePassword()"
+              aria-label="Mostrar u ocultar contraseña"
+            >
+              @if (showPassword()) {
+                <svg lucideEyeOff size="20"></svg>
+              } @else {
+                <svg lucideEye size="20"></svg>
+              }
+            </button></div
+        ></label>
         <a routerLink="/auth/reset-password" class="recover-link">¿Olvidaste tu contraseña?</a>
         <a routerLink="/app" class="btn btn-primary btn-block login-button">Iniciar sesión</a>
         <p class="register-link">¿No tienes cuenta? <a routerLink="/auth/register">Regístrate</a></p>
@@ -77,6 +90,34 @@ import { APP_BRAND } from '../../../shared/constants/app-brand';
         background: transparent;
         font: inherit;
       }
+      .password-field {
+        position: relative;
+        width: 100%;
+      }
+      .password-field input {
+        width: 100%;
+        padding-right: 44px;
+        box-sizing: border-box;
+      }
+      .password-field button {
+        position: absolute;
+        right: 0;
+        top: 0;
+        bottom: 0;
+        width: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 0;
+        background: transparent;
+        color: var(--color-text-muted);
+        cursor: pointer;
+        padding: 0;
+      }
+      .password-field button svg {
+        width: 22px;
+        height: 22px;
+      }
       .outlined-field input:focus {
         outline: 2px solid rgba(43, 103, 103, 0.15);
       }
@@ -109,5 +150,9 @@ import { APP_BRAND } from '../../../shared/constants/app-brand';
   ],
 })
 export class LoginComponent {
+  readonly showPassword = signal(false);
+  togglePassword(): void {
+    this.showPassword.update((value) => !value);
+  }
   readonly brand = APP_BRAND;
 }

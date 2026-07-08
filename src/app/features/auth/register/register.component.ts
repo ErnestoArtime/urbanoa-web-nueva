@@ -1,10 +1,11 @@
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { APP_BRAND } from '../../../shared/constants/app-brand';
+import { LucideEye, LucideEyeOff } from '@lucide/angular';
 
 @Component({
   selector: 'app-register',
-  imports: [RouterLink],
+  imports: [RouterLink, LucideEye, LucideEyeOff],
   template: `
     <main class="auth-page register-page">
       <section class="register-panel">
@@ -20,8 +21,36 @@ import { APP_BRAND } from '../../../shared/constants/app-brand';
           <label class="outlined-field"><span>Matrícula</span><input placeholder="1234 ABC" /></label>
           <label class="foreign-check"><input type="checkbox" /> Matrícula extranjera</label>
           <label class="outlined-field"><span>Correo electrónico</span><input type="email" placeholder="xxx@yyy.zzz" /></label>
-          <label class="outlined-field"><span>Contraseña</span><input type="password" /></label>
-          <label class="outlined-field"><span>Repetir contraseña</span><input type="password" /></label>
+          <label class="outlined-field"
+            ><span>Contraseña</span>
+            <div class="password-field">
+              <input [type]="showPassword() ? 'text' : 'password'" /><button
+                type="button"
+                (click)="togglePassword()"
+                aria-label="Mostrar u ocultar contraseña"
+              >
+                @if (showPassword()) {
+                  <svg lucideEyeOff size="20"></svg>
+                } @else {
+                  <svg lucideEye size="20"></svg>
+                }
+              </button></div
+          ></label>
+          <label class="outlined-field"
+            ><span>Repetir contraseña</span>
+            <div class="password-field">
+              <input [type]="showConfirmation() ? 'text' : 'password'" /><button
+                type="button"
+                (click)="toggleConfirmation()"
+                aria-label="Mostrar u ocultar contraseña"
+              >
+                @if (showConfirmation()) {
+                  <svg lucideEyeOff size="20"></svg>
+                } @else {
+                  <svg lucideEye size="20"></svg>
+                }
+              </button></div
+          ></label>
           <label class="terms-check"
             ><input type="checkbox" /><span
               >Acepto los <a routerLink="/auth/web/terms">términos y condiciones</a> y la
@@ -93,6 +122,34 @@ import { APP_BRAND } from '../../../shared/constants/app-brand';
         background: transparent;
         font: inherit;
       }
+      .password-field {
+        position: relative;
+        width: 100%;
+      }
+      .password-field input {
+        width: 100%;
+        padding-right: 44px;
+        box-sizing: border-box;
+      }
+      .password-field button {
+        position: absolute;
+        right: 0;
+        top: 0;
+        bottom: 0;
+        width: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 0;
+        background: transparent;
+        color: var(--color-text-muted);
+        cursor: pointer;
+        padding: 0;
+      }
+      .password-field button svg {
+        width: 22px;
+        height: 22px;
+      }
       .foreign-check,
       .terms-check {
         display: flex;
@@ -133,5 +190,13 @@ import { APP_BRAND } from '../../../shared/constants/app-brand';
   ],
 })
 export class RegisterComponent {
+  readonly showPassword = signal(false);
+  readonly showConfirmation = signal(false);
+  togglePassword(): void {
+    this.showPassword.update((value) => !value);
+  }
+  toggleConfirmation(): void {
+    this.showConfirmation.update((value) => !value);
+  }
   readonly brand = APP_BRAND;
 }

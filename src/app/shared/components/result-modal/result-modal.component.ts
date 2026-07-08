@@ -1,21 +1,37 @@
 import { Component, input, output } from '@angular/core';
 
-export type ResultType = 'success' | 'error';
+export type ResultType = 'success' | 'error' | 'confirmation';
 
 @Component({
   selector: 'app-result-modal',
   template: `
     <div class="result-modal-overlay">
       <div class="result-modal">
-        <div class="result-icon" [class.success]="type() === 'success'" [class.error]="type() === 'error'">
+        <div
+          class="result-icon"
+          [class.success]="type() === 'success'"
+          [class.error]="type() === 'error'"
+          [class.confirmation]="type() === 'confirmation'"
+        >
           @if (type() === 'success') {
-            <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <svg
+              viewBox="0 0 24 24"
+              width="48"
+              height="48"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
               <path d="M20 6L9 17l-5-5" />
             </svg>
-          } @else {
+          } @else if (type() === 'error') {
             <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
               <path d="M18 6L6 18M6 6l12 12" />
             </svg>
+          } @else {
+            <span class="confirmation-icon">↩</span>
           }
         </div>
         <h2 class="result-title">{{ title() }}</h2>
@@ -40,7 +56,7 @@ export type ResultType = 'success' | 'error';
       .result-modal-overlay {
         position: fixed;
         inset: 0;
-        background: rgba(0,0,0,0.4);
+        background: rgba(0, 0, 0, 0.4);
         display: grid;
         place-items: center;
         z-index: 3000;
@@ -53,7 +69,7 @@ export type ResultType = 'success' | 'error';
         max-width: 340px;
         width: 100%;
         text-align: center;
-        box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
       }
       .result-icon {
         width: 72px;
@@ -71,6 +87,17 @@ export type ResultType = 'success' | 'error';
       .result-icon.error {
         background: #fbe9e7;
         color: #c62828;
+      }
+      .result-icon.confirmation {
+        width: 48px;
+        height: 48px;
+        margin-bottom: 0.5rem;
+        background: var(--color-active);
+        color: var(--color-primary);
+      }
+      .confirmation-icon {
+        font-size: 28px;
+        font-weight: 700;
       }
       .result-title {
         font-size: var(--text-lg);

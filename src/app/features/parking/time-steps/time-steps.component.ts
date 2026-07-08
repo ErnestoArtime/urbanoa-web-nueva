@@ -7,10 +7,11 @@ import { ParkingTimeStepsService } from '../parking-time-steps.service';
 import type { ParkingTimeStep } from '../models/parking-time-step.model';
 import { OperationsService } from '../../../core/services/operations.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { LucideCarFront } from '@lucide/angular';
 
 @Component({
   selector: 'app-parking-time-steps',
-  imports: [RouterLink, LoaderComponent, TranslatePipe],
+  imports: [RouterLink, LoaderComponent, TranslatePipe, LucideCarFront],
   template: `
     <app-loader [visible]="loading()" [message]="'parking.timeSteps.loading' | translate" imageSrc="/assets/brand/login-logo.jpg" />
     <div class="page flow-page has-sticky-actions">
@@ -24,6 +25,13 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
           <strong>{{ context().zone }}</strong>
           <p>{{ context().street }}{{ context().cityName ? ' · ' + context().cityName : '' }}</p>
           <small>{{ context().plate }}{{ context().tariff ? ' · ' + context().tariff : '' }}</small>
+        </div>
+        <div class="selected-vehicle">
+          <svg lucideCarFront size="22" strokeWidth="2.2"></svg>
+          <span
+            ><small>{{ 'parking.timeSteps.vehicle' | translate }}</small
+            ><strong>{{ context().plate }}</strong></span
+          >
         </div>
       </div>
 
@@ -128,6 +136,22 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
       .context-card p,
       .context-card small {
         color: var(--color-text-muted);
+      }
+      .selected-vehicle {
+        display: flex;
+        align-items: center;
+        gap: 0.55rem;
+        margin-left: auto;
+        padding-left: 1rem;
+        color: var(--color-primary);
+      }
+      .selected-vehicle span {
+        display: flex;
+        flex-direction: column;
+      }
+      .selected-vehicle strong {
+        color: var(--color-text);
+        white-space: nowrap;
       }
       .time-line {
         display: grid;
@@ -350,6 +374,7 @@ export class ParkingTimeStepsComponent implements OnInit {
       tariffId: this.query.tariffId || '1',
       tariffPrice: hourlyPrice,
       startDate: this.startedAt,
+      stepMinutes: this.isZarautz() ? 3 : 5,
     });
     this.steps.set(generatedSteps);
     const oneHourIndex = generatedSteps.findIndex((step) => step.time === 60);
@@ -407,6 +432,9 @@ export class ParkingTimeStepsComponent implements OnInit {
   private parsePrice(tariffPrice: string | undefined): number {
     const parsed = Number((tariffPrice?.match(/[\d,.]+/)?.[0] ?? '0.60').replace(',', '.'));
     return Number.isFinite(parsed) && parsed > 0 ? parsed : 0.6;
+  }
+  private isZarautz(): boolean {
+    return [this.query.city, this.query.cityName].some((value) => value?.trim().toLocaleLowerCase('es') === 'zarautz');
   }
   private formatTime(date: Date): string {
     return date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });

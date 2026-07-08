@@ -111,6 +111,17 @@ import { ActiveTicketCardComponent } from '../../home/components/active-ticket-c
           (primaryAction)="unparked.set(false)"
         />
       }
+      @if (confirmUnpark()) {
+        <app-result-modal
+          type="confirmation"
+          title="Desaparcar"
+          message="Al dejar el aparcamiento recibirás un reembolso de EUR3.70."
+          primaryText="Aceptar"
+          secondaryText="Cancelar"
+          (primaryAction)="confirmUnparkAction()"
+          (secondaryAction)="confirmUnpark.set(false)"
+        />
+      }
     </app-split-view>
   `,
   styles: [
@@ -268,6 +279,7 @@ export class OperationsLayoutComponent {
   readonly OPERATION_TYPE_LABELS = OPERATION_TYPE_LABELS;
   readonly activeTicket = this.operationsService.activeOperation;
   readonly unparked = signal(false);
+  readonly confirmUnpark = signal(false);
   readonly filteredOps = computed(() => this.applyFilter(this.operations()));
   readonly groupedHistory = computed(() => this.groupByPeriod(this.filteredOps()));
 
@@ -295,6 +307,11 @@ export class OperationsLayoutComponent {
   }
 
   onUnpark(): void {
+    this.confirmUnpark.set(true);
+  }
+
+  confirmUnparkAction(): void {
+    this.confirmUnpark.set(false);
     if (this.operationsService.unparkActiveOperation()) this.unparked.set(true);
   }
 

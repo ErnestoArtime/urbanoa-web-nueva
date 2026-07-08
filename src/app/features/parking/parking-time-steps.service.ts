@@ -10,9 +10,10 @@ export class ParkingTimeStepsService {
     const now = input.startDate ?? new Date();
     const hourlyPrice = input.tariffPrice;
     const maxMinutes = input.maxMinutes ?? 180;
+    const stepMinutes = input.stepMinutes ?? 5;
 
-    const durations = Array.from({ length: Math.floor(maxMinutes / 5) }, (_, index) => {
-      const minutes = (index + 1) * 5;
+    const durations = Array.from({ length: Math.floor(maxMinutes / stepMinutes) }, (_, index) => {
+      const minutes = (index + 1) * stepMinutes;
       const hours = Math.floor(minutes / 60);
       const remainder = minutes % 60;
       const label = hours === 0 ? `${minutes} min` : remainder === 0 ? `${hours} h` : `${hours} h ${remainder} min`;

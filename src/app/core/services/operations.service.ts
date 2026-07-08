@@ -61,6 +61,21 @@ export class OperationsService {
     this.persistOps();
   }
 
+  registerBalanceRefund(amount: number, destination: string): void {
+    this._operations.update((list) => [
+      {
+        id: this.nextId(),
+        type: OperationType.BALANCE_REFUND,
+        plate: null,
+        date: this.todayDateString(),
+        amount: -Math.abs(amount),
+        zone: destination,
+      },
+      ...list,
+    ]);
+    this.persistOps();
+  }
+
   startParking(input: ActiveOperation & { amount: number }): boolean {
     if (this._activeOperation()) return false;
 
@@ -127,7 +142,9 @@ export class OperationsService {
     try {
       const parsed = JSON.parse(localStorage.getItem(this.storageKey) ?? 'null') as Operation[] | null;
       if (Array.isArray(parsed) && parsed.length) return parsed;
-    } catch { /* fall through */ }
+    } catch {
+      /* fall through */
+    }
     return MOCK_OPERATIONS.map((op) => ({ ...op }));
   }
 
@@ -135,7 +152,9 @@ export class OperationsService {
     try {
       const parsed = JSON.parse(localStorage.getItem(this.activeKey) ?? 'null') as ActiveOperation | null;
       if (parsed && typeof parsed.plate === 'string') return parsed;
-    } catch { /* fall through */ }
+    } catch {
+      /* fall through */
+    }
     return MOCK_TICKET_ACTIVE
       ? {
           plate: MOCK_TICKET_ACTIVE.plate,
@@ -154,7 +173,9 @@ export class OperationsService {
   private persistOps(): void {
     try {
       localStorage.setItem(this.storageKey, JSON.stringify(this._operations()));
-    } catch { /* storage unavailable */ }
+    } catch {
+      /* storage unavailable */
+    }
   }
 
   private persistActive(): void {
@@ -165,7 +186,9 @@ export class OperationsService {
       } else {
         localStorage.removeItem(this.activeKey);
       }
-    } catch { /* storage unavailable */ }
+    } catch {
+      /* storage unavailable */
+    }
   }
 
   private todayDateString(): string {

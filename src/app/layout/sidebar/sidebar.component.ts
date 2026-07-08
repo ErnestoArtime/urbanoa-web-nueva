@@ -1,9 +1,10 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { LucideCarFront, LucideCircleUserRound, LucideHistory, LucideLayoutGrid } from '@lucide/angular';
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 import { NAV_ITEMS } from '../../shared/mock-data';
 import { APP_BRAND } from '../../shared/constants/app-brand';
+import { OperationsService } from '../../core/services/operations.service';
 
 @Component({
   selector: 'app-sidebar',
@@ -31,6 +32,9 @@ import { APP_BRAND } from '../../shared/constants/app-brand';
                 }
                 @case ('operations') {
                   <svg lucideHistory class="sidebar-icon" size="25" strokeWidth="2.35"></svg>
+                  @if (hasActiveOperation()) {
+                    <span class="active-count">1</span>
+                  }
                 }
                 @case ('account') {
                   <svg lucideCircleUserRound class="sidebar-icon" size="25" strokeWidth="2.35"></svg>
@@ -110,12 +114,27 @@ import { APP_BRAND } from '../../shared/constants/app-brand';
         color: var(--color-primary);
       }
       .sidebar-pill {
+        position: relative;
         display: grid;
         place-items: center;
         width: 58px;
         height: 38px;
         border-radius: 999px;
         transition: background 0.15s;
+      }
+      .active-count {
+        position: absolute;
+        top: -2px;
+        right: 6px;
+        min-width: 18px;
+        height: 18px;
+        padding: 0 4px;
+        border-radius: 999px;
+        background: #7a3f32;
+        color: #fff;
+        font-size: 11px;
+        font-weight: 700;
+        line-height: 18px;
       }
       .sidebar-link.active .sidebar-pill {
         background: #fde0a4;
@@ -132,6 +151,7 @@ import { APP_BRAND } from '../../shared/constants/app-brand';
   ],
 })
 export class SidebarComponent {
+  readonly hasActiveOperation = inject(OperationsService).hasActiveOperation;
   readonly brand = APP_BRAND;
   readonly navItems = NAV_ITEMS;
 

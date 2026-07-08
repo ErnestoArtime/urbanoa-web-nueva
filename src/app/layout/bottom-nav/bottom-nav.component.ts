@@ -5,6 +5,7 @@ import { filter, map, startWith } from 'rxjs/operators';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 import { NAV_ITEMS, ACCOUNT_MENU } from '../../shared/mock-data';
+import { OperationsService } from '../../core/services/operations.service';
 
 const CHILD_LABELS = new Map(ACCOUNT_MENU.map((m) => [m.path, m.labelKey]));
 
@@ -30,6 +31,9 @@ const CHILD_LABELS = new Map(ACCOUNT_MENU.map((m) => [m.path, m.labelKey]));
               }
               @case ('operations') {
                 <svg lucideHistory class="bottom-nav-icon" size="25" strokeWidth="2.35"></svg>
+                @if (hasActiveOperation()) {
+                  <span class="active-count">1</span>
+                }
               }
               @case ('account') {
                 <svg lucideCircleUserRound class="bottom-nav-icon" size="25" strokeWidth="2.35"></svg>
@@ -90,11 +94,27 @@ const CHILD_LABELS = new Map(ACCOUNT_MENU.map((m) => [m.path, m.labelKey]));
         color: currentColor;
       }
       .bottom-nav-pill {
+        position: relative;
         display: grid;
         place-items: center;
         width: 52px;
         height: 32px;
         border-radius: 999px;
+      }
+      .active-count {
+        position: absolute;
+        top: -4px;
+        right: 4px;
+        min-width: 18px;
+        height: 18px;
+        padding: 0 4px;
+        border-radius: 999px;
+        background: #7a3f32;
+        color: #fff;
+        font-size: 11px;
+        font-weight: 700;
+        line-height: 18px;
+        text-align: center;
       }
       .bottom-nav-item.active .bottom-nav-pill {
         background: var(--color-active);
@@ -104,6 +124,7 @@ const CHILD_LABELS = new Map(ACCOUNT_MENU.map((m) => [m.path, m.labelKey]));
 })
 export class BottomNavComponent {
   private readonly router = inject(Router);
+  readonly hasActiveOperation = inject(OperationsService).hasActiveOperation;
   readonly navItems = NAV_ITEMS;
 
   private readonly currentUrl = toSignal(

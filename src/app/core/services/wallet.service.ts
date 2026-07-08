@@ -62,6 +62,14 @@ export class WalletService {
     this.writeStorage(this.defaultCardStorageKey, id);
   }
 
+  removeCard(id: string): boolean {
+    if (!this.cards().some((card) => card.id === id)) return false;
+    this.cards.update((cards) => cards.filter((card) => card.id !== id));
+    if (this.defaultCardId() === id) this.defaultCardId.set(this.cards()[0]?.id ?? '');
+    this.persistCards();
+    return true;
+  }
+
   addBalance(amount: number): void {
     this.balance.update((b) => b + amount);
   }
@@ -89,7 +97,7 @@ export class WalletService {
   private readCards(): MainCard[] {
     try {
       const parsed = JSON.parse(localStorage.getItem(this.cardsStorageKey) ?? 'null') as MainCard[] | null;
-      return Array.isArray(parsed) && parsed.length ? parsed : this.fallbackCards.map((card) => ({ ...card }));
+      return Array.isArray(parsed) ? parsed : this.fallbackCards.map((card) => ({ ...card }));
     } catch {
       return this.fallbackCards.map((card) => ({ ...card }));
     }

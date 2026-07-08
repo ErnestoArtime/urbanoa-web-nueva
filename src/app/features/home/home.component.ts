@@ -33,7 +33,12 @@ import { VehicleService } from '../../core/services/vehicle.service';
 
       <div class="dashboard-grid mt-2">
         <div class="dashboard-col-left">
-          <app-active-ticket-card [ticket]="ticket()" (unpark)="unparkFromDashboard()" (extend)="onExtend()" (goToCar)="onGoToCar($event)" />
+          <app-active-ticket-card
+            [ticket]="ticket()"
+            (unpark)="unparkFromDashboard()"
+            (extend)="onExtend()"
+            (goToCar)="onGoToCar($event)"
+          />
           <app-recent-operations-card [operations]="recentOps()" (viewAll)="onViewAll()" />
         </div>
 
@@ -48,9 +53,24 @@ import { VehicleService } from '../../core/services/vehicle.service';
         </div>
       </div>
       @if (unparked()) {
-        <app-result-modal type="success" title="Aparcamiento finalizado"
+        <app-result-modal
+          type="success"
+          title="Aparcamiento finalizado"
           message="La devolución de saldo se ha añadido al monedero."
-          primaryText="Aceptar" (primaryAction)="unparked.set(false)" />
+          primaryText="Aceptar"
+          (primaryAction)="unparked.set(false)"
+        />
+      }
+      @if (confirmUnpark()) {
+        <app-result-modal
+          type="confirmation"
+          title="Desaparcar"
+          message="Al dejar el aparcamiento recibirás un reembolso de EUR3.70."
+          primaryText="Aceptar"
+          secondaryText="Cancelar"
+          (primaryAction)="confirmUnparkAction()"
+          (secondaryAction)="confirmUnpark.set(false)"
+        />
       }
     </div>
   `,
@@ -107,8 +127,14 @@ export class HomeComponent {
   });
   readonly showProfileCard = signal(true);
   readonly unparked = signal(false);
+  readonly confirmUnpark = signal(false);
 
   unparkFromDashboard(): void {
+    this.confirmUnpark.set(true);
+  }
+
+  confirmUnparkAction(): void {
+    this.confirmUnpark.set(false);
     if (this.operationsService.unparkActiveOperation()) this.unparked.set(true);
   }
 
@@ -117,7 +143,7 @@ export class HomeComponent {
   }
 
   onRecharge(): void {
-    this.router.navigate(['/app/account/recharge']);
+    this.router.navigate(['/app/account/payment-methods/recharge']);
   }
 
   onGoToCar(ticket: TicketActive): void {

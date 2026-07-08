@@ -1,7 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
+import { Router } from '@angular/router';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { AppIconComponent } from '../../../shared/icons/app-icon.component';
-import { Router } from '@angular/router';
 import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
 import { ResultModalComponent } from '../../../shared/components/result-modal/result-modal.component';
 import { WalletService } from '../../../core/services/wallet.service';
@@ -13,21 +13,34 @@ type CardBrand = 'visa' | 'mastercard' | 'amex' | null;
   imports: [TranslatePipe, AppIconComponent, DetailPanelHeaderComponent, ResultModalComponent],
   template: `
     <div class="page account-static-page">
-      <app-detail-panel-header backRoute="/app/account/payment-methods" title="Añadir tarjeta" [backDesktop]="true" />
-      <div class="card">
+      <app-detail-panel-header
+        backRoute="/app/account/payment-methods"
+        [title]="'account.addCard.title' | translate"
+        [backDesktop]="true"
+      />
+
+      <div class="payment-form">
         <div class="form-group">
-          <label>{{ 'account.addCard.cardholder' | translate }}</label
-          ><input class="form-input" [class.invalid]="submitted() && !cardholder().trim()" [value]="cardholder()"
-            (input)="cardholder.set(valueOf($event))" [placeholder]="'account.addCard.cardholder' | translate" />
-          @if (submitted() && !cardholder().trim()) { <p class="form-error">El titular es obligatorio.</p> }
+          <label>{{ 'account.addCard.cardholder' | translate }}</label>
+          <input
+            class="form-input"
+            [class.invalid]="submitted() && !cardholder().trim()"
+            [value]="cardholder()"
+            (input)="cardholder.set(valueOf($event))"
+          />
+          @if (submitted() && !cardholder().trim()) {
+            <p class="form-error">El titular es obligatorio.</p>
+          }
         </div>
+
         <div class="form-group">
           <label>{{ 'account.addCard.cardNumber' | translate }}</label>
           <div class="card-input-wrapper">
             <input
               #cardInput
               class="form-input card-number-input"
-              placeholder="1234 5678 9012 3456"
+              inputmode="numeric"
+              autocomplete="cc-number"
               (input)="onCardInput(cardInput)"
               maxlength="19"
               [class.invalid]="submitted() && rawCardNumber().length < 15"
@@ -35,18 +48,27 @@ type CardBrand = 'visa' | 'mastercard' | 'amex' | null;
             @if (cardBrand(); as brand) {
               <span class="card-brand-icon">
                 @if (brand === 'amex') {
-                  <app-icon name="card" [size]="22" [stroke]="false" />
+                  <app-icon name="card" [size]="28" [stroke]="false" />
                 } @else {
                   <img [src]="'/assets/payment/' + brand + '.svg'" [alt]="brand" />
                 }
               </span>
             }
+            @if (rawCardNumber().length >= 15) {
+              <span class="valid-card" aria-label="Número de tarjeta válido">✓</span>
+            }
           </div>
         </div>
+
         <div class="expiry-row">
           <div class="form-group">
-            <label>{{ 'account.addCard.expiry' | translate }}</label
-            ><select class="form-input" [class.invalid]="submitted() && !expiryMonth()" [value]="expiryMonth()" (change)="expiryMonth.set(valueOf($event))">
+            <label>{{ 'account.addCard.expiry' | translate }}</label>
+            <select
+              class="form-input"
+              [class.invalid]="submitted() && !expiryMonth()"
+              [value]="expiryMonth()"
+              (change)="expiryMonth.set(valueOf($event))"
+            >
               <option value="">{{ 'account.addCard.month' | translate }}</option>
               @for (m of months(); track m.value) {
                 <option [value]="m.value">{{ m.label }}</option>
@@ -54,8 +76,13 @@ type CardBrand = 'visa' | 'mastercard' | 'amex' | null;
             </select>
           </div>
           <div class="form-group">
-            <label>&nbsp;</label
-            ><select class="form-input" [class.invalid]="submitted() && !expiryYear()" [value]="expiryYear()" (change)="expiryYear.set(valueOf($event))">
+            <select
+              class="form-input"
+              [class.invalid]="submitted() && !expiryYear()"
+              [value]="expiryYear()"
+              (change)="expiryYear.set(valueOf($event))"
+              [attr.aria-label]="'account.addCard.year' | translate"
+            >
               <option value="">{{ 'account.addCard.year' | translate }}</option>
               @for (y of years(); track y.value) {
                 <option [value]="y.value">{{ y.label }}</option>
@@ -63,90 +90,247 @@ type CardBrand = 'visa' | 'mastercard' | 'amex' | null;
             </select>
           </div>
         </div>
+
         <div class="form-group">
-          <label>{{ 'account.addCard.cvc' | translate }}</label
-          ><input class="form-input" [class.invalid]="submitted() && cvc().length < 3" [value]="cvc()"
-            (input)="cvc.set(digitsOf($event, 4))" [placeholder]="'account.addCard.cvc' | translate" maxlength="4" />
-          @if (submitted() && cvc().length < 3) { <p class="form-error">Introduce un CVC válido.</p> }
+          <label>{{ 'account.addCard.cvc' | translate }}</label>
+          <input
+            class="form-input"
+            inputmode="numeric"
+            autocomplete="cc-csc"
+            [class.invalid]="submitted() && cvc().length < 3"
+            [value]="cvc()"
+            (input)="cvc.set(digitsOf($event, 4))"
+            maxlength="4"
+          />
+          @if (submitted() && cvc().length < 3) {
+            <p class="form-error">Introduce un CVC válido.</p>
+          }
         </div>
+
         <div class="form-group">
-          <label>{{ 'account.addCard.alias' | translate }}</label
-          ><input class="form-input" [value]="alias()" (input)="alias.set(valueOf($event))" [placeholder]="'account.addCard.alias' | translate" />
+          <label>{{ 'account.addCard.alias' | translate }}</label>
+          <input class="form-input" [value]="alias()" (input)="alias.set(valueOf($event))" />
         </div>
+
         @if (submitted() && !valid()) {
           <p class="form-error form-summary">Revisa los campos obligatorios de la tarjeta.</p>
         }
-        <button type="button" class="btn btn-primary btn-block" (click)="save()">{{ 'account.addCard.button' | translate }}</button>
+        <button type="button" class="btn btn-primary btn-block" (click)="save()">
+          {{ 'account.addCard.button' | translate }}
+        </button>
       </div>
-      @if (saved()) {
-        <app-result-modal type="success" title="Tarjeta añadida" message="La tarjeta se ha guardado correctamente."
-          primaryText="Volver a métodos de pago" (primaryAction)="goBack()" />
-      }
-      <div class="secure-badge">
-        <app-icon name="lock" [size]="16" [stroke]="false" />
-        <div>
-          <span class="secure-title">{{ 'account.addCard.securePayment' | translate }}</span>
-          <span class="secure-subtitle"
-            >{{ 'account.addCard.secureCheckout' | translate }} {{ 'account.addCard.paycomet' | translate }}
-            {{ 'account.addCard.byBank' | translate }}</span
-          >
+
+      <div class="secure-checkout">
+        <div class="secure-brand-row">
+          <span class="secure-shield" aria-hidden="true">✓</span>
+          <div class="checkout-brand">
+            <span>{{ 'account.addCard.secureCheckout' | translate }}</span>
+            <strong>{{ 'account.addCard.paycomet' | translate }}</strong>
+          </div>
+          <span class="bank-name">{{ 'account.addCard.byBank' | translate }}</span>
         </div>
+        <div class="accepted-cards" aria-label="Tarjetas aceptadas">
+          <img src="/assets/payment/visa.svg" alt="Visa" />
+          <img src="/assets/payment/mastercard.svg" alt="Mastercard" />
+          <span>AMEX</span><span>DINERS</span><span>JCB</span><span>UnionPay</span>
+        </div>
+        <p class="merchant-details">
+          GERTEK SDAD. DE GESTIONES Y SERVICIOS, S.A.<br />Dirección: Gregorio De La Revilla 27, 2º<br />48010 - Bilbao (España)<br />Teléfono:
+          944399809<br />Email: soporte&#64;arinpark.eus<br />CIF: A95158895
+        </p>
       </div>
+
+      @if (saved()) {
+        <app-result-modal
+          type="success"
+          title="Tarjeta añadida"
+          message="La tarjeta se ha guardado correctamente."
+          primaryText="Volver a métodos de pago"
+          (primaryAction)="goBack()"
+        />
+      }
     </div>
   `,
   styles: [
     `
+      .payment-form {
+        margin-top: 1rem;
+      }
+      .form-group {
+        position: relative;
+        margin-bottom: 0.9rem;
+      }
+      .form-group label {
+        position: absolute;
+        z-index: 2;
+        top: -0.58rem;
+        left: 1rem;
+        padding: 0 0.35rem;
+        background: var(--color-background);
+        color: var(--color-primary);
+        font-size: var(--text-xs);
+        line-height: 1.1;
+      }
+      .form-input {
+        width: 100%;
+        min-height: 46px;
+        border: 1.5px solid var(--color-primary);
+        border-radius: 5px;
+        background: var(--color-surface);
+        font-size: var(--text-base);
+      }
+      .form-input.invalid {
+        border-color: var(--color-error);
+      }
+      .form-error {
+        margin-top: 0.3rem;
+        color: var(--color-error);
+        font-size: var(--text-xs);
+      }
+      .form-summary {
+        margin-bottom: 0.65rem;
+        text-align: center;
+      }
+      select.form-input {
+        color: var(--color-text-muted);
+      }
       .card-input-wrapper {
         position: relative;
       }
-      .form-input.invalid{border-color:var(--color-error)}.form-error{margin-top:.3rem;color:var(--color-error);font-size:var(--text-xs)}
-      .form-summary{margin-bottom:.65rem;text-align:center}
       .card-number-input {
-        letter-spacing: 0.08em;
+        padding: 0 3.2rem 0 5.3rem;
+        letter-spacing: 0.04em;
         font-variant-numeric: tabular-nums;
-        padding-right: 2.5rem;
       }
       .card-brand-icon {
         position: absolute;
-        right: 0.6rem;
+        left: 0.8rem;
         top: 50%;
         translate: 0 -50%;
         display: flex;
         align-items: center;
-        height: 22px;
+        height: 28px;
+        color: var(--color-primary);
       }
       .card-brand-icon img {
-        height: 18px;
-        width: auto;
         display: block;
+        width: 58px;
+        height: 25px;
+        object-fit: contain;
+      }
+      .valid-card {
+        position: absolute;
+        right: 1rem;
+        top: 50%;
+        translate: 0 -50%;
+        color: #14ae35;
+        font-size: 2rem;
+        font-weight: 700;
       }
       .expiry-row {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 0.5rem;
+        gap: 0;
       }
-      .secure-badge {
-        display: flex;
-        align-items: center;
-        gap: 0.6rem;
-        margin-top: 0.65rem;
-        padding: 0.65rem 0.75rem;
-        border: 1px solid var(--color-border);
-        border-radius: var(--radius-md);
+      .expiry-row .form-group:first-child .form-input {
+        border-radius: 5px 0 0 5px;
+      }
+      .expiry-row .form-group:last-child .form-input {
+        border-left: 0;
+        border-radius: 0 5px 5px 0;
+      }
+      .btn {
+        min-height: 40px;
+        border-radius: 999px;
+        padding-block: 0.45rem;
+        font-size: var(--text-sm);
+      }
+      .secure-checkout {
+        margin: 2.5rem auto 0;
+        text-align: center;
         color: var(--color-text-muted);
       }
-      .secure-badge > div {
+      .secure-brand-row {
         display: flex;
-        flex-wrap: wrap;
-        column-gap: 0.25rem;
+        align-items: center;
+        justify-content: center;
+        gap: 0.8rem;
       }
-      .secure-title {
-        font-weight: var(--font-bold);
+      .secure-shield {
+        display: grid;
+        place-items: center;
+        width: 48px;
+        height: 56px;
+        color: #fff;
+        background: #1474e6;
+        font-size: 1.65rem;
+        font-weight: 800;
+        clip-path: polygon(50% 0, 100% 18%, 88% 75%, 50% 100%, 12% 75%, 0 18%);
+      }
+      .checkout-brand {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        line-height: 1.05;
+      }
+      .checkout-brand span {
+        font-size: var(--text-sm);
+        font-weight: 300;
+      }
+      .checkout-brand strong {
+        color: var(--color-text);
+        font-size: 1.3rem;
+        letter-spacing: 0.08em;
+        font-weight: 500;
+      }
+      .bank-name {
+        padding-left: 0.8rem;
+        border-left: 1px solid var(--color-text);
+        color: var(--color-text);
         font-size: var(--text-xs);
       }
-      .secure-subtitle {
+      .accepted-cards {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.35rem;
+        margin: 0.7rem 0;
+      }
+      .accepted-cards img {
+        width: 34px;
+        height: 22px;
+        object-fit: contain;
+      }
+      .accepted-cards span {
+        color: #2772af;
+        font-size: 0.55rem;
+        font-weight: 800;
+      }
+      .merchant-details {
+        margin: 1.4rem auto 0;
+        color: #b8b8b4;
         font-size: var(--text-2xs);
-        opacity: 0.75;
+        line-height: 1.5;
+      }
+      @media (max-width: 520px) {
+        .account-static-page {
+          padding-inline: 1rem;
+        }
+        .payment-form {
+          margin-top: 1.25rem;
+        }
+        .form-input {
+          min-height: 48px;
+        }
+        .form-group {
+          margin-bottom: 1rem;
+        }
+        .secure-checkout {
+          margin-top: 2rem;
+        }
+        .checkout-brand strong {
+          font-size: 1.2rem;
+        }
       }
     `,
   ],
@@ -170,59 +354,48 @@ export class PaymentAddComponent {
       !!this.expiryYear() &&
       this.cvc().length >= 3,
   );
-
   readonly cardBrand = computed<CardBrand>(() => {
-    const d = this.rawCardNumber();
-    if (/^4/.test(d)) return 'visa';
-    if (/^5[1-5]/.test(d) || /^2(?:2[2-9]\d|2[3-9]\d|[3-6]\d{2}|7[0-1]\d|720)\d/.test(d)) return 'mastercard';
-    if (/^3[47]/.test(d)) return 'amex';
+    const digits = this.rawCardNumber();
+    if (/^4/.test(digits)) return 'visa';
+    if (/^5[1-5]/.test(digits) || /^2(?:2[2-9]\d|2[3-9]\d|[3-6]\d{2}|7[0-1]\d|720)\d/.test(digits)) return 'mastercard';
+    if (/^3[47]/.test(digits)) return 'amex';
     return null;
   });
-
-  readonly formattedCardNumber = computed(() => {
-    const digits = this.rawCardNumber();
-    return digits.replace(/(\d{4})(?=\d)/g, '$1 ').trim();
-  });
-
-  readonly months = computed(() =>
-    Array.from({ length: 12 }, (_, i) => {
-      const n = i + 1;
-      return { value: String(n).padStart(2, '0'), label: String(n).padStart(2, '0') };
-    }),
+  readonly formattedCardNumber = computed(() =>
+    this.rawCardNumber()
+      .replace(/(\d{4})(?=\d)/g, '$1 ')
+      .trim(),
   );
-  readonly years = computed(() => {
-    const current = new Date().getFullYear();
-    return Array.from({ length: 11 }, (_, i) => {
-      const y = current + i;
-      return { value: String(y), label: String(y) };
-    });
-  });
+  readonly months = computed(() =>
+    Array.from({ length: 12 }, (_, index) => ({ value: String(index + 1).padStart(2, '0'), label: String(index + 1).padStart(2, '0') })),
+  );
+  readonly years = computed(() =>
+    Array.from({ length: 11 }, (_, index) => ({
+      value: String(new Date().getFullYear() + index),
+      label: String(new Date().getFullYear() + index),
+    })),
+  );
 
-  onCardInput(input: HTMLInputElement) {
+  onCardInput(input: HTMLInputElement): void {
     const cursor = input.selectionStart ?? 0;
-    const raw = input.value.replace(/\D/g, '');
     const digitsBefore = input.value.substring(0, cursor).replace(/\D/g, '').length;
-    this.rawCardNumber.set(raw);
+    this.rawCardNumber.set(input.value.replace(/\D/g, ''));
     const formatted = this.formattedCardNumber();
-    let newPos = 0;
-    for (let d = 0; d < digitsBefore && newPos < formatted.length; newPos++) {
-      if (formatted[newPos] !== ' ') d++;
-    }
+    let newPosition = 0;
+    for (let digit = 0; digit < digitsBefore && newPosition < formatted.length; newPosition++) if (formatted[newPosition] !== ' ') digit++;
     input.value = formatted;
-    input.setSelectionRange(newPos, newPos);
+    input.setSelectionRange(newPosition, newPosition);
   }
 
   valueOf(event: Event): string {
     return (event.target as HTMLInputElement).value;
   }
-
   digitsOf(event: Event, maxLength: number): string {
     const input = event.target as HTMLInputElement;
     const value = input.value.replace(/\D/g, '').slice(0, maxLength);
     input.value = value;
     return value;
   }
-
   save(): void {
     this.submitted.set(true);
     if (!this.valid()) return;
@@ -235,7 +408,6 @@ export class PaymentAddComponent {
     });
     this.saved.set(true);
   }
-
   goBack(): void {
     void this.router.navigate(['/app/account/payment-methods']);
   }
