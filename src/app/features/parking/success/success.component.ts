@@ -201,12 +201,15 @@ export class ParkingSuccessComponent implements OnInit {
 
   ngOnInit(): void {
     const parsedAmount = parseFloat(this.query.amount.replace('€', '').replace(',', '.').trim()) || 0;
+    const minutes = Number(this.query.minutes || 0);
+    const hoursPart = String(Math.floor(minutes / 60)).padStart(2, '0');
+    const minutesPart = String(minutes % 60).padStart(2, '0');
     this.operationsService.startParking({
       plate: this.query.plate,
       zone: `${this.query.zone} — ${this.query.cityName}`,
       startTime: this.startTime(),
       durationLabel: this.query.duration,
-      timeRemaining: '01:00:00',
+      timeRemaining: `${hoursPart}:${minutesPart}:00`,
       endTime: this.query.endTime,
       amount: parsedAmount,
       latitude: Number(this.query.latitude) || undefined,
