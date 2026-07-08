@@ -665,8 +665,10 @@ a:hover {
 .password-field button {
   position: absolute;
   right: 0.45rem;
-  top: 50%;
-  translate: 0 -50%;
+  top: 0;
+  bottom: 0;
+  margin-block: auto;
+  translate: none;
   display: grid;
   place-items: center;
   width: 34px;
@@ -679,7 +681,13 @@ a:hover {
   cursor: pointer;
 }
 .password-field button:hover {
-  background: var(--color-active);
+  background: #fde0a4;
+  color: var(--color-primary);
+}
+.password-field button:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+  background: #fde0a4;
   color: var(--color-primary);
 }
 

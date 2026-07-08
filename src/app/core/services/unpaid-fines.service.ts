@@ -24,14 +24,15 @@ export class UnpaidFinesService {
     ]);
   }
 
-  payFine(id: string): boolean {
+  payFine(id: string, cardId?: string): boolean {
     const fine = this.fines().find((f) => f.id === id);
     if (!fine) return false;
 
     const numericAmount = Number.parseFloat(fine.amount.replace(',', '.').replace(/[^0-9.,]/g, ''));
-    if (this.walletService.balance() < numericAmount) return false;
-
-    this.walletService.debit(numericAmount, 'Pago de denuncia', 'fine-payment');
+    const walletAmount = Math.min(this.walletService.balance(), numericAmount);
+    const cardAmount = numericAmount - walletAmount;
+    if (cardAmount > 0 && !this.walletService.cards().some((card) => card.id === cardId)) return false;
+    if (walletAmount > 0) this.walletService.debit(walletAmount, 'Pago de denuncia', 'fine-payment');
     this.fines.update((list) => list.filter((f) => f.id !== id));
     this.operationsService.registerFinePayment({
       plate: fine.plate,

@@ -44,20 +44,25 @@ import { WalletService } from '../../../core/services/wallet.service';
       </div>
 
       <section class="card payment-selector">
-        <p class="payment-selector-title">Selecciona cómo pagar</p>
-        <label class="payment-option" [class.selected]="selectedPayment() === 'wallet'">
-          <input type="radio" name="parking-payment" value="wallet" [checked]="selectedPayment() === 'wallet'"
-            (change)="selectedPayment.set('wallet')" />
-          <span>Monedero</span>
-          <small>{{ walletService.balance().toFixed(2).replace('.', ',') }} € disponibles</small>
-        </label>
-        @for (card of walletService.cards(); track card.id) {
-          <label class="payment-option" [class.selected]="selectedPayment() === card.id">
-            <input type="radio" name="parking-payment" [value]="card.id" [checked]="selectedPayment() === card.id"
-              (change)="selectedPayment.set(card.id)" />
-            <span>{{ card.brand }} •••• {{ card.last4 }}</span>
-            <small>Caduca {{ card.expiryDate }}</small>
-          </label>
+        <p class="payment-selector-title">Forma de pago</p>
+        <p class="wallet-priority">
+          El saldo del monedero se utilizará primero: {{ walletService.balance().toFixed(2).replace('.', ',') }} € disponibles.
+        </p>
+        @if (requiresCard()) {
+          <p class="card-needed">Selecciona una tarjeta para abonar los {{ cardAmount().toFixed(2).replace('.', ',') }} € restantes.</p>
+          @for (card of walletService.cards(); track card.id) {
+            <label class="payment-option" [class.selected]="selectedCardId() === card.id">
+              <input
+                type="radio"
+                name="parking-payment"
+                [value]="card.id"
+                [checked]="selectedCardId() === card.id"
+                (change)="selectedCardId.set(card.id)"
+              />
+              <span>{{ card.brand }} •••• {{ card.last4 }}</span
+              ><small>Caduca {{ card.expiryDate }}</small>
+            </label>
+          }
         }
       </section>
 
@@ -131,10 +136,39 @@ import { WalletService } from '../../../core/services/wallet.service';
         text-align: center;
         font-size: var(--text-xs);
       }
-      .payment-selector{display:grid;gap:.5rem;margin-top:.8rem}.payment-selector-title{font-weight:var(--font-bold)}
-      .payment-option{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:.6rem;padding:.65rem;border:1px solid var(--color-border);border-radius:var(--radius-md);cursor:pointer}
-      .payment-option.selected{border-color:var(--color-primary);background:var(--color-active)}.payment-option input{accent-color:var(--color-primary)}
-      .payment-option small{color:var(--color-text-muted)}
+      .payment-selector {
+        display: grid;
+        gap: 0.5rem;
+        margin-top: 0.8rem;
+      }
+      .payment-selector-title {
+        font-weight: var(--font-bold);
+      }
+      .payment-option {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        align-items: center;
+        gap: 0.6rem;
+        padding: 0.65rem;
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        cursor: pointer;
+      }
+      .payment-option.selected {
+        border-color: var(--color-primary);
+        background: var(--color-active);
+      }
+      .payment-option input {
+        accent-color: var(--color-primary);
+      }
+      .payment-option small {
+        color: var(--color-text-muted);
+      }
+      .wallet-priority,
+      .card-needed {
+        color: var(--color-text-muted);
+        font-size: var(--text-sm);
+      }
       @media (min-width: 960px) and (max-height: 950px) {
         .confirm-page {
           padding-top: 1rem;
@@ -166,10 +200,12 @@ export class ParkingConfirmComponent {
   private readonly store = inject(ParkingFlowStore);
   readonly walletService = inject(WalletService);
   readonly query: ParkingFlowQuery = this.store.hasMinimumParkingData() ? this.store.fromStore() : readParkingFlowQuery(this.route);
-  readonly selectedPayment = signal('wallet');
-  readonly selectedCard = computed(() => this.walletService.cards().find((card) => card.id === this.selectedPayment()) ?? this.walletService.mainCard);
+  readonly selectedCardId = signal(this.walletService.defaultCardId());
+  readonly selectedCard = computed(
+    () => this.walletService.cards().find((card) => card.id === this.selectedCardId()) ?? this.walletService.mainCard,
+  );
   readonly wallet = computed(() => ({
-    balance: this.selectedPayment() === 'wallet' ? this.walletService.balance() : 0,
+    balance: this.walletService.balance(),
     mainCard: this.selectedCard(),
   }));
   readonly loading = signal(false);
@@ -178,6 +214,8 @@ export class ParkingConfirmComponent {
     const raw = this.query.amount?.replace('€', '').replace(',', '.').trim();
     return raw ? parseFloat(raw) : 0;
   });
+  readonly cardAmount = computed(() => Math.max(0, this.totalAmount() - this.walletService.balance()));
+  readonly requiresCard = computed(() => this.cardAmount() > 0);
 
   sectorColor(): string {
     return this.query.sectorColor ? `#${this.query.sectorColor.replace('#', '')}` : 'var(--color-primary)';
@@ -186,7 +224,9 @@ export class ParkingConfirmComponent {
   onSwipeComplete(): void {
     if (this.loading()) return;
     const amount = this.totalAmount();
-    const paid = this.selectedPayment() === 'wallet' ? this.walletService.debit(amount, 'Estacionamiento', 'parking-payment') : true;
+    if (this.requiresCard() && !this.walletService.cards().some((card) => card.id === this.selectedCardId())) return;
+    const walletAmount = Math.min(amount, this.walletService.balance());
+    const paid = walletAmount <= 0 || this.walletService.debit(walletAmount, 'Estacionamiento', 'parking-payment');
     if (!paid) return;
 
     this.loading.set(true);

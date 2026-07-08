@@ -41,9 +41,29 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
             <p style="font-size: var(--text-xl);font-weight: var(--font-bold)">{{ walletService.balance() | number: '1.2-2' }} €</p>
           </div>
           @if (insufficientFunds()) {
-            <p class="form-error">{{ 'ops.fineDetail.insufficientBalance' | translate }}</p>
+            <fieldset class="payment-card-selector">
+              <legend>Tarjeta para completar el pago</legend>
+              @for (card of walletService.cards(); track card.id) {
+                <label class="payment-card-option" [class.selected]="selectedCardId() === card.id"
+                  ><input
+                    type="radio"
+                    name="fine-card"
+                    [checked]="selectedCardId() === card.id"
+                    (change)="selectedCardId.set(card.id)"
+                  /><span
+                    ><strong>{{ card.brand }} •••• {{ card.last4 }}</strong
+                    ><small>Caduca {{ card.expiryDate }}</small></span
+                  ></label
+                >
+              }
+            </fieldset>
           }
-          <button type="button" class="btn btn-primary btn-block mt-2" (click)="pay()" [disabled]="insufficientFunds()">
+          <button
+            type="button"
+            class="btn btn-primary btn-block mt-2"
+            (click)="pay()"
+            [disabled]="insufficientFunds() && !selectedCardId()"
+          >
             {{ 'ops.fineDetail.pay' | translate }} {{ fine.amount }}
           </button>
         } @else {
@@ -137,6 +157,7 @@ export class UnpaidFineDetailComponent {
   readonly fineId = this.route.snapshot.paramMap.get('id') ?? '';
   readonly fine = this.unpaidFinesService.getFine(this.fineId);
   readonly paid = signal(false);
+  readonly selectedCardId = signal(this.walletService.defaultCardId());
 
   readonly insufficientFunds = () => {
     if (!this.fine) return false;
@@ -146,7 +167,7 @@ export class UnpaidFineDetailComponent {
 
   pay(): void {
     if (!this.fine) return;
-    const ok = this.unpaidFinesService.payFine(this.fineId);
+    const ok = this.unpaidFinesService.payFine(this.fineId, this.selectedCardId());
     if (ok) this.paid.set(true);
   }
 

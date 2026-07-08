@@ -93,6 +93,7 @@ import { LucideEye, LucideEyeOff } from '@lucide/angular';
         right: 0;
         top: 0;
         bottom: 0;
+        translate: none;
         width: 44px;
         display: flex;
         align-items: center;
@@ -102,6 +103,10 @@ import { LucideEye, LucideEyeOff } from '@lucide/angular';
         color: var(--color-text-muted);
         cursor: pointer;
         padding: 0;
+      }
+      .password-field button:hover {
+        background: #fde0a4;
+        color: var(--color-primary);
       }
       .password-field button svg {
         width: 22px;
