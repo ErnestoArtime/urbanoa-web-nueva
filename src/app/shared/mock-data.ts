@@ -77,12 +77,11 @@ export const MOCK_WALLET: Wallet = {
 
 export const MOCK_OPERATIONS: Operation[] = [
   { id: '1', type: OperationType.PARKING, plate: '1234 ABC', date: '16/06/2026', amount: -1.2, zone: 'Zona Azul — Centro' },
-  { id: '2', type: OperationType.TOP_UP, plate: null, date: '15/06/2026', amount: 20.0, zone: null },
-  { id: '3', type: OperationType.PARKING_EXTENSION, plate: '1234 ABC', date: '14/06/2026', amount: -0.6, zone: 'Zona Azul — Centro' },
+  { id: '2', type: OperationType.PARKING_EXTENSION, plate: '1234 ABC', date: '15/06/2026', amount: -0.6, zone: 'Zona Azul — Centro' },
+  { id: '3', type: OperationType.REFUND, plate: '5678 DEF', date: '14/06/2026', amount: 3.5, zone: 'Zona Verde — Ensanche' },
   { id: '4', type: OperationType.FINE_PAYMENT, plate: '1234 ABC', date: '10/06/2026', amount: -35.0, zone: 'Gran Vía' },
-  { id: '5', type: OperationType.REFUND, plate: '5678 DEF', date: '08/06/2026', amount: 3.5, zone: 'Zona Verde — Ensanche' },
-  { id: '6', type: OperationType.BALANCE_REFUND, plate: null, date: '01/06/2026', amount: 5.0, zone: null },
-  { id: '7', type: OperationType.UNPAID_FINES, plate: '1234 ABC', date: '28/05/2026', amount: -20.0, zone: 'Ercilla' },
+  { id: '5', type: OperationType.TOP_UP, plate: null, date: '08/06/2026', amount: 20.0, zone: null },
+  { id: '6', type: OperationType.PARKING_END, plate: '1234 ABC', date: '01/06/2026', amount: 0.4, zone: 'Zona Azul — Centro' },
 ];
 
 export const MOCK_TICKET_ACTIVE: TicketActive = {

@@ -7,7 +7,6 @@ import { OperationsService } from '../../../core/services/operations.service';
 import { OperationType } from '../../../shared/models/operation-type';
 import { OperationIconComponent } from '../../../shared/components/operation-icon/operation-icon.component';
 import { AppIconComponent } from '../../../shared/icons/app-icon.component';
-import type { IconName } from '../../../shared/icons/icon-paths';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
 
@@ -16,7 +15,7 @@ import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/
   imports: [DecimalPipe, OperationIconComponent, AppIconComponent, TranslatePipe, DetailPanelHeaderComponent],
   template: `
     <div class="page operation-detail-page">
-      <app-detail-panel-header [title]="detailTitle() | translate" backRoute="/app/operations" />
+      <app-detail-panel-header [title]="'common.back' | translate" backRoute="/app/operations" />
       @if (op(); as operation) {
         <header class="detail-heading">
           <app-operation-icon [type]="operation.type" />
@@ -26,44 +25,46 @@ import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/
           </div>
         </header>
         @if (isTicketOperation()) {
-          <article class="ticket-card">
-            <div class="ticket-accent"></div>
-            <div class="ticket-header">
-              <app-operation-icon [type]="operation.type" />
-              <div>
-                <strong>{{ operation.plate }}</strong
-                ><span>{{ operation.zone }}</span>
+          <div class="ticket-shell">
+            <article class="ticket-card">
+              <div class="ticket-accent"></div>
+              <div class="ticket-header">
+                <app-operation-icon [type]="operation.type" />
+                <div>
+                  <strong>{{ operation.plate }}</strong
+                  ><span>{{ operation.zone }}</span>
+                </div>
+                <div class="ticket-date">
+                  <small>{{ 'ops.detail.date' | translate }}</small
+                  ><strong>{{ operation.date }}</strong>
+                </div>
               </div>
-              <div class="ticket-date">
-                <small>{{ 'ops.detail.date' | translate }}</small
-                ><strong>{{ operation.date }}</strong>
+              <div class="ticket-timeline">
+                <div>
+                  <small>{{ 'ops.detail.start' | translate }}</small
+                  ><strong>{{ startTime() }}</strong
+                  ><span>{{ operation.date }}</span>
+                </div>
+                <i></i><b>{{ duration() }}</b
+                ><i></i>
+                <div>
+                  <small>{{ 'ops.detail.end' | translate }}</small
+                  ><strong>{{ endTime() }}</strong
+                  ><span>{{ operation.date }}</span>
+                </div>
               </div>
-            </div>
-            <div class="ticket-timeline">
-              <div>
-                <small>{{ 'ops.detail.start' | translate }}</small
-                ><strong>{{ startTime() }}</strong
-                ><span>{{ operation.date }}</span>
+              <div class="ticket-cut"></div>
+              <div class="ticket-total">
+                <div>
+                  <span>{{ 'ops.detail.total' | translate }}</span
+                  ><small>{{ 'ops.detail.paymentMethod' | translate }}</small>
+                </div>
+                <div>
+                  <strong>{{ absoluteAmount() | number: '1.2-2' }} €</strong><span>{{ 'ops.detail.wallet' | translate }}</span>
+                </div>
               </div>
-              <i></i><b>{{ duration() }}</b
-              ><i></i>
-              <div>
-                <small>{{ 'ops.detail.end' | translate }}</small
-                ><strong>{{ endTime() }}</strong
-                ><span>{{ operation.date }}</span>
-              </div>
-            </div>
-            <div class="ticket-cut"></div>
-            <div class="ticket-total">
-              <div>
-                <span>{{ 'ops.detail.total' | translate }}</span
-                ><small>{{ 'ops.detail.paymentMethod' | translate }}</small>
-              </div>
-              <div>
-                <strong>{{ absoluteAmount() | number: '1.2-2' }} €</strong><span>{{ 'ops.detail.wallet' | translate }}</span>
-              </div>
-            </div>
-          </article>
+            </article>
+          </div>
         } @else {
           <article class="info-detail card">
             <div class="transaction">
@@ -72,9 +73,7 @@ import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/
             </div>
             @for (row of detailRows(); track row.label) {
               <div class="info-row">
-                <span class="row-icon"
-                  ><app-icon [name]="row.icon" [stroke]="false" />
-                </span>
+                <span class="row-icon"><app-icon [name]="row.icon" [stroke]="false" /> </span>
                 <div>
                   <span>{{ row.label | translate }}</span
                   ><strong [class.positive]="row.positive">{{ row.value }}</strong>
@@ -110,16 +109,33 @@ import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/
       .detail-heading h1 {
         font-size: var(--text-xl);
       }
+      .ticket-shell {
+        border-radius: 16px;
+        filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.14));
+      }
       .ticket-card {
+        --ticket-notch-r: 10px;
+        --ticket-cut-y: 190px;
         position: relative;
         overflow: hidden;
         border: 1px solid var(--color-border);
         border-radius: 16px;
         background: var(--color-surface);
-        box-shadow: var(--shadow-md);
+        box-shadow: none;
+        -webkit-mask:
+          radial-gradient(circle at 0 var(--ticket-cut-y), transparent 0 var(--ticket-notch-r), #000 calc(var(--ticket-notch-r) + 1px)) left
+            top / 51% 100% no-repeat,
+          radial-gradient(circle at 100% var(--ticket-cut-y), transparent 0 var(--ticket-notch-r), #000 calc(var(--ticket-notch-r) + 1px))
+            right top / 51% 100% no-repeat;
+        mask:
+          radial-gradient(circle at 0 var(--ticket-cut-y), transparent 0 var(--ticket-notch-r), #000 calc(var(--ticket-notch-r) + 1px)) left
+            top / 51% 100% no-repeat,
+          radial-gradient(circle at 100% var(--ticket-cut-y), transparent 0 var(--ticket-notch-r), #000 calc(var(--ticket-notch-r) + 1px))
+            right top / 51% 100% no-repeat;
       }
       .ticket-accent {
         height: 14px;
+        border-radius: 16px 16px 0 0;
         background: #248cda;
       }
       .ticket-header {
@@ -174,8 +190,15 @@ import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/
         border-radius: 10px;
       }
       .ticket-cut {
-        height: 8px;
-        border-top: 3px dashed var(--color-border);
+        position: relative;
+        height: 20px;
+        display: flex;
+        align-items: center;
+        margin: 0 calc(var(--ticket-notch-r) + 5px);
+        background-image: linear-gradient(to right, rgba(149, 156, 146, 0.62) 50%, transparent 0);
+        background-position: center;
+        background-repeat: repeat-x;
+        background-size: 8px 3px;
       }
       .ticket-total {
         display: flex;

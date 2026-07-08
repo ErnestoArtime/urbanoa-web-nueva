@@ -12,8 +12,8 @@ import { NavigationToCarService } from '../../../core/services/navigation-to-car
 import type { Operation } from '../../../shared/models/operation';
 import { OperationIconComponent } from '../../../shared/components/operation-icon/operation-icon.component';
 import { SplitViewComponent } from '../../../layout/split-view/split-view.component';
-import { AppIconComponent } from '../../../shared/icons/app-icon.component';
 import { ResultModalComponent } from '../../../shared/components/result-modal/result-modal.component';
+import { ActiveTicketCardComponent } from '../../home/components/active-ticket-card.component';
 
 @Component({
   selector: 'app-operations-layout',
@@ -25,7 +25,7 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
     DateRangeFilterComponent,
     OperationIconComponent,
     SplitViewComponent,
-    AppIconComponent,
+    ActiveTicketCardComponent,
     ResultModalComponent,
   ],
   template: `
@@ -36,35 +36,7 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
         <section class="current-section">
           <p class="section-label">{{ 'ops.inProgress' | translate }}</p>
           @if (activeTicket(); as active) {
-            <article class="active-operation">
-              <div class="active-operation-head">
-                <app-icon name="vehicle" class="car-icon" [stroke]="false" />
-                <div>
-                  <strong>{{ active.plate }}</strong
-                  ><small>{{ active.zone }}</small>
-                </div>
-                <span class="running-badge">{{ active.timeRemaining }}</span>
-              </div>
-              <div class="active-times">
-                <span>{{ 'ops.endsAt' | translate }}</span
-                ><strong>{{ active.endTime }}</strong>
-              </div>
-              <div class="go-to-car-row">
-                <button
-                  type="button"
-                  class="btn btn-secondary btn-sm"
-                  [disabled]="!hasCoordinates(active)"
-                  (click)="onGoToCar(active)"
-                >
-                  <app-icon name="goToCar" class="action-btn-icon" [stroke]="false" />
-                  {{ 'dashboard.howToGetThere' | translate }}
-                </button>
-              </div>
-              <div class="active-actions">
-                <button type="button" class="btn btn-danger btn-sm" (click)="onUnpark()">{{ 'dashboard.unpark' | translate }}</button>
-                <a routerLink="/app/parking/time-steps" class="btn btn-primary btn-sm">{{ 'dashboard.extendTime' | translate }}</a>
-              </div>
-            </article>
+            <app-active-ticket-card [ticket]="active" (unpark)="onUnpark()" (extend)="onExtend()" (goToCar)="onGoToCar($event)" />
           } @else {
             <article class="active-operation empty-active-operation">
               <p>{{ 'ops.noActive' | translate }}</p>
@@ -131,9 +103,13 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
         </ul>
       </div>
       @if (unparked()) {
-        <app-result-modal type="success" title="Aparcamiento finalizado"
+        <app-result-modal
+          type="success"
+          title="Aparcamiento finalizado"
           message="La devolución de saldo se ha añadido al monedero."
-          primaryText="Aceptar" (primaryAction)="unparked.set(false)" />
+          primaryText="Aceptar"
+          (primaryAction)="unparked.set(false)"
+        />
       }
     </app-split-view>
   `,
@@ -199,63 +175,6 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
         border-top-width: 1px;
         padding: 0.8rem;
         color: var(--color-text-muted);
-      }
-      .active-operation-head {
-        display: grid;
-        grid-template-columns: auto 1fr auto;
-        align-items: center;
-        gap: 0.65rem;
-        padding: 0.75rem;
-      }
-      .active-operation-head div {
-        display: flex;
-        flex-direction: column;
-      }
-      .active-operation-head small {
-        color: var(--color-text-muted);
-        font-size: var(--text-xs);
-      }
-      .car-icon {
-        display: grid;
-        place-items: center;
-        width: 32px;
-        height: 32px;
-        border-radius: 50%;
-        background: var(--color-accent-soft);
-        color: var(--color-primary);
-      }
-      .running-badge {
-        padding: 0.28rem 0.5rem;
-        border-radius: 999px;
-        background: var(--color-active);
-        color: var(--color-primary-dark);
-        font-size: var(--text-xs);
-        font-weight: var(--font-extra);
-      }
-      .active-times {
-        display: flex;
-        justify-content: space-between;
-        padding: 0.55rem 0.75rem;
-        border-top: 1px dashed var(--color-border);
-        font-size: var(--text-sm);
-      }
-      .go-to-car-row {
-        padding: 0.55rem 0.75rem;
-        border-top: 1px dashed var(--color-border);
-      }
-      .go-to-car-row .btn {
-        width: 100%;
-        border-radius: 999px;
-        background: var(--color-surface);
-        border: 1px solid var(--color-border);
-        color: var(--color-text);
-      }
-      .active-actions {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 0.5rem;
-        padding: 0.65rem 0.75rem;
-        background: rgba(93, 154, 150, 0.07);
       }
       .actions-section {
         margin-top: 1rem;
@@ -379,16 +298,16 @@ export class OperationsLayoutComponent {
     if (this.operationsService.unparkActiveOperation()) this.unparked.set(true);
   }
 
+  onExtend(): void {
+    this.router.navigate(['/app/parking/time-steps']);
+  }
+
   onGoToCar(active: ActiveOperation): void {
     this.navigationToCar.open({
       latitude: active.latitude,
       longitude: active.longitude,
       label: active.plate,
     });
-  }
-
-  hasCoordinates(active: ActiveOperation): boolean {
-    return Number.isFinite(active.latitude) && Number.isFinite(active.longitude);
   }
 
   isFinishParking(op: Operation): boolean {

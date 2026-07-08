@@ -1,14 +1,46 @@
-import { Component, computed, input } from '@angular/core';
-import { AppIconComponent } from '../../icons/app-icon.component';
+import { Component, input } from '@angular/core';
+import {
+  LucideBanknoteArrowDown,
+  LucideBanknoteArrowUp,
+  LucideCircleStop,
+  LucideClockPlus,
+  LucideReceiptText,
+  LucideSquareParking,
+} from '@lucide/angular';
 import { OperationType } from '../../models/operation-type';
 
 @Component({
   selector: 'app-operation-icon',
   standalone: true,
-  imports: [AppIconComponent],
+  imports: [LucideSquareParking, LucideClockPlus, LucideBanknoteArrowDown, LucideReceiptText, LucideBanknoteArrowUp, LucideCircleStop],
   template: `
     <span class="operation-icon" [attr.data-type]="type()" aria-hidden="true">
-      <app-icon [name]="iconName()" [stroke]="false" />
+      @switch (type()) {
+        @case (types.PARKING) {
+          <svg lucideSquareParking></svg>
+        }
+        @case (types.PARKING_EXTENSION) {
+          <svg lucideClockPlus></svg>
+        }
+        @case (types.REFUND) {
+          <svg lucideBanknoteArrowDown></svg>
+        }
+        @case (types.FINE_PAYMENT) {
+          <svg lucideReceiptText></svg>
+        }
+        @case (types.TOP_UP) {
+          <svg lucideBanknoteArrowUp></svg>
+        }
+        @case (types.PARKING_END) {
+          <svg lucideCircleStop></svg>
+        }
+        @case (types.BALANCE_REFUND) {
+          <svg lucideBanknoteArrowDown></svg>
+        }
+        @default {
+          <svg lucideReceiptText></svg>
+        }
+      }
     </span>
   `,
   styles: [
@@ -20,7 +52,7 @@ import { OperationType } from '../../models/operation-type';
         width: 36px;
         height: 36px;
         border-radius: 50%;
-        background: var(--color-accent-soft);
+        background: #d8f1f2;
         color: var(--color-primary);
       }
       svg {
@@ -28,18 +60,26 @@ import { OperationType } from '../../models/operation-type';
         height: 21px;
         fill: none;
         stroke: currentColor;
-        stroke-width: 1.8;
+        stroke-width: 2;
         stroke-linecap: round;
         stroke-linejoin: round;
+      }
+      .operation-icon[data-type='2'] {
+        background: #dff2ef;
+        color: #2b7675;
+      }
+      .operation-icon[data-type='3'],
+      .operation-icon[data-type='6'],
+      .operation-icon[data-type='8'] {
+        background: #e4f3e9;
+        color: var(--color-success);
       }
       .operation-icon[data-type='4'] {
         background: var(--color-error-bg);
         color: var(--color-error);
       }
-      .operation-icon[data-type='5'],
-      .operation-icon[data-type='8'],
-      .operation-icon[data-type='3'] {
-        background: #e4f3e9;
+      .operation-icon[data-type='5'] {
+        background: #e7f6ea;
         color: var(--color-success);
       }
     `,
@@ -48,16 +88,4 @@ import { OperationType } from '../../models/operation-type';
 export class OperationIconComponent {
   readonly type = input.required<OperationType>();
   readonly types = OperationType;
-
-  readonly iconName = computed(() => {
-    const map: Record<number, string> = {
-      [OperationType.PARKING]: 'operationParking',
-      [OperationType.PARKING_EXTENSION]: 'operationExtension',
-      [OperationType.REFUND]: 'operationRefund',
-      [OperationType.FINE_PAYMENT]: 'operationFine',
-      [OperationType.TOP_UP]: 'operationTopUp',
-      [OperationType.BALANCE_REFUND]: 'operationBalanceRefund',
-    };
-    return map[this.type()] ?? 'operationDefault';
-  });
 }
