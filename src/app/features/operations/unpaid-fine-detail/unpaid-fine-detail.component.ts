@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { DecimalPipe } from '@angular/common';
 import { UnpaidFinesService } from '../../../core/services/unpaid-fines.service';
@@ -36,9 +36,11 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
               </div>
             </article>
           </div>
-          <div class="mt-2 card" style="padding:0.75rem">
-            <p style="font-size: var(--text-sm);color:var(--color-muted)">{{ 'ops.fineDetail.availableBalance' | translate }}</p>
-            <p style="font-size: var(--text-xl);font-weight: var(--font-bold)">{{ walletService.balance() | number: '1.2-2' }} €</p>
+          <div class="mt-2 card payment-breakdown-card">
+            <div class="payment-breakdown-row">
+              <span class="payment-breakdown-label">{{ 'ops.fineDetail.availableBalance' | translate }}</span>
+              <span class="payment-breakdown-value">{{ walletService.balance() | number: '1.2-2' }} €</span>
+            </div>
           </div>
           @if (insufficientFunds()) {
             <fieldset class="payment-card-selector">
@@ -75,7 +77,7 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
       <app-result-modal
         type="success"
         title="Denuncia pagada"
-        [message]="'La denuncia de ' + (fine?.plate ?? '') + ' en ' + (fine?.location ?? '') + ' ha sido pagada.'"
+        [message]="successMessage()"
         primaryText="Volver a denuncias"
         (primaryAction)="onBackToFines()"
       />
@@ -145,6 +147,34 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
         font-size: var(--text-xl);
         font-weight: var(--font-bold);
       }
+      .payment-breakdown-card {
+        padding: 0.75rem;
+      }
+      .payment-breakdown-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.3rem 0;
+      }
+      .payment-breakdown-label {
+        font-size: var(--text-sm);
+        color: var(--color-text-muted);
+      }
+      .payment-breakdown-value {
+        font-weight: var(--font-bold);
+        font-size: var(--text-sm);
+      }
+      .payment-breakdown-value.wallet-amount {
+        color: var(--color-primary);
+      }
+      .payment-breakdown-value.card-amount {
+        color: var(--color-error);
+      }
+      .payment-breakdown-divider {
+        height: 1px;
+        background: var(--color-border);
+        margin: 0.2rem 0;
+      }
     `,
   ],
 })
@@ -158,11 +188,26 @@ export class UnpaidFineDetailComponent {
   readonly fine = this.unpaidFinesService.getFine(this.fineId);
   readonly paid = signal(false);
   readonly selectedCardId = signal(this.walletService.defaultCardId());
+  readonly numericAmount = computed(() => {
+    if (!this.fine) return 0;
+    return Number.parseFloat(this.fine.amount.replace(',', '.').replace(/[^0-9.,]/g, ''));
+  });
+  readonly walletAmount = computed(() => Math.min(this.walletService.balance(), this.numericAmount()));
+  readonly cardAmount = computed(() => Math.max(0, this.numericAmount() - this.walletAmount()));
+
+  readonly successMessage = computed(() => {
+    const base = 'La denuncia de ' + (this.fine?.plate ?? '') + ' en ' + (this.fine?.location ?? '') + ' ha sido pagada.';
+    const wallet = this.walletAmount();
+    const card = this.cardAmount();
+    if (card > 0) {
+      return base + ' Se han cobrado ' + wallet.toFixed(2).replace('.', ',') + ' € del saldo y ' + card.toFixed(2).replace('.', ',') + ' € de la tarjeta.';
+    }
+    return base + ' Se han cobrado ' + wallet.toFixed(2).replace('.', ',') + ' € del saldo.';
+  });
 
   readonly insufficientFunds = () => {
     if (!this.fine) return false;
-    const amount = Number.parseFloat(this.fine.amount.replace(',', '.').replace(/[^0-9.,]/g, ''));
-    return this.walletService.balance() < amount;
+    return this.walletService.balance() < this.numericAmount();
   };
 
   pay(): void {
