@@ -1,11 +1,10 @@
 import { Component, signal } from '@angular/core';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
-import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
 import { ResultModalComponent } from '../../../shared/components/result-modal/result-modal.component';
 
 @Component({
   selector: 'app-account-notifications',
-  imports: [TranslatePipe, DetailPanelHeaderComponent, ResultModalComponent],
+  imports: [TranslatePipe, ResultModalComponent],
   template: `
     <div class="page account-static-page">
       <h1 class="page-title">{{ 'account.notifications.title' | translate }}</h1>
@@ -28,11 +27,17 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
           ></label>
         }
       </div>
-      <button type="button" class="btn btn-primary btn-block mt-2" (click)="saved.set(true)">{{ 'account.notifications.save' | translate }}</button>
+      <button type="button" class="btn btn-primary btn-block mt-2" (click)="saved.set(true)">
+        {{ 'account.notifications.save' | translate }}
+      </button>
       @if (saved()) {
-        <app-result-modal type="success" title="Notificaciones guardadas"
+        <app-result-modal
+          type="success"
+          title="Notificaciones guardadas"
           message="Tus preferencias de notificación se han actualizado correctamente."
-          primaryText="Aceptar" (primaryAction)="saved.set(false)" />
+          primaryText="Aceptar"
+          (primaryAction)="saved.set(false)"
+        />
       }
     </div>
   `,

@@ -1,6 +1,5 @@
 import { Component, computed, inject, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { LocationSettingsService } from '../../../core/services/location-settings.service';
 import { VehicleService } from '../../../core/services/vehicle.service';
 import { WalletService } from '../../../core/services/wallet.service';
@@ -8,7 +7,7 @@ import { WalletService } from '../../../core/services/wallet.service';
 @Component({
   selector: 'app-profile-progress-card',
   standalone: true,
-  imports: [RouterLink, TranslatePipe],
+  imports: [RouterLink],
   template: `
     <div class="card profile-progress-card">
       <div class="profile-progress-head">

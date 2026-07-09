@@ -3,11 +3,10 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { DomSanitizer } from '@angular/platform-browser';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { APP_BRAND } from '../../../shared/constants/app-brand';
-import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
 
 @Component({
   selector: 'app-web-content',
-  imports: [RouterLink, TranslatePipe, DetailPanelHeaderComponent],
+  imports: [RouterLink, TranslatePipe],
   template: `
     <div class="web-content-shell">
       <header class="web-content-header">
@@ -29,13 +28,7 @@ import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/
             <a [href]="rawUrl()" target="_blank" rel="noopener" class="btn btn-primary">Abrir en navegador</a>
           </div>
         } @else {
-          <iframe
-            [src]="iframeUrl()"
-            (load)="onLoad()"
-            (error)="onError()"
-            [title]="resolvedTitle()"
-            scrolling="yes"
-          ></iframe>
+          <iframe [src]="iframeUrl()" (load)="onLoad()" (error)="onError()" [title]="resolvedTitle()" scrolling="yes"></iframe>
         }
       </section>
     </div>

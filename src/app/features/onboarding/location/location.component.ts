@@ -1,12 +1,11 @@
 import { Component, inject, signal } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import { APP_BRAND } from '../../../shared/constants/app-brand';
 import { MOCK_MUNICIPIOS } from '../../../shared/mock-data';
 import { LocationSettingsService } from '../../../core/services/location-settings.service';
 
 @Component({
   selector: 'app-onboarding-location',
-  imports: [RouterLink],
   template: `
     <div class="page">
       <h1 class="page-title">Ubicación</h1>
@@ -33,11 +32,7 @@ import { LocationSettingsService } from '../../../core/services/location-setting
             <p class="city-picker-desc">Elige tu municipio preferido para buscar zonas de estacionamiento.</p>
             <div class="city-list">
               @for (city of municipios; track city.id) {
-                <button
-                  type="button"
-                  class="city-option"
-                  (click)="selectCity(city.id, city.nombre)"
-                >
+                <button type="button" class="city-option" (click)="selectCity(city.id, city.nombre)">
                   {{ city.nombre }}
                   <small>{{ city.provincia }}</small>
                 </button>

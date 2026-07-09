@@ -4,13 +4,12 @@ import { filter, map, startWith } from 'rxjs/operators';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { SplitViewComponent } from '../../../layout/split-view/split-view.component';
-import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
 import { AppIconComponent } from '../../../shared/icons/app-icon.component';
 import { VehicleService } from '../../../core/services/vehicle.service';
 
 @Component({
   selector: 'app-vehicles-layout',
-  imports: [RouterLink, SplitViewComponent, TranslatePipe, DetailPanelHeaderComponent, AppIconComponent],
+  imports: [RouterLink, SplitViewComponent, TranslatePipe, AppIconComponent],
   template: `
     <app-split-view [hideList]="isChildRoute()" [hideDetail]="!isChildRoute()">
       <div splitList class="page has-sticky-actions">
@@ -36,16 +35,43 @@ import { VehicleService } from '../../../core/services/vehicle.service';
       </div>
     </app-split-view>
   `,
-  styles: [`
-    .vehicle-item{gap:.75rem!important}
-    .vehicle-icon-wrap{display:grid;place-items:center;width:40px;height:40px;flex:none;border-radius:var(--radius-md);background:var(--color-accent-soft);color:var(--color-primary)}
-    .vehicle-icon{display:block;width:24px;height:24px;fill:currentColor}
-    .vehicle-badge{font-size:var(--text-2xs);padding:2px 8px;border-radius:999px;margin-left:.5rem}
-    .vehicle-item .list-item-content{gap:2px}
-    @media (min-width: 960px) {
-      .sticky-actions { margin-top: 1.5rem; }
-    }
-  `],
+  styles: [
+    `
+      .vehicle-item {
+        gap: 0.75rem !important;
+      }
+      .vehicle-icon-wrap {
+        display: grid;
+        place-items: center;
+        width: 40px;
+        height: 40px;
+        flex: none;
+        border-radius: var(--radius-md);
+        background: var(--color-accent-soft);
+        color: var(--color-primary);
+      }
+      .vehicle-icon {
+        display: block;
+        width: 24px;
+        height: 24px;
+        fill: currentColor;
+      }
+      .vehicle-badge {
+        font-size: var(--text-2xs);
+        padding: 2px 8px;
+        border-radius: 999px;
+        margin-left: 0.5rem;
+      }
+      .vehicle-item .list-item-content {
+        gap: 2px;
+      }
+      @media (min-width: 960px) {
+        .sticky-actions {
+          margin-top: 1.5rem;
+        }
+      }
+    `,
+  ],
 })
 export class VehiclesLayoutComponent {
   private readonly vehicleService = inject(VehicleService);
