@@ -39,7 +39,6 @@ import type { Operation } from '../../../shared/models/operation';
       .operation-history-card .list-item {
         display: flex;
         align-items: center;
-        background: #fbfcf6;
         border-bottom-color: #e1e6d9;
       }
       .operation-history-card .list-item:hover {

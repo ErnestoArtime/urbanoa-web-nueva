@@ -195,19 +195,15 @@ export class UnpaidFineDetailComponent {
   readonly walletAmount = computed(() => Math.min(this.walletService.balance(), this.numericAmount()));
   readonly cardAmount = computed(() => Math.max(0, this.numericAmount() - this.walletAmount()));
 
+  readonly capturedWalletAmount = signal(0);
+  readonly capturedCardAmount = signal(0);
+
   readonly successMessage = computed(() => {
     const base = 'La denuncia de ' + (this.fine?.plate ?? '') + ' en ' + (this.fine?.location ?? '') + ' ha sido pagada.';
-    const wallet = this.walletAmount();
-    const card = this.cardAmount();
+    const wallet = this.capturedWalletAmount();
+    const card = this.capturedCardAmount();
     if (card > 0) {
-      return (
-        base +
-        ' Se han cobrado ' +
-        wallet.toFixed(2).replace('.', ',') +
-        ' € del saldo y ' +
-        card.toFixed(2).replace('.', ',') +
-        ' € de la tarjeta.'
-      );
+      return base + ' Se han cobrado ' + wallet.toFixed(2).replace('.', ',') + ' € del saldo y ' + card.toFixed(2).replace('.', ',') + ' € de la tarjeta.';
     }
     return base + ' Se han cobrado ' + wallet.toFixed(2).replace('.', ',') + ' € del saldo.';
   });
@@ -219,8 +215,14 @@ export class UnpaidFineDetailComponent {
 
   pay(): void {
     if (!this.fine) return;
+    const walletAmt = this.walletAmount();
+    const cardAmt = this.cardAmount();
     const ok = this.unpaidFinesService.payFine(this.fineId, this.selectedCardId());
-    if (ok) this.paid.set(true);
+    if (ok) {
+      this.capturedWalletAmount.set(walletAmt);
+      this.capturedCardAmount.set(cardAmt);
+      this.paid.set(true);
+    }
   }
 
   onBackToFines(): void {

@@ -3,7 +3,7 @@
   --color-primary-dark: #14534f;
   --color-primary-light: #5d9a96;
   --color-secondary: #6f736d;
-  --color-surface: #fffff7;
+  --color-surface: var(--color-background);
   --color-background: #f7f8ef;
   --color-bg: var(--color-background);
   --color-text: #1f2a24;
