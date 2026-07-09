@@ -1,6 +1,6 @@
 import { Component, input, output } from '@angular/core';
 
-export type ResultType = 'success' | 'error' | 'warning' | 'confirmation';
+export type ResultType = 'success' | 'error' | 'warning' | 'confirmation' | 'unpark';
 
 @Component({
   selector: 'app-result-modal',
@@ -25,6 +25,21 @@ export type ResultType = 'success' | 'error' | 'warning' | 'confirmation';
               stroke-linejoin="round"
             >
               <path d="M20 6L9 17l-5-5" />
+            </svg>
+          } @else if (type() === 'unpark') {
+            <svg
+              viewBox="0 0 24 24"
+              width="48"
+              height="48"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M4 18V6q0-10 7-17t17-7h14" />
+              <path d="M16 14v6M20 14v6M8 14v6M12 14v6" />
+              <circle cx="12" cy="14" r="2" />
             </svg>
           } @else if (type() === 'error') {
             <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">

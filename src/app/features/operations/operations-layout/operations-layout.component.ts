@@ -35,7 +35,11 @@ import { ActiveTicketCardComponent } from '../../home/components/active-ticket-c
         <h1 class="page-title">{{ 'ops.title' | translate }}</h1>
 
         <section class="current-section">
-          <p class="section-label">{{ 'ops.inProgress' | translate }}</p>
+          <p class="section-label">{{ 'ops.inProgress' | translate }}
+            @if (activeParkings().length > 1) {
+              <span class="badge badge-primary">{{ activeParkings().length }}</span>
+            }
+          </p>
           @if (activeParkings().length > 0) {
             @for (parking of activeParkings(); track parking.id) {
               <app-active-ticket-card
@@ -119,15 +123,15 @@ import { ActiveTicketCardComponent } from '../../home/components/active-ticket-c
         </ul>
       </div>
     </app-split-view>
-    @if (unparked()) {
-      <app-result-modal
-        type="success"
-        title="Aparcamiento finalizado"
-        message="La devolución de saldo se ha añadido al monedero."
-        primaryText="Aceptar"
-        (primaryAction)="unparked.set(false)"
-      />
-    }
+@if (unparked()) {
+        <app-result-modal
+          type="unpark"
+          title="Aparcamiento finalizado"
+          message="La devolución de saldo se ha añadido al monedero."
+          primaryText="Aceptar"
+          (primaryAction)="unparked.set(false)"
+        />
+      }
     @if (confirmUnpark()) {
       <app-result-modal
         type="confirmation"

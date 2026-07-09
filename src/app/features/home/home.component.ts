@@ -74,7 +74,7 @@ import { AccountCompletionService } from '../../core/services/account-completion
       </div>
       @if (unparked()) {
         <app-result-modal
-          type="success"
+          type="unpark"
           title="Aparcamiento finalizado"
           message="La devolución de saldo se ha añadido al monedero."
           primaryText="Aceptar"
