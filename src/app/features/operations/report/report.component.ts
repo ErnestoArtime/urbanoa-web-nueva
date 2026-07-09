@@ -1,5 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { TranslationService } from '../../../core/services/translation.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
@@ -29,9 +29,9 @@ interface ReportRangeItem {
 
 @Component({
   selector: 'app-report',
-  imports: [FormsModule, TranslatePipe, DateRangeFilterComponent],
+  imports: [ReactiveFormsModule, TranslatePipe, DateRangeFilterComponent],
   template: `
-    <div class="report-page has-sticky-actions">
+    <div class="report-page has-sticky-actions" [formGroup]="form">
       <div class="report-scroll">
         <h1 class="page-title">{{ 'ops.report' | translate }}</h1>
         <p class="page-subtitle">{{ 'ops.report.subtitle' | translate }}</p>
@@ -44,11 +44,11 @@ interface ReportRangeItem {
               <strong>{{ 'ops.report.customDates' | translate }}</strong>
               <span>{{ 'ops.report.customDatesDesc' | translate }}</span>
             </div>
-            <input type="checkbox" [(ngModel)]="customDates" />
+            <input type="checkbox" formControlName="customDates" />
             <span class="switch"></span>
           </label>
 
-          @if (!customDates) {
+          @if (!customDatesEnabled()) {
             <button type="button" class="range-row" (click)="rangePickerOpen = !rangePickerOpen">
               <span>{{ currentRangeLabel() }}</span>
               <span class="chevron">›</span>
@@ -66,7 +66,7 @@ interface ReportRangeItem {
           } @else {
             <app-date-range-filter [simple]="true" (rangeChange)="onDateRangeChange($event)" />
             @if (dateRangeError(); as err) {
-              <p class="form-error">{{ err }}</p>
+              <p class="form-error">{{ err | translate }}</p>
             }
           }
         </section>
@@ -80,7 +80,7 @@ interface ReportRangeItem {
                 <strong>{{ item.labelKey | translate }}</strong>
                 <span>{{ item.descKey | translate }}</span>
               </div>
-              <input type="checkbox" [ngModel]="isFilterEnabled(item.key)" (ngModelChange)="setFilter(item.key, $event)" />
+              <input type="checkbox" [formControlName]="item.key" />
               <span class="switch"></span>
             </label>
           }
@@ -88,7 +88,12 @@ interface ReportRangeItem {
       </div>
 
       <div class="sticky-actions">
-        <button type="button" class="btn btn-primary btn-block report-submit" (click)="generateReport()" [disabled]="isGenerating()">
+        <button
+          type="button"
+          class="btn btn-primary btn-block report-submit"
+          (click)="generateReport()"
+          [disabled]="isGenerating() || !!dateRangeError()"
+        >
           {{ isGenerating() ? ('ops.report.generating' | translate) : ('ops.report.generateButton' | translate) }}
         </button>
       </div>
@@ -241,8 +246,18 @@ export class ReportComponent {
   private readonly router = inject(Router);
   private readonly operationsService = inject(OperationsService);
   private readonly translationService = inject(TranslationService);
+  private readonly fb = inject(FormBuilder);
 
-  customDates = false;
+  readonly form = this.fb.nonNullable.group({
+    customDates: [false],
+    parks: [true],
+    extends: [true],
+    refunds: [true],
+    recharges: [true],
+    parkingEnd: [true],
+    balanceRefunds: [true],
+    fines: [true],
+  });
   rangePickerOpen = false;
   selectedRange: ReportRange = 'last30';
   fromDate = '';
@@ -270,15 +285,6 @@ export class ReportComponent {
     },
     { key: 'fines', labelKey: 'ops.report.fines', descKey: 'ops.report.finesDesc', type: OperationType.FINE_PAYMENT },
   ];
-  private readonly filterState: Record<ReportFilterKey, boolean> = {
-    parks: true,
-    extends: true,
-    refunds: true,
-    recharges: true,
-    parkingEnd: true,
-    balanceRefunds: true,
-    fines: true,
-  };
   readonly isGenerating = signal(false);
   readonly reportHtml = signal<string | null>(null);
 
@@ -289,12 +295,12 @@ export class ReportComponent {
     return this.translationService.translate(selected?.labelKey ?? 'ops.report.last30Days');
   }
 
-  isFilterEnabled(key: ReportFilterKey): boolean {
-    return this.filterState[key];
+  customDatesEnabled(): boolean {
+    return this.form.controls.customDates.value;
   }
 
-  setFilter(key: ReportFilterKey, value: boolean): void {
-    this.filterState[key] = value;
+  isFilterEnabled(key: ReportFilterKey): boolean {
+    return this.form.controls[key].value;
   }
 
   setRange(key: ReportRange): void {
@@ -310,7 +316,7 @@ export class ReportComponent {
       const [d2, m2, y2] = range.to.split('/').map(Number);
       const from = new Date(y, m - 1, d);
       const to = new Date(y2, m2 - 1, d2);
-      this.dateRangeError.set(from > to ? 'La fecha Desde debe ser menor que Hasta' : null);
+      this.dateRangeError.set(from > to ? 'ops.report.dateRangeInvalid' : null);
     } else {
       this.dateRangeError.set(null);
     }
@@ -375,13 +381,13 @@ export class ReportComponent {
     const operations = this.operationsService.operations().filter((operation) => operation.type !== OperationType.UNPAID_FINES);
     const range = this.resolveRange();
     return operations
-      .filter((operation) => this.filterState[this.filterKeyForType(operation.type)])
+      .filter((operation) => this.isFilterEnabled(this.filterKeyForType(operation.type)))
       .filter((operation) => this.isInRange(operation.date, range.start, range.end))
       .sort((a, b) => this.parseDate(b.date).getTime() - this.parseDate(a.date).getTime());
   }
 
   private resolveRange(): { start: Date; end: Date } {
-    if (this.customDates && this.fromDate && this.toDate) {
+    if (this.customDatesEnabled() && this.fromDate && this.toDate) {
       return { start: this.parseDate(this.fromDate), end: this.parseDate(this.toDate) };
     }
 

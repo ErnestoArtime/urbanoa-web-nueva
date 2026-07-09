@@ -5,9 +5,7 @@ import { WebContentComponent } from '../../account/web-content/web-content.compo
 @Component({
   selector: 'app-web',
   imports: [WebContentComponent],
-  template: `
-    <app-web-content [title]="title" [url]="url" backLink="/auth/login" />
-  `,
+  template: ` <app-web-content [title]="title" [url]="url" backLink="/auth/login" /> `,
   styles: `
     :host {
       display: block;
@@ -21,7 +19,5 @@ export class WebComponent {
 
   readonly title = this.route.snapshot.paramMap.get('type') === 'privacy' ? 'Política de privacidad' : 'Términos y condiciones';
   readonly url =
-    this.route.snapshot.paramMap.get('type') === 'privacy'
-      ? '/external-content/arinpark/es.html'
-      : '/external-content/arinpark/CU_es.html';
+    this.route.snapshot.paramMap.get('type') === 'privacy' ? '/external-content/arinpark/es.html' : '/external-content/arinpark/CU_es.html';
 }

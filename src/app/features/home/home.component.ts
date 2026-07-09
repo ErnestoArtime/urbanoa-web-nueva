@@ -4,22 +4,23 @@ import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 import { WalletService } from '../../core/services/wallet.service';
 import { UserService } from '../../core/services/user.service';
 import { OperationsService, type ActiveParking } from '../../core/services/operations.service';
+import { ParkingSessionService } from '../../core/services/parking-session.service';
 import { NavigationToCarService } from '../../core/services/navigation-to-car.service';
 import { OperationType } from '../../shared/models/operation-type';
-import { ActiveTicketCardComponent } from './components/active-ticket-card.component';
+import { ParkingTicketCardComponent } from '../../shared/components/parking-ticket-card/parking-ticket-card.component';
 import { WalletSummaryCardComponent } from './components/wallet-summary-card.component';
 import { VehicleSummaryCardComponent } from './components/vehicle-summary-card.component';
 import { RecentOperationsCardComponent } from './components/recent-operations-card.component';
 import { ProfileProgressCardComponent } from './components/profile-progress-card.component';
 import { ResultModalComponent } from '../../shared/components/result-modal/result-modal.component';
 import { VehicleService } from '../../core/services/vehicle.service';
-import { LocationSettingsService } from '../../core/services/location-settings.service';
+import { AccountCompletionService } from '../../core/services/account-completion.service';
 
 @Component({
   selector: 'app-home',
   imports: [
     TranslatePipe,
-    ActiveTicketCardComponent,
+    ParkingTicketCardComponent,
     WalletSummaryCardComponent,
     VehicleSummaryCardComponent,
     RecentOperationsCardComponent,
@@ -34,20 +35,20 @@ import { LocationSettingsService } from '../../core/services/location-settings.s
       <div class="dashboard-grid mt-2">
         <div class="dashboard-col-left">
           @if (activeParkings().length === 1) {
-            <app-active-ticket-card
-              [ticket]="activeParkings()[0]"
-              (unpark)="confirmUnparkFor(activeParkings()[0])"
-              (extend)="onExtend()"
+            <app-parking-ticket-card
+              [parking]="activeParkings()[0]"
+              (leaveParking)="confirmUnparkFor($event)"
+              (extendTime)="onExtend()"
               (goToCar)="onGoToCar($event)"
             />
           } @else if (activeParkings().length > 1) {
             <section class="active-parkings-section">
-              <p class="section-label">Aparcamientos activos</p>
+              <p class="section-label">{{ 'dashboard.activeParkings' | translate }}</p>
               @for (parking of activeParkings(); track parking.id) {
-                <app-active-ticket-card
-                  [ticket]="parking"
-                  (unpark)="confirmUnparkFor(parking)"
-                  (extend)="onExtend()"
+                <app-parking-ticket-card
+                  [parking]="parking"
+                  (leaveParking)="confirmUnparkFor($event)"
+                  (extendTime)="onExtend()"
                   (goToCar)="onGoToCar($event)"
                 />
               }
@@ -143,14 +144,15 @@ export class HomeComponent {
   private readonly router = inject(Router);
   readonly walletService = inject(WalletService);
   private readonly operationsService = inject(OperationsService);
+  private readonly parkingSessionService = inject(ParkingSessionService);
   private readonly userService = inject(UserService);
   private readonly navigationToCar = inject(NavigationToCarService);
   private readonly vehicleService = inject(VehicleService);
   readonly user = this.userService.user;
   readonly fullName = computed(() => `${this.user().name} ${this.user().surname}`);
-  readonly activeParkings = this.operationsService.activeParkings;
-  private readonly locationService = inject(LocationSettingsService);
+  readonly activeParkings = this.parkingSessionService.activeParkings;
   readonly vehicle = this.vehicleService.mainVehicle;
+  private readonly accountCompletion = inject(AccountCompletionService);
   readonly recentOps = computed(() => {
     const list = this.operationsService
       .operations()
@@ -158,7 +160,7 @@ export class HomeComponent {
       .sort((a, b) => this.toDateValue(b.date) - this.toDateValue(a.date));
     return list.slice(0, 3);
   });
-  readonly showProfileCard = computed(() => !this.vehicle() || this.walletService.cards().length === 0 || !this.locationService.isConfigured());
+  readonly showProfileCard = computed(() => !this.accountCompletion.isComplete());
   readonly unparked = signal(false);
   readonly confirmUnpark = signal(false);
   private pendingUnparkId = '';
@@ -170,7 +172,7 @@ export class HomeComponent {
 
   confirmUnparkAction(): void {
     this.confirmUnpark.set(false);
-    if (this.operationsService.unpark(this.pendingUnparkId)) {
+    if (this.parkingSessionService.leaveParking(this.pendingUnparkId)) {
       this.pendingUnparkId = '';
       this.unparked.set(true);
     }

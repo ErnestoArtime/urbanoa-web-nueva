@@ -12,7 +12,7 @@ import type { Vehicle } from '../../../shared/mock-data';
     <div class="card compact-card vehicle-summary-card">
       <app-icon name="vehicle" class="vehicle-summary-icon" [stroke]="false" />
       <div>
-        <p class="vehicle-summary-label">Vehículo principal</p>
+        <p class="vehicle-summary-label">{{ 'dashboard.vehicle' | translate }}</p>
         <p class="vehicle-plate">{{ vehicle().plate }}</p>
       </div>
       <a routerLink="/app/account/vehicles" class="manage-vehicles">{{ 'account.menu.vehicles' | translate }}</a>

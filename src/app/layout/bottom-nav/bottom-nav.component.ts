@@ -5,7 +5,7 @@ import { filter, map, startWith } from 'rxjs/operators';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 import { NAV_ITEMS, ACCOUNT_MENU } from '../../shared/mock-data';
-import { OperationsService } from '../../core/services/operations.service';
+import { ParkingSessionService } from '../../core/services/parking-session.service';
 
 const CHILD_LABELS = new Map(ACCOUNT_MENU.map((m) => [m.path, m.labelKey]));
 
@@ -40,19 +40,10 @@ const CHILD_LABELS = new Map(ACCOUNT_MENU.map((m) => [m.path, m.labelKey]));
               }
             }
           </span>
-          @switch (item.path) {
-            @case ('/app/home') {
-              <span class="bottom-nav-label">{{ 'nav.home' | translate }}</span>
-            }
-            @case ('/app/parking') {
-              <span class="bottom-nav-label">{{ 'nav.park' | translate }}</span>
-            }
-            @case ('/app/operations') {
-              <span class="bottom-nav-label">{{ childLabelFor(item.path) ?? ('nav.operations' | translate) }}</span>
-            }
-            @case ('/app/account') {
-              <span class="bottom-nav-label">{{ childLabelFor(item.path) ?? ('nav.account' | translate) }}</span>
-            }
+          @if (childLabelFor(item.path); as childLabel) {
+            <span class="bottom-nav-label">{{ childLabel | translate }}</span>
+          } @else {
+            <span class="bottom-nav-label">{{ item.labelKey | translate }}</span>
           }
         </a>
       }
@@ -66,7 +57,7 @@ const CHILD_LABELS = new Map(ACCOUNT_MENU.map((m) => [m.path, m.labelKey]));
         left: 0;
         right: 0;
         height: var(--bottom-nav-height);
-        background: #f6f5e8;
+        background: var(--color-background);
         border-top: 1px solid var(--color-border);
         display: flex;
         z-index: 100;
@@ -99,7 +90,7 @@ const CHILD_LABELS = new Map(ACCOUNT_MENU.map((m) => [m.path, m.labelKey]));
         place-items: center;
         width: 52px;
         height: 32px;
-        border-radius: 999px;
+        border-radius: var(--radius-pill);
       }
       .active-count {
         position: absolute;
@@ -108,11 +99,11 @@ const CHILD_LABELS = new Map(ACCOUNT_MENU.map((m) => [m.path, m.labelKey]));
         min-width: 18px;
         height: 18px;
         padding: 0 4px;
-        border-radius: 999px;
+        border-radius: var(--radius-pill);
         background: #7a3f32;
         color: #fff;
-        font-size: 11px;
-        font-weight: 700;
+        font-size: var(--text-2xs);
+        font-weight: var(--font-bold);
         line-height: 18px;
         text-align: center;
       }
@@ -124,7 +115,7 @@ const CHILD_LABELS = new Map(ACCOUNT_MENU.map((m) => [m.path, m.labelKey]));
 })
 export class BottomNavComponent {
   private readonly router = inject(Router);
-  readonly hasActiveOperation = inject(OperationsService).hasActiveParkings;
+  readonly hasActiveOperation = inject(ParkingSessionService).hasActiveParkings;
   readonly navItems = NAV_ITEMS;
 
   private readonly currentUrl = toSignal(

@@ -1,6 +1,6 @@
 import { Component, input, output } from '@angular/core';
 
-export type ResultType = 'success' | 'error' | 'confirmation';
+export type ResultType = 'success' | 'error' | 'warning' | 'confirmation';
 
 @Component({
   selector: 'app-result-modal',
@@ -11,7 +11,7 @@ export type ResultType = 'success' | 'error' | 'confirmation';
           class="result-icon"
           [class.success]="type() === 'success'"
           [class.error]="type() === 'error'"
-          [class.confirmation]="type() === 'confirmation'"
+          [class.warning]="type() === 'warning' || type() === 'confirmation'"
         >
           @if (type() === 'success') {
             <svg
@@ -31,8 +31,21 @@ export type ResultType = 'success' | 'error' | 'confirmation';
               <path d="M18 6L6 18M6 6l12 12" />
             </svg>
           } @else {
-            <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M3 6h18" /><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /><path d="M10 11v6" /><path d="M14 11v6" />
+            <svg
+              viewBox="0 0 24 24"
+              width="48"
+              height="48"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M3 6h18" />
+              <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+              <path d="M10 11v6" />
+              <path d="M14 11v6" />
             </svg>
           }
         </div>
@@ -90,7 +103,7 @@ export type ResultType = 'success' | 'error' | 'confirmation';
         background: #fbe9e7;
         color: #c62828;
       }
-      .result-icon.confirmation {
+      .result-icon.warning {
         background: #fbe9e7;
         color: #c62828;
       }

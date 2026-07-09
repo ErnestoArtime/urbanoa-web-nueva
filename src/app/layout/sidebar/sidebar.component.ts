@@ -4,7 +4,7 @@ import { LucideCarFront, LucideCircleUserRound, LucideHistory, LucideLayoutGrid 
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 import { NAV_ITEMS } from '../../shared/mock-data';
 import { APP_BRAND } from '../../shared/constants/app-brand';
-import { OperationsService } from '../../core/services/operations.service';
+import { ParkingSessionService } from '../../core/services/parking-session.service';
 
 @Component({
   selector: 'app-sidebar',
@@ -22,7 +22,7 @@ import { OperationsService } from '../../core/services/operations.service';
             [routerLinkActiveOptions]="{ exact: isExactPath(item.path) }"
             class="sidebar-link"
           >
-            <span class="sidebar-pill">
+            <span class="nav-icon-pill">
               @switch (item.icon) {
                 @case ('home') {
                   <svg lucideLayoutGrid class="sidebar-icon" size="25" strokeWidth="2.55"></svg>
@@ -41,20 +41,7 @@ import { OperationsService } from '../../core/services/operations.service';
                 }
               }
             </span>
-            @switch (item.path) {
-              @case ('/app/home') {
-                <span>{{ 'nav.home' | translate }}</span>
-              }
-              @case ('/app/parking') {
-                <span>{{ 'nav.park' | translate }}</span>
-              }
-              @case ('/app/operations') {
-                <span>{{ 'nav.operations' | translate }}</span>
-              }
-              @case ('/app/account') {
-                <span>{{ 'nav.account' | translate }}</span>
-              }
-            }
+            <span class="nav-label">{{ item.labelKey | translate }}</span>
           </a>
         }
       </nav>
@@ -113,13 +100,13 @@ import { OperationsService } from '../../core/services/operations.service';
       .sidebar-link.active {
         color: var(--color-primary);
       }
-      .sidebar-pill {
+      .nav-icon-pill {
         position: relative;
         display: grid;
         place-items: center;
         width: 58px;
         height: 38px;
-        border-radius: 999px;
+        border-radius: var(--radius-pill);
         transition: background 0.15s;
       }
       .active-count {
@@ -129,15 +116,15 @@ import { OperationsService } from '../../core/services/operations.service';
         min-width: 18px;
         height: 18px;
         padding: 0 4px;
-        border-radius: 999px;
+        border-radius: var(--radius-pill);
         background: #7a3f32;
         color: #fff;
-        font-size: 11px;
-        font-weight: 700;
+        font-size: var(--text-2xs);
+        font-weight: var(--font-bold);
         line-height: 18px;
       }
-      .sidebar-link.active .sidebar-pill {
-        background: #fde0a4;
+      .sidebar-link.active .nav-icon-pill {
+        background: var(--color-active);
       }
       .sidebar-icon {
         width: 22px;
@@ -151,7 +138,7 @@ import { OperationsService } from '../../core/services/operations.service';
   ],
 })
 export class SidebarComponent {
-  readonly hasActiveOperation = inject(OperationsService).hasActiveParkings;
+  readonly hasActiveOperation = inject(ParkingSessionService).hasActiveParkings;
   readonly brand = APP_BRAND;
   readonly navItems = NAV_ITEMS;
 

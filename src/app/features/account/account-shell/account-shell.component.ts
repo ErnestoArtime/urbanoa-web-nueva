@@ -97,7 +97,9 @@ import { WalletService } from '../../../core/services/wallet.service';
         font-size: var(--text-sm);
         font-weight: var(--font-medium);
         cursor: pointer;
-        transition: background 0.2s, color 0.2s;
+        transition:
+          background 0.2s,
+          color 0.2s;
       }
       .account-logout:hover {
         background: var(--color-error, #dc2626);

@@ -5,7 +5,7 @@ import { ParkingFlowStore } from '../parking-flow.store';
 import { ParkingFlowQuery, readParkingFlowQuery } from '../parking-flow.model';
 import { ParkingTimeStepsService } from '../parking-time-steps.service';
 import type { ParkingTimeStep } from '../models/parking-time-step.model';
-import { OperationsService } from '../../../core/services/operations.service';
+import { ParkingSessionService } from '../../../core/services/parking-session.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { LucideCarFront } from '@lucide/angular';
 
@@ -335,12 +335,12 @@ export class ParkingTimeStepsComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly store = inject(ParkingFlowStore);
   private readonly timeStepsService = inject(ParkingTimeStepsService);
-  private readonly operationsService = inject(OperationsService);
+  private readonly parkingSessionService = inject(ParkingSessionService);
   readonly query: ParkingFlowQuery = this.store.hasMinimumParkingData() ? this.store.fromStore() : readParkingFlowQuery(this.route);
   readonly hasFlowData = computed(() => !!this.query.plate);
   readonly context = computed(() => {
     if (this.hasFlowData()) return this.query;
-    const parkings = this.operationsService.activeParkings();
+    const parkings = this.parkingSessionService.activeParkings();
     const first = parkings[0];
     if (!first) return this.query;
     return {

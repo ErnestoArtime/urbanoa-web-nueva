@@ -1,4 +1,10 @@
 import { Routes } from '@angular/router';
+import {
+  canAccessParkingConfirmStep,
+  canAccessParkingSuccessStep,
+  canAccessParkingTicketStep,
+  canAccessParkingTimeStep,
+} from './parking-flow.guard';
 
 export const PARKING_ROUTES: Routes = [
   {
@@ -9,14 +15,31 @@ export const PARKING_ROUTES: Routes = [
       { path: 'cities', loadComponent: () => import('./cities/cities.component').then((m) => m.ParkingCitiesComponent) },
       { path: 'city-info', loadComponent: () => import('./city-info/city-info.component').then((m) => m.ParkingCityInfoComponent) },
       { path: 'streets', loadComponent: () => import('./streets/streets.component').then((m) => m.ParkingStreetsComponent) },
-      { path: 'tickets', loadComponent: () => import('./tickets/tickets.component').then((m) => m.ParkingTicketsComponent) },
+      {
+        path: 'tickets',
+        canActivate: [canAccessParkingTicketStep],
+        loadComponent: () => import('./tickets/tickets.component').then((m) => m.ParkingTicketsComponent),
+      },
       {
         path: 'ticket',
+        canActivate: [canAccessParkingTicketStep],
         loadComponent: () => import('./ticket-detail/ticket-detail.component').then((m) => m.ParkingTicketDetailComponent),
       },
-      { path: 'time-steps', loadComponent: () => import('./time-steps/time-steps.component').then((m) => m.ParkingTimeStepsComponent) },
-      { path: 'confirm', loadComponent: () => import('./confirm/confirm.component').then((m) => m.ParkingConfirmComponent) },
-      { path: 'success', loadComponent: () => import('./success/success.component').then((m) => m.ParkingSuccessComponent) },
+      {
+        path: 'time-steps',
+        canActivate: [canAccessParkingTimeStep],
+        loadComponent: () => import('./time-steps/time-steps.component').then((m) => m.ParkingTimeStepsComponent),
+      },
+      {
+        path: 'confirm',
+        canActivate: [canAccessParkingConfirmStep],
+        loadComponent: () => import('./confirm/confirm.component').then((m) => m.ParkingConfirmComponent),
+      },
+      {
+        path: 'success',
+        canActivate: [canAccessParkingSuccessStep],
+        loadComponent: () => import('./success/success.component').then((m) => m.ParkingSuccessComponent),
+      },
     ],
   },
 ];

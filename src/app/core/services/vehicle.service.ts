@@ -15,10 +15,7 @@ export class VehicleService {
 
   add(input: Omit<Vehicle, 'id'>): Vehicle {
     const vehicle = { ...input, id: crypto.randomUUID() };
-    this.state.update((vehicles) => [
-      ...vehicles.map((item) => (vehicle.isDefault ? { ...item, isDefault: false } : item)),
-      vehicle,
-    ]);
+    this.state.update((vehicles) => [...vehicles.map((item) => (vehicle.isDefault ? { ...item, isDefault: false } : item)), vehicle]);
     this.persist();
     return vehicle;
   }

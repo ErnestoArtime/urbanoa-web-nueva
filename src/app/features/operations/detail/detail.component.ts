@@ -8,6 +8,7 @@ import { OperationType } from '../../../shared/models/operation-type';
 import { OperationIconComponent } from '../../../shared/components/operation-icon/operation-icon.component';
 import { AppIconComponent } from '../../../shared/icons/app-icon.component';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { TranslationService } from '../../../core/services/translation.service';
 import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
 
 @Component({
@@ -67,7 +68,8 @@ import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/
                 <div class="ticket-payment-breakdown">
                   @if (walletPaymentAmount() > 0) {
                     <p>
-                      <span>Monedero</span><strong>{{ walletPaymentAmount() | number: '1.2-2' }} €</strong>
+                      <span>{{ 'ops.detail.wallet' | translate }}</span
+                      ><strong>{{ walletPaymentAmount() | number: '1.2-2' }} €</strong>
                     </p>
                   }
                   @if (cardPaymentAmount() > 0) {
@@ -305,6 +307,7 @@ import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/
 export class OperationsDetailComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly service = inject(OperationsService);
+  private readonly translationService = inject(TranslationService);
   readonly id = toSignal(this.route.paramMap.pipe(map((p) => p.get('id') ?? '1')), { initialValue: '1' });
   readonly op = computed(() => {
     this.service.operations();
@@ -333,13 +336,22 @@ export class OperationsDetailComponent {
   readonly walletPaymentAmount = computed(() => Math.abs(this.op()?.paymentBreakdown?.walletAmount ?? 0));
   readonly cardPaymentAmount = computed(() => Math.abs(this.op()?.paymentBreakdown?.cardAmount ?? 0));
   readonly hasPaymentBreakdown = computed(() => this.walletPaymentAmount() > 0 || this.cardPaymentAmount() > 0);
-  readonly cardPaymentLabel = computed(() => this.op()?.paymentBreakdown?.cardLabel || this.op()?.cardLabel || 'Tarjeta');
+  readonly cardPaymentLabel = computed(
+    () => this.op()?.paymentBreakdown?.cardLabel || this.op()?.cardLabel || this.translationService.translate('ops.detail.card'),
+  );
   readonly paymentMethodLabel = computed(() => {
     const wallet = this.walletPaymentAmount();
     const card = this.cardPaymentAmount();
-    if (wallet > 0 && card > 0) return `Mixto: Monedero + ${this.cardPaymentLabel()}`;
+    if (wallet > 0 && card > 0)
+      return (
+        this.translationService.translate('payment.mixed') +
+        ': ' +
+        this.translationService.translate('ops.detail.wallet') +
+        ' + ' +
+        this.cardPaymentLabel()
+      );
     if (card > 0) return this.cardPaymentLabel();
-    return 'Monedero';
+    return this.translationService.translate('ops.detail.wallet');
   });
   readonly detailRows = computed(() => {
     const o = this.op();
@@ -383,7 +395,7 @@ export class OperationsDetailComponent {
 
   private paymentRows(icon: 'wallet', positive: boolean | undefined) {
     if (!this.hasPaymentBreakdown()) return [];
-    const rows: Array<{ label: string; value: string; icon: 'wallet'; positive: boolean | undefined }> = [];
+    const rows: { label: string; value: string; icon: 'wallet'; positive: boolean | undefined }[] = [];
     if (this.walletPaymentAmount() > 0) {
       rows.push({ label: 'ops.detail.wallet', value: `${this.walletPaymentAmount().toFixed(2).replace('.', ',')} €`, icon, positive });
     }

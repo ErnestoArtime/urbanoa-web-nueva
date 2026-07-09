@@ -10,14 +10,19 @@ import { VehicleService } from '../../../core/services/vehicle.service';
   imports: [TranslatePipe, DetailPanelHeaderComponent, ResultModalComponent],
   template: `
     <div class="page account-static-page">
-      <app-detail-panel-header backRoute="/app/account/vehicles" title="Añadir vehículo" [backDesktop]="true" />
+      <app-detail-panel-header backRoute="/app/account/vehicles" [title]="'account.vehicleAdd.title' | translate" [backDesktop]="true" />
       <div class="card">
         <div class="form-group">
           <label>{{ 'account.vehicleAdd.plate' | translate }} <span class="text-error">*</span></label
-          ><input class="form-input" [class.invalid]="plateError()" [value]="plate()" (input)="setPlate($event)"
-            [placeholder]="'account.vehicleAdd.plate' | translate" />
+          ><input
+            class="form-input"
+            [class.invalid]="plateError()"
+            [value]="plate()"
+            (input)="setPlate($event)"
+            [placeholder]="'account.vehicleAdd.plate' | translate"
+          />
           @if (plateError()) {
-            <p class="form-error">La matrícula es obligatoria.</p>
+            <p class="form-error">{{ 'account.vehicleAdd.plateRequired' | translate }}</p>
           }
         </div>
         <label class="switch-row"
@@ -31,8 +36,13 @@ import { VehicleService } from '../../../core/services/vehicle.service';
         <button type="button" class="btn btn-primary btn-block mt-2" (click)="save()">{{ 'account.vehicleAdd.save' | translate }}</button>
       </div>
       @if (saved()) {
-        <app-result-modal type="success" title="Vehículo añadido" message="El vehículo se ha guardado correctamente."
-          primaryText="Volver a vehículos" (primaryAction)="goBack()" />
+        <app-result-modal
+          type="success"
+          [title]="'account.vehicleAdd.successTitle' | translate"
+          [message]="'account.vehicleAdd.successDetail' | translate"
+          [primaryText]="'account.vehicle.backToVehicles' | translate"
+          (primaryAction)="goBack()"
+        />
       }
     </div>
   `,
@@ -46,7 +56,14 @@ import { VehicleService } from '../../../core/services/vehicle.service';
         padding: 0.65rem 0;
         cursor: pointer;
       }
-      .form-input.invalid{border-color:var(--color-error)}.form-error{margin-top:.35rem;color:var(--color-error);font-size:var(--text-xs)}
+      .form-input.invalid {
+        border-color: var(--color-error);
+      }
+      .form-error {
+        margin-top: 0.35rem;
+        color: var(--color-error);
+        font-size: var(--text-xs);
+      }
       .switch {
         position: relative;
         width: 44px;

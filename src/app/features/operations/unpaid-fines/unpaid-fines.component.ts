@@ -8,7 +8,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
   imports: [RouterLink, TranslatePipe],
   template: `
     <div class="page">
-      <h1 class="page-title">{{ 'ops.unpaidFines.title' | translate: { count: '' + fines().length } }}</h1>
+      <h1 class="page-title">{{ 'ops.unpaidFines.title' | translate: { count: fines().length } }}</h1>
       @if (fines().length > 0) {
         <ul class="list card" style="padding:0;overflow:hidden">
           @for (fine of fines(); track fine.id) {

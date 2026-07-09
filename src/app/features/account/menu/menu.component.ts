@@ -16,6 +16,7 @@ import { VehicleAddComponent } from '../vehicle-add/vehicle-add.component';
 import { VehicleEditComponent } from '../vehicle-edit/vehicle-edit.component';
 import { PaymentAddComponent } from '../payment-add/payment-add.component';
 import { WebContentComponent } from '../web-content/web-content.component';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 
 import { APP_BRAND } from '../../../shared/constants/app-brand';
 
@@ -25,6 +26,7 @@ const STORE_URL = 'https://play.google.com/store/apps/details?id=com.gerteksa.r.
   selector: 'app-account-menu',
   imports: [
     RouterLink,
+    TranslatePipe,
     AccountProfileComponent,
     AccountSettingsComponent,
     AccountNotificationsComponent,
@@ -43,7 +45,7 @@ const STORE_URL = 'https://play.google.com/store/apps/details?id=com.gerteksa.r.
   template: `
     <div class="account-layout">
       <section class="account-master">
-        <h1 class="page-title">Mi cuenta</h1>
+        <h1 class="page-title">{{ 'account.title' | translate }}</h1>
         <div class="account-profile">
           <span class="account-avatar">{{ user.name.charAt(0) }}</span>
           <div>
@@ -53,20 +55,20 @@ const STORE_URL = 'https://play.google.com/store/apps/details?id=com.gerteksa.r.
           </div>
         </div>
         <div class="card wallet-card mb-2 mobile-wallet">
-          <p>Saldo monedero</p>
+          <p>{{ 'account.walletBalance' | translate }}</p>
           <p class="wallet-balance">{{ walletService.balance() }} €</p>
         </div>
         <ul class="list account-list">
           @for (item of menu; track item.key; let i = $index) {
             @if (itemGroupLabel(i); as group) {
-              <li class="menu-group">{{ group }}</li>
+              <li class="menu-group">{{ group | translate }}</li>
             }
             <button type="button" class="list-item account-item" [class.active]="selected() === item.key" (click)="select(item.key)">
               <svg class="account-item-icon" viewBox="0 -960 960 960" aria-hidden="true">
                 <path [attr.d]="iconPath(item.icon)"></path>
               </svg>
               <div class="list-item-content">
-                <div class="list-item-title">{{ item.labelKey }}</div>
+                <div class="list-item-title">{{ item.labelKey | translate }}</div>
               </div>
               <span class="list-item-chevron">›</span>
             </button>
@@ -101,11 +103,7 @@ const STORE_URL = 'https://play.google.com/store/apps/details?id=com.gerteksa.r.
                 <app-account-tax-data />
               }
               @case ('help') {
-                <app-web-content
-                  title="Ayuda"
-                  backLink="/app/account"
-                  url="/external-content/Arinpark/ArinparkFAQ-ESP.html"
-                />
+                <app-web-content title="Ayuda" backLink="/app/account" url="/external-content/Arinpark/ArinparkFAQ-ESP.html" />
               }
               @case ('about') {
                 <app-account-about />
@@ -117,11 +115,7 @@ const STORE_URL = 'https://play.google.com/store/apps/details?id=com.gerteksa.r.
                 <app-account-support-success />
               }
               @case ('terms-and-conditions') {
-                <app-web-content
-                  title="Términos y condiciones"
-                  backLink="/app/account"
-                  url="/external-content/arinpark/CU_es.html"
-                />
+                <app-web-content title="Términos y condiciones" backLink="/app/account" url="/external-content/arinpark/CU_es.html" />
               }
               @case ('privacy-policy') {
                 <app-web-content title="Política de privacidad" backLink="/app/account" url="/external-content/arinpark/es.html" />
@@ -147,7 +141,9 @@ const STORE_URL = 'https://play.google.com/store/apps/details?id=com.gerteksa.r.
                         <a class="list-item" (click)="vehiclesSub.set('edit'); $event.preventDefault()">
                           <div class="list-item-content">
                             <div class="list-item-title">{{ v.plate }}</div>
-                            <div class="list-item-subtitle">{{ v.isDefault ? 'Vehículo favorito' : (v.label ?? '') }}</div>
+                            <div class="list-item-subtitle">
+                              {{ v.isDefault ? ('account.vehicleFavorite' | translate) : (v.label ?? '') }}
+                            </div>
                           </div>
                           @if (v.isDefault) {
                             <span class="badge badge-primary">★</span>
@@ -155,7 +151,9 @@ const STORE_URL = 'https://play.google.com/store/apps/details?id=com.gerteksa.r.
                         </a>
                       }
                     </ul>
-                    <button type="button" class="btn btn-primary btn-block mt-2" (click)="vehiclesSub.set('add')">Añadir vehículo</button>
+                    <button type="button" class="btn btn-primary btn-block mt-2" (click)="vehiclesSub.set('add')">
+                      {{ 'account.addVehicle' | translate }}
+                    </button>
                   </div>
                 }
               }
@@ -169,16 +167,24 @@ const STORE_URL = 'https://play.google.com/store/apps/details?id=com.gerteksa.r.
                 } @else {
                   <div class="page">
                     <div class="wallet-card mb-2">
-                      <p style="opacity:0.9">Monedero {{ brand.name }}</p>
+                      <p style="opacity:0.9">{{ 'account.wallet' | translate }} {{ brand.name }}</p>
                       <p class="wallet-balance">{{ user.balance }} €</p>
                     </div>
-                    <p class="section-title">Tarjetas</p>
-                    <div class="card">Visa •••• 4242 <span class="badge badge-primary">Principal</span></div>
-                    <div class="row mt-2">
-                      <button type="button" class="btn btn-primary btn-sm" (click)="paymentSub.set('recharge')">Recargar</button>
-                      <button type="button" class="btn btn-secondary btn-sm" (click)="paymentSub.set('refund')">Retirar saldo</button>
+                    <p class="section-title">{{ 'account.cards' | translate }}</p>
+                    <div class="card">
+                      Visa •••• 4242 <span class="badge badge-primary">{{ 'account.cardPrimary' | translate }}</span>
                     </div>
-                    <button type="button" class="btn btn-secondary btn-block mt-2" (click)="paymentSub.set('add')">Añadir tarjeta</button>
+                    <div class="row mt-2">
+                      <button type="button" class="btn btn-primary btn-sm" (click)="paymentSub.set('recharge')">
+                        {{ 'account.recharge.button' | translate }}
+                      </button>
+                      <button type="button" class="btn btn-secondary btn-sm" (click)="paymentSub.set('refund')">
+                        {{ 'account.withdrawBalance' | translate }}
+                      </button>
+                    </div>
+                    <button type="button" class="btn btn-secondary btn-block mt-2" (click)="paymentSub.set('add')">
+                      {{ 'account.addCard' | translate }}
+                    </button>
                   </div>
                 }
               }

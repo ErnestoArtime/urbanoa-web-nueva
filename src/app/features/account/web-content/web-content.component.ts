@@ -29,13 +29,7 @@ import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/
             <a [href]="rawUrl()" target="_blank" rel="noopener" class="btn btn-primary">Abrir en navegador</a>
           </div>
         } @else {
-          <iframe
-            [src]="iframeUrl()"
-            (load)="onLoad()"
-            (error)="onError()"
-            [title]="resolvedTitle()"
-            scrolling="yes"
-          ></iframe>
+          <iframe [src]="iframeUrl()" (load)="onLoad()" (error)="onError()" [title]="resolvedTitle()" scrolling="yes"></iframe>
         }
       </section>
     </div>
