@@ -209,7 +209,10 @@ export class ParkingSuccessComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly store = inject(ParkingFlowStore);
   private readonly operationsService = inject(OperationsService);
-  readonly query: ParkingFlowQuery = this.store.hasMinimumParkingData() ? this.store.fromStore() : readParkingFlowQuery(this.route);
+  readonly query: ParkingFlowQuery =
+    this.route.snapshot.queryParamMap.has('paymentWalletAmount') || !this.store.hasMinimumParkingData()
+      ? readParkingFlowQuery(this.route)
+      : this.store.fromStore();
   readonly parkingType = OperationType.PARKING;
 
   ngOnInit(): void {
@@ -225,6 +228,13 @@ export class ParkingSuccessComponent implements OnInit {
       timeRemaining: `${hoursPart}:${minutesPart}:00`,
       endTime: this.query.endTime,
       amount: parsedAmount,
+      paymentBreakdown: {
+        walletAmount: Number(this.query.paymentWalletAmount || parsedAmount) || 0,
+        cardAmount: Number(this.query.paymentCardAmount || 0) || 0,
+        cardLabel: this.query.paymentCardLabel,
+      },
+      cardId: this.query.paymentCardId,
+      cardLabel: this.query.paymentCardLabel,
       latitude: Number(this.query.latitude) || undefined,
       longitude: Number(this.query.longitude) || undefined,
       street: this.query.street,

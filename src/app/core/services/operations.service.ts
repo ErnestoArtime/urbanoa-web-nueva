@@ -14,6 +14,10 @@ export interface ActiveOperation {
   latitude?: number;
   longitude?: number;
   street?: string;
+  operationId?: string;
+  paymentBreakdown?: Operation['paymentBreakdown'];
+  cardId?: string;
+  cardLabel?: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -32,7 +36,7 @@ export class OperationsService {
     return this._operations().find((op) => op.id === id);
   }
 
-  registerFinePayment(input: { plate: string; location: string; amount: number }): void {
+  registerFinePayment(input: { plate: string; location: string; amount: number; paymentBreakdown?: Operation['paymentBreakdown'] }): void {
     const amount = Math.abs(input.amount);
     const operation: Operation = {
       id: this.nextId(),
@@ -41,6 +45,7 @@ export class OperationsService {
       date: this.todayDateString(),
       amount: -amount,
       zone: input.location,
+      paymentBreakdown: input.paymentBreakdown,
     };
     this._operations.update((list) => [operation, ...list]);
     this.persistOps();
@@ -61,7 +66,7 @@ export class OperationsService {
     this.persistOps();
   }
 
-  registerBalanceRefund(amount: number, destination: string): void {
+  registerBalanceRefund(amount: number, destination: string, cardId?: string, cardLabel?: string): void {
     this._operations.update((list) => [
       {
         id: this.nextId(),
@@ -70,6 +75,8 @@ export class OperationsService {
         date: this.todayDateString(),
         amount: -Math.abs(amount),
         zone: destination,
+        cardId,
+        cardLabel,
       },
       ...list,
     ]);
@@ -78,6 +85,8 @@ export class OperationsService {
 
   startParking(input: ActiveOperation & { amount: number }): boolean {
     if (this._activeOperation()) return false;
+
+    const operationId = this.nextId();
 
     this._activeOperation.set({
       plate: input.plate,
@@ -89,16 +98,26 @@ export class OperationsService {
       latitude: input.latitude,
       longitude: input.longitude,
       street: input.street,
+      operationId,
+      paymentBreakdown: input.paymentBreakdown,
+      cardId: input.cardId,
+      cardLabel: input.cardLabel,
     });
 
     this._operations.update((list) => [
       {
-        id: this.nextId(),
+        id: operationId,
         type: OperationType.PARKING,
         plate: input.plate,
         date: this.todayDateString(),
         amount: -Math.abs(input.amount),
         zone: input.zone,
+        startTime: input.startTime,
+        endTime: input.endTime,
+        durationLabel: input.durationLabel,
+        paymentBreakdown: input.paymentBreakdown,
+        cardId: input.cardId,
+        cardLabel: input.cardLabel,
       },
       ...list,
     ]);
@@ -112,22 +131,33 @@ export class OperationsService {
     if (!active) return false;
 
     const today = this.todayDateString();
+    const [parkingClosedId, finishParkingId] = this.nextIds(2);
     const parkingClosed: Operation = {
-      id: this.nextId(),
+      id: parkingClosedId,
       type: OperationType.PARKING,
       plate: active.plate,
       date: today,
       amount: -1.01,
       zone: active.zone,
+      startTime: active.startTime,
+      endTime: active.endTime,
+      durationLabel: active.durationLabel,
+      paymentBreakdown: active.paymentBreakdown,
+      cardId: active.cardId,
+      cardLabel: active.cardLabel,
     };
 
     const finishParking: Operation = {
-      id: this.nextId(),
+      id: finishParkingId,
       type: OperationType.PARKING_END,
       plate: active.plate,
       date: today,
       amount: 0.4,
       zone: active.zone,
+      relatedOperationId: active.operationId,
+      startTime: active.startTime,
+      endTime: active.endTime,
+      durationLabel: active.durationLabel,
     };
 
     this.walletService.credit(0.4, 'Devolución de saldo', 'parking-refund');
@@ -141,7 +171,7 @@ export class OperationsService {
   private readOps(): Operation[] {
     try {
       const parsed = JSON.parse(localStorage.getItem(this.storageKey) ?? 'null') as Operation[] | null;
-      if (Array.isArray(parsed) && parsed.length) return parsed;
+      if (Array.isArray(parsed) && parsed.length) return this.normalizeOperationIds(parsed);
     } catch {
       /* fall through */
     }
@@ -205,5 +235,29 @@ export class OperationsService {
       return Number.isFinite(n) ? Math.max(acc, n) : acc;
     }, 0);
     return String(max + 1);
+  }
+
+  private nextIds(count: number): string[] {
+    const start = Number(this.nextId());
+    return Array.from({ length: count }, (_, index) => String(start + index));
+  }
+
+  private normalizeOperationIds(list: Operation[]): Operation[] {
+    const used = new Set<string>();
+    let max = list.reduce((acc, op) => {
+      const n = Number(op.id);
+      return Number.isFinite(n) ? Math.max(acc, n) : acc;
+    }, 0);
+
+    return list.map((op) => {
+      if (op.id && !used.has(op.id)) {
+        used.add(op.id);
+        return op;
+      }
+      max += 1;
+      const id = String(max);
+      used.add(id);
+      return { ...op, id };
+    });
   }
 }

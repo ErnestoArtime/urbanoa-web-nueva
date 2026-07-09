@@ -229,7 +229,15 @@ export class ParkingConfirmComponent {
     const paid = walletAmount <= 0 || this.walletService.debit(walletAmount, 'Estacionamiento', 'parking-payment');
     if (!paid) return;
 
+    const paymentQuery = {
+      ...this.query,
+      paymentWalletAmount: walletAmount.toFixed(2),
+      paymentCardAmount: this.cardAmount().toFixed(2),
+      paymentCardId: this.requiresCard() ? this.selectedCardId() : '',
+      paymentCardLabel: this.requiresCard() ? `${this.selectedCard().brand} •••• ${this.selectedCard().last4}` : '',
+    };
+
     this.loading.set(true);
-    setTimeout(() => void this.router.navigate(['/app/parking/success'], { queryParams: this.query }), 1500);
+    setTimeout(() => void this.router.navigate(['/app/parking/success'], { queryParams: paymentQuery }), 1500);
   }
 }

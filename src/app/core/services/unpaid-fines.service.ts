@@ -38,6 +38,16 @@ export class UnpaidFinesService {
       plate: fine.plate,
       location: fine.location,
       amount: numericAmount,
+      paymentBreakdown: {
+        walletAmount,
+        cardAmount,
+        cardLabel: cardId
+          ? (() => {
+              const card = this.walletService.cards().find((item) => item.id === cardId);
+              return card ? `${card.brand} •••• ${card.last4}` : undefined;
+            })()
+          : undefined,
+      },
     });
     return true;
   }

@@ -1,4 +1,4 @@
-export interface ParkingFlowQuery extends Record<string, string> {
+export interface ParkingFlowQuery extends Record<string, string | undefined> {
   city: string;
   cityName: string;
   cityId: string;
@@ -19,6 +19,10 @@ export interface ParkingFlowQuery extends Record<string, string> {
   minutes: string;
   amount: string;
   endTime: string;
+  paymentWalletAmount?: string;
+  paymentCardAmount?: string;
+  paymentCardId?: string;
+  paymentCardLabel?: string;
 }
 
 export function readParkingFlowQuery(route: import('@angular/router').ActivatedRoute): ParkingFlowQuery {

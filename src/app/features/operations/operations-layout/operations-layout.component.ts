@@ -81,7 +81,12 @@ import { ActiveTicketCardComponent } from '../../home/components/active-ticket-c
           @for (group of groupedHistory(); track group.label) {
             <li class="history-group-label">{{ group.label }}</li>
             @for (op of group.items; track op.id) {
-              <a [routerLink]="['/app/operations/detail', op.id]" class="list-item" routerLinkActive="active">
+              <a
+                [routerLink]="['/app/operations/detail', op.id]"
+                class="list-item"
+                routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }"
+              >
                 <app-operation-icon [type]="op.type" />
                 <div class="list-item-content">
                   <div class="list-item-title" [class.finish-op-title]="isFinishParking(op)">

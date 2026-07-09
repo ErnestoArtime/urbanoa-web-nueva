@@ -1,5 +1,6 @@
 import { DecimalPipe } from '@angular/common';
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { WalletService } from '../../../core/services/wallet.service';
 import { OperationsService } from '../../../core/services/operations.service';
@@ -18,10 +19,28 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
         <p class="refund-explanation">
           Se solicitará al servicio el saldo que puede devolverse. El importe depende de las recargas realizadas durante el último año.
         </p>
+        <section class="refund-card-selector">
+          <strong>Tarjeta destino</strong>
+          @for (card of walletService.cards(); track card.id) {
+            <label class="payment-card-option" [class.selected]="selectedCardId() === card.id">
+              <input
+                type="radio"
+                name="refund-card"
+                [value]="card.id"
+                [checked]="selectedCardId() === card.id"
+                (change)="selectedCardId.set(card.id)"
+              />
+              <span>{{ card.brand }} •••• {{ card.last4 }}</span>
+              <small>{{ card.cardholderName }} · {{ card.expiryDate }}</small>
+            </label>
+          } @empty {
+            <p class="text-muted">Añade una tarjeta para retirar saldo del monedero.</p>
+          }
+        </section>
         <button
           type="button"
           class="btn btn-primary btn-block"
-          [disabled]="requesting() || walletService.balance() <= 0"
+          [disabled]="requesting() || walletService.balance() <= 0 || !selectedCard()"
           (click)="requestRefund()"
         >
           {{ requesting() ? 'Calculando saldo…' : 'Solicitar devolución' }}
@@ -70,19 +89,31 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
         font-size: var(--text-sm);
         line-height: 1.5;
       }
+      .refund-card-selector {
+        display: grid;
+        gap: 0.55rem;
+      }
+      .refund-card-selector > strong {
+        font-size: var(--text-sm);
+      }
     `,
   ],
 })
 export class AccountRefundComponent {
+  private readonly route = inject(ActivatedRoute);
   readonly walletService = inject(WalletService);
   private readonly operationsService = inject(OperationsService);
+  readonly selectedCardId = signal(this.route.snapshot.queryParamMap.get('cardId') ?? this.walletService.defaultCardId());
+  readonly selectedCard = computed(
+    () => this.walletService.cards().find((card) => card.id === this.selectedCardId()) ?? this.walletService.defaultCard(),
+  );
   readonly requesting = signal(false);
   readonly refundQuote = signal<number | null>(null);
   readonly refundedAmount = signal(0);
   readonly done = signal(false);
 
   requestRefund(): void {
-    if (this.requesting() || this.walletService.balance() <= 0) return;
+    if (this.requesting() || this.walletService.balance() <= 0 || !this.selectedCard()) return;
     this.requesting.set(true);
     queueMicrotask(() => {
       this.refundQuote.set(this.walletService.balance());
@@ -91,8 +122,10 @@ export class AccountRefundComponent {
   }
   confirmRefund(): void {
     const amount = this.refundQuote();
-    if (!amount || !this.walletService.debit(amount, 'Devolución de saldo', 'balance-refund')) return;
-    this.operationsService.registerBalanceRefund(amount, 'Saldo del monedero');
+    const card = this.selectedCard();
+    if (!amount || !card || !this.walletService.debit(amount, 'Devolución de saldo', 'balance-refund')) return;
+    const cardLabel = `${card.brand} •••• ${card.last4}`;
+    this.operationsService.registerBalanceRefund(amount, cardLabel, card.id, cardLabel);
     this.refundedAmount.set(amount);
     this.refundQuote.set(null);
     this.done.set(true);

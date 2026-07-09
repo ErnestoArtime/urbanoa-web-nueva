@@ -60,9 +60,24 @@ import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/
                   ><small>{{ 'ops.detail.paymentMethod' | translate }}</small>
                 </div>
                 <div>
-                  <strong>{{ absoluteAmount() | number: '1.2-2' }} €</strong><span>{{ 'ops.detail.wallet' | translate }}</span>
+                  <strong>{{ absoluteAmount() | number: '1.2-2' }} €</strong><span>{{ paymentMethodLabel() }}</span>
                 </div>
               </div>
+              @if (hasPaymentBreakdown()) {
+                <div class="ticket-payment-breakdown">
+                  @if (walletPaymentAmount() > 0) {
+                    <p>
+                      <span>Monedero</span><strong>{{ walletPaymentAmount() | number: '1.2-2' }} €</strong>
+                    </p>
+                  }
+                  @if (cardPaymentAmount() > 0) {
+                    <p>
+                      <span>{{ cardPaymentLabel() }}</span
+                      ><strong>{{ cardPaymentAmount() | number: '1.2-2' }} €</strong>
+                    </p>
+                  }
+                </div>
+              }
             </article>
           </div>
         } @else {
@@ -205,6 +220,21 @@ import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/
         justify-content: space-between;
         padding: 1rem 1.2rem;
       }
+      .ticket-payment-breakdown {
+        display: grid;
+        gap: 0.35rem;
+        padding: 0 1.2rem 1rem;
+      }
+      .ticket-payment-breakdown p {
+        display: flex;
+        justify-content: space-between;
+        margin: 0;
+        color: var(--color-text-muted);
+        font-size: var(--text-sm);
+      }
+      .ticket-payment-breakdown strong {
+        color: var(--color-text);
+      }
       .ticket-total > div {
         display: flex;
         flex-direction: column;
@@ -288,18 +318,29 @@ export class OperationsDetailComponent {
       [OperationType.REFUND]: 'ops.detail.parkingEnd',
       [OperationType.FINE_PAYMENT]: 'ops.detail.finePayment',
       [OperationType.TOP_UP]: 'ops.detail.walletRecharge',
-      [OperationType.PARKING_END]: 'ops.type.parkingEnd',
+      [OperationType.PARKING_END]: 'ops.type.parkingEndRefund',
       [OperationType.BALANCE_REFUND]: 'ops.detail.balanceRefundLabel',
       [OperationType.UNPAID_FINES]: 'ops.detail.pendingFine',
     };
     return labels[this.opType()] ?? 'ops.detail';
   });
   readonly isTicketOperation = computed(() => [OperationType.PARKING, OperationType.PARKING_EXTENSION].includes(this.opType()));
-  readonly startTime = () => (this.opType() === OperationType.PARKING ? '18:36' : '19:40');
-  readonly endTime = () => (this.opType() === OperationType.PARKING ? '19:40' : '20:10');
-  readonly duration = () => (this.opType() === OperationType.PARKING ? '1 h 4 min' : '30 min');
+  readonly startTime = () => this.op()?.startTime ?? (this.opType() === OperationType.PARKING ? '18:36' : '19:40');
+  readonly endTime = () => this.op()?.endTime ?? (this.opType() === OperationType.PARKING ? '19:40' : '20:10');
+  readonly duration = () => this.op()?.durationLabel ?? (this.opType() === OperationType.PARKING ? '1 h 4 min' : '30 min');
   readonly transactionId = computed(() => `8430${String(370 + Number(this.id()))}`);
   readonly absoluteAmount = computed(() => Math.abs(this.op()?.amount ?? 0));
+  readonly walletPaymentAmount = computed(() => Math.abs(this.op()?.paymentBreakdown?.walletAmount ?? 0));
+  readonly cardPaymentAmount = computed(() => Math.abs(this.op()?.paymentBreakdown?.cardAmount ?? 0));
+  readonly hasPaymentBreakdown = computed(() => this.walletPaymentAmount() > 0 || this.cardPaymentAmount() > 0);
+  readonly cardPaymentLabel = computed(() => this.op()?.paymentBreakdown?.cardLabel || this.op()?.cardLabel || 'Tarjeta');
+  readonly paymentMethodLabel = computed(() => {
+    const wallet = this.walletPaymentAmount();
+    const card = this.cardPaymentAmount();
+    if (wallet > 0 && card > 0) return `Mixto: Monedero + ${this.cardPaymentLabel()}`;
+    if (card > 0) return this.cardPaymentLabel();
+    return 'Monedero';
+  });
   readonly detailRows = computed(() => {
     const o = this.op();
     if (!o) return [];
@@ -325,11 +366,35 @@ export class OperationsDetailComponent {
         { label: 'ops.detail.plate', value: o.plate ?? '', icon: car, positive: undefined },
         { label: 'ops.detail.datetime', value: o.date, icon: calendar, positive: undefined },
         { label: 'ops.detail.location', value: o.zone ?? '', icon: calendar, positive: undefined },
+        ...this.paymentRows(money, false),
         { label: 'ops.detail.total', value: `${this.absoluteAmount().toFixed(2).replace('.', ',')} €`, icon: money, positive: undefined },
       ];
     return [
       { label: 'ops.detail.datetime', value: o.date, icon: calendar, positive: undefined },
-      { label: 'ops.detail.balanceRefund', value: `+${this.absoluteAmount().toFixed(2).replace('.', ',')} €`, icon: money, positive: true },
+      ...(o.cardLabel ? [{ label: 'ops.detail.paymentMethod', value: o.cardLabel, icon: money, positive: undefined }] : []),
+      {
+        label: 'ops.detail.balanceRefund',
+        value: `${this.signedAmountPrefix()}${this.absoluteAmount().toFixed(2).replace('.', ',')} €`,
+        icon: money,
+        positive: o.amount > 0,
+      },
     ];
   });
+
+  private paymentRows(icon: 'wallet', positive: boolean | undefined) {
+    if (!this.hasPaymentBreakdown()) return [];
+    const rows: Array<{ label: string; value: string; icon: 'wallet'; positive: boolean | undefined }> = [];
+    if (this.walletPaymentAmount() > 0) {
+      rows.push({ label: 'ops.detail.wallet', value: `${this.walletPaymentAmount().toFixed(2).replace('.', ',')} €`, icon, positive });
+    }
+    if (this.cardPaymentAmount() > 0) {
+      rows.push({ label: 'ops.detail.card', value: `${this.cardPaymentAmount().toFixed(2).replace('.', ',')} €`, icon, positive });
+    }
+    return rows;
+  }
+
+  private signedAmountPrefix(): string {
+    const amount = this.op()?.amount ?? 0;
+    return amount > 0 ? '+' : amount < 0 ? '-' : '';
+  }
 }
