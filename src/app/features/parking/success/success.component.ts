@@ -17,35 +17,37 @@ import { OperationsService } from '../../../core/services/operations.service';
         <div class="success-mark"><span>✓</span><app-icon name="parkingSlip" [stroke]="false" /></div>
         <h1 class="page-title">{{ 'parking.success.title' | translate }}</h1>
         <p class="page-subtitle">{{ 'parking.success.subtitle' | translate }}</p>
-        <article class="success-ticket">
-          <div class="ticket-accent"></div>
-          <div class="ticket-head">
-            <app-operation-icon [type]="parkingType" />
-            <div>
-              <strong>{{ query.plate }}</strong
-              ><span>{{ query.zone }} · {{ query.cityName }}</span>
+        <div class="success-ticket-shell">
+          <article class="success-ticket">
+            <div class="ticket-accent"></div>
+            <div class="ticket-head">
+              <app-operation-icon [type]="parkingType" />
+              <div>
+                <strong>{{ query.plate }}</strong
+                ><span>{{ query.zone }} · {{ query.cityName }}</span>
+              </div>
             </div>
-          </div>
-          <div class="ticket-times">
-            <div>
-              <small>{{ 'parking.success.start' | translate }}</small
-              ><strong>{{ startTime() }}</strong
-              ><span>{{ 'parking.success.today' | translate }}</span>
+            <div class="ticket-times">
+              <div>
+                <small>{{ 'parking.success.start' | translate }}</small
+                ><strong>{{ startTime() }}</strong
+                ><span>{{ 'parking.success.today' | translate }}</span>
+              </div>
+              <i></i><b>{{ query.duration }}</b
+              ><i></i>
+              <div>
+                <small>{{ 'parking.success.end' | translate }}</small
+                ><strong>{{ query.endTime }}</strong
+                ><span>{{ 'parking.success.today' | translate }}</span>
+              </div>
             </div>
-            <i></i><b>{{ query.duration }}</b
-            ><i></i>
-            <div>
-              <small>{{ 'parking.success.end' | translate }}</small
-              ><strong>{{ query.endTime }}</strong
-              ><span>{{ 'parking.success.today' | translate }}</span>
+            <div class="ticket-cut"><div class="ticket-cut-line"></div></div>
+            <div class="ticket-total">
+              <span>{{ 'parking.success.total' | translate }}</span
+              ><strong>{{ query.amount }}</strong>
             </div>
-          </div>
-          <div class="ticket-cut"></div>
-          <div class="ticket-total">
-            <span>{{ 'parking.success.total' | translate }}</span
-            ><strong>{{ query.amount }}</strong>
-          </div>
-        </article>
+          </article>
+        </div>
         <div class="actions">
           <a routerLink="/app/home" class="btn btn-primary btn-block">{{ 'parking.success.goHome' | translate }}</a>
           <a routerLink="/app/parking" [queryParams]="{ city: query.city }" class="btn btn-ghost btn-block">{{
@@ -105,17 +107,22 @@ import { OperationsService } from '../../../core/services/operations.service';
         stroke: var(--color-text);
         stroke-width: 1.8;
       }
+      .success-ticket-shell {
+        width: 100%;
+        margin-top: 1.2rem;
+        border-radius: 16px;
+        filter: drop-shadow(0 3px 8px rgba(28, 44, 39, 0.07));
+      }
       .success-ticket {
         --ticket-notch-r: 10px;
-        --ticket-cut-y: calc(100% - 68px);
+        --ticket-cut-y: 176px;
         position: relative;
         overflow: hidden;
         width: 100%;
-        margin-top: 1.2rem;
         border: 1px solid var(--color-border);
         border-radius: 16px;
         background: var(--color-surface);
-        box-shadow: var(--shadow-md);
+        box-shadow: none;
         text-align: left;
         -webkit-mask:
           radial-gradient(circle at 0 var(--ticket-cut-y), transparent 0 var(--ticket-notch-r), #000 calc(var(--ticket-notch-r) + 1px)) left
@@ -130,6 +137,7 @@ import { OperationsService } from '../../../core/services/operations.service';
       }
       .ticket-accent {
         height: 14px;
+        border-radius: 16px 16px 0 0;
         background: #248cda;
       }
       .ticket-head {
@@ -177,6 +185,16 @@ import { OperationsService } from '../../../core/services/operations.service';
         border-radius: 10px;
       }
       .ticket-cut {
+        position: relative;
+        height: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 calc(var(--ticket-notch-r) + 5px);
+      }
+      .ticket-cut-line {
+        flex: 1;
+        height: 0;
         border-top: 3px dashed var(--color-border);
       }
       .ticket-total {

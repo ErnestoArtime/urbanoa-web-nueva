@@ -143,7 +143,7 @@ const TITLE_KEYS: Record<string, string> = {
         align-items: center;
         justify-content: space-between;
         gap: 1rem;
-        min-height: 42px;
+        min-height: 52px;
         padding: 0.35rem 1rem 0.35rem 1.25rem;
         border-bottom: 1px solid var(--color-border);
         background: linear-gradient(180deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0));
