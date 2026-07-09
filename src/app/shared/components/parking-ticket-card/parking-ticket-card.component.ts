@@ -71,7 +71,7 @@ export type ParkingTicketCardVariant = 'dashboard' | 'operations-current' | 'det
     `
       .parking-ticket-card {
         --ticket-notch-r: 10px;
-        --ticket-cut-y: 120px;
+        --ticket-cut-y: 190px;
         position: relative;
         overflow: hidden;
         box-shadow: none;
