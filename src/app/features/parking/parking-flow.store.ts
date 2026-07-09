@@ -8,6 +8,7 @@ export interface ParkingFlowState {
   cityId: string;
   cityName: string;
   plate: string;
+  vehicleId: string;
   zoneId: string;
   zoneName: string;
   sectorId: string;
@@ -73,6 +74,7 @@ export class ParkingFlowStore {
       cityName: s.cityName ?? '',
       cityId: s.cityId ?? '',
       plate: s.plate ?? '',
+      vehicleId: s.vehicleId ?? '',
       zoneId: s.zoneId ?? '',
       zone: s.zoneName ?? '',
       street: s.street ?? '',

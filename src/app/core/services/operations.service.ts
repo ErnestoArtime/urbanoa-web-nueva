@@ -4,8 +4,10 @@ import { OperationType } from '../../shared/models/operation-type';
 import { WalletService } from './wallet.service';
 import type { Operation } from '../../shared/models/operation';
 
-export interface ActiveOperation {
+export interface ActiveParking {
+  id: string;
   plate: string;
+  vehicleId: string;
   zone: string;
   startTime: string;
   durationLabel: string;
@@ -26,11 +28,23 @@ export class OperationsService {
   private readonly storageKey = 'urbanoa.operations';
   private readonly activeKey = 'urbanoa.operations.active';
   private readonly _operations = signal<Operation[]>(this.readOps());
-  private readonly _activeOperation = signal<ActiveOperation | null>(this.readActive());
+  private readonly _activeParkings = signal<ActiveParking[]>(this.readActive());
 
   readonly operations = this._operations.asReadonly();
-  readonly activeOperation = this._activeOperation.asReadonly();
-  readonly hasActiveOperation = computed(() => this._activeOperation() !== null);
+  readonly activeParkings = this._activeParkings.asReadonly();
+  readonly hasActiveParkings = computed(() => this._activeParkings().length > 0);
+
+  isVehicleParked(vehicleId: string): boolean {
+    return this._activeParkings().some((p) => p.vehicleId === vehicleId);
+  }
+
+  isPlateParked(plate: string): boolean {
+    return this._activeParkings().some((p) => p.plate === plate);
+  }
+
+  getActiveParking(id: string): ActiveParking | undefined {
+    return this._activeParkings().find((p) => p.id === id);
+  }
 
   getOperationById(id: string): Operation | undefined {
     return this._operations().find((op) => op.id === id);
@@ -83,13 +97,14 @@ export class OperationsService {
     this.persistOps();
   }
 
-  startParking(input: ActiveOperation & { amount: number }): boolean {
-    if (this._activeOperation()) return false;
+  startParking(input: ActiveParking & { amount: number }): boolean {
+    if (this.isVehicleParked(input.vehicleId)) return false;
 
     const operationId = this.nextId();
-
-    this._activeOperation.set({
+    const parking: ActiveParking = {
+      id: input.id || crypto.randomUUID(),
       plate: input.plate,
+      vehicleId: input.vehicleId,
       zone: input.zone,
       startTime: input.startTime,
       durationLabel: input.durationLabel,
@@ -102,7 +117,9 @@ export class OperationsService {
       paymentBreakdown: input.paymentBreakdown,
       cardId: input.cardId,
       cardLabel: input.cardLabel,
-    });
+    };
+
+    this._activeParkings.update((list) => [...list, parking]);
 
     this._operations.update((list) => [
       {
@@ -126,8 +143,8 @@ export class OperationsService {
     return true;
   }
 
-  unparkActiveOperation(): boolean {
-    const active = this._activeOperation();
+  unpark(parkingId: string): boolean {
+    const active = this._activeParkings().find((p) => p.id === parkingId);
     if (!active) return false;
 
     const today = this.todayDateString();
@@ -162,7 +179,7 @@ export class OperationsService {
 
     this.walletService.credit(0.4, 'Devolución de saldo', 'parking-refund');
     this._operations.update((list) => [finishParking, parkingClosed, ...list]);
-    this._activeOperation.set(null);
+    this._activeParkings.update((list) => list.filter((p) => p.id !== parkingId));
     this.persistOps();
     this.persistActive();
     return true;
@@ -178,26 +195,38 @@ export class OperationsService {
     return MOCK_OPERATIONS.map((op) => ({ ...op }));
   }
 
-  private readActive(): ActiveOperation | null {
+  private readActive(): ActiveParking[] {
     try {
-      const parsed = JSON.parse(localStorage.getItem(this.activeKey) ?? 'null') as ActiveOperation | null;
-      if (parsed && typeof parsed.plate === 'string') return parsed;
+      const parsed = JSON.parse(localStorage.getItem(this.activeKey) ?? 'null');
+      if (Array.isArray(parsed)) return parsed.filter((p: ActiveParking) => p.id && p.plate);
     } catch {
       /* fall through */
     }
-    return MOCK_TICKET_ACTIVE
-      ? {
+    if (MOCK_TICKET_ACTIVE) {
+      const now = new Date();
+      const [h, m] = MOCK_TICKET_ACTIVE.endTime.split(':').map(Number);
+      const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m);
+      const totalSeconds = Math.round((end.getTime() - now.getTime()) / 1000);
+      const hh = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
+      const mm = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
+      const ss = String(totalSeconds % 60).padStart(2, '0');
+      return [
+        {
+          id: 'mock-1',
           plate: MOCK_TICKET_ACTIVE.plate,
+          vehicleId: '1',
           zone: MOCK_TICKET_ACTIVE.zone,
           startTime: MOCK_TICKET_ACTIVE.startTime,
           durationLabel: MOCK_TICKET_ACTIVE.durationLabel,
-          timeRemaining: MOCK_TICKET_ACTIVE.timeRemaining,
+          timeRemaining: totalSeconds > 0 ? `${hh}:${mm}:${ss}` : '00:00:00',
           endTime: MOCK_TICKET_ACTIVE.endTime,
           latitude: MOCK_TICKET_ACTIVE.latitude,
           longitude: MOCK_TICKET_ACTIVE.longitude,
           street: MOCK_TICKET_ACTIVE.street,
-        }
-      : null;
+        },
+      ];
+    }
+    return [];
   }
 
   private persistOps(): void {
@@ -210,8 +239,8 @@ export class OperationsService {
 
   private persistActive(): void {
     try {
-      const val = this._activeOperation();
-      if (val) {
+      const val = this._activeParkings();
+      if (val.length > 0) {
         localStorage.setItem(this.activeKey, JSON.stringify(val));
       } else {
         localStorage.removeItem(this.activeKey);

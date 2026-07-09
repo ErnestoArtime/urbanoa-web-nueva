@@ -1,6 +1,9 @@
-import { Component, input, output } from '@angular/core';
+import { Component, computed, inject, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { LocationSettingsService } from '../../../core/services/location-settings.service';
+import { VehicleService } from '../../../core/services/vehicle.service';
+import { WalletService } from '../../../core/services/wallet.service';
 
 @Component({
   selector: 'app-profile-progress-card',
@@ -9,9 +12,9 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
   template: `
     <div class="card profile-progress-card">
       <div class="profile-progress-head">
-        <span>Configuración de la cuenta</span><strong>{{ progress() }}%</strong>
+        <span>Configuración de la cuenta</span><strong>{{ realProgress() }}%</strong>
       </div>
-      <div class="profile-progress"><span [style.width.%]="progress()"></span></div>
+      <div class="profile-progress"><span [style.width.%]="realProgress()"></span></div>
       <p class="card-title">Completa tu perfil</p>
       <p class="card-subtitle">
         Revisa tus datos y activa la ubicación para mostrar automáticamente las zonas de estacionamiento más cercanas.
@@ -49,6 +52,24 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
   ],
 })
 export class ProfileProgressCardComponent {
+  private readonly locationService = inject(LocationSettingsService);
+  private readonly vehicleService = inject(VehicleService);
+  private readonly walletService = inject(WalletService);
+
   readonly progress = input(0);
   readonly completeProfile = output<void>();
+
+  readonly profileDone = true;
+  readonly vehicleDone = computed(() => this.vehicleService.vehicles().length > 0);
+  readonly paymentDone = computed(() => this.walletService.cards().length > 0);
+  readonly locationDone = computed(() => this.locationService.isConfigured());
+
+  readonly realProgress = computed(() => {
+    let done = 0;
+    if (this.profileDone) done += 25;
+    if (this.vehicleDone()) done += 25;
+    if (this.paymentDone()) done += 25;
+    if (this.locationDone()) done += 25;
+    return done;
+  });
 }

@@ -1,7 +1,8 @@
-import { Component, computed, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
-import { MOCK_MUNICIPIOS } from '../../../shared/mock-data';
+import { MOCK_MUNICIPIOS, type Municipio } from '../../../shared/mock-data';
+import { LocationSettingsService } from '../../../core/services/location-settings.service';
 
 @Component({
   selector: 'app-parking-cities',
@@ -241,8 +242,19 @@ import { MOCK_MUNICIPIOS } from '../../../shared/mock-data';
   ],
 })
 export class ParkingCitiesComponent {
+  private readonly locationSettings = inject(LocationSettingsService);
   readonly municipios = MOCK_MUNICIPIOS;
-  readonly selected = signal(this.municipios[1]);
+  readonly selected = signal(this.defaultCity());
+
+  private defaultCity(): Municipio {
+    const preferredId = this.locationSettings.settings().preferredCityId;
+    if (preferredId) {
+      const match = MOCK_MUNICIPIOS.find((m) => m.id === preferredId);
+      if (match) return match;
+    }
+    return MOCK_MUNICIPIOS[1];
+  }
+
   readonly search = signal('');
   readonly filteredMunicipios = computed(() => {
     const query = this.search().trim().toLocaleLowerCase('es');

@@ -7,7 +7,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { DateRangeFilterComponent, type DateRange } from '../../../shared/components/date-range-filter/date-range-filter.component';
 import { OperationType, OPERATION_TYPE_LABELS } from '../../../shared/models/operation-type';
 import { UnpaidFinesService } from '../../../core/services/unpaid-fines.service';
-import { OperationsService, type ActiveOperation } from '../../../core/services/operations.service';
+import { OperationsService, type ActiveParking } from '../../../core/services/operations.service';
 import { NavigationToCarService } from '../../../core/services/navigation-to-car.service';
 import type { Operation } from '../../../shared/models/operation';
 import { OperationIconComponent } from '../../../shared/components/operation-icon/operation-icon.component';
@@ -35,8 +35,18 @@ import { ActiveTicketCardComponent } from '../../home/components/active-ticket-c
 
         <section class="current-section">
           <p class="section-label">{{ 'ops.inProgress' | translate }}</p>
-          @if (activeTicket(); as active) {
-            <app-active-ticket-card [ticket]="active" (unpark)="onUnpark()" (extend)="onExtend()" (goToCar)="onGoToCar($event)" />
+          @if (activeParkings().length > 0) {
+            @for (parking of activeParkings(); track parking.id) {
+              <app-active-ticket-card
+                [ticket]="parking"
+                (unpark)="onUnpark(parking.id)"
+                (extend)="onExtend()"
+                (goToCar)="onGoToCar($event)"
+              />
+              @if (!$last) {
+                <div class="parking-separator"></div>
+              }
+            }
           } @else {
             <article class="active-operation empty-active-operation">
               <p>{{ 'ops.noActive' | translate }}</p>
@@ -221,6 +231,9 @@ import { ActiveTicketCardComponent } from '../../home/components/active-ticket-c
       .action-item.active .list-item-title {
         font-weight: var(--font-extra);
       }
+      .parking-separator {
+        height: 0.5rem;
+      }
       .action-item.active .list-item-chevron {
         color: var(--color-primary);
         font-weight: var(--font-extra);
@@ -282,9 +295,10 @@ export class OperationsLayoutComponent {
   readonly unpaidFinesCount = () => this.unpaidFinesService.fines().length;
   readonly OperationType = OperationType;
   readonly OPERATION_TYPE_LABELS = OPERATION_TYPE_LABELS;
-  readonly activeTicket = this.operationsService.activeOperation;
+  readonly activeParkings = this.operationsService.activeParkings;
   readonly unparked = signal(false);
   readonly confirmUnpark = signal(false);
+  private pendingUnparkId = '';
   readonly filteredOps = computed(() => this.applyFilter(this.operations()));
   readonly groupedHistory = computed(() => this.groupByPeriod(this.filteredOps()));
 
@@ -311,24 +325,28 @@ export class OperationsLayoutComponent {
     this.rangeFilter.set(range);
   }
 
-  onUnpark(): void {
+  onUnpark(parkingId: string): void {
+    this.pendingUnparkId = parkingId;
     this.confirmUnpark.set(true);
   }
 
   confirmUnparkAction(): void {
     this.confirmUnpark.set(false);
-    if (this.operationsService.unparkActiveOperation()) this.unparked.set(true);
+    if (this.operationsService.unpark(this.pendingUnparkId)) {
+      this.pendingUnparkId = '';
+      this.unparked.set(true);
+    }
   }
 
   onExtend(): void {
     this.router.navigate(['/app/parking/time-steps']);
   }
 
-  onGoToCar(active: ActiveOperation): void {
+  onGoToCar(parking: ActiveParking): void {
     this.navigationToCar.open({
-      latitude: active.latitude,
-      longitude: active.longitude,
-      label: active.plate,
+      latitude: parking.latitude,
+      longitude: parking.longitude,
+      label: parking.plate,
     });
   }
 

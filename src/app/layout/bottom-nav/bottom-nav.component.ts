@@ -124,7 +124,7 @@ const CHILD_LABELS = new Map(ACCOUNT_MENU.map((m) => [m.path, m.labelKey]));
 })
 export class BottomNavComponent {
   private readonly router = inject(Router);
-  readonly hasActiveOperation = inject(OperationsService).hasActiveOperation;
+  readonly hasActiveOperation = inject(OperationsService).hasActiveParkings;
   readonly navItems = NAV_ITEMS;
 
   private readonly currentUrl = toSignal(

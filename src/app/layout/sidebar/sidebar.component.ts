@@ -151,7 +151,7 @@ import { OperationsService } from '../../core/services/operations.service';
   ],
 })
 export class SidebarComponent {
-  readonly hasActiveOperation = inject(OperationsService).hasActiveOperation;
+  readonly hasActiveOperation = inject(OperationsService).hasActiveParkings;
   readonly brand = APP_BRAND;
   readonly navItems = NAV_ITEMS;
 

@@ -338,16 +338,16 @@ export class ParkingTimeStepsComponent implements OnInit {
   private readonly operationsService = inject(OperationsService);
   readonly query: ParkingFlowQuery = this.store.hasMinimumParkingData() ? this.store.fromStore() : readParkingFlowQuery(this.route);
   readonly hasFlowData = computed(() => !!this.query.plate);
-  readonly activeOp = this.operationsService.activeOperation;
   readonly context = computed(() => {
     if (this.hasFlowData()) return this.query;
-    const op = this.activeOp();
-    if (!op) return this.query;
+    const parkings = this.operationsService.activeParkings();
+    const first = parkings[0];
+    if (!first) return this.query;
     return {
       ...this.query,
-      zone: this.query.zone || op.zone,
-      street: this.query.street || op.street || '',
-      plate: this.query.plate || op.plate,
+      zone: this.query.zone || first.zone,
+      street: this.query.street || first.street || '',
+      plate: this.query.plate || first.plate,
       cityName: this.query.cityName || '',
       tariff: this.query.tariff || '',
     } as ParkingFlowQuery;
