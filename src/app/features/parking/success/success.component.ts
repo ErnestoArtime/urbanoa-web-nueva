@@ -6,7 +6,7 @@ import { AppIconComponent } from '../../../shared/icons/app-icon.component';
 import { OperationIconComponent } from '../../../shared/components/operation-icon/operation-icon.component';
 import { OperationType } from '../../../shared/models/operation-type';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
-import { OperationsService } from '../../../core/services/operations.service';
+import { ParkingSessionService } from '../../../core/services/parking-session.service';
 
 @Component({
   selector: 'app-parking-success',
@@ -226,7 +226,7 @@ import { OperationsService } from '../../../core/services/operations.service';
 export class ParkingSuccessComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly store = inject(ParkingFlowStore);
-  private readonly operationsService = inject(OperationsService);
+  private readonly parkingSessionService = inject(ParkingSessionService);
   readonly query: ParkingFlowQuery =
     this.route.snapshot.queryParamMap.has('paymentWalletAmount') || !this.store.hasMinimumParkingData()
       ? readParkingFlowQuery(this.route)
@@ -238,7 +238,7 @@ export class ParkingSuccessComponent implements OnInit {
     const minutes = Number(this.query.minutes || 0);
     const hoursPart = String(Math.floor(minutes / 60)).padStart(2, '0');
     const minutesPart = String(minutes % 60).padStart(2, '0');
-    this.operationsService.startParking({
+    this.parkingSessionService.startParking({
       id: crypto.randomUUID(),
       plate: this.query.plate,
       vehicleId: this.query.vehicleId || '',

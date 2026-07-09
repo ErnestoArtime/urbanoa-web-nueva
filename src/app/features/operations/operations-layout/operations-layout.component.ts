@@ -8,6 +8,7 @@ import { DateRangeFilterComponent, type DateRange } from '../../../shared/compon
 import { OperationType, OPERATION_TYPE_LABELS } from '../../../shared/models/operation-type';
 import { UnpaidFinesService } from '../../../core/services/unpaid-fines.service';
 import { OperationsService, type ActiveParking } from '../../../core/services/operations.service';
+import { ParkingSessionService } from '../../../core/services/parking-session.service';
 import { NavigationToCarService } from '../../../core/services/navigation-to-car.service';
 import type { Operation } from '../../../shared/models/operation';
 import { OperationIconComponent } from '../../../shared/components/operation-icon/operation-icon.component';
@@ -63,7 +64,7 @@ import { ActiveTicketCardComponent } from '../../home/components/active-ticket-c
           >
             <div class="list-item-content">
               <div class="list-item-title">
-                {{ 'ops.unpaidFines.title' | translate: { count: '' + unpaidFinesCount() } }}
+                {{ 'ops.unpaidFines.title' | translate: { count: unpaidFinesCount() } }}
               </div>
             </div>
             <span class="list-item-chevron">›</span>
@@ -288,6 +289,7 @@ import { ActiveTicketCardComponent } from '../../home/components/active-ticket-c
 export class OperationsLayoutComponent {
   private readonly router = inject(Router);
   private readonly operationsService = inject(OperationsService);
+  private readonly parkingSessionService = inject(ParkingSessionService);
   private readonly navigationToCar = inject(NavigationToCarService);
   private readonly operations = this.operationsService.operations;
   private readonly rangeFilter = signal<DateRange>({ from: '', to: '' });
@@ -295,7 +297,7 @@ export class OperationsLayoutComponent {
   readonly unpaidFinesCount = () => this.unpaidFinesService.fines().length;
   readonly OperationType = OperationType;
   readonly OPERATION_TYPE_LABELS = OPERATION_TYPE_LABELS;
-  readonly activeParkings = this.operationsService.activeParkings;
+  readonly activeParkings = this.parkingSessionService.activeParkings;
   readonly unparked = signal(false);
   readonly confirmUnpark = signal(false);
   private pendingUnparkId = '';
@@ -332,7 +334,7 @@ export class OperationsLayoutComponent {
 
   confirmUnparkAction(): void {
     this.confirmUnpark.set(false);
-    if (this.operationsService.unpark(this.pendingUnparkId)) {
+    if (this.parkingSessionService.leaveParking(this.pendingUnparkId)) {
       this.pendingUnparkId = '';
       this.unparked.set(true);
     }

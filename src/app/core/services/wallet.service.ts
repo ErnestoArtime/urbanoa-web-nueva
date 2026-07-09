@@ -15,15 +15,31 @@ export interface WalletMovement {
   type: WalletMovementType;
   amount: number;
   date: string;
-  description: string;
+  descriptionKey: string;
+  descriptionParams?: Record<string, string | number>;
+  operationId?: string;
+  description?: string;
 }
+
+type WalletMovementInput = Omit<WalletMovement, 'id' | 'amount' | 'date'>;
+
+const LEGACY_DESCRIPTION_KEYS: Record<string, string> = {
+  'Recarga de saldo': 'wallet.movement.topUp',
+  Estacionamiento: 'wallet.movement.parkingPayment',
+  'Pago de denuncia': 'wallet.movement.finePayment',
+  'Devolución de saldo': 'wallet.movement.balanceRefund',
+};
 
 @Injectable({ providedIn: 'root' })
 export class WalletService {
+  private readonly balanceStorageKey = 'urbanoa.wallet.balance';
+  private readonly movementsStorageKey = 'urbanoa.wallet.movements';
   private readonly cardsStorageKey = 'urbanoa.payment-cards';
   private readonly defaultCardStorageKey = 'urbanoa.default-payment-card';
-  readonly balance = signal(12.5);
-  readonly movements = signal<WalletMovement[]>([]);
+
+  readonly balance = signal(this.readBalance());
+  readonly movements = signal<WalletMovement[]>(this.readMovements());
+
   private readonly fallbackCards: MainCard[] = [
     {
       id: 'visa-1234',
@@ -40,6 +56,7 @@ export class WalletService {
       cardholderName: 'Juan García',
     },
   ];
+
   readonly cards = signal<MainCard[]>(this.readCards());
   readonly defaultCardId = signal(this.readDefaultCardId());
   readonly defaultCard = computed(() => this.cards().find((card) => card.id === this.defaultCardId()) ?? this.cards()[0]);
@@ -71,27 +88,73 @@ export class WalletService {
   }
 
   addBalance(amount: number): void {
-    this.balance.update((b) => b + amount);
+    if (amount >= 0) {
+      this.credit(amount, { type: 'top-up', descriptionKey: 'wallet.movement.topUp' });
+    } else {
+      this.debit(Math.abs(amount), { type: 'balance-refund', descriptionKey: 'wallet.movement.balanceRefund' });
+    }
   }
 
-  credit(amount: number, description: string, type: WalletMovementType): void {
+  credit(amount: number, movement: WalletMovementInput): void;
+  credit(amount: number, description: string, type: WalletMovementType): void;
+  credit(amount: number, movementOrDescription: WalletMovementInput | string, type?: WalletMovementType): void {
     const value = Math.abs(amount);
-    this.balance.update((b) => b + value);
-    this.movements.update((list) => [
-      { id: crypto.randomUUID(), type, amount: value, date: new Date().toISOString(), description },
-      ...list,
-    ]);
+    this.balance.update((balance) => balance + value);
+    this.pushMovement(value, this.normalizeMovement(movementOrDescription, type ?? 'top-up'));
   }
 
-  debit(amount: number, description: string, type: WalletMovementType): boolean {
+  debit(amount: number, movement: WalletMovementInput): boolean;
+  debit(amount: number, description: string, type: WalletMovementType): boolean;
+  debit(amount: number, movementOrDescription: WalletMovementInput | string, type?: WalletMovementType): boolean {
     const value = Math.abs(amount);
     if (this.balance() < value) return false;
-    this.balance.update((b) => b - value);
+    this.balance.update((balance) => balance - value);
+    this.pushMovement(-value, this.normalizeMovement(movementOrDescription, type ?? 'parking-payment'));
+    return true;
+  }
+
+  private pushMovement(amount: number, movement: WalletMovementInput): void {
     this.movements.update((list) => [
-      { id: crypto.randomUUID(), type, amount: -value, date: new Date().toISOString(), description },
+      {
+        id: crypto.randomUUID(),
+        type: movement.type,
+        amount,
+        date: new Date().toISOString(),
+        descriptionKey: movement.descriptionKey,
+        descriptionParams: movement.descriptionParams,
+        operationId: movement.operationId,
+        description: movement.description,
+      },
       ...list,
     ]);
-    return true;
+    this.persistWallet();
+  }
+
+  private normalizeMovement(input: WalletMovementInput | string, type: WalletMovementType): WalletMovementInput {
+    if (typeof input !== 'string') return input;
+    return {
+      type,
+      descriptionKey: LEGACY_DESCRIPTION_KEYS[input] ?? input,
+      description: input,
+    };
+  }
+
+  private readBalance(): number {
+    try {
+      const stored = Number(localStorage.getItem(this.balanceStorageKey));
+      return Number.isFinite(stored) ? stored : 12.5;
+    } catch {
+      return 12.5;
+    }
+  }
+
+  private readMovements(): WalletMovement[] {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(this.movementsStorageKey) ?? 'null') as WalletMovement[] | null;
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
   }
 
   private readCards(): MainCard[] {
@@ -109,6 +172,11 @@ export class WalletService {
     } catch {
       return this.fallbackCards[0].id;
     }
+  }
+
+  private persistWallet(): void {
+    this.writeStorage(this.balanceStorageKey, String(this.balance()));
+    this.writeStorage(this.movementsStorageKey, JSON.stringify(this.movements()));
   }
 
   private persistCards(): void {

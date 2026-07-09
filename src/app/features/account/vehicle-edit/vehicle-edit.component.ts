@@ -10,13 +10,13 @@ import { VehicleService } from '../../../core/services/vehicle.service';
   imports: [TranslatePipe, DetailPanelHeaderComponent, ResultModalComponent],
   template: `
     <div class="page account-static-page">
-      <app-detail-panel-header backRoute="/app/account/vehicles" title="Editar vehículo" [backDesktop]="true" />
+      <app-detail-panel-header backRoute="/app/account/vehicles" [title]="'account.vehicleEdit.title' | translate" [backDesktop]="true" />
       <div class="card">
         <div class="form-group">
           <label>{{ 'account.vehicleEdit.plate' | translate }}</label
           ><input class="form-input" [class.invalid]="plateError()" [value]="plate()" (input)="setPlate($event)" />
           @if (plateError()) {
-            <p class="form-error">La matrícula es obligatoria.</p>
+            <p class="form-error">{{ 'account.vehicleAdd.plateRequired' | translate }}</p>
           }
         </div>
         <label class="switch-row"
@@ -24,12 +24,18 @@ import { VehicleService } from '../../../core/services/vehicle.service';
           ><input type="checkbox" [checked]="favorite()" (change)="favorite.set(checked($event))" /><span class="switch"></span
         ></label>
         <button type="button" class="btn btn-primary btn-block mt-2" (click)="save()">{{ 'account.vehicleEdit.save' | translate }}</button>
-        <button type="button" class="btn btn-danger btn-block mt-1" (click)="remove()">{{ 'account.vehicleEdit.delete' | translate }}</button>
+        <button type="button" class="btn btn-danger btn-block mt-1" (click)="remove()">
+          {{ 'account.vehicleEdit.delete' | translate }}
+        </button>
       </div>
       @if (result(); as state) {
-        <app-result-modal type="success" [title]="state === 'saved' ? 'Vehículo actualizado' : 'Vehículo eliminado'"
-          [message]="state === 'saved' ? 'Los datos del vehículo se han guardado correctamente.' : 'El vehículo se ha eliminado correctamente.'"
-          primaryText="Volver a vehículos" (primaryAction)="goBack()" />
+        <app-result-modal
+          type="success"
+          [title]="(state === 'saved' ? 'account.vehicleEdit.savedTitle' : 'account.vehicleEdit.deletedTitle') | translate"
+          [message]="(state === 'saved' ? 'account.vehicleEdit.savedDetail' : 'account.vehicleEdit.deletedDetail') | translate"
+          [primaryText]="'account.vehicle.backToVehicles' | translate"
+          (primaryAction)="goBack()"
+        />
       }
     </div>
   `,
@@ -43,7 +49,14 @@ import { VehicleService } from '../../../core/services/vehicle.service';
         padding: 0.65rem 0;
         cursor: pointer;
       }
-      .form-input.invalid{border-color:var(--color-error)}.form-error{margin-top:.35rem;color:var(--color-error);font-size:var(--text-xs)}
+      .form-input.invalid {
+        border-color: var(--color-error);
+      }
+      .form-error {
+        margin-top: 0.35rem;
+        color: var(--color-error);
+        font-size: var(--text-xs);
+      }
       .switch {
         position: relative;
         width: 44px;

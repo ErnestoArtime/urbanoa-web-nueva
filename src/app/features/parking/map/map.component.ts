@@ -8,7 +8,7 @@ import { ParkingFlowStore } from '../parking-flow.store';
 import { ParkingFlowQuery, readParkingFlowQuery } from '../parking-flow.model';
 import { VehicleService } from '../../../core/services/vehicle.service';
 import { LocationSettingsService } from '../../../core/services/location-settings.service';
-import { OperationsService } from '../../../core/services/operations.service';
+import { ParkingSessionService } from '../../../core/services/parking-session.service';
 
 interface MapParkingZone {
   zoneId: number;
@@ -33,6 +33,9 @@ interface MapParkingZone {
         </div>
         <a routerLink="/app/parking/cities" class="btn btn-secondary">{{ 'parking.map.searchMunicipio' | translate }}</a>
       </header>
+      @if (flowError()) {
+        <p class="flow-warning">{{ 'parking.flow.missingData' | translate }}</p>
+      }
 
       <div class="map-frame">
         <div #mapContainer class="leaflet-map" [attr.aria-label]="'parking.map.ariaLabel' | translate"></div>
@@ -48,14 +51,14 @@ interface MapParkingZone {
           >
 
           <div class="vehicle-control-wrapper">
-            <div class="vehicle-control" (click)="toggleVehicleSelector()">
+            <button type="button" class="vehicle-control" (click)="toggleVehicleSelector()">
               <span>▣</span>
               <span
                 ><small>{{ 'parking.map.vehicle' | translate }}</small
                 ><strong>{{ selectedVehicle().plate }}</strong></span
               >
               <b>▼</b>
-            </div>
+            </button>
 
             @if (showVehicleSelector()) {
               <div class="vehicle-selector-dropdown">
@@ -141,6 +144,17 @@ interface MapParkingZone {
       .map-heading span {
         color: var(--color-text-muted);
       }
+      .flow-warning {
+        margin: 0.75rem 0 0;
+        padding: 0.65rem 0.8rem;
+        border: 1px solid var(--color-warning);
+        border-radius: var(--radius-sm);
+        background: #fff7e8;
+        color: var(--color-warning);
+        font-size: var(--text-sm);
+        font-weight: var(--font-medium);
+      }
+
       .map-frame {
         position: relative;
         min-height: 540px;
@@ -183,6 +197,9 @@ interface MapParkingZone {
         text-align: left;
       }
       .vehicle-control {
+        width: 100%;
+        border: 0;
+        text-align: left;
         display: flex;
         align-items: center;
         gap: 0.7rem;
@@ -379,6 +396,17 @@ interface MapParkingZone {
         .map-heading {
           display: none;
         }
+        .flow-warning {
+          margin: 0.75rem 0 0;
+          padding: 0.65rem 0.8rem;
+          border: 1px solid var(--color-warning);
+          border-radius: var(--radius-sm);
+          background: #fff7e8;
+          color: var(--color-warning);
+          font-size: var(--text-sm);
+          font-weight: var(--font-medium);
+        }
+
         .map-frame {
           border: 0;
           border-radius: 0;
@@ -443,6 +471,9 @@ interface MapParkingZone {
         }
         .parking-controls .search-control,
         .parking-controls .vehicle-control {
+          width: 100%;
+          border: 0;
+          text-align: left;
           min-height: 44px;
           padding: 0.45rem 0.7rem;
         }
@@ -487,14 +518,15 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
     return MOCK_MUNICIPIOS[1];
   }
   readonly mapLoading = signal(true);
+  readonly flowError = signal(this.route.snapshot.queryParamMap.get('flowError') === 'missingData');
   readonly mapError = signal(false);
   readonly zoneCount = signal(0);
   readonly selectedZone = signal<MapParkingZone | null>(null);
   readonly vehicles = this.vehicleService.vehicles;
   readonly selectedVehicle = signal<Vehicle>(this.vehicleService.mainVehicle() ?? this.vehicleService.vehicles()[0]);
-  private readonly operationsService = inject(OperationsService);
+  private readonly parkingSessionService = inject(ParkingSessionService);
   readonly showVehicleSelector = signal(false);
-  readonly isParkedIn = (vehicle: Vehicle) => this.operationsService.isVehicleParked(vehicle.id);
+  readonly isParkedIn = (vehicle: Vehicle) => this.parkingSessionService.isVehicleParked(vehicle.id);
 
   toggleVehicleSelector(): void {
     this.showVehicleSelector.update((value) => !value);

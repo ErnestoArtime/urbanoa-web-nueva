@@ -23,11 +23,11 @@ export class TranslationService {
     document.documentElement.lang = targetLang;
   }
 
-  translate(key: string, params?: Record<string, string>): string {
+  translate(key: string, params?: Record<string, string | number>): string {
     let value = this.translations()[key] ?? `[${key}]`;
     if (params) {
       for (const [k, v] of Object.entries(params)) {
-        value = value.replaceAll(`{{${k}}}`, v);
+        value = value.replaceAll(`{{${k}}}`, String(v));
       }
     }
     return value;

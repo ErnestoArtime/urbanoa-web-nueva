@@ -44,7 +44,12 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
         'account.menu.changePassword' | translate
       }}</a>
       @if (saved()) {
-        <app-result-modal type="success" [title]="'account.profile.saveSuccess' | translate" primaryText="Aceptar" (primaryAction)="saved.set(false)" />
+        <app-result-modal
+          type="success"
+          [title]="'account.profile.saveSuccess' | translate"
+          primaryText="Aceptar"
+          (primaryAction)="saved.set(false)"
+        />
       }
     </div>
   `,

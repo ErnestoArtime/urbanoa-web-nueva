@@ -2,8 +2,13 @@ import { Component, inject, signal } from '@angular/core';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
 import { ResultModalComponent } from '../../../shared/components/result-modal/result-modal.component';
-import { LocationSettingsService } from '../../../core/services/location-settings.service';
+import { LocationSettingsService, type LocationPermissionState } from '../../../core/services/location-settings.service';
 import { MOCK_MUNICIPIOS } from '../../../shared/mock-data';
+
+interface LocationMessage {
+  key: string;
+  params?: Record<string, string | number>;
+}
 
 @Component({
   selector: 'app-account-settings',
@@ -18,48 +23,52 @@ import { MOCK_MUNICIPIOS } from '../../../shared/mock-data';
         ></label>
       </div>
 
-      <div class="card mt-2">
-        <p class="location-section-title">Ubicación</p>
-        <p class="location-section-desc">Usar mi ubicación para mostrar zonas de estacionamiento cercanas</p>
+      <section class="card mt-2" aria-labelledby="location-settings-title">
+        <p id="location-settings-title" class="location-section-title">{{ 'account.settings.location.title' | translate }}</p>
+        <p class="location-section-desc">{{ 'account.settings.location.description' | translate }}</p>
         <div class="location-status">
-          <span class="status-label">Estado</span>
-          <span class="status-value" [class.granted]="locationService.settings().permissionState === 'granted'"
-            >{{ permissionLabel() }}</span
-          >
+          <span class="status-label">{{ 'account.settings.location.status' | translate }}</span>
+          <span class="status-value" [class.granted]="locationService.settings().permissionState === 'granted'">
+            {{ permissionLabelKey() | translate }}
+          </span>
         </div>
         @if (locationService.settings().preferredCityName) {
           <div class="location-pref-city">
-            <span class="status-label">Municipio preferido</span>
+            <span class="status-label">{{ 'account.settings.location.preferredCity' | translate }}</span>
             <span class="status-value">{{ locationService.settings().preferredCityName }}</span>
           </div>
         }
         <div class="location-actions">
           @if (locationService.settings().permissionState !== 'granted') {
-            <button type="button" class="btn btn-primary btn-sm mt-1" (click)="requestLocation()">Activar ubicación</button>
+            <button type="button" class="btn btn-primary btn-sm mt-1" (click)="requestLocation()">
+              {{ 'account.settings.location.enable' | translate }}
+            </button>
           } @else {
             <label class="switch-row mt-1"
-              ><span>Usar ubicación actual</span
+              ><span>{{ 'account.settings.location.useCurrent' | translate }}</span
               ><input
                 type="checkbox"
                 [checked]="locationService.settings().useCurrentLocation"
-                (change)="locationService.toggleUseCurrentLocation($any($event.target).checked)"
-              /><span class="switch"></span
+                (change)="locationService.toggleUseCurrentLocation($any($event.target).checked)" /><span class="switch"></span
             ></label>
           }
           <button type="button" class="btn btn-secondary btn-sm mt-1" (click)="showCityPicker.set(true)">
-            {{ locationService.settings().preferredCityId ? 'Cambiar municipio' : 'Elegir municipio manualmente' }}
+            {{
+              (locationService.settings().preferredCityId ? 'account.settings.location.changeCity' : 'account.settings.location.chooseCity')
+                | translate
+            }}
           </button>
         </div>
         @if (locationMessage(); as msg) {
-          <p class="location-message">{{ msg }}</p>
+          <p class="location-message">{{ msg.key | translate: msg.params }}</p>
         }
-      </div>
+      </section>
 
       @if (showCityPicker()) {
         <div class="modal-overlay" (click)="showCityPicker.set(false)">
           <div class="modal city-picker-modal" (click)="$event.stopPropagation()">
-            <h3>Seleccionar municipio</h3>
-            <p class="modal-desc">Elige tu municipio preferido para buscar zonas de estacionamiento.</p>
+            <h3>{{ 'account.settings.location.cityPickerTitle' | translate }}</h3>
+            <p class="modal-desc">{{ 'account.settings.location.cityPickerDesc' | translate }}</p>
             <div class="city-list">
               @for (city of municipios; track city.id) {
                 <button
@@ -73,7 +82,9 @@ import { MOCK_MUNICIPIOS } from '../../../shared/mock-data';
                 </button>
               }
             </div>
-            <button type="button" class="btn btn-ghost btn-block mt-1" (click)="showCityPicker.set(false)">Cancelar</button>
+            <button type="button" class="btn btn-ghost btn-block mt-1" (click)="showCityPicker.set(false)">
+              {{ 'common.cancel' | translate }}
+            </button>
           </div>
         </div>
       }
@@ -92,8 +103,13 @@ import { MOCK_MUNICIPIOS } from '../../../shared/mock-data';
         </div>
       }
       @if (saved()) {
-        <app-result-modal type="success" title="Ajustes guardados" message="Los ajustes se han actualizado correctamente."
-          primaryText="Aceptar" (primaryAction)="saved.set(false)" />
+        <app-result-modal
+          type="success"
+          [title]="'account.settings.savedTitle' | translate"
+          [message]="'account.settings.savedMessage' | translate"
+          [primaryText]="'common.accept' | translate"
+          (primaryAction)="saved.set(false)"
+        />
       }
     </div>
   `,
@@ -111,7 +127,7 @@ import { MOCK_MUNICIPIOS } from '../../../shared/mock-data';
         position: relative;
         width: 44px;
         height: 24px;
-        border-radius: 99px;
+        border-radius: var(--radius-pill);
         background: var(--color-border);
         transition: background 0.2s;
       }
@@ -179,7 +195,7 @@ import { MOCK_MUNICIPIOS } from '../../../shared/mock-data';
       .modal {
         width: min(100%, 380px);
         padding: 1.5rem;
-        border-radius: 20px;
+        border-radius: var(--radius-lg);
         background: var(--color-surface);
       }
       .city-picker-modal h3 {
@@ -229,19 +245,19 @@ export class AccountSettingsComponent {
   readonly showConfirm = signal(false);
   readonly saved = signal(false);
   readonly showCityPicker = signal(false);
-  readonly locationMessage = signal('');
+  readonly locationMessage = signal<LocationMessage | null>(null);
 
-  readonly permissionLabel = () => {
+  permissionLabelKey(): string {
     const state = this.locationService.settings().permissionState;
-    const map: Record<string, string> = {
-      unknown: 'No activada',
-      prompt: 'Pendiente',
-      granted: 'Permitida',
-      denied: 'Bloqueada',
-      unsupported: 'No compatible',
+    const map: Record<LocationPermissionState, string> = {
+      unknown: 'account.settings.location.statusInactive',
+      prompt: 'account.settings.location.statusPrompt',
+      granted: 'account.settings.location.statusGranted',
+      denied: 'account.settings.location.statusDenied',
+      unsupported: 'account.settings.location.statusUnsupported',
     };
-    return map[state] ?? 'Desconocido';
-  };
+    return map[state];
+  }
 
   toggleFingerprint(): void {
     this.fingerprint.update((v) => !v);
@@ -249,23 +265,21 @@ export class AccountSettingsComponent {
   }
 
   async requestLocation(): Promise<void> {
-    this.locationMessage.set('');
-    const ok = await this.locationService.requestCurrentLocation();
-    if (ok) {
-      this.locationMessage.set('Ubicación activada. Usaremos tu ubicación para mostrar zonas cercanas.');
-    } else {
-      const state = this.locationService.settings().permissionState;
-      if (state === 'denied') {
-        this.locationMessage.set('La ubicación está bloqueada. Puedes permitirla desde la configuración del navegador o elegir un municipio manualmente.');
-      } else {
-        this.locationMessage.set('No se pudo obtener la ubicación. Puedes elegir un municipio manualmente.');
-      }
+    this.locationMessage.set(null);
+    const result = await this.locationService.requestCurrentLocation();
+    if (result.ok) {
+      this.locationMessage.set({ key: 'account.settings.location.enabledMessage' });
+      return;
     }
+
+    this.locationMessage.set({
+      key: result.status === 'denied' ? 'account.settings.location.blockedMessage' : 'account.settings.location.failedMessage',
+    });
   }
 
   selectCity(id: string, name: string): void {
     this.locationService.setPreferredCity(id, name);
     this.showCityPicker.set(false);
-    this.locationMessage.set('Municipio preferido guardado. Usaremos ' + name + ' como referencia.');
+    this.locationMessage.set({ key: 'account.settings.location.citySavedMessage', params: { city: name } });
   }
 }

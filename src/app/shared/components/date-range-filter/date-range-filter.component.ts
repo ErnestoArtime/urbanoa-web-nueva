@@ -1,7 +1,7 @@
 import { TitleCasePipe } from '@angular/common';
 import { Component, computed, inject, input, output, signal } from '@angular/core';
-import { TranslatePipe } from '../../pipes/translate.pipe';
 import { AppIconComponent } from '../../icons/app-icon.component';
+import { TranslatePipe } from '../../pipes/translate.pipe';
 import { TranslationService } from '../../../core/services/translation.service';
 
 export interface DateRange {
@@ -17,15 +17,15 @@ export interface DateRange {
       @if (!simple()) {
         <div class="date-filter-chips">
           @for (preset of presets; track preset.key) {
-            <span class="chip" [class.chip-active]="activePreset() === preset.key" (click)="applyPreset(preset.key)">
+            <button type="button" class="chip" [class.chip-active]="activePreset() === preset.key" (click)="applyPreset(preset.key)">
               {{ preset.label | translate }}
-            </span>
+            </button>
           }
         </div>
       }
       <div class="date-filter-cal-row">
         @if (!simple()) {
-          <button type="button" class="date-filter-toggle" (click)="showCalendar.set(!showCalendar())">
+          <button type="button" class="date-filter-toggle" (click)="toggleCalendar()">
             <app-icon name="dateRange" [stroke]="false" />
             <span class="cal-label">{{ 'ops.filterDate' | translate }}</span>
           </button>
@@ -34,26 +34,26 @@ export interface DateRange {
           <div class="date-filter-inputs">
             <div class="date-picker-field">
               <span class="date-picker-label">{{ 'ops.from' | translate }}</span>
-              <div class="date-display" (click)="openPicker('from')">
+              <button type="button" class="date-display" (click)="openPicker('from')">
                 @if (fromDisplay(); as d) {
                   <span>{{ d }}</span>
                 } @else {
                   <span class="date-display-placeholder">{{ 'ops.from' | translate }}</span>
                 }
-              </div>
+              </button>
             </div>
             <div class="date-picker-field">
               <span class="date-picker-label">{{ 'ops.to' | translate }}</span>
-              <div class="date-display" (click)="openPicker('to')">
+              <button type="button" class="date-display" (click)="openPicker('to')">
                 @if (toDisplay(); as d) {
                   <span>{{ d }}</span>
                 } @else {
                   <span class="date-display-placeholder">{{ 'ops.to' | translate }}</span>
                 }
-              </div>
+              </button>
             </div>
             @if (from() || to()) {
-              <button class="date-filter-clear" (click)="clear()">{{ 'ops.clear' | translate }}</button>
+              <button type="button" class="date-filter-clear" (click)="clear()">{{ 'ops.clear' | translate }}</button>
             }
           </div>
         }
@@ -67,8 +67,8 @@ export interface DateRange {
             <button type="button" (click)="nextMonth()">›</button>
           </div>
           <div class="cal-weekdays">
-            @for (d of dayHeaders(); track d) {
-              <span>{{ d }}</span>
+            @for (day of dayHeaders(); track day) {
+              <span>{{ day }}</span>
             }
           </div>
           <div class="cal-days">
@@ -101,24 +101,24 @@ export interface DateRange {
       }
       .chip {
         padding: 0.3rem 0.75rem;
-        border-radius: 1rem;
-        font-size: 0.8125rem;
+        border-radius: var(--radius-pill);
+        font-size: var(--text-sm);
         font-weight: var(--font-medium);
-        border: 1px solid var(--color-border, #e5e7eb);
-        background: var(--color-surface, #fff);
+        border: 1px solid var(--color-border);
+        background: var(--color-surface);
         color: var(--color-secondary);
         cursor: pointer;
         transition: all 0.15s;
       }
       .chip:hover {
-        border-color: var(--color-primary, #006a68);
-        color: var(--color-primary, #006a68);
+        border-color: var(--color-primary);
+        color: var(--color-primary);
       }
       .chip-active,
       .chip-active:hover {
-        background: var(--color-primary, #006a68);
+        background: var(--color-primary);
         color: #fff;
-        border-color: var(--color-primary, #006a68);
+        border-color: var(--color-primary);
       }
       .date-filter-cal-row {
         display: flex;
@@ -126,25 +126,26 @@ export interface DateRange {
         gap: 0.75rem;
         flex-wrap: wrap;
       }
+      .date-filter-toggle,
+      .date-display {
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-sm);
+        background: var(--color-surface);
+        cursor: pointer;
+        color: var(--color-secondary);
+        transition: border-color 0.15s;
+      }
       .date-filter-toggle {
         display: flex;
         align-items: center;
         gap: 0.375rem;
         padding: 0.375rem 0.75rem;
-        border: 1px solid var(--color-border, #e5e7eb);
-        border-radius: 6px;
-        background: var(--color-surface, #fff);
-        cursor: pointer;
-        font-size: 0.8125rem;
-        color: var(--color-secondary);
-        transition: border-color 0.15s;
+        font-size: var(--text-sm);
       }
-      .date-filter-toggle:hover {
-        border-color: var(--color-primary, #006a68);
-        color: var(--color-primary, #006a68);
-      }
-      .cal-icon {
-        display: block;
+      .date-filter-toggle:hover,
+      .date-display:hover {
+        border-color: var(--color-primary);
+        color: var(--color-primary);
       }
       .cal-label {
         font-weight: var(--font-medium);
@@ -162,29 +163,22 @@ export interface DateRange {
       }
       .date-picker-label {
         font-size: var(--text-xs);
-        color: var(--color-muted, #9ca3af);
+        color: var(--color-muted);
       }
       .date-display {
-        border: 1px solid var(--color-border, #e5e7eb);
-        border-radius: 6px;
-        padding: 0.5rem 0.75rem;
-        font-size: 0.875rem;
-        cursor: pointer;
         min-width: 7rem;
-        background: var(--color-surface, #fff);
-        transition: border-color 0.15s;
-      }
-      .date-display:hover {
-        border-color: var(--color-primary, #006a68);
+        padding: 0.5rem 0.75rem;
+        font-size: var(--text-sm);
+        text-align: left;
       }
       .date-display-placeholder {
-        color: var(--color-muted, #9ca3af);
+        color: var(--color-muted);
       }
       .date-filter-clear {
         border: none;
         background: none;
-        color: var(--color-primary, #006a68);
-        font-size: 0.8125rem;
+        color: var(--color-primary);
+        font-size: var(--text-sm);
         font-weight: var(--font-medium);
         cursor: pointer;
         padding: 0.25rem 0.5rem;
@@ -199,13 +193,13 @@ export interface DateRange {
         top: 100%;
         left: 0;
         z-index: 10;
-        background: var(--color-surface, #fff);
-        border: 1px solid var(--color-border, #e5e7eb);
-        border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-        padding: 0.75rem;
         width: 260px;
         margin-top: 0.25rem;
+        padding: 0.75rem;
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-sm);
+        background: var(--color-surface);
+        box-shadow: var(--shadow-card);
       }
       .cal-nav {
         display: flex;
@@ -223,46 +217,46 @@ export interface DateRange {
         line-height: var(--line-tight);
       }
       .cal-nav button:hover {
-        color: var(--color-primary, #006a68);
+        color: var(--color-primary);
       }
       .cal-nav-title {
         font-weight: var(--font-medium);
-        font-size: 0.875rem;
+        font-size: var(--text-sm);
       }
-      .cal-weekdays {
-        display: grid;
-        grid-template-columns: repeat(7, 1fr);
-        text-align: center;
-        font-size: var(--text-2xs);
-        font-weight: var(--font-medium);
-        color: var(--color-muted, #9ca3af);
-        margin-bottom: 0.25rem;
-      }
+      .cal-weekdays,
       .cal-days {
         display: grid;
         grid-template-columns: repeat(7, 1fr);
+        text-align: center;
+      }
+      .cal-weekdays {
+        margin-bottom: 0.25rem;
+        color: var(--color-muted);
+        font-size: var(--text-2xs);
+        font-weight: var(--font-medium);
+      }
+      .cal-days {
         gap: 1px;
       }
       .cal-day {
         border: none;
         background: none;
         padding: 0.35rem 0;
-        font-size: 0.8125rem;
+        font-size: var(--text-sm);
         cursor: pointer;
-        border-radius: 4px;
+        border-radius: var(--radius-sm);
         text-align: center;
-        color: var(--color-text, #111);
+        color: var(--color-text);
       }
-      .cal-day:hover {
-        background: var(--color-primary, #006a68);
+      .cal-day:hover,
+      .cal-day-selected {
+        background: var(--color-primary);
         color: #fff;
       }
       .cal-day-other {
-        color: var(--color-muted, #ccc);
+        color: var(--color-muted);
       }
       .cal-day-selected {
-        background: var(--color-primary, #006a68);
-        color: #fff;
         font-weight: var(--font-medium);
       }
     `,
@@ -277,7 +271,6 @@ export class DateRangeFilterComponent {
   readonly showCalendar = signal(false);
   readonly rangeChange = output<DateRange>();
   readonly activePreset = signal<string | null>(null);
-
   readonly pickerTarget = signal<'from' | 'to' | null>(null);
   readonly viewDate = signal(new Date());
 
@@ -298,9 +291,7 @@ export class DateRangeFilterComponent {
   });
 
   readonly monthLabel = computed(() => new Intl.DateTimeFormat(this.intlLocale(), { month: 'long' }).format(this.viewDate()));
-
   readonly viewYear = computed(() => this.viewDate().getFullYear());
-
   readonly calendarDays = computed(() => {
     const d = new Date(this.viewDate().getFullYear(), this.viewDate().getMonth(), 1);
     d.setDate(d.getDate() - d.getDay());
@@ -310,35 +301,13 @@ export class DateRangeFilterComponent {
       return day;
     });
   });
-
-  readonly fromDisplay = computed(() => {
-    const v = this.from();
-    if (!v) return '';
-    const [day, month, year] = v.split('/');
-    const d = new Date(+year, +month - 1, +day);
-    return new Intl.DateTimeFormat(this.intlLocale(), { day: 'numeric', month: 'short' }).format(d);
-  });
-
-  readonly toDisplay = computed(() => {
-    const v = this.to();
-    if (!v) return '';
-    const [day, month, year] = v.split('/');
-    const d = new Date(+year, +month - 1, +day);
-    return new Intl.DateTimeFormat(this.intlLocale(), { day: 'numeric', month: 'short' }).format(d);
-  });
-
+  readonly fromDisplay = computed(() => this.displayDate(this.from()));
+  readonly toDisplay = computed(() => this.displayDate(this.to()));
   readonly presets = [
     { key: 'today', label: 'ops.today' },
     { key: 'week', label: 'ops.thisWeek' },
     { key: 'month', label: 'ops.thisMonth' },
   ];
-
-  private readonly today = () => new Date().toISOString().slice(0, 10);
-  private readonly daysAgo = (n: number) => {
-    const d = new Date();
-    d.setDate(d.getDate() - n);
-    return d.toISOString().slice(0, 10);
-  };
 
   applyPreset(key: string): void {
     if (this.activePreset() === key) {
@@ -371,17 +340,9 @@ export class DateRangeFilterComponent {
     this.rangeChange.emit({ from: this.from(), to: this.to() });
   }
 
-  private readonly isoToDmy = (iso: string): string => {
-    if (!iso) return '';
-    const [y, m, d] = iso.split('-').map(Number);
-    return `${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}/${y}`;
-  };
-
   toggleCalendar(): void {
     this.showCalendar.update((v) => !v);
-    if (!this.showCalendar()) {
-      this.pickerTarget.set(null);
-    }
+    if (!this.showCalendar()) this.pickerTarget.set(null);
   }
 
   openPicker(target: 'from' | 'to'): void {
@@ -399,14 +360,18 @@ export class DateRangeFilterComponent {
   selectDate(d: Date): void {
     const formatted = this.dateToDmy(d);
     const target = this.pickerTarget();
-    if (target === 'from') {
-      this.from.set(formatted);
-    } else if (target === 'to') {
-      this.to.set(formatted);
-    }
+    if (target === 'from') this.from.set(formatted);
+    if (target === 'to') this.to.set(formatted);
     this.activePreset.set(null);
     this.pickerTarget.set(null);
     this.rangeChange.emit({ from: this.from(), to: this.to() });
+  }
+
+  clear(): void {
+    this.from.set('');
+    this.to.set('');
+    this.activePreset.set(null);
+    this.rangeChange.emit({ from: '', to: '' });
   }
 
   isSelected(day: Date): boolean {
@@ -414,15 +379,30 @@ export class DateRangeFilterComponent {
     return ds === this.from() || ds === this.to();
   }
 
-  private readonly dateToDmy = (d: Date): string => {
-    return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
-  };
+  private displayDate(value: string): string {
+    if (!value) return '';
+    const [day, month, year] = value.split('/');
+    const d = new Date(+year, +month - 1, +day);
+    return new Intl.DateTimeFormat(this.intlLocale(), { day: 'numeric', month: 'short' }).format(d);
+  }
 
-  clear(): void {
-    this.from.set('');
-    this.to.set('');
-    this.activePreset.set(null);
-    this.pickerTarget.set(null);
-    this.rangeChange.emit({ from: '', to: '' });
+  private today(): string {
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  private daysAgo(n: number): string {
+    const d = new Date();
+    d.setDate(d.getDate() - n);
+    return d.toISOString().slice(0, 10);
+  }
+
+  private isoToDmy(iso: string): string {
+    if (!iso) return '';
+    const [y, m, d] = iso.split('-').map(Number);
+    return `${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}/${y}`;
+  }
+
+  private dateToDmy(d: Date): string {
+    return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
   }
 }

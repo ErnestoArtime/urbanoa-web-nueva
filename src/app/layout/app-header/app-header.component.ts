@@ -54,9 +54,13 @@ import { Router } from '@angular/router';
       align-items: center;
       justify-content: center;
     }
-    .app-header-spacer { width: 44px; }
+    .app-header-spacer {
+      width: 44px;
+    }
     @media (min-width: 960px) {
-      .app-header { display: none; }
+      .app-header {
+        display: none;
+      }
     }
   `,
 })

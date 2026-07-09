@@ -34,9 +34,15 @@ import { TranslationService, type SupportedLang } from '../../../core/services/t
       cursor: pointer;
       appearance: none;
       box-shadow: var(--shadow-sm);
-      background-image: linear-gradient(45deg, transparent 50%, var(--color-primary) 50%), linear-gradient(135deg, var(--color-primary) 50%, transparent 50%);
-      background-position: calc(100% - 0.85rem) calc(50% - 1px), calc(100% - 0.55rem) calc(50% - 1px);
-      background-size: 5px 5px, 5px 5px;
+      background-image:
+        linear-gradient(45deg, transparent 50%, var(--color-primary) 50%),
+        linear-gradient(135deg, var(--color-primary) 50%, transparent 50%);
+      background-position:
+        calc(100% - 0.85rem) calc(50% - 1px),
+        calc(100% - 0.55rem) calc(50% - 1px);
+      background-size:
+        5px 5px,
+        5px 5px;
       background-repeat: no-repeat;
     }
   `,

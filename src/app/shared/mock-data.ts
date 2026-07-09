@@ -155,10 +155,10 @@ export const MOCK_UNPAID_FINES = [
 ];
 
 export const NAV_ITEMS = [
-  { path: '/app/home', label: 'Inicio', icon: 'home' },
-  { path: '/app/parking', label: 'Aparcar', icon: 'directions_car' },
-  { path: '/app/operations', label: 'Operaciones', icon: 'operations' },
-  { path: '/app/account', label: 'Mi cuenta', icon: 'account' },
+  { path: '/app/home', labelKey: 'nav.home', icon: 'home' },
+  { path: '/app/parking', labelKey: 'nav.park', icon: 'directions_car' },
+  { path: '/app/operations', labelKey: 'nav.operations', icon: 'operations' },
+  { path: '/app/account', labelKey: 'nav.account', icon: 'account' },
 ] as const;
 
 export const ACCOUNT_MENU = [
