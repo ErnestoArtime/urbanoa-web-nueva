@@ -239,7 +239,9 @@ export class ParkingSuccessComponent implements OnInit {
     const hoursPart = String(Math.floor(minutes / 60)).padStart(2, '0');
     const minutesPart = String(minutes % 60).padStart(2, '0');
     this.operationsService.startParking({
+      id: crypto.randomUUID(),
       plate: this.query.plate,
+      vehicleId: this.query.vehicleId || '',
       zone: `${this.query.zone} — ${this.query.cityName}`,
       startTime: this.startTime(),
       durationLabel: this.query.duration,

@@ -3,6 +3,7 @@ export interface ParkingFlowQuery extends Record<string, string | undefined> {
   cityName: string;
   cityId: string;
   plate: string;
+  vehicleId: string;
   zoneId: string;
   zone: string;
   street: string;

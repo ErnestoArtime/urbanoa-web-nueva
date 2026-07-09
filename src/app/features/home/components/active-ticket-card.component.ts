@@ -2,7 +2,7 @@ import { Component, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { LucideCarFront, LucideNavigation, LucideTimerReset } from '@lucide/angular';
-import type { ActiveOperation } from '../../../core/services/operations.service';
+import type { ActiveParking } from '../../../core/services/operations.service';
 
 @Component({
   selector: 'app-active-ticket-card',
@@ -257,16 +257,16 @@ import type { ActiveOperation } from '../../../core/services/operations.service'
   ],
 })
 export class ActiveTicketCardComponent {
-  readonly ticket = input<ActiveOperation | null>(null);
+  readonly ticket = input<ActiveParking | null>(null);
   readonly unpark = output<void>();
   readonly extend = output<void>();
-  readonly goToCar = output<ActiveOperation>();
+  readonly goToCar = output<ActiveParking>();
 
-  hasCoordinates(ticket: ActiveOperation): boolean {
+  hasCoordinates(ticket: ActiveParking): boolean {
     return Number.isFinite(ticket.latitude) && Number.isFinite(ticket.longitude);
   }
 
-  ticketProgress(ticket: ActiveOperation): string {
+  ticketProgress(ticket: ActiveParking): string {
     const remaining = this.parseDurationSeconds(ticket.timeRemaining);
     const total = this.parseDurationSeconds(ticket.durationLabel);
     if (!remaining || !total || remaining > total) return '28';

@@ -11,7 +11,7 @@ export class AppEntryComponent implements OnInit {
   private readonly operationsService = inject(OperationsService);
 
   ngOnInit(): void {
-    const target = this.operationsService.hasActiveOperation() ? '/app/home' : '/app/parking';
+    const target = this.operationsService.hasActiveParkings() ? '/app/home' : '/app/parking';
     void this.router.navigate([target], { replaceUrl: true });
   }
 }

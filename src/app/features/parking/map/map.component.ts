@@ -1,12 +1,14 @@
 import { AfterViewInit, Component, ElementRef, OnDestroy, ViewChild, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import * as L from 'leaflet';
-import { MOCK_MUNICIPIOS, type Vehicle } from '../../../shared/mock-data';
+import { MOCK_MUNICIPIOS, type Municipio, type Vehicle } from '../../../shared/mock-data';
 import { LoaderComponent } from '../../../shared/components/loader/loader.component';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { ParkingFlowStore } from '../parking-flow.store';
 import { ParkingFlowQuery, readParkingFlowQuery } from '../parking-flow.model';
 import { VehicleService } from '../../../core/services/vehicle.service';
+import { LocationSettingsService } from '../../../core/services/location-settings.service';
+import { OperationsService } from '../../../core/services/operations.service';
 
 interface MapParkingZone {
   zoneId: number;
@@ -58,10 +60,19 @@ interface MapParkingZone {
             @if (showVehicleSelector()) {
               <div class="vehicle-selector-dropdown">
                 @for (v of vehicles(); track v.id) {
-                  <button type="button" class="vehicle-option" [class.selected]="v === selectedVehicle()" (click)="selectVehicle(v)">
+                  <button
+                    type="button"
+                    class="vehicle-option"
+                    [class.selected]="v === selectedVehicle()"
+                    [class.parked]="isParkedIn(v)"
+                    [disabled]="isParkedIn(v)"
+                    (click)="selectVehicle(v)"
+                  >
                     <span>{{ v.plate }}</span>
                     <span class="vehicle-label">{{ v.label }}</span>
-                    @if (v.isDefault) {
+                    @if (isParkedIn(v)) {
+                      <span class="badge badge-warning">Ya aparcado</span>
+                    } @else if (v.isDefault) {
                       <span class="badge badge-primary">★</span>
                     }
                   </button>
@@ -455,6 +466,7 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
   private readonly router = inject(Router);
   private readonly store = inject(ParkingFlowStore);
   private readonly vehicleService = inject(VehicleService);
+  private readonly locationSettings = inject(LocationSettingsService);
   private readonly query: ParkingFlowQuery = this.store.hasMinimumParkingData() ? this.store.fromStore() : readParkingFlowQuery(this.route);
   private map?: L.Map;
   private zoneLayer?: L.FeatureGroup;
@@ -462,14 +474,27 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
   private resizeFrame?: number;
   private readonly zones: MapParkingZone[] = [];
   private highlightedZone?: MapParkingZone;
-  readonly selected = MOCK_MUNICIPIOS.find((m) => m.id === this.query.city) ?? MOCK_MUNICIPIOS[1];
+  readonly selected: Municipio = this.resolveMunicipio();
+
+  private resolveMunicipio(): Municipio {
+    const fromQuery = MOCK_MUNICIPIOS.find((m) => m.id === this.query.city);
+    if (fromQuery) return fromQuery;
+    const preferredId = this.locationSettings.settings().preferredCityId;
+    if (preferredId) {
+      const match = MOCK_MUNICIPIOS.find((m) => m.id === preferredId);
+      if (match) return match;
+    }
+    return MOCK_MUNICIPIOS[1];
+  }
   readonly mapLoading = signal(true);
   readonly mapError = signal(false);
   readonly zoneCount = signal(0);
   readonly selectedZone = signal<MapParkingZone | null>(null);
   readonly vehicles = this.vehicleService.vehicles;
   readonly selectedVehicle = signal<Vehicle>(this.vehicleService.mainVehicle() ?? this.vehicleService.vehicles()[0]);
+  private readonly operationsService = inject(OperationsService);
   readonly showVehicleSelector = signal(false);
+  readonly isParkedIn = (vehicle: Vehicle) => this.operationsService.isVehicleParked(vehicle.id);
 
   toggleVehicleSelector(): void {
     this.showVehicleSelector.update((value) => !value);
@@ -511,12 +536,15 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
   startParking(): void {
     const zone = this.selectedZone();
     const center = this.map?.getCenter();
-    if (!zone || !center) return;
+    const vehicle = this.selectedVehicle();
+    if (!zone || !center || !vehicle) return;
+    if (this.isParkedIn(vehicle)) return;
     this.store.update({
       city: this.selected.id,
       cityId: String(this.contractId()),
       cityName: this.selected.nombre,
-      plate: this.selectedVehicle().plate,
+      plate: vehicle.plate,
+      vehicleId: vehicle.id,
       zoneId: String(zone.zoneId),
       zoneName: zone.name,
       street: zone.street,
@@ -529,7 +557,8 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
         city: this.selected.id,
         cityName: this.selected.nombre,
         cityId: this.contractId(),
-        plate: this.selectedVehicle().plate,
+        plate: vehicle.plate,
+        vehicleId: vehicle.id,
         zoneId: zone.zoneId,
         zone: zone.name,
         street: zone.street,

@@ -3,10 +3,9 @@ import { Router } from '@angular/router';
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 import { WalletService } from '../../core/services/wallet.service';
 import { UserService } from '../../core/services/user.service';
-import { OperationsService } from '../../core/services/operations.service';
+import { OperationsService, type ActiveParking } from '../../core/services/operations.service';
 import { NavigationToCarService } from '../../core/services/navigation-to-car.service';
 import { OperationType } from '../../shared/models/operation-type';
-import type { TicketActive } from '../../shared/mock-data';
 import { ActiveTicketCardComponent } from './components/active-ticket-card.component';
 import { WalletSummaryCardComponent } from './components/wallet-summary-card.component';
 import { VehicleSummaryCardComponent } from './components/vehicle-summary-card.component';
@@ -14,6 +13,7 @@ import { RecentOperationsCardComponent } from './components/recent-operations-ca
 import { ProfileProgressCardComponent } from './components/profile-progress-card.component';
 import { ResultModalComponent } from '../../shared/components/result-modal/result-modal.component';
 import { VehicleService } from '../../core/services/vehicle.service';
+import { LocationSettingsService } from '../../core/services/location-settings.service';
 
 @Component({
   selector: 'app-home',
@@ -33,12 +33,31 @@ import { VehicleService } from '../../core/services/vehicle.service';
 
       <div class="dashboard-grid mt-2">
         <div class="dashboard-col-left">
-          <app-active-ticket-card
-            [ticket]="ticket()"
-            (unpark)="unparkFromDashboard()"
-            (extend)="onExtend()"
-            (goToCar)="onGoToCar($event)"
-          />
+          @if (activeParkings().length === 1) {
+            <app-active-ticket-card
+              [ticket]="activeParkings()[0]"
+              (unpark)="confirmUnparkFor(activeParkings()[0])"
+              (extend)="onExtend()"
+              (goToCar)="onGoToCar($event)"
+            />
+          } @else if (activeParkings().length > 1) {
+            <section class="active-parkings-section">
+              <p class="section-label">Aparcamientos activos</p>
+              @for (parking of activeParkings(); track parking.id) {
+                <app-active-ticket-card
+                  [ticket]="parking"
+                  (unpark)="confirmUnparkFor(parking)"
+                  (extend)="onExtend()"
+                  (goToCar)="onGoToCar($event)"
+                />
+              }
+            </section>
+          } @else {
+            <div class="card">
+              <p class="text-muted">{{ 'dashboard.noActiveTicket' | translate }}</p>
+              <a routerLink="/app/parking" class="btn btn-primary btn-block mt-2">{{ 'parking.title' | translate }}</a>
+            </div>
+          }
           <app-recent-operations-card [operations]="recentOps()" (viewAll)="onViewAll()" />
         </div>
 
@@ -48,7 +67,7 @@ import { VehicleService } from '../../core/services/vehicle.service';
           }
           <app-wallet-summary-card [balance]="walletService.balance()" [mainCard]="walletService.mainCard" (recharge)="onRecharge()" />
           @if (showProfileCard()) {
-            <app-profile-progress-card [progress]="75" />
+            <app-profile-progress-card />
           }
         </div>
       </div>
@@ -87,6 +106,19 @@ import { VehicleService } from '../../core/services/vehicle.service';
         flex-direction: column;
         gap: 0.5rem;
       }
+      .active-parkings-section {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+      .section-label {
+        color: var(--color-text-muted);
+        font-size: var(--text-xs);
+        font-weight: var(--font-extra);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        margin: 0.25rem 0 0.1rem;
+      }
       @media (min-width: 960px) {
         :host > .page {
           max-width: 1420px;
@@ -116,7 +148,8 @@ export class HomeComponent {
   private readonly vehicleService = inject(VehicleService);
   readonly user = this.userService.user;
   readonly fullName = computed(() => `${this.user().name} ${this.user().surname}`);
-  readonly ticket = computed(() => this.operationsService.activeOperation());
+  readonly activeParkings = this.operationsService.activeParkings;
+  private readonly locationService = inject(LocationSettingsService);
   readonly vehicle = this.vehicleService.mainVehicle;
   readonly recentOps = computed(() => {
     const list = this.operationsService
@@ -125,17 +158,22 @@ export class HomeComponent {
       .sort((a, b) => this.toDateValue(b.date) - this.toDateValue(a.date));
     return list.slice(0, 3);
   });
-  readonly showProfileCard = signal(true);
+  readonly showProfileCard = computed(() => !this.vehicle() || this.walletService.cards().length === 0 || !this.locationService.isConfigured());
   readonly unparked = signal(false);
   readonly confirmUnpark = signal(false);
+  private pendingUnparkId = '';
 
-  unparkFromDashboard(): void {
+  confirmUnparkFor(parking: ActiveParking): void {
+    this.pendingUnparkId = parking.id;
     this.confirmUnpark.set(true);
   }
 
   confirmUnparkAction(): void {
     this.confirmUnpark.set(false);
-    if (this.operationsService.unparkActiveOperation()) this.unparked.set(true);
+    if (this.operationsService.unpark(this.pendingUnparkId)) {
+      this.pendingUnparkId = '';
+      this.unparked.set(true);
+    }
   }
 
   onExtend(): void {
@@ -146,11 +184,11 @@ export class HomeComponent {
     this.router.navigate(['/app/account/payment-methods/recharge']);
   }
 
-  onGoToCar(ticket: TicketActive): void {
-    const ok = this.navigationToCar.open({
-      latitude: ticket.latitude,
-      longitude: ticket.longitude,
-      label: ticket.plate,
+  onGoToCar(parking: ActiveParking): void {
+    this.navigationToCar.open({
+      latitude: parking.latitude,
+      longitude: parking.longitude,
+      label: parking.plate,
     });
   }
 
