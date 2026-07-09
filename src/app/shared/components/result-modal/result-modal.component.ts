@@ -31,7 +31,9 @@ export type ResultType = 'success' | 'error' | 'confirmation';
               <path d="M18 6L6 18M6 6l12 12" />
             </svg>
           } @else {
-            <span class="confirmation-icon">↩</span>
+            <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 6h18" /><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /><path d="M10 11v6" /><path d="M14 11v6" />
+            </svg>
           }
         </div>
         <h2 class="result-title">{{ title() }}</h2>
@@ -89,15 +91,8 @@ export type ResultType = 'success' | 'error' | 'confirmation';
         color: #c62828;
       }
       .result-icon.confirmation {
-        width: 48px;
-        height: 48px;
-        margin-bottom: 0.5rem;
-        background: var(--color-active);
-        color: var(--color-primary);
-      }
-      .confirmation-icon {
-        font-size: 28px;
-        font-weight: 700;
+        background: #fbe9e7;
+        color: #c62828;
       }
       .result-title {
         font-size: var(--text-lg);

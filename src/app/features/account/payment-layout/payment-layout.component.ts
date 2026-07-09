@@ -77,18 +77,18 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
 
         <app-wallet-movement-list class="mt-2" [movements]="walletService.movements()" [title]="'account.movements' | translate" />
       </div>
-      @if (cardToDelete()) {
-        <app-result-modal
-          type="confirmation"
-          title="Eliminar tarjeta"
-          message="La tarjeta dejará de estar disponible para pagos, recargas y retiradas."
-          primaryText="Eliminar"
-          secondaryText="Cancelar"
-          (primaryAction)="confirmDelete()"
-          (secondaryAction)="cardToDelete.set(null)"
-        />
-      }
     </app-split-view>
+    @if (cardToDelete()) {
+      <app-result-modal
+        type="confirmation"
+        title="Eliminar tarjeta"
+        message="La tarjeta dejará de estar disponible para pagos, recargas y retiradas."
+        primaryText="Eliminar"
+        secondaryText="Cancelar"
+        (primaryAction)="confirmDelete()"
+        (secondaryAction)="cardToDelete.set(null)"
+      />
+    }
   `,
   styles: `
     .payment-wallet-card {

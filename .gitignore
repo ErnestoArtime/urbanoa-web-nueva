@@ -58,6 +58,10 @@ testem.log
 /typings
 .codex/
 
+# OpenCode / agents
+.agents/
+skills-lock.json
+
 # System files
 .DS_Store
 Thumbs.db
