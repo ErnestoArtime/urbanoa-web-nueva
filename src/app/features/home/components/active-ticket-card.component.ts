@@ -44,12 +44,19 @@ import type { ActiveOperation } from '../../../core/services/operations.service'
             <div class="ticket-divider-line"></div>
           </div>
           <div class="row mt-2 action-row">
-            <button type="button" class="btn btn-secondary btn-sm" [disabled]="!hasCoordinates(active)" (click)="goToCar.emit(active)">
+            <button
+              type="button"
+              class="btn btn-secondary btn-sm"
+              [disabled]="!hasCoordinates(active)"
+              (click)="$event.stopPropagation(); goToCar.emit(active)"
+            >
               <svg lucideNavigation class="action-btn-icon" size="19" strokeWidth="2"></svg>
               {{ 'dashboard.howToGetThere' | translate }}
             </button>
-            <button type="button" class="btn btn-danger btn-sm" (click)="unpark.emit()">{{ 'dashboard.unpark' | translate }}</button>
-            <button type="button" class="btn btn-primary btn-sm" (click)="extend.emit()">
+            <button type="button" class="btn btn-danger btn-sm" (click)="$event.stopPropagation(); unpark.emit()">
+              {{ 'dashboard.unpark' | translate }}
+            </button>
+            <button type="button" class="btn btn-primary btn-sm" (click)="$event.stopPropagation(); extend.emit()">
               <svg lucideTimerReset class="action-btn-icon" size="19" strokeWidth="2"></svg>
               {{ 'dashboard.extendTime' | translate }}
             </button>

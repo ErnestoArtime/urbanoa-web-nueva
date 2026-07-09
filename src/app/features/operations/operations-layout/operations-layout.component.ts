@@ -106,28 +106,28 @@ import { ActiveTicketCardComponent } from '../../home/components/active-ticket-c
             </li>
           }
         </ul>
-        @if (unparked()) {
-          <app-result-modal
-            type="success"
-            title="Aparcamiento finalizado"
-            message="La devolución de saldo se ha añadido al monedero."
-            primaryText="Aceptar"
-            (primaryAction)="unparked.set(false)"
-          />
-        }
-        @if (confirmUnpark()) {
-          <app-result-modal
-            type="confirmation"
-            title="Desaparcar"
-            message="Al dejar el aparcamiento recibirás un reembolso de EUR3.70."
-            primaryText="Aceptar"
-            secondaryText="Cancelar"
-            (primaryAction)="confirmUnparkAction()"
-            (secondaryAction)="confirmUnpark.set(false)"
-          />
-        }
       </div>
     </app-split-view>
+    @if (unparked()) {
+      <app-result-modal
+        type="success"
+        title="Aparcamiento finalizado"
+        message="La devolución de saldo se ha añadido al monedero."
+        primaryText="Aceptar"
+        (primaryAction)="unparked.set(false)"
+      />
+    }
+    @if (confirmUnpark()) {
+      <app-result-modal
+        type="confirmation"
+        title="Desaparcar"
+        message="Al dejar el aparcamiento recibirás un reembolso de EUR3.70."
+        primaryText="Aceptar"
+        secondaryText="Cancelar"
+        (primaryAction)="confirmUnparkAction()"
+        (secondaryAction)="confirmUnpark.set(false)"
+      />
+    }
   `,
   styles: [
     `

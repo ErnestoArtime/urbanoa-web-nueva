@@ -51,7 +51,7 @@
   "parking.wizard.step1.hint": "Selecciona una zona válida",
   "parking.wizard.step2.label": "Tarifa",
   "parking.wizard.step2.hint": "Elige el ticket disponible",
-  "parking.wizard.step3.label": "Tiempo",
+  "parking.wizard.step3.label": "Tarifas y Zonas",
   "parking.wizard.step3.hint": "Selecciona un paso permitido",
   "parking.wizard.step4.label": "Confirmar y pagar",
   "parking.wizard.step4.hint": "Revisa los datos y desliza",
