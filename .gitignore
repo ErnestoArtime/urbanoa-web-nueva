@@ -61,6 +61,8 @@ testem.log
 # OpenCode / agents
 .agents/
 skills-lock.json
+.claude/
+.playwright*
 
 # System files
 .DS_Store
