@@ -69,20 +69,39 @@ export type ParkingTicketCardVariant = 'dashboard' | 'operations-current' | 'det
   `,
   styles: [
     `
+      :host {
+        display: block;
+        filter: drop-shadow(0 3px 8px rgba(28, 44, 39, 0.07));
+      }
       .parking-ticket-card {
         --ticket-notch-r: 10px;
-        --ticket-cut-y: 190px;
+        --ticket-cut-y: 120px;
         position: relative;
         overflow: hidden;
         box-shadow: none;
+        -webkit-mask:
+          radial-gradient(circle at 0 var(--ticket-cut-y), transparent 0 var(--ticket-notch-r), #000 calc(var(--ticket-notch-r) + 1px)) left
+            top / 51% 100% no-repeat,
+          radial-gradient(circle at 100% var(--ticket-cut-y), transparent 0 var(--ticket-notch-r), #000 calc(var(--ticket-notch-r) + 1px))
+            right top / 51% 100% no-repeat;
+        mask:
+          radial-gradient(circle at 0 var(--ticket-cut-y), transparent 0 var(--ticket-notch-r), #000 calc(var(--ticket-notch-r) + 1px)) left
+            top / 51% 100% no-repeat,
+          radial-gradient(circle at 100% var(--ticket-cut-y), transparent 0 var(--ticket-notch-r), #000 calc(var(--ticket-notch-r) + 1px))
+            right top / 51% 100% no-repeat;
       }
       .parking-ticket-card::before {
         content: '';
         position: absolute;
         inset: 0 0 auto;
+        z-index: 0;
         height: var(--space-2);
         border-radius: var(--radius-md) var(--radius-md) 0 0;
         background: linear-gradient(90deg, #8f84f3 0%, #7971de 48%, #7469d2 100%);
+      }
+      .parking-ticket-card > * {
+        position: relative;
+        z-index: 1;
       }
       .ticket-main-row {
         display: flex;
@@ -182,6 +201,7 @@ export type ParkingTicketCardVariant = 'dashboard' | 'operations-current' | 'det
         white-space: nowrap;
       }
       .ticket-divider {
+        position: relative;
         display: flex;
         align-items: center;
         height: 20px;

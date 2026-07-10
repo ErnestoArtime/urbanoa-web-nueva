@@ -14,7 +14,7 @@ import type { Operation } from '../../../shared/models/operation';
 import { OperationIconComponent } from '../../../shared/components/operation-icon/operation-icon.component';
 import { SplitViewComponent } from '../../../layout/split-view/split-view.component';
 import { ResultModalComponent } from '../../../shared/components/result-modal/result-modal.component';
-import { ActiveTicketCardComponent } from '../../home/components/active-ticket-card.component';
+import { ParkingTicketCardComponent } from '../../../shared/components/parking-ticket-card/parking-ticket-card.component';
 
 @Component({
   selector: 'app-operations-layout',
@@ -26,7 +26,7 @@ import { ActiveTicketCardComponent } from '../../home/components/active-ticket-c
     DateRangeFilterComponent,
     OperationIconComponent,
     SplitViewComponent,
-    ActiveTicketCardComponent,
+    ParkingTicketCardComponent,
     ResultModalComponent,
   ],
   template: `
@@ -35,17 +35,19 @@ import { ActiveTicketCardComponent } from '../../home/components/active-ticket-c
         <h1 class="page-title">{{ 'ops.title' | translate }}</h1>
 
         <section class="current-section">
-          <p class="section-label">{{ 'ops.inProgress' | translate }}
+          <p class="section-label">
+            {{ 'ops.inProgress' | translate }}
             @if (activeParkings().length > 1) {
               <span class="badge badge-primary">{{ activeParkings().length }}</span>
             }
           </p>
           @if (activeParkings().length > 0) {
             @for (parking of activeParkings(); track parking.id) {
-              <app-active-ticket-card
-                [ticket]="parking"
-                (unpark)="onUnpark(parking.id)"
-                (extend)="onExtend()"
+              <app-parking-ticket-card
+                [parking]="parking"
+                variant="operations-current"
+                (leaveParking)="onUnpark($event.id)"
+                (extendTime)="onExtend()"
                 (goToCar)="onGoToCar($event)"
               />
               @if (!$last) {
@@ -123,15 +125,15 @@ import { ActiveTicketCardComponent } from '../../home/components/active-ticket-c
         </ul>
       </div>
     </app-split-view>
-@if (unparked()) {
-        <app-result-modal
-          type="unpark"
-          title="Aparcamiento finalizado"
-          message="La devolución de saldo se ha añadido al monedero."
-          primaryText="Aceptar"
-          (primaryAction)="unparked.set(false)"
-        />
-      }
+    @if (unparked()) {
+      <app-result-modal
+        type="unpark"
+        title="Aparcamiento finalizado"
+        message="La devolución de saldo se ha añadido al monedero."
+        primaryText="Aceptar"
+        (primaryAction)="unparked.set(false)"
+      />
+    }
     @if (confirmUnpark()) {
       <app-result-modal
         type="confirmation"

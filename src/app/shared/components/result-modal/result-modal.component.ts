@@ -11,7 +11,8 @@ export type ResultType = 'success' | 'error' | 'warning' | 'confirmation' | 'unp
           class="result-icon"
           [class.success]="type() === 'success'"
           [class.error]="type() === 'error'"
-          [class.warning]="type() === 'warning' || type() === 'confirmation'"
+          [class.warning]="type() === 'warning'"
+          [class.confirmation]="type() === 'confirmation'"
         >
           @if (type() === 'success') {
             <svg
@@ -45,6 +46,21 @@ export type ResultType = 'success' | 'error' | 'warning' | 'confirmation' | 'unp
             <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
               <path d="M18 6L6 18M6 6l12 12" />
             </svg>
+          } @else if (type() === 'warning') {
+            <svg
+              viewBox="0 0 24 24"
+              width="48"
+              height="48"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.3"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M12 9v4" />
+              <path d="M12 17h.01" />
+              <path d="M10.3 3.9 2.8 18a2 2 0 0 0 1.7 3h15a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" />
+            </svg>
           } @else {
             <svg
               viewBox="0 0 24 24"
@@ -56,11 +72,10 @@ export type ResultType = 'success' | 'error' | 'warning' | 'confirmation' | 'unp
               stroke-linecap="round"
               stroke-linejoin="round"
             >
-              <path d="M3 6h18" />
-              <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-              <path d="M10 11v6" />
-              <path d="M14 11v6" />
+              <path d="M4 9h16" />
+              <path d="M6 5h12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z" />
+              <path d="M8 13h5" />
+              <path d="m15 11 2 2-2 2" />
             </svg>
           }
         </div>
@@ -119,8 +134,12 @@ export type ResultType = 'success' | 'error' | 'warning' | 'confirmation' | 'unp
         color: #c62828;
       }
       .result-icon.warning {
-        background: #fbe9e7;
-        color: #c62828;
+        background: #fff4db;
+        color: var(--color-warning);
+      }
+      .result-icon.confirmation {
+        background: #e7f3f1;
+        color: var(--color-primary);
       }
       .result-title {
         font-size: var(--text-lg);

@@ -128,6 +128,8 @@ export class OnboardingLocationComponent {
   }
 
   skip(): void {
-    void this.router.navigate(['/onboarding/notification']);
+    this.showCityPicker.set(false);
+    this.message.set('');
+    void this.router.navigate(['/app'], { replaceUrl: true });
   }
 }

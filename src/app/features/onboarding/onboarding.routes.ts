@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { canShowOnboardingReady } from './onboarding-ready.guard';
 
 export const ONBOARDING_ROUTES: Routes = [
   { path: '', redirectTo: 'user', pathMatch: 'full' },
@@ -9,5 +10,9 @@ export const ONBOARDING_ROUTES: Routes = [
     path: 'notification',
     loadComponent: () => import('./notification/notification.component').then((m) => m.OnboardingNotificationComponent),
   },
-  { path: 'ready', loadComponent: () => import('./ready/ready.component').then((m) => m.OnboardingReadyComponent) },
+  {
+    path: 'ready',
+    canActivate: [canShowOnboardingReady],
+    loadComponent: () => import('./ready/ready.component').then((m) => m.OnboardingReadyComponent),
+  },
 ];

@@ -203,7 +203,14 @@ export class UnpaidFineDetailComponent {
     const wallet = this.capturedWalletAmount();
     const card = this.capturedCardAmount();
     if (card > 0) {
-      return base + ' Se han cobrado ' + wallet.toFixed(2).replace('.', ',') + ' € del saldo y ' + card.toFixed(2).replace('.', ',') + ' € de la tarjeta.';
+      return (
+        base +
+        ' Se han cobrado ' +
+        wallet.toFixed(2).replace('.', ',') +
+        ' € del saldo y ' +
+        card.toFixed(2).replace('.', ',') +
+        ' € de la tarjeta.'
+      );
     }
     return base + ' Se han cobrado ' + wallet.toFixed(2).replace('.', ',') + ' € del saldo.';
   });
