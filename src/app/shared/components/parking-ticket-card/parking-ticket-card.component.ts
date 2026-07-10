@@ -13,6 +13,9 @@ export type ParkingTicketCardVariant = 'dashboard' | 'operations-current' | 'det
   template: `
     @if (parking(); as active) {
       <article class="parking-ticket-card card" [class.detail-variant]="variant() === 'detail'">
+        @if (active.operationId; as opId) {
+          <span class="ticket-op-id">#{{ opId }}</span>
+        }
         <div class="ticket-main-row">
           <div class="ticket-main-icon" [style.--ticket-progress]="ticketProgress()">
             <svg class="ticket-progress-ring" viewBox="0 0 44 44" aria-hidden="true">
@@ -102,6 +105,16 @@ export type ParkingTicketCardVariant = 'dashboard' | 'operations-current' | 'det
       .parking-ticket-card > * {
         position: relative;
         z-index: 1;
+      }
+      .ticket-op-id {
+        position: absolute;
+        z-index: 2;
+        top: 0.35rem;
+        right: 0.6rem;
+        font-size: var(--text-2xs);
+        color: rgba(255, 255, 255, 0.75);
+        font-weight: var(--font-bold);
+        letter-spacing: 0.02em;
       }
       .ticket-main-row {
         display: flex;
