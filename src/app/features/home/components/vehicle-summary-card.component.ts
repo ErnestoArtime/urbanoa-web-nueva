@@ -15,7 +15,7 @@ import type { Vehicle } from '../../../shared/mock-data';
         <p class="vehicle-summary-label">{{ 'dashboard.vehicle' | translate }}</p>
         <p class="vehicle-plate">{{ vehicle().plate }}</p>
       </div>
-      <a routerLink="/app/account/vehicles" class="manage-vehicles">{{ 'account.menu.vehicles' | translate }}</a>
+      <a routerLink="/app/account/vehicles" class="btn btn-secondary btn-sm manage-vehicles">{{ 'account.menu.vehicles' | translate }}</a>
     </div>
   `,
   styles: [
@@ -54,9 +54,11 @@ import type { Vehicle } from '../../../shared/mock-data';
         margin-top: 0.15rem;
       }
       .manage-vehicles {
+        min-height: 30px;
         margin-left: auto;
+        padding: 0.34rem 0.72rem;
         font-size: var(--text-xs);
-        font-weight: var(--font-bold);
+        line-height: 1;
         white-space: nowrap;
       }
     `,

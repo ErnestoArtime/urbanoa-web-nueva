@@ -13,9 +13,6 @@ export type ParkingTicketCardVariant = 'dashboard' | 'operations-current' | 'det
   template: `
     @if (parking(); as active) {
       <article class="parking-ticket-card card" [class.detail-variant]="variant() === 'detail'">
-        @if (active.operationId; as opId) {
-          <span class="ticket-op-id">#{{ opId }}</span>
-        }
         <div class="ticket-main-row">
           <div class="ticket-main-icon" [style.--ticket-progress]="ticketProgress()">
             <svg class="ticket-progress-ring" viewBox="0 0 44 44" aria-hidden="true">
@@ -32,6 +29,9 @@ export type ParkingTicketCardVariant = 'dashboard' | 'operations-current' | 'det
             <small>{{ 'dashboard.ticket.zone' | translate }}</small>
             <strong>{{ active.zone }}</strong>
           </div>
+          @if (active.operationId; as opId) {
+            <span class="ticket-op-id">{{ operationReference(opId) }}</span>
+          }
         </div>
 
         <div class="ticket-time-row">
@@ -107,20 +107,22 @@ export type ParkingTicketCardVariant = 'dashboard' | 'operations-current' | 'det
         z-index: 1;
       }
       .ticket-op-id {
-        position: absolute;
-        z-index: 2;
-        top: 0.35rem;
-        right: 0.6rem;
+        flex: 0 0 auto;
+        align-self: flex-start;
+        margin-left: auto;
+        padding-top: 0.1rem;
+        color: var(--color-text-muted);
         font-size: var(--text-2xs);
-        color: rgba(255, 255, 255, 0.75);
-        font-weight: var(--font-bold);
-        letter-spacing: 0.02em;
+        font-weight: var(--font-extra);
+        letter-spacing: 0.03em;
+        line-height: 1;
+        white-space: nowrap;
       }
       .ticket-main-row {
         display: flex;
-        align-items: center;
+        align-items: flex-start;
         gap: var(--space-3);
-        margin-top: var(--space-1);
+        margin-top: var(--space-3);
       }
       .ticket-main-icon {
         position: relative;
@@ -259,6 +261,13 @@ export class ParkingTicketCardComponent {
     const durationMinutes = this.durationMinutes(active.durationLabel);
     return Math.max(8, Math.min(100, (remainingMinutes / durationMinutes) * 100));
   });
+
+  operationReference(operationId: string): string {
+    const id = String(operationId).trim();
+    if (!id) return '';
+    if (id.startsWith('#')) return id;
+    return /^\d+$/.test(id) && id.length < 7 ? `#${id.padStart(7, '0')}` : `#${id}`;
+  }
 
   hasCoordinates(): boolean {
     const active = this.parking();

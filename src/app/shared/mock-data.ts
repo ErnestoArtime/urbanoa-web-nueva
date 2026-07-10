@@ -9,6 +9,7 @@ export interface Vehicle {
 }
 
 export interface TicketActive {
+  operationId: string;
   plate: string;
   zone: string;
   startTime: string;
@@ -85,6 +86,7 @@ export const MOCK_OPERATIONS: Operation[] = [
 ];
 
 export const MOCK_TICKET_ACTIVE: TicketActive = {
+  operationId: '8430548',
   plate: '1234 ABC',
   zone: 'Zona Azul — Zarautz Centro',
   startTime: '18:36',

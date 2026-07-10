@@ -80,7 +80,6 @@ import { APP_BRAND } from '../../../shared/constants/app-brand';
     .wallet-main-value { font-size: var(--text-base); font-weight: var(--font-bold); line-height: var(--line-tight); margin-top:.1rem; }
     .wallet-main-expiry { color:var(--color-text-muted); font-size: var(--text-md); margin-top:.14rem; }
     .wallet-actions .btn { min-width: 136px; }
-    .wallet-actions .btn-secondary { background:#f3f6ed; border-color:#c5cec1; color:#3c4a41; }
     .wallet-actions .btn-primary { background:#2f6f71; }
   `,
   ],

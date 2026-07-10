@@ -119,7 +119,7 @@ export class OperationsService {
       cardLabel: input.cardLabel,
     };
 
-    this._activeParkings.update((list) => [...list, parking]);
+    this._activeParkings.update((list) => [parking, ...list]);
 
     this._operations.update((list) => [
       {
@@ -198,7 +198,11 @@ export class OperationsService {
   private readActive(): ActiveParking[] {
     try {
       const parsed = JSON.parse(localStorage.getItem(this.activeKey) ?? 'null');
-      if (Array.isArray(parsed)) return parsed.filter((p: ActiveParking) => p.id && p.plate);
+      if (Array.isArray(parsed)) {
+        return parsed
+          .filter((p: ActiveParking) => p.id && p.plate)
+          .map((p: ActiveParking) => ({ ...p, operationId: p.operationId || MOCK_TICKET_ACTIVE?.operationId || this.nextId() }));
+      }
     } catch {
       /* fall through */
     }
@@ -223,6 +227,7 @@ export class OperationsService {
           latitude: MOCK_TICKET_ACTIVE.latitude,
           longitude: MOCK_TICKET_ACTIVE.longitude,
           street: MOCK_TICKET_ACTIVE.street,
+          operationId: MOCK_TICKET_ACTIVE.operationId,
         },
       ];
     }
