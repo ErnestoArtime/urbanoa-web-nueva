@@ -352,11 +352,21 @@ export class ParkingWizardLayoutComponent {
     };
   });
   readonly currentStep = computed(() => {
-    const path = this.url().split('?')[0];
-    if (path.includes('/success')) return 4;
-    if (path.includes('/confirm')) return 3;
-    if (path.includes('/time-steps')) return 2;
-    if (path.includes('/tickets') || path.includes('/ticket')) return 1;
-    return 0;
+    const path = this.url().split('?')[0].replace(/\/+$/, '');
+    const segment = path.split('/').at(-1) ?? '';
+
+    switch (segment) {
+      case 'success':
+        return 4;
+      case 'confirm':
+        return 3;
+      case 'time-steps':
+        return 2;
+      case 'tickets':
+      case 'ticket':
+        return 1;
+      default:
+        return 0;
+    }
   });
 }

@@ -5,6 +5,7 @@ export type SupportedLang = 'es' | 'eu' | 'fr' | 'uk';
 const DEFAULT_LANG: SupportedLang = 'es';
 const STORAGE_KEY = 'urbanoa-lang';
 const SUPPORTED_LANGS: SupportedLang[] = ['es', 'eu', 'fr', 'uk'];
+const TRANSLATION_FETCH_OPTIONS: RequestInit = { cache: 'no-store' };
 
 @Injectable({ providedIn: 'root' })
 export class TranslationService {
@@ -68,14 +69,14 @@ export class TranslationService {
 
   private async loadTranslations(lang: SupportedLang): Promise<Record<string, string>> {
     try {
-      const response = await fetch(`/assets/i18n/${lang}.json`);
+      const response = await fetch(`/assets/i18n/${lang}.json`, TRANSLATION_FETCH_OPTIONS);
       if (!response.ok) {
         throw new Error(`Failed to load translations for ${lang}`);
       }
       return (await response.json()) as Record<string, string>;
     } catch {
       if (lang !== DEFAULT_LANG) {
-        const fallbackResponse = await fetch(`/assets/i18n/${DEFAULT_LANG}.json`);
+        const fallbackResponse = await fetch(`/assets/i18n/${DEFAULT_LANG}.json`, TRANSLATION_FETCH_OPTIONS);
         return (await fallbackResponse.json()) as Record<string, string>;
       }
       return {};
