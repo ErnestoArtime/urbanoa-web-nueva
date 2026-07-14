@@ -90,7 +90,7 @@ import { ParkingTicketCardComponent } from '../../../shared/components/parking-t
         </section>
 
         <section class="history-filter-panel">
-          <p class="section-label history-label">Historial</p>
+          <p class="section-label history-label">{{ 'dashboard.recentOps' | translate }}</p>
           <app-date-range-filter (rangeChange)="onRangeChange($event)" />
         </section>
 

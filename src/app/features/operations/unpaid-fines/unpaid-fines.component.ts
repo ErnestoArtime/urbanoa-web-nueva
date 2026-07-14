@@ -23,8 +23,8 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
         </ul>
       } @else {
         <div class="card empty-fines">
-          <p>Todas las denuncias han sido pagadas.</p>
-          <p class="text-muted">No tienes denuncias pendientes por pagar.</p>
+          <p>{{ 'ops.unpaidFines.allPaid' | translate }}</p>
+          <p class="text-muted">{{ 'ops.unpaidFines.nonePending' | translate }}</p>
         </div>
       }
     </div>
