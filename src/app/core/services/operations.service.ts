@@ -32,6 +32,7 @@ export class OperationsService {
 
   readonly operations = this._operations.asReadonly();
   readonly activeParkings = this._activeParkings.asReadonly();
+  readonly activeParkingsCount = computed(() => this._activeParkings().length);
   readonly hasActiveParkings = computed(() => this._activeParkings().length > 0);
 
   isVehicleParked(vehicleId: string): boolean {

@@ -37,8 +37,8 @@ import { ParkingTicketCardComponent } from '../../../shared/components/parking-t
         <section class="current-section">
           <p class="section-label">
             {{ 'ops.inProgress' | translate }}
-            @if (activeParkings().length > 1) {
-              <span class="badge badge-primary">{{ activeParkings().length }}</span>
+            @if (activeParkingsCount() > 1) {
+              <span class="active-parkings-count">{{ activeParkingsCount() }}</span>
             }
           </p>
           @if (activeParkings().length > 0) {
@@ -111,7 +111,7 @@ import { ParkingTicketCardComponent } from '../../../shared/components/parking-t
                   </div>
                   <div class="list-item-subtitle">{{ op.date }}{{ op.zone ? ' — ' + op.zone : '' }}</div>
                 </div>
-                <span [class]="op.amount > 0 ? 'badge badge-success' : ''">
+                <span [class]="op.amount > 0 ? 'operation-amount operation-amount-credit' : 'operation-amount operation-amount-debit'">
                   {{ op.amount > 0 ? '+' : '' }}{{ op.amount | number: '1.2-2' }} €
                 </span>
               </a>
@@ -158,12 +158,30 @@ import { ParkingTicketCardComponent } from '../../../shared/components/parking-t
         margin-right: 0.25rem;
       }
       .section-label {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
         margin: 0.85rem 0 0.4rem;
         color: var(--color-text-muted);
         font-size: var(--text-xs);
         font-weight: var(--font-extra);
         text-transform: uppercase;
         letter-spacing: 0.06em;
+      }
+      .active-parkings-count {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 1.5rem;
+        height: 1.5rem;
+        padding: 0 0.35rem;
+        border-radius: var(--radius-pill);
+        background: var(--color-active);
+        color: var(--color-primary-dark);
+        font-size: var(--text-xs);
+        font-weight: var(--font-extra);
+        letter-spacing: normal;
+        line-height: 1;
       }
       .history-filter-panel {
         margin: 1rem 0 0.7rem;
@@ -195,6 +213,28 @@ import { ParkingTicketCardComponent } from '../../../shared/components/parking-t
       .finish-op-title {
         color: var(--color-primary-dark);
         font-weight: var(--font-bold);
+      }
+      .operation-amount {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 4.25rem;
+        padding: 0.28rem 0.55rem;
+        border: 1px solid transparent;
+        border-radius: var(--radius-pill);
+        font-size: var(--text-xs);
+        font-weight: var(--font-extra);
+        line-height: 1;
+        white-space: nowrap;
+      }
+      .operation-amount-credit {
+        background: #e8f5e9;
+        color: var(--color-success);
+      }
+      .operation-amount-debit {
+        border-color: transparent;
+        background: var(--color-error-bg);
+        color: var(--color-error);
       }
       .active-operation {
         overflow: hidden;
@@ -304,6 +344,7 @@ export class OperationsLayoutComponent {
   readonly OperationType = OperationType;
   readonly OPERATION_TYPE_LABELS = OPERATION_TYPE_LABELS;
   readonly activeParkings = this.parkingSessionService.activeParkings;
+  readonly activeParkingsCount = this.parkingSessionService.activeParkingsCount;
   readonly unparked = signal(false);
   readonly confirmUnpark = signal(false);
   private pendingUnparkId = '';

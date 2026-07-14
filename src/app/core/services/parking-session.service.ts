@@ -8,6 +8,7 @@ export class ParkingSessionService {
   private readonly operationsService = inject(OperationsService);
 
   readonly activeParkings = this.operationsService.activeParkings;
+  readonly activeParkingsCount = this.operationsService.activeParkingsCount;
   readonly hasActiveParkings = this.operationsService.hasActiveParkings;
 
   startParking(input: StartParkingInput): ActiveParking | null {

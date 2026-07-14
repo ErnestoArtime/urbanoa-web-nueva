@@ -32,8 +32,8 @@ import { ParkingSessionService } from '../../core/services/parking-session.servi
                 }
                 @case ('operations') {
                   <svg lucideHistory class="sidebar-icon" size="25" strokeWidth="2.35"></svg>
-                  @if (hasActiveOperation()) {
-                    <span class="active-count">1</span>
+                  @if (activeParkingsCount() > 0) {
+                    <span class="active-count">{{ activeParkingsCount() }}</span>
                   }
                 }
                 @case ('account') {
@@ -138,7 +138,8 @@ import { ParkingSessionService } from '../../core/services/parking-session.servi
   ],
 })
 export class SidebarComponent {
-  readonly hasActiveOperation = inject(ParkingSessionService).hasActiveParkings;
+  private readonly parkingSessionService = inject(ParkingSessionService);
+  readonly activeParkingsCount = this.parkingSessionService.activeParkingsCount;
   readonly brand = APP_BRAND;
   readonly navItems = NAV_ITEMS;
 
