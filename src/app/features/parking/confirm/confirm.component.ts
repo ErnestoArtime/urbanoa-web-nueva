@@ -44,7 +44,7 @@ import { WalletService } from '../../../core/services/wallet.service';
       </div>
 
       <section class="card payment-selector">
-        <p class="payment-selector-title">Forma de pago</p>
+        <p class="payment-selector-title">{{ 'payment.methodLabel' | translate }}</p>
         <p class="wallet-priority">
           El saldo del monedero se utilizará primero: {{ walletService.balance().toFixed(2).replace('.', ',') }} € disponibles.
         </p>

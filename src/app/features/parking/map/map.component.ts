@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, ElementRef, OnDestroy, ViewChild, inject, signal } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, OnDestroy, ViewChild, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import * as L from 'leaflet';
 import { MOCK_MUNICIPIOS, type Municipio, type Vehicle } from '../../../shared/mock-data';
@@ -51,16 +51,16 @@ interface MapParkingZone {
           >
 
           <div class="vehicle-control-wrapper">
-            <button type="button" class="vehicle-control" (click)="toggleVehicleSelector()">
+            <button type="button" class="vehicle-control" [disabled]="!hasAvailableVehicles()" (click)="toggleVehicleSelector()">
               <span>▣</span>
               <span
                 ><small>{{ 'parking.map.vehicle' | translate }}</small
-                ><strong>{{ selectedVehicle().plate }}</strong></span
+                ><strong>{{ selectedVehicle()?.plate ?? 'Sin vehículos disponibles' }}</strong></span
               >
               <b>▼</b>
             </button>
 
-            @if (showVehicleSelector()) {
+            @if (showVehicleSelector() && selectedVehicle()) {
               <div class="vehicle-selector-dropdown">
                 @for (v of vehicles(); track v.id) {
                   <button
@@ -74,7 +74,7 @@ interface MapParkingZone {
                     <span>{{ v.plate }}</span>
                     <span class="vehicle-label">{{ v.label }}</span>
                     @if (isParkedIn(v)) {
-                      <span class="badge badge-warning">Ya aparcado</span>
+                      <span class="badge badge-warning">{{ 'account.vehicle.alreadyParked' | translate }}</span>
                     } @else if (v.isDefault) {
                       <span class="badge badge-primary">★</span>
                     }
@@ -96,9 +96,12 @@ interface MapParkingZone {
           } @else {
             <p class="select-hint">{{ 'parking.map.selectHint' | translate }}</p>
           }
-          <button type="button" class="btn btn-primary btn-block" [disabled]="!selectedZone()" (click)="startParking()">
+          <button type="button" class="btn btn-primary btn-block" [disabled]="!canStartParking()" (click)="startParking()">
             {{ 'parking.map.parkHere' | translate }}
           </button>
+          @if (!hasAvailableVehicles()) {
+            <p class="flow-warning">No hay vehículos disponibles para aparcar.</p>
+          }
         </section>
 
         <div class="map-status" [class.error]="mapError()">
@@ -357,7 +360,8 @@ interface MapParkingZone {
         font-size: var(--text-xs);
         text-align: center;
       }
-      .btn:disabled {
+      .btn:disabled,
+      .vehicle-control:disabled {
         opacity: 0.45;
         cursor: not-allowed;
       }
@@ -523,12 +527,16 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
   readonly zoneCount = signal(0);
   readonly selectedZone = signal<MapParkingZone | null>(null);
   readonly vehicles = this.vehicleService.vehicles;
-  readonly selectedVehicle = signal<Vehicle>(this.vehicleService.mainVehicle() ?? this.vehicleService.vehicles()[0]);
   private readonly parkingSessionService = inject(ParkingSessionService);
-  readonly showVehicleSelector = signal(false);
   readonly isParkedIn = (vehicle: Vehicle) => this.parkingSessionService.isVehicleParked(vehicle.id);
+  readonly availableVehicles = computed(() => this.vehicles().filter((vehicle) => !this.isParkedIn(vehicle)));
+  readonly hasAvailableVehicles = computed(() => this.availableVehicles().length > 0);
+  readonly selectedVehicle = signal<Vehicle | null>(this.availableVehicles()[0] ?? null);
+  readonly canStartParking = computed(() => Boolean(this.selectedZone() && this.selectedVehicle() && !this.isParkedIn(this.selectedVehicle()!)));
+  readonly showVehicleSelector = signal(false);
 
   toggleVehicleSelector(): void {
+    if (!this.hasAvailableVehicles()) return;
     this.showVehicleSelector.update((value) => !value);
   }
 
@@ -569,8 +577,7 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
     const zone = this.selectedZone();
     const center = this.map?.getCenter();
     const vehicle = this.selectedVehicle();
-    if (!zone || !center || !vehicle) return;
-    if (this.isParkedIn(vehicle)) return;
+    if (!zone || !center || !vehicle || !this.canStartParking()) return;
     this.store.update({
       city: this.selected.id,
       cityId: String(this.contractId()),
