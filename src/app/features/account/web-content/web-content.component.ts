@@ -23,9 +23,9 @@ import { APP_BRAND } from '../../../shared/constants/app-brand';
         }
         @if (error()) {
           <div class="web-content-error">
-            <strong>No se pudo mostrar el contenido</strong>
+            <strong>{{ 'account.webContent.displayError' | translate }}</strong>
             <p class="text-muted">{{ 'account.webContent.error' | translate }}</p>
-            <a [href]="rawUrl()" target="_blank" rel="noopener" class="btn btn-primary">Abrir en navegador</a>
+            <a [href]="rawUrl()" target="_blank" rel="noopener" class="btn btn-primary">{{ 'account.webContent.openBrowser' | translate }}</a>
           </div>
         } @else {
           <iframe [src]="iframeUrl()" (load)="onLoad()" (error)="onError()" [title]="resolvedTitle()" scrolling="yes"></iframe>
@@ -184,7 +184,7 @@ export class WebContentComponent {
   private readonly sanitizer = inject(DomSanitizer);
   private readonly route = inject(ActivatedRoute);
 
-  readonly resolvedTitle = computed(() => this.title() || this.route.snapshot.data['title'] || 'Contenido');
+  readonly resolvedTitle = computed(() => this.title() || this.route.snapshot.data['title'] || '');
   readonly resolvedBackLink = computed(() => this.backLink() || this.route.snapshot.data['backLink'] || null);
   readonly resolvedUrl = computed(() => {
     const routeUrl = this.route.snapshot.data['url'];

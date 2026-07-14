@@ -17,12 +17,12 @@ import { VehicleService } from '../../../core/services/vehicle.service';
         <ul class="list card" style="padding:0;overflow:hidden">
           @for (v of vehicles(); track v.id) {
             <a [routerLink]="['/app/account/vehicles/edit', v.id]" class="list-item vehicle-item">
-              <span class="vehicle-icon-wrap"><app-icon name="vehicle" class="vehicle-icon" [stroke]="false" /></span>
+              <span class="vehicle-icon-wrap"><app-icon name="vehicle" class="vehicle-icon" [size]="22" [stroke]="false" /></span>
               <div class="list-item-content">
                 <div class="list-item-title">{{ v.plate }}</div>
                 <div class="list-item-subtitle">{{ v.isDefault ? ('account.vehicleFavorite' | translate) : (v.label ?? '') }}</div>
                 @if (v.isDefault) {
-                  <span class="badge badge-primary vehicle-badge">Principal</span>
+                  <span class="badge badge-primary">{{ 'account.cardPrimary' | translate }}</span>
                 }
               </div>
               <span class="list-item-chevron">›</span>
@@ -50,17 +50,11 @@ import { VehicleService } from '../../../core/services/vehicle.service';
         background: var(--color-accent-soft);
         color: var(--color-primary);
       }
-      .vehicle-icon {
-        display: block;
+      app-icon.vehicle-icon {
+        display: grid;
+        place-items: center;
         width: 24px;
         height: 24px;
-        fill: currentColor;
-      }
-      .vehicle-badge {
-        font-size: var(--text-2xs);
-        padding: 2px 8px;
-        border-radius: 999px;
-        margin-left: 0.5rem;
       }
       .vehicle-item .list-item-content {
         gap: 2px;
