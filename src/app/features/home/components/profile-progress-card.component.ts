@@ -3,24 +3,23 @@ import { RouterLink } from '@angular/router';
 import { LocationSettingsService } from '../../../core/services/location-settings.service';
 import { VehicleService } from '../../../core/services/vehicle.service';
 import { WalletService } from '../../../core/services/wallet.service';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 
 @Component({
   selector: 'app-profile-progress-card',
   standalone: true,
-  imports: [RouterLink],
+  imports: [RouterLink, TranslatePipe],
   template: `
     <div class="card profile-progress-card">
       <div class="profile-progress-head">
-        <span>Configuración de la cuenta</span><strong>{{ realProgress() }}%</strong>
+        <span>{{ 'dashboard.profileCompletion.accountConfig' | translate }}</span><strong>{{ realProgress() }}%</strong>
       </div>
       <div class="profile-progress"><span [style.width.%]="realProgress()"></span></div>
-      <p class="card-title">Completa tu perfil</p>
-      <p class="card-subtitle">
-        Revisa tus datos y activa la ubicación para mostrar automáticamente las zonas de estacionamiento más cercanas.
-      </p>
+      <p class="card-title">{{ 'dashboard.profileCompletion.title' | translate }}</p>
+      <p class="card-subtitle">{{ 'dashboard.profileCompletion.subtitle' | translate }}</p>
       <div class="row mt-1">
-        <a routerLink="/app/account/profile" class="btn btn-primary btn-sm">Revisar perfil</a>
-        <a routerLink="/onboarding/location" class="btn btn-secondary btn-sm">Ubicación</a>
+        <a routerLink="/app/account/profile" class="btn btn-primary btn-sm">{{ 'dashboard.profileCompletion.reviewProfile' | translate }}</a>
+        <a routerLink="/onboarding/location" class="btn btn-secondary btn-sm">{{ 'dashboard.profileCompletion.location' | translate }}</a>
       </div>
     </div>
   `,

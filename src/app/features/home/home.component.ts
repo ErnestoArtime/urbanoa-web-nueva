@@ -14,7 +14,6 @@ import { RecentOperationsCardComponent } from './components/recent-operations-ca
 import { ProfileProgressCardComponent } from './components/profile-progress-card.component';
 import { ResultModalComponent } from '../../shared/components/result-modal/result-modal.component';
 import { VehicleService } from '../../core/services/vehicle.service';
-import { AccountCompletionService } from '../../core/services/account-completion.service';
 
 @Component({
   selector: 'app-home',
@@ -67,9 +66,7 @@ import { AccountCompletionService } from '../../core/services/account-completion
             <app-vehicle-summary-card [vehicle]="mainVehicle" />
           }
           <app-wallet-summary-card [balance]="walletService.balance()" [mainCard]="walletService.mainCard" (recharge)="onRecharge()" />
-          @if (showProfileCard()) {
-            <app-profile-progress-card />
-          }
+          <app-profile-progress-card />
         </div>
       </div>
       @if (unparked()) {
@@ -152,7 +149,6 @@ export class HomeComponent {
   readonly fullName = computed(() => `${this.user().name} ${this.user().surname}`);
   readonly activeParkings = this.parkingSessionService.activeParkings;
   readonly vehicle = this.vehicleService.mainVehicle;
-  private readonly accountCompletion = inject(AccountCompletionService);
   readonly recentOps = computed(() => {
     const list = this.operationsService
       .operations()
@@ -160,7 +156,6 @@ export class HomeComponent {
       .sort((a, b) => this.toDateValue(b.date) - this.toDateValue(a.date));
     return list.slice(0, 3);
   });
-  readonly showProfileCard = computed(() => !this.accountCompletion.isComplete());
   readonly unparked = signal(false);
   readonly confirmUnpark = signal(false);
   private pendingUnparkId = '';

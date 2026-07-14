@@ -12,14 +12,14 @@ import type { Operation } from '../../../shared/models/operation';
   imports: [RouterLink, DecimalPipe, TranslatePipe, OperationIconComponent],
   template: `
     <div class="card operation-history-card">
-      <p class="card-title">Historial de operaciones</p>
+      <p class="card-title">{{ 'dashboard.recentOps' | translate }}</p>
       <ul class="list" style="margin-top:0.5rem;border-radius:var(--radius-sm);overflow:hidden">
         @for (op of operations(); track op.id) {
           <a [routerLink]="['/app/operations/detail', op.id]" class="list-item">
             <app-operation-icon [type]="op.type" />
             <div class="list-item-content">
               @if (isFinishParking(op)) {
-                <div class="list-item-title">Fin de estacionamiento</div>
+                <div class="list-item-title">{{ 'ops.type.parkingEnd' | translate }}</div>
               } @else {
                 <div class="list-item-title">{{ OPERATION_TYPE_LABELS[op.type] | translate }}</div>
               }

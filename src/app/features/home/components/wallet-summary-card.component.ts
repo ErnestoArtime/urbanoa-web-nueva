@@ -12,7 +12,7 @@ import { APP_BRAND } from '../../../shared/constants/app-brand';
   template: `
     <div class="card wallet-shell-card">
       <div class="wallet-card-inline">
-        <p class="wallet-inline-title">Mi monedero</p>
+        <p class="wallet-inline-title">{{ 'account.wallet' | translate }}</p>
         <p class="wallet-inline-balance">{{ balance() | number: '1.2-2' }} €</p>
         <span class="wallet-inline-brand">ap</span>
         <span class="wallet-inline-mark" aria-hidden="true">{{ brand.name }}</span>
@@ -20,7 +20,7 @@ import { APP_BRAND } from '../../../shared/constants/app-brand';
       <div class="wallet-main-card-row">
         <app-icon name="card" class="wallet-card-icon" [stroke]="false" />
         <div>
-          <p class="wallet-main-label">Tarjeta principal</p>
+          <p class="wallet-main-label">{{ 'dashboard.mainCard' | translate }}</p>
           <p class="wallet-main-value">{{ mainCard().brand }} Debit ·{{ mainCard().last4 }}</p>
           <p class="wallet-main-expiry">{{ mainCard().cardholderName }} {{ mainCard().expiryDate }}</p>
         </div>
