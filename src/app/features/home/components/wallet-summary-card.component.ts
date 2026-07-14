@@ -19,14 +19,21 @@ import { APP_BRAND } from '../../../shared/constants/app-brand';
       </div>
       <div class="wallet-main-card-row">
         <app-icon name="card" class="wallet-card-icon" [stroke]="false" />
-        <div>
-          <p class="wallet-main-label">{{ 'dashboard.mainCard' | translate }}</p>
-          <p class="wallet-main-value">{{ mainCard().brand }} Debit ·{{ mainCard().last4 }}</p>
-          <p class="wallet-main-expiry">{{ mainCard().cardholderName }} {{ mainCard().expiryDate }}</p>
-        </div>
+        @if (hasCards()) {
+          <div>
+            <p class="wallet-main-label">{{ 'dashboard.mainCard' | translate }}</p>
+            <p class="wallet-main-value">{{ mainCard().brand }} Debit ·{{ mainCard().last4 }}</p>
+            <p class="wallet-main-expiry">{{ mainCard().cardholderName }} {{ mainCard().expiryDate }}</p>
+          </div>
+        } @else {
+          <div>
+            <p class="wallet-main-label">{{ 'dashboard.cardEmptyTitle' | translate }}</p>
+            <p class="wallet-main-expiry">{{ 'dashboard.cardEmptyDetail' | translate }}</p>
+          </div>
+        }
       </div>
       <div class="row mt-2 wallet-actions" style="gap:0.5rem;flex-wrap:wrap">
-        <button type="button" class="btn btn-secondary btn-sm" (click)="recharge.emit()">{{ 'dashboard.recharge' | translate }}</button>
+        <button type="button" class="btn btn-secondary btn-sm" [disabled]="!hasCards()" (click)="recharge.emit()">{{ 'dashboard.recharge' | translate }}</button>
         <a routerLink="/app/account/payment-methods" class="btn btn-primary btn-sm">{{ 'dashboard.manageCards' | translate }}</a>
       </div>
     </div>
@@ -81,12 +88,18 @@ import { APP_BRAND } from '../../../shared/constants/app-brand';
     .wallet-main-expiry { color:var(--color-text-muted); font-size: var(--text-md); margin-top:.14rem; }
     .wallet-actions .btn { min-width: 136px; }
     .wallet-actions .btn-primary { background:#2f6f71; }
+    .wallet-actions button:disabled {
+      cursor: not-allowed;
+      opacity: 0.45;
+      filter: grayscale(0.35);
+    }
   `,
   ],
 })
 export class WalletSummaryCardComponent {
   readonly balance = input.required<number>();
   readonly mainCard = input.required<{ brand: string; last4: string; cardholderName: string; expiryDate: string }>();
+  readonly hasCards = input(false);
   readonly recharge = output<void>();
   readonly brand = APP_BRAND;
 }

@@ -14,8 +14,9 @@ import { VehicleService } from '../../../core/services/vehicle.service';
     <app-split-view [hideList]="isChildRoute()" [hideDetail]="!isChildRoute()">
       <div splitList class="page has-sticky-actions">
         <h1 class="page-title">{{ 'account.menu.vehicles' | translate }}</h1>
-        <ul class="list card" style="padding:0;overflow:hidden">
-          @for (v of vehicles(); track v.id) {
+        @if (vehicles().length > 0) {
+          <ul class="list card" style="padding:0;overflow:hidden">
+            @for (v of vehicles(); track v.id) {
             <a [routerLink]="['/app/account/vehicles/edit', v.id]" class="list-item vehicle-item">
               <span class="vehicle-icon-wrap"><app-icon name="vehicle" class="vehicle-icon" [size]="22" [stroke]="false" /></span>
               <div class="list-item-content">
@@ -27,11 +28,19 @@ import { VehicleService } from '../../../core/services/vehicle.service';
               </div>
               <span class="list-item-chevron">›</span>
             </a>
-          }
-        </ul>
-        <div class="sticky-actions">
-          <a routerLink="/app/account/vehicles/add" class="btn btn-primary btn-block">{{ 'account.addVehicle' | translate }}</a>
-        </div>
+            }
+          </ul>
+        } @else {
+          <div class="card empty-vehicles">
+            <p>{{ 'account.vehicles.emptyTitle' | translate }}</p>
+            <a routerLink="/app/account/vehicles/add" class="btn btn-primary btn-block">{{ 'account.addVehicle' | translate }}</a>
+          </div>
+        }
+        @if (vehicles().length > 0) {
+          <div class="sticky-actions">
+            <a routerLink="/app/account/vehicles/add" class="btn btn-primary btn-block">{{ 'account.addVehicle' | translate }}</a>
+          </div>
+        }
       </div>
     </app-split-view>
   `,
@@ -58,6 +67,13 @@ import { VehicleService } from '../../../core/services/vehicle.service';
       }
       .vehicle-item .list-item-content {
         gap: 2px;
+      }
+      .empty-vehicles .btn {
+        margin-top: 1rem;
+      }
+      .empty-vehicles > p {
+        margin: 0;
+        text-align: center;
       }
       @media (min-width: 960px) {
         .sticky-actions {

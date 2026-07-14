@@ -37,6 +37,17 @@ import { VehicleService } from '../../../core/services/vehicle.service';
           (primaryAction)="goBack()"
         />
       }
+      @if (confirmDelete()) {
+        <app-result-modal
+            type="delete"
+          [title]="'account.vehicleEdit.confirmDeleteTitle' | translate"
+          [message]="'account.vehicleEdit.confirmDeleteMessage' | translate"
+          [primaryText]="'account.vehicleEdit.delete' | translate"
+          [secondaryText]="'common.cancel' | translate"
+          (primaryAction)="confirmRemove()"
+          (secondaryAction)="confirmDelete.set(false)"
+        />
+      }
     </div>
   `,
   styles: [
@@ -96,6 +107,7 @@ export class VehicleEditComponent {
   readonly favorite = signal(this.vehicle?.isDefault ?? false);
   readonly plateError = signal(false);
   readonly result = signal<'saved' | 'deleted' | null>(null);
+  readonly confirmDelete = signal(false);
 
   setPlate(event: Event): void {
     this.plate.set((event.target as HTMLInputElement).value.toUpperCase());
@@ -116,6 +128,11 @@ export class VehicleEditComponent {
   }
 
   remove(): void {
+    this.confirmDelete.set(true);
+  }
+
+  confirmRemove(): void {
+    this.confirmDelete.set(false);
     this.vehicleService.remove(this.id);
     this.result.set('deleted');
   }

@@ -2,6 +2,7 @@ import { DecimalPipe } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
+import { RouterLink } from '@angular/router';
 import { OperationsService } from '../../../core/services/operations.service';
 import { WalletService } from '../../../core/services/wallet.service';
 import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
@@ -10,10 +11,17 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 
 @Component({
   selector: 'app-account-recharge',
-  imports: [ReactiveFormsModule, TranslatePipe, DetailPanelHeaderComponent, ResultModalComponent, DecimalPipe],
+  imports: [ReactiveFormsModule, RouterLink, TranslatePipe, DetailPanelHeaderComponent, ResultModalComponent, DecimalPipe],
   template: `
     <div class="page account-static-page">
       <app-detail-panel-header [title]="'account.recharge.title' | translate" backRoute="/app/account/payment-methods" />
+      @if (walletService.cards().length === 0) {
+        <div class="card empty-recharge-state">
+          <p class="card-title">{{ 'dashboard.cardEmptyTitle' | translate }}</p>
+          <p class="text-muted">{{ 'dashboard.cardEmptyDetail' | translate }}</p>
+          <a routerLink="/app/account/payment-methods/add" class="btn btn-primary btn-block mt-2">{{ 'account.addCard' | translate }}</a>
+        </div>
+      } @else {
       <form [formGroup]="form" (ngSubmit)="confirm()" novalidate>
         <div class="card">
           <p class="text-muted">
@@ -55,6 +63,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
         </div>
         <button type="submit" class="btn btn-primary btn-block mt-2">{{ 'account.recharge.button' | translate }}</button>
       </form>
+      }
       @if (done()) {
         <app-result-modal
           type="success"
@@ -158,6 +167,7 @@ export class AccountRechargeComponent {
 
   confirm(): void {
     if (this.done()) return;
+    if (!this.walletService.cards().length) return;
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;

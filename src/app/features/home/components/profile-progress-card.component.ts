@@ -1,4 +1,4 @@
-import { Component, inject, input, output } from '@angular/core';
+import { Component, computed, inject, input, output, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AccountCompletionService } from '../../../core/services/account-completion.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
@@ -10,14 +10,25 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
   template: `
     <div class="card profile-progress-card">
       <div class="profile-progress-head">
-        <span>{{ 'dashboard.profileCompletion.accountConfig' | translate }}</span><strong>{{ realProgress() }}%</strong>
+        <span>{{ 'dashboard.profileCompletion.accountConfig' | translate }}</span>
+        <button type="button" class="progress-help" [attr.aria-label]="'dashboard.profileCompletion.help' | translate" (click)="toggleHelp()">i</button>
+        <strong>{{ realProgress() }}%</strong>
       </div>
       <div class="profile-progress"><span [style.width.%]="realProgress()"></span></div>
       <p class="card-title">{{ 'dashboard.profileCompletion.title' | translate }}</p>
       <p class="card-subtitle">{{ 'dashboard.profileCompletion.subtitle' | translate }}</p>
-      <div class="row mt-1">
+      @if (showHelp()) {
+        <div class="profile-checklist">
+          @for (item of completionItems(); track item.key) {
+            <p><span [class.done]="item.done">{{ item.done ? '✓' : '○' }}</span>{{ item.label | translate }}</p>
+          }
+        </div>
+      }
+      <div class="profile-actions mt-1">
         <a routerLink="/app/account/profile" class="btn btn-primary btn-sm">{{ 'dashboard.profileCompletion.reviewProfile' | translate }}</a>
-        <a routerLink="/onboarding/location" class="btn btn-secondary btn-sm">{{ 'dashboard.profileCompletion.location' | translate }}</a>
+        @for (action of pendingActions(); track action.key) {
+          <a [routerLink]="action.route" class="btn btn-secondary btn-sm">{{ action.label | translate }}</a>
+        }
       </div>
     </div>
   `,
@@ -28,6 +39,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
       }
       .profile-progress-head {
         display: flex;
+        align-items: center;
         justify-content: space-between;
         color: var(--color-text-muted);
         font-size: var(--text-xs);
@@ -44,6 +56,38 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
         height: 100%;
         background: var(--color-primary-light);
       }
+      .progress-help {
+        display: inline-grid;
+        place-items: center;
+        width: 1.15rem;
+        height: 1.15rem;
+        margin-left: auto;
+        margin-right: 0.4rem;
+        border: 1px solid var(--color-primary);
+        border-radius: 50%;
+        background: transparent;
+        color: var(--color-primary);
+        font-size: var(--text-2xs);
+        font-weight: var(--font-extra);
+        cursor: pointer;
+      }
+      .profile-checklist {
+        display: grid;
+        gap: 0.25rem;
+        padding: 0.55rem 0.7rem;
+        border-radius: var(--radius-sm);
+        background: var(--color-background);
+        font-size: var(--text-xs);
+      }
+      .profile-checklist p { display: flex; align-items: center; gap: 0.45rem; margin: 0; }
+      .profile-checklist span { color: var(--color-error); font-weight: var(--font-extra); }
+      .profile-checklist span.done { color: var(--color-success); }
+      .profile-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.65rem;
+        align-items: center;
+      }
     `,
   ],
 })
@@ -54,4 +98,32 @@ export class ProfileProgressCardComponent {
   readonly completeProfile = output<void>();
 
   readonly realProgress = this.accountCompletion.percent;
+  readonly showHelp = signal(false);
+  readonly profileCompleted = this.accountCompletion.profileCompleted;
+  readonly vehiclesCompleted = this.accountCompletion.vehicleCompleted;
+  readonly paymentCompleted = this.accountCompletion.paymentCompleted;
+  readonly locationCompleted = this.accountCompletion.locationCompleted;
+  readonly completionItems = computed(() => [
+    { key: 'profile', label: 'dashboard.profileCompletion.profileCheck', done: this.profileCompleted() },
+    { key: 'vehicle', label: 'dashboard.profileCompletion.vehicleCheck', done: this.vehiclesCompleted() },
+    { key: 'card', label: 'dashboard.profileCompletion.cardCheck', done: this.paymentCompleted() },
+    { key: 'location', label: 'dashboard.profileCompletion.locationCheck', done: this.locationCompleted() },
+  ]);
+  readonly pendingActions = computed(() => {
+    const actions: Array<{ key: string; label: string; route: string }> = [];
+    if (!this.vehiclesCompleted()) {
+      actions.push({ key: 'vehicle', label: 'dashboard.profileCompletion.vehicleAction', route: '/app/account/vehicles/add' });
+    }
+    if (!this.paymentCompleted()) {
+      actions.push({ key: 'card', label: 'dashboard.profileCompletion.cardAction', route: '/app/account/payment-methods' });
+    }
+    if (!this.locationCompleted()) {
+      actions.push({ key: 'location', label: 'dashboard.profileCompletion.location', route: '/onboarding/location' });
+    }
+    return actions;
+  });
+
+  toggleHelp(): void {
+    this.showHelp.update((value) => !value);
+  }
 }

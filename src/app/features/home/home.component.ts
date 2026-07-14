@@ -62,10 +62,8 @@ import { VehicleService } from '../../core/services/vehicle.service';
         </div>
 
         <div class="dashboard-col-right">
-          @if (vehicle(); as mainVehicle) {
-            <app-vehicle-summary-card [vehicle]="mainVehicle" />
-          }
-          <app-wallet-summary-card [balance]="walletService.balance()" [mainCard]="walletService.mainCard" (recharge)="onRecharge()" />
+          <app-vehicle-summary-card [vehicle]="vehicle()" />
+          <app-wallet-summary-card [balance]="walletService.balance()" [mainCard]="walletService.mainCard" [hasCards]="walletService.cards().length > 0" (recharge)="onRecharge()" />
           <app-profile-progress-card />
         </div>
       </div>

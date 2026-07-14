@@ -68,7 +68,12 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
           }
         </div>
         <div class="payment-actions mt-2">
-          <a routerLink="/app/account/payment-methods/recharge" class="btn btn-primary btn-sm">{{ 'dashboard.recharge' | translate }}</a>
+          <button
+            type="button"
+            class="btn btn-primary btn-sm"
+            [disabled]="walletService.cards().length === 0"
+            (click)="goToRecharge()"
+          >{{ 'dashboard.recharge' | translate }}</button>
           <a routerLink="/app/account/payment-methods/refund" class="btn btn-secondary btn-sm">{{
             'account.withdrawBalance' | translate
           }}</a>
@@ -132,6 +137,11 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
       color: #fff;
       margin: 0.25rem 0 0;
       letter-spacing: 0.02em;
+    }
+    .payment-actions button:disabled {
+      cursor: not-allowed;
+      opacity: 0.45;
+      filter: grayscale(0.35);
     }
     .card-item {
       position: relative;
@@ -296,6 +306,11 @@ export class PaymentLayoutComponent {
   rechargeCard(id: string): void {
     this.activeCardMenu.set(null);
     void this.router.navigate(['/app/account/payment-methods/recharge'], { queryParams: { cardId: id } });
+  }
+  goToRecharge(): void {
+    const cardId = this.walletService.defaultCardId();
+    if (!this.walletService.cards().length || !cardId) return;
+    void this.router.navigate(['/app/account/payment-methods/recharge'], { queryParams: { cardId } });
   }
   refundToCard(id: string): void {
     this.activeCardMenu.set(null);

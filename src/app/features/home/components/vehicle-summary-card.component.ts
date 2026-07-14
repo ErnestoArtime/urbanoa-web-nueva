@@ -11,10 +11,17 @@ import type { Vehicle } from '../../../shared/mock-data';
   template: `
     <div class="card compact-card vehicle-summary-card">
       <app-icon name="vehicle" class="vehicle-summary-icon" [stroke]="false" />
-      <div>
-        <p class="vehicle-summary-label">{{ 'dashboard.vehicle' | translate }}</p>
-        <p class="vehicle-plate">{{ vehicle().plate }}</p>
-      </div>
+      @if (vehicle(); as currentVehicle) {
+        <div>
+          <p class="vehicle-summary-label">{{ 'dashboard.vehicle' | translate }}</p>
+          <p class="vehicle-plate">{{ currentVehicle.plate }}</p>
+        </div>
+      } @else {
+        <div>
+          <p class="vehicle-summary-label">{{ 'dashboard.vehicleEmptyTitle' | translate }}</p>
+          <p class="vehicle-empty-detail">{{ 'dashboard.vehicleEmptyDetail' | translate }}</p>
+        </div>
+      }
       <a routerLink="/app/account/vehicles" class="btn btn-secondary btn-sm manage-vehicles">{{ 'account.menu.vehicles' | translate }}</a>
     </div>
   `,
@@ -53,6 +60,11 @@ import type { Vehicle } from '../../../shared/mock-data';
         line-height: var(--line-tight);
         margin-top: 0.15rem;
       }
+      .vehicle-empty-detail {
+        color: var(--color-text-muted);
+        font-size: var(--text-sm);
+        margin-top: 0.15rem;
+      }
       .manage-vehicles {
         min-height: 30px;
         margin-left: auto;
@@ -65,5 +77,5 @@ import type { Vehicle } from '../../../shared/mock-data';
   ],
 })
 export class VehicleSummaryCardComponent {
-  readonly vehicle = input.required<Vehicle>();
+  readonly vehicle = input<Vehicle | null>(null);
 }
