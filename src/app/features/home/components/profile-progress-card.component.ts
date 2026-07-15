@@ -20,7 +20,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
       @if (showHelp()) {
         <div class="profile-checklist">
           @for (item of completionItems(); track item.key) {
-            <p><span [class.done]="item.done">{{ item.done ? '✓' : '○' }}</span>{{ item.label | translate }}</p>
+            <p><span [class.done]="item.done">{{ item.done ? '✓' : '○' }}</span>{{ item.label | translate }} ({{ item.action | translate }})</p>
           }
         </div>
       }
@@ -104,10 +104,10 @@ export class ProfileProgressCardComponent {
   readonly paymentCompleted = this.accountCompletion.paymentCompleted;
   readonly locationCompleted = this.accountCompletion.locationCompleted;
   readonly completionItems = computed(() => [
-    { key: 'profile', label: 'dashboard.profileCompletion.profileCheck', done: this.profileCompleted() },
-    { key: 'vehicle', label: 'dashboard.profileCompletion.vehicleCheck', done: this.vehiclesCompleted() },
-    { key: 'card', label: 'dashboard.profileCompletion.cardCheck', done: this.paymentCompleted() },
-    { key: 'location', label: 'dashboard.profileCompletion.locationCheck', done: this.locationCompleted() },
+    { key: 'profile', label: 'dashboard.profileCompletion.profileCheck', action: 'dashboard.profileCompletion.profileUpdate', done: this.profileCompleted() },
+    { key: 'vehicle', label: 'dashboard.profileCompletion.vehicleCheck', action: this.vehiclesCompleted() ? 'dashboard.profileCompletion.vehicleUpdate' : 'dashboard.profileCompletion.vehicleAction', done: this.vehiclesCompleted() },
+    { key: 'card', label: 'dashboard.profileCompletion.cardCheck', action: this.paymentCompleted() ? 'dashboard.profileCompletion.cardUpdate' : 'dashboard.profileCompletion.cardAction', done: this.paymentCompleted() },
+    { key: 'location', label: 'dashboard.profileCompletion.locationCheck', action: 'dashboard.profileCompletion.locationUpdate', done: this.locationCompleted() },
   ]);
   readonly pendingActions = computed(() => {
     const actions: Array<{ key: string; label: string; route: string }> = [];
@@ -115,11 +115,9 @@ export class ProfileProgressCardComponent {
       actions.push({ key: 'vehicle', label: 'dashboard.profileCompletion.vehicleAction', route: '/app/account/vehicles/add' });
     }
     if (!this.paymentCompleted()) {
-      actions.push({ key: 'card', label: 'dashboard.profileCompletion.cardAction', route: '/app/account/payment-methods' });
+      actions.push({ key: 'card', label: 'dashboard.profileCompletion.cardAction', route: '/app/account/payment-methods/add' });
     }
-    if (!this.locationCompleted()) {
-      actions.push({ key: 'location', label: 'dashboard.profileCompletion.location', route: '/onboarding/location' });
-    }
+    actions.push({ key: 'location', label: 'dashboard.profileCompletion.location', route: '/onboarding/location' });
     return actions;
   });
 

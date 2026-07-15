@@ -551,4 +551,8 @@
   ,"dashboard.vehicleEmptyDetail": "Ajoutez un véhicule pour pouvoir vous garer."
   ,"dashboard.cardEmptyTitle": "Aucune carte associée"
   ,"dashboard.cardEmptyDetail": "Ajoutez une carte pour gérer vos paiements."
+  ,"dashboard.profileCompletion.profileUpdate": "Revoir le profil"
+  ,"dashboard.profileCompletion.vehicleUpdate": "Véhicules"
+  ,"dashboard.profileCompletion.cardUpdate": "Gérer les cartes"
+  ,"dashboard.profileCompletion.locationUpdate": "Localisation"
 }

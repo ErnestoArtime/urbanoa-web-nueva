@@ -551,4 +551,8 @@
   ,"dashboard.vehicleEmptyDetail": "Añade un vehículo para poder aparcar."
   ,"dashboard.cardEmptyTitle": "Sin tarjetas asociadas"
   ,"dashboard.cardEmptyDetail": "Añade una tarjeta para gestionar tus pagos."
+  ,"dashboard.profileCompletion.profileUpdate": "Revisar perfil"
+  ,"dashboard.profileCompletion.vehicleUpdate": "Vehículos"
+  ,"dashboard.profileCompletion.cardUpdate": "Gestionar tarjetas"
+  ,"dashboard.profileCompletion.locationUpdate": "Ubicación"
 }

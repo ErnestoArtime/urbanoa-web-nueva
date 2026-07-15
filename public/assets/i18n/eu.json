@@ -551,4 +551,8 @@
   ,"dashboard.vehicleEmptyDetail": "Gehitu ibilgailu bat aparkatu ahal izateko."
   ,"dashboard.cardEmptyTitle": "Ez dago txartel elkarturik"
   ,"dashboard.cardEmptyDetail": "Gehitu txartel bat ordainketak kudeatzeko."
+  ,"dashboard.profileCompletion.profileUpdate": "Profila berrikusi"
+  ,"dashboard.profileCompletion.vehicleUpdate": "Ibilgailuak"
+  ,"dashboard.profileCompletion.cardUpdate": "Txartelak kudeatu"
+  ,"dashboard.profileCompletion.locationUpdate": "Kokapena"
 }

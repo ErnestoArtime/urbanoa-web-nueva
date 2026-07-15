@@ -1,4 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
+import { DecimalPipe } from '@angular/common';
 import { NavigationEnd, Router, RouterLink } from '@angular/router';
 import { ACCOUNT_MENU, MOCK_USER, MOCK_VEHICLES } from '../../../shared/mock-data';
 import { WalletService } from '../../../core/services/wallet.service';
@@ -27,6 +28,7 @@ const STORE_URL = 'https://play.google.com/store/apps/details?id=com.gerteksa.r.
   imports: [
     RouterLink,
     TranslatePipe,
+    DecimalPipe,
     AccountProfileComponent,
     AccountSettingsComponent,
     AccountNotificationsComponent,
@@ -51,12 +53,12 @@ const STORE_URL = 'https://play.google.com/store/apps/details?id=com.gerteksa.r.
           <div>
             <strong>{{ user.name }} {{ user.surname }}</strong
             ><span>{{ user.email }}</span
-            ><span>{{ walletService.balance() }} €</span>
+            ><span>{{ walletService.balance() | number: '1.2-2' }} €</span>
           </div>
         </div>
         <div class="card wallet-card mb-2 mobile-wallet">
           <p>{{ 'account.walletBalance' | translate }}</p>
-          <p class="wallet-balance">{{ walletService.balance() }} €</p>
+          <p class="wallet-balance">{{ walletService.balance() | number: '1.2-2' }} €</p>
         </div>
         <ul class="list account-list">
           @for (item of menu; track item.key; let i = $index) {
@@ -168,7 +170,7 @@ const STORE_URL = 'https://play.google.com/store/apps/details?id=com.gerteksa.r.
                   <div class="page">
                     <div class="wallet-card mb-2">
                       <p style="opacity:0.9">{{ 'account.wallet' | translate }} {{ brand.name }}</p>
-                      <p class="wallet-balance">{{ user.balance }} €</p>
+                      <p class="wallet-balance">{{ user.balance | number: '1.2-2' }} €</p>
                     </div>
                     <p class="section-title">{{ 'account.cards' | translate }}</p>
                     <div class="card">

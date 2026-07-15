@@ -551,4 +551,8 @@
   ,"dashboard.vehicleEmptyDetail": "Додайте автомобіль, щоб паркуватися."
   ,"dashboard.cardEmptyTitle": "Немає прив’язаних карток"
   ,"dashboard.cardEmptyDetail": "Додайте картку для керування платежами."
+  ,"dashboard.profileCompletion.profileUpdate": "Переглянути профіль"
+  ,"dashboard.profileCompletion.vehicleUpdate": "Автомобілі"
+  ,"dashboard.profileCompletion.cardUpdate": "Керувати картками"
+  ,"dashboard.profileCompletion.locationUpdate": "Місцезнаходження"
 }

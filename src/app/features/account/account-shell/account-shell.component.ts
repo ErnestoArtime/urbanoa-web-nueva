@@ -1,4 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
+import { DecimalPipe } from '@angular/common';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { filter, map, startWith } from 'rxjs/operators';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -12,7 +13,7 @@ import { WalletService } from '../../../core/services/wallet.service';
 
 @Component({
   selector: 'app-account-shell',
-  imports: [RouterLink, RouterLinkActive, AppIconComponent, SplitViewComponent, TranslatePipe],
+  imports: [RouterLink, RouterLinkActive, AppIconComponent, SplitViewComponent, TranslatePipe, DecimalPipe],
   template: `
     <app-split-view [hideList]="!isRootRoute()" [hideDetail]="isRootRoute()">
       <div splitList class="account-master">
@@ -22,12 +23,12 @@ import { WalletService } from '../../../core/services/wallet.service';
           <div>
             <strong>{{ user().name }} {{ user().surname }}</strong
             ><span>{{ user().email }}</span
-            ><span>{{ walletService.balance() }} €</span>
+            ><span>{{ walletService.balance() | number: '1.2-2' }} €</span>
           </div>
         </div>
         <div class="card wallet-card mb-2 mobile-wallet">
           <p>{{ 'account.walletBalance' | translate }}</p>
-          <p class="wallet-balance">{{ walletService.balance() }} €</p>
+          <p class="wallet-balance">{{ walletService.balance() | number: '1.2-2' }} €</p>
         </div>
         <ul class="list account-list">
           @for (item of menu; track item.key; let i = $index) {
