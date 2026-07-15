@@ -107,6 +107,7 @@ export class ParkingFlowStore {
       cityId: params['cityId'] ?? '',
       cityName: params['cityName'] ?? '',
       plate: params['plate'] ?? '',
+      vehicleId: params['vehicleId'] ?? '',
       zoneId: params['zoneId'] ?? '',
       zoneName: params['zone'] ?? '',
       sectorColor: params['sectorColor'] ?? '',
@@ -134,6 +135,7 @@ export class ParkingFlowStore {
     if (s.cityId) result['cityId'] = s.cityId;
     if (s.cityName) result['cityName'] = s.cityName;
     if (s.plate) result['plate'] = s.plate;
+    if (s.vehicleId) result['vehicleId'] = s.vehicleId;
     if (s.zoneId) result['zoneId'] = s.zoneId;
     if (s.zoneName) result['zone'] = s.zoneName;
     if (s.sectorColor) result['sectorColor'] = s.sectorColor;

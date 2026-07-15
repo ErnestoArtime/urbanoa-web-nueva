@@ -109,7 +109,15 @@ import { ParkingTicketCardComponent } from '../../../shared/components/parking-t
                   <div class="list-item-title" [class.finish-op-title]="isFinishParking(op)">
                     {{ OPERATION_TYPE_LABELS[op.type] | translate }}
                   </div>
-                  <div class="list-item-subtitle">{{ op.date }}{{ op.zone ? ' — ' + op.zone : '' }}</div>
+                  <div class="list-item-subtitle">{{ op.date }}{{ operationTime(op) ? ' · ' + operationTime(op) : '' }}{{ op.zone ? ' — ' + op.zone : '' }}</div>
+                  @if (op.plate) {
+                    <div class="operation-meta">
+                      {{ op.plate }}
+                      @if (isParking(op) && op.durationLabel) {
+                        <span> · {{ op.durationLabel }}</span>
+                      }
+                    </div>
+                  }
                 </div>
                 <span [class]="op.amount > 0 ? 'operation-amount operation-amount-credit' : 'operation-amount operation-amount-debit'">
                   {{ op.amount > 0 ? '+' : '' }}{{ op.amount | number: '1.2-2' }} €
@@ -213,6 +221,10 @@ import { ParkingTicketCardComponent } from '../../../shared/components/parking-t
       .finish-op-title {
         color: var(--color-primary-dark);
         font-weight: var(--font-bold);
+      }
+      .history-list .operation-meta {
+        color: var(--color-text-muted);
+        font-size: var(--text-xs);
       }
       .operation-amount {
         display: inline-flex;
@@ -401,6 +413,14 @@ export class OperationsLayoutComponent {
 
   isFinishParking(op: Operation): boolean {
     return op.type === OperationType.PARKING_END;
+  }
+
+  isParking(op: Operation): boolean {
+    return op.type === OperationType.PARKING || op.type === OperationType.PARKING_EXTENSION;
+  }
+
+  operationTime(op: Operation): string {
+    return op.startTime ?? op.endTime ?? '';
   }
 
   private applyFilter(list: Operation[]): Operation[] {

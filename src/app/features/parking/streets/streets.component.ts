@@ -2,6 +2,7 @@ import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { ParkingStreet, StreetsService } from '../../../core/services/streets.service';
+import { ParkingFlowStore } from '../parking-flow.store';
 
 const CITY_API_IDS: Record<string, number> = {
   durango: 1,
@@ -93,12 +94,14 @@ const CITY_API_IDS: Record<string, number> = {
 export class ParkingStreetsComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly streetsService = inject(StreetsService);
+  private readonly flowStore = inject(ParkingFlowStore);
   readonly streets = signal<ParkingStreet[]>([]);
   readonly search = signal('');
   readonly loading = signal(true);
   readonly cityId = this.route.snapshot.queryParamMap.get('city') ?? this.route.snapshot.queryParamMap.get('municipio') ?? 'zarautz';
   readonly cityName = this.route.snapshot.queryParamMap.get('cityName') ?? 'Zarautz';
-  readonly plate = this.route.snapshot.queryParamMap.get('plate') ?? '1234 ABC';
+  readonly plate = this.route.snapshot.queryParamMap.get('plate') ?? this.flowStore.vm().plate ?? '1234 ABC';
+  readonly vehicleId = this.route.snapshot.queryParamMap.get('vehicleId') ?? this.flowStore.vm().vehicleId ?? '';
   readonly filteredStreets = computed(() => {
     const term = this.search().trim().toLocaleLowerCase('es');
     return term
@@ -125,6 +128,7 @@ export class ParkingStreetsComponent implements OnInit {
       cityName: this.cityName,
       cityId: this.cityId,
       plate: this.plate,
+      vehicleId: this.vehicleId,
       zoneId: String(street.zoneId),
       zone: street.zoneDescription,
       street: street.name,

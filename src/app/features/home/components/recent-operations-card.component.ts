@@ -23,9 +23,17 @@ import type { Operation } from '../../../shared/models/operation';
               } @else {
                 <div class="list-item-title">{{ OPERATION_TYPE_LABELS[op.type] | translate }}</div>
               }
-              <div class="list-item-subtitle">{{ op.date }}{{ op.zone ? ' — ' + op.zone : '' }}</div>
+              <div class="list-item-subtitle">{{ op.date }}{{ operationTime(op) ? ' · ' + operationTime(op) : '' }}{{ op.zone ? ' — ' + op.zone : '' }}</div>
+              @if (op.plate) {
+                <div class="operation-meta">
+                  {{ op.plate }}
+                  @if (isParking(op) && op.durationLabel) {
+                    <span> · {{ op.durationLabel }}</span>
+                  }
+                </div>
+              }
             </div>
-            <span [class]="op.amount > 0 ? 'badge badge-success' : 'badge'">
+            <span [class]="op.amount > 0 ? 'operation-amount operation-amount-credit' : 'operation-amount operation-amount-debit'">
               {{ op.amount > 0 ? '+' : '' }}{{ op.amount | number: '1.2-2' }} €
             </span>
           </a>
@@ -44,6 +52,30 @@ import type { Operation } from '../../../shared/models/operation';
       .operation-history-card .list-item:hover {
         background: #f1f4ea;
       }
+      .operation-history-card .operation-meta {
+        color: var(--color-text-muted);
+        font-size: var(--text-xs);
+      }
+      .operation-history-card .operation-amount {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 4.25rem;
+        padding: 0.28rem 0.55rem;
+        border-radius: var(--radius-pill);
+        font-size: var(--text-xs);
+        font-weight: var(--font-extra);
+        line-height: 1;
+        white-space: nowrap;
+      }
+      .operation-history-card .operation-amount-credit {
+        background: #e8f5e9;
+        color: var(--color-success);
+      }
+      .operation-history-card .operation-amount-debit {
+        background: var(--color-error-bg);
+        color: var(--color-error);
+      }
       .operation-history-card .card-title {
         margin-bottom: 0.35rem;
       }
@@ -61,6 +93,14 @@ export class RecentOperationsCardComponent {
   readonly OPERATION_TYPE_LABELS = OPERATION_TYPE_LABELS;
 
   isFinishParking(op: { type: OperationType; plate: string | null }): boolean {
-    return op.type === OperationType.BALANCE_REFUND && !!op.plate;
+    return (op.type === OperationType.PARKING_END || op.type === OperationType.BALANCE_REFUND) && !!op.plate;
+  }
+
+  isParking(op: Operation): boolean {
+    return op.type === OperationType.PARKING || op.type === OperationType.PARKING_EXTENSION;
+  }
+
+  operationTime(op: Operation): string {
+    return op.startTime ?? op.endTime ?? '';
   }
 }

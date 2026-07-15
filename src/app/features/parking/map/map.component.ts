@@ -42,7 +42,7 @@ interface MapParkingZone {
         <div class="map-target" aria-hidden="true"><span></span></div>
 
         <section class="parking-controls">
-          <a routerLink="/app/parking/cities" class="search-control"
+          <a routerLink="/app/parking/cities" [queryParams]="vehicleQueryParams()" class="search-control"
             ><span>⌕</span
             ><span
               ><small>{{ 'parking.map.municipio' | translate }}</small
@@ -531,7 +531,11 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
   readonly isParkedIn = (vehicle: Vehicle) => this.parkingSessionService.isVehicleParked(vehicle.id);
   readonly availableVehicles = computed(() => this.vehicles().filter((vehicle) => !this.isParkedIn(vehicle)));
   readonly hasAvailableVehicles = computed(() => this.availableVehicles().length > 0);
-  readonly selectedVehicle = signal<Vehicle | null>(this.availableVehicles()[0] ?? null);
+  readonly selectedVehicle = signal<Vehicle | null>(
+    this.availableVehicles().find((vehicle) => vehicle.id === this.query.vehicleId || vehicle.plate === this.query.plate) ??
+      this.availableVehicles()[0] ??
+      null,
+  );
   readonly canStartParking = computed(() => Boolean(this.selectedZone() && this.selectedVehicle() && !this.isParkedIn(this.selectedVehicle()!)));
   readonly showVehicleSelector = signal(false);
 
@@ -542,10 +546,18 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
 
   selectVehicle(vehicle: Vehicle): void {
     this.selectedVehicle.set(vehicle);
+    this.store.update({ vehicleId: vehicle.id, plate: vehicle.plate });
     this.showVehicleSelector.set(false);
   }
 
+  vehicleQueryParams(): Record<string, string> {
+    const vehicle = this.selectedVehicle();
+    return vehicle ? { vehicleId: vehicle.id, plate: vehicle.plate } : {};
+  }
+
   ngAfterViewInit(): void {
+    const vehicle = this.selectedVehicle();
+    if (vehicle) this.store.update({ vehicleId: vehicle.id, plate: vehicle.plate });
     this.map = L.map(this.mapContainer.nativeElement, { zoomControl: false }).setView(this.cityCenter(), 15);
     L.control.zoom({ position: 'topright' }).addTo(this.map);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {

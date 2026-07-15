@@ -1,8 +1,9 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { MOCK_MUNICIPIOS, type Municipio } from '../../../shared/mock-data';
 import { LocationSettingsService } from '../../../core/services/location-settings.service';
+import { ParkingFlowStore } from '../parking-flow.store';
 
 @Component({
   selector: 'app-parking-cities',
@@ -57,10 +58,10 @@ import { LocationSettingsService } from '../../../core/services/location-setting
             </li>
           </ul>
           <div class="sticky-actions">
-            <a routerLink="/app/parking" [queryParams]="{ city: selected().id }" class="btn btn-primary btn-block">{{
+            <a routerLink="/app/parking" [queryParams]="{ city: selected().id, vehicleId: vehicleId, plate: vehiclePlate }" class="btn btn-primary btn-block">{{
               'parking.cities.viewMap' | translate
             }}</a>
-            <a routerLink="/app/parking/streets" [queryParams]="{ municipio: selected().id }" class="btn btn-secondary btn-block">{{
+            <a routerLink="/app/parking/streets" [queryParams]="{ municipio: selected().id, vehicleId: vehicleId, plate: vehiclePlate }" class="btn btn-secondary btn-block">{{
               'parking.cities.viewStreets' | translate
             }}</a>
           </div>
@@ -243,6 +244,10 @@ import { LocationSettingsService } from '../../../core/services/location-setting
 })
 export class ParkingCitiesComponent {
   private readonly locationSettings = inject(LocationSettingsService);
+  readonly flowStore = inject(ParkingFlowStore);
+  readonly route = inject(ActivatedRoute);
+  readonly vehicleId = this.route.snapshot.queryParamMap.get('vehicleId') ?? this.flowStore.vm().vehicleId ?? '';
+  readonly vehiclePlate = this.route.snapshot.queryParamMap.get('plate') ?? this.flowStore.vm().plate ?? '';
   readonly municipios = MOCK_MUNICIPIOS;
   readonly selected = signal(this.defaultCity());
 

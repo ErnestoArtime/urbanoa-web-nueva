@@ -2,6 +2,7 @@ import { Component, inject } from '@angular/core';
 import { RouterLink, ActivatedRoute } from '@angular/router';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { MOCK_MUNICIPIOS } from '../../../shared/mock-data';
+import { ParkingFlowStore } from '../parking-flow.store';
 
 @Component({
   selector: 'app-parking-city-info',
@@ -21,7 +22,7 @@ import { MOCK_MUNICIPIOS } from '../../../shared/mock-data';
       </div>
       <a
         [routerLink]="['/app/parking/streets']"
-        [queryParams]="{ city: municipio.id, cityName: municipio.nombre }"
+        [queryParams]="{ city: municipio.id, cityName: municipio.nombre, vehicleId: vehicleId, plate: vehiclePlate }"
         class="btn btn-primary btn-block mt-2"
         >{{ 'parking.selectStreet' | translate }}</a
       >
@@ -38,5 +39,8 @@ import { MOCK_MUNICIPIOS } from '../../../shared/mock-data';
 })
 export class ParkingCityInfoComponent {
   private readonly route = inject(ActivatedRoute);
+  readonly flowStore = inject(ParkingFlowStore);
   readonly municipio = MOCK_MUNICIPIOS.find((m) => m.id === this.route.snapshot.queryParamMap.get('id')) ?? MOCK_MUNICIPIOS[1];
+  readonly vehicleId = this.route.snapshot.queryParamMap.get('vehicleId') ?? this.flowStore.vm().vehicleId ?? '';
+  readonly vehiclePlate = this.route.snapshot.queryParamMap.get('plate') ?? this.flowStore.vm().plate ?? '';
 }

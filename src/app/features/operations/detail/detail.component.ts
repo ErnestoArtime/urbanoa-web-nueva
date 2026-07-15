@@ -360,24 +360,25 @@ export class OperationsDetailComponent {
     const calendar = 'dateRange' as const;
     const clock = 'schedule' as const;
     const money = 'wallet' as const;
-    if (o.type === OperationType.REFUND)
+    if (o.type === OperationType.REFUND || o.type === OperationType.PARKING_END)
       return [
         { label: 'ops.detail.plate', value: o.plate ?? '5678 DEF', icon: car, positive: undefined },
-        { label: 'ops.detail.datetime', value: o.date, icon: calendar, positive: undefined },
-        { label: 'ops.detail.totalTime', value: '5 h 45 min', icon: clock, positive: undefined },
+        { label: 'ops.detail.datetime', value: this.dateTime(o), icon: calendar, positive: undefined },
+        { label: 'ops.detail.totalTime', value: o.durationLabel ?? '5 h 45 min', icon: clock, positive: undefined },
         { label: 'ops.detail.refund', value: `+${this.absoluteAmount().toFixed(2).replace('.', ',')} €`, icon: money, positive: true },
       ];
     if (o.type === OperationType.TOP_UP)
       return [
-        { label: 'ops.detail.datetime', value: o.date, icon: calendar, positive: undefined },
+        { label: 'ops.detail.datetime', value: this.dateTime(o), icon: calendar, positive: undefined },
         { label: 'ops.detail.paymentMethod', value: 'Visa •••• 1234', icon: money, positive: undefined },
         { label: 'ops.detail.recharge', value: `+${this.absoluteAmount().toFixed(2).replace('.', ',')} €`, icon: money, positive: true },
       ];
     if (o.type === OperationType.FINE_PAYMENT)
       return [
         { label: 'ops.detail.plate', value: o.plate ?? '', icon: car, positive: undefined },
-        { label: 'ops.detail.datetime', value: o.date, icon: calendar, positive: undefined },
+        { label: 'ops.detail.datetime', value: this.dateTime(o), icon: calendar, positive: undefined },
         { label: 'ops.detail.location', value: o.zone ?? '', icon: calendar, positive: undefined },
+        { label: 'ops.detail.paymentMethod', value: this.paymentMethodLabel(), icon: money, positive: undefined },
         ...this.paymentRows(money, false),
         { label: 'ops.detail.total', value: `${this.absoluteAmount().toFixed(2).replace('.', ',')} €`, icon: money, positive: undefined },
       ];
@@ -400,7 +401,7 @@ export class OperationsDetailComponent {
       rows.push({ label: 'ops.detail.wallet', value: `${this.walletPaymentAmount().toFixed(2).replace('.', ',')} €`, icon, positive });
     }
     if (this.cardPaymentAmount() > 0) {
-      rows.push({ label: 'ops.detail.card', value: `${this.cardPaymentAmount().toFixed(2).replace('.', ',')} €`, icon, positive });
+      rows.push({ label: this.cardPaymentLabel(), value: `${this.cardPaymentAmount().toFixed(2).replace('.', ',')} €`, icon, positive });
     }
     return rows;
   }
@@ -408,5 +409,10 @@ export class OperationsDetailComponent {
   private signedAmountPrefix(): string {
     const amount = this.op()?.amount ?? 0;
     return amount > 0 ? '+' : amount < 0 ? '-' : '';
+  }
+
+  private dateTime(operation: { date: string; startTime?: string; endTime?: string }): string {
+    const time = operation.endTime ?? operation.startTime;
+    return time ? `${operation.date} · ${time}` : operation.date;
   }
 }

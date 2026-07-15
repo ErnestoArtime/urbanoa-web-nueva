@@ -78,7 +78,7 @@ import type { ActiveParking } from '../../../core/services/operations.service';
       }
       .active-ticket-card {
         --ticket-notch-r: 10px;
-        --ticket-cut-y: 120px;
+        --ticket-cut-y: 156px;
         position: relative;
         overflow: hidden;
         box-shadow: none;
