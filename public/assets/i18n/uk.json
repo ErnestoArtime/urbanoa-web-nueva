@@ -550,6 +550,8 @@
   ,"account.vehicles.emptyDetail": "Додайте автомобіль, щоб паркуватися."
   ,"account.vehicleEdit.confirmDeleteTitle": "Видалити автомобіль"
   ,"account.vehicleEdit.confirmDeleteMessage": "Ви справді хочете видалити цей автомобіль?"
+  ,"account.vehicleEdit.activeParkingTitle": "Неможливо видалити автомобіль"
+  ,"account.vehicleEdit.activeParkingMessage": "Цей автомобіль має активне паркування. Спочатку завершіть паркування, а потім видаліть його."
   ,"dashboard.vehicleEmptyTitle": "Немає прив’язаних автомобілів"
   ,"dashboard.vehicleEmptyDetail": "Додайте автомобіль, щоб паркуватися."
   ,"dashboard.cardEmptyTitle": "Немає прив’язаних карток"

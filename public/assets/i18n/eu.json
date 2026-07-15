@@ -550,6 +550,8 @@
   ,"account.vehicles.emptyDetail": "Gehitu ibilgailu bat aparkatu ahal izateko."
   ,"account.vehicleEdit.confirmDeleteTitle": "Ibilgailua ezabatu"
   ,"account.vehicleEdit.confirmDeleteMessage": "Ziur zaude ibilgailu hau ezabatu nahi duzula?"
+  ,"account.vehicleEdit.activeParkingTitle": "Ezin da ibilgailua ezabatu"
+  ,"account.vehicleEdit.activeParkingMessage": "Ibilgailu honek aparkaleku aktibo bat du. Lehenik aparkalekua amaitu eta gero ezabatu ahal izango duzu."
   ,"dashboard.vehicleEmptyTitle": "Ez dago ibilgailu elkarturik"
   ,"dashboard.vehicleEmptyDetail": "Gehitu ibilgailu bat aparkatu ahal izateko."
   ,"dashboard.cardEmptyTitle": "Ez dago txartel elkarturik"

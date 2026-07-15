@@ -550,6 +550,8 @@
   ,"account.vehicles.emptyDetail": "Añade un vehículo para poder aparcar."
   ,"account.vehicleEdit.confirmDeleteTitle": "Eliminar vehículo"
   ,"account.vehicleEdit.confirmDeleteMessage": "¿Seguro que quieres eliminar este vehículo?"
+  ,"account.vehicleEdit.activeParkingTitle": "No se puede eliminar el vehículo"
+  ,"account.vehicleEdit.activeParkingMessage": "Este vehículo tiene un aparcamiento activo. Desaparca primero el vehículo y después podrás eliminarlo."
   ,"dashboard.vehicleEmptyTitle": "Vehículos no asociados"
   ,"dashboard.vehicleEmptyDetail": "Añade un vehículo para poder aparcar."
   ,"dashboard.cardEmptyTitle": "Sin tarjetas asociadas"

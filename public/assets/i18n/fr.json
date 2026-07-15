@@ -550,6 +550,8 @@
   ,"account.vehicles.emptyDetail": "Ajoutez un véhicule pour pouvoir stationner."
   ,"account.vehicleEdit.confirmDeleteTitle": "Supprimer le véhicule"
   ,"account.vehicleEdit.confirmDeleteMessage": "Voulez-vous vraiment supprimer ce véhicule ?"
+  ,"account.vehicleEdit.activeParkingTitle": "Impossible de supprimer le véhicule"
+  ,"account.vehicleEdit.activeParkingMessage": "Ce véhicule a un stationnement actif. Terminez d’abord le stationnement avant de le supprimer."
   ,"dashboard.vehicleEmptyTitle": "Aucun véhicule associé"
   ,"dashboard.vehicleEmptyDetail": "Ajoutez un véhicule pour pouvoir vous garer."
   ,"dashboard.cardEmptyTitle": "Aucune carte associée"

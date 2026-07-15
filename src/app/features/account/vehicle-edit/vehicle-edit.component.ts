@@ -4,6 +4,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
 import { ResultModalComponent } from '../../../shared/components/result-modal/result-modal.component';
 import { VehicleService } from '../../../core/services/vehicle.service';
+import { ParkingSessionService } from '../../../core/services/parking-session.service';
 
 @Component({
   selector: 'app-vehicle-edit',
@@ -46,6 +47,15 @@ import { VehicleService } from '../../../core/services/vehicle.service';
           [secondaryText]="'common.cancel' | translate"
           (primaryAction)="confirmRemove()"
           (secondaryAction)="confirmDelete.set(false)"
+        />
+      }
+      @if (blockedDelete()) {
+        <app-result-modal
+          type="warning"
+          [title]="'account.vehicleEdit.activeParkingTitle' | translate"
+          [message]="'account.vehicleEdit.activeParkingMessage' | translate"
+          [primaryText]="'common.accept' | translate"
+          (primaryAction)="blockedDelete.set(false)"
         />
       }
     </div>
@@ -101,6 +111,7 @@ export class VehicleEditComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly vehicleService = inject(VehicleService);
+  private readonly parkingSessionService = inject(ParkingSessionService);
   readonly id = this.route.snapshot.paramMap.get('id') ?? '';
   private readonly vehicle = this.vehicleService.getById(this.id);
   readonly plate = signal(this.vehicle?.plate ?? '');
@@ -108,6 +119,7 @@ export class VehicleEditComponent {
   readonly plateError = signal(false);
   readonly result = signal<'saved' | 'deleted' | null>(null);
   readonly confirmDelete = signal(false);
+  readonly blockedDelete = signal(false);
 
   setPlate(event: Event): void {
     this.plate.set((event.target as HTMLInputElement).value.toUpperCase());
@@ -128,6 +140,11 @@ export class VehicleEditComponent {
   }
 
   remove(): void {
+    const isActive = this.parkingSessionService.isVehicleParked(this.id) || Boolean(this.vehicle?.plate && this.parkingSessionService.isVehicleParked(this.vehicle.plate));
+    if (isActive) {
+      this.blockedDelete.set(true);
+      return;
+    }
     this.confirmDelete.set(true);
   }
 

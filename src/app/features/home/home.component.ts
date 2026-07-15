@@ -41,7 +41,7 @@ import { VehicleService } from '../../core/services/vehicle.service';
               (goToCar)="onGoToCar($event)"
             />
           } @else if (activeParkings().length > 1) {
-            <details class="active-parkings-section">
+            <details class="active-parkings-section" open>
               <summary class="active-parkings-summary">
                 <span class="section-label">{{ 'dashboard.activeParkings' | translate }}</span>
                 <span class="active-parkings-count" aria-hidden="true">{{ activeParkings().length }}</span>
