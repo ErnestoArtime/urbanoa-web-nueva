@@ -4,6 +4,8 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { filter, map, startWith } from 'rxjs/operators';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { ParkingFlowStore } from '../parking-flow.store';
+import { VehicleService } from '../../../core/services/vehicle.service';
+import { ParkingSessionService } from '../../../core/services/parking-session.service';
 
 interface WizardStep {
   labelKey: string;
@@ -47,7 +49,7 @@ interface WizardStep {
           }
         </ol>
 
-        @if (query()['cityName'] || query()['plate']) {
+        @if (hasAvailableVehicles() && (query()['cityName'] || query()['plate'])) {
           <section class="wizard-summary">
             <span>{{ 'parking.wizard.currentSelection' | translate }}</span>
             @if (query()['cityName']) {
@@ -325,6 +327,11 @@ interface WizardStep {
 export class ParkingWizardLayoutComponent {
   private readonly router = inject(Router);
   private readonly store = inject(ParkingFlowStore);
+  private readonly vehicleService = inject(VehicleService);
+  private readonly parkingSessionService = inject(ParkingSessionService);
+  readonly hasAvailableVehicles = computed(() =>
+    this.vehicleService.vehicles().some((vehicle) => !this.parkingSessionService.isVehicleParked(vehicle.id)),
+  );
   readonly steps: WizardStep[] = [
     { labelKey: 'parking.wizard.step1.label', hintKey: 'parking.wizard.step1.hint', path: '/app/parking' },
     { labelKey: 'parking.wizard.step2.label', hintKey: 'parking.wizard.step2.hint', path: '/app/parking/tickets' },

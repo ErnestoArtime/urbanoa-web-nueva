@@ -41,8 +41,12 @@ import { VehicleService } from '../../core/services/vehicle.service';
               (goToCar)="onGoToCar($event)"
             />
           } @else if (activeParkings().length > 1) {
-            <section class="active-parkings-section">
-              <p class="section-label">{{ 'dashboard.activeParkings' | translate }}</p>
+            <details class="active-parkings-section">
+              <summary class="active-parkings-summary">
+                <span class="section-label">{{ 'dashboard.activeParkings' | translate }}</span>
+                <span class="active-parkings-count" aria-hidden="true">{{ activeParkings().length }}</span>
+                <span class="sr-only">{{ 'dashboard.activeParkingsCount' | translate: { count: activeParkings().length } }}</span>
+              </summary>
               @for (parking of activeParkings(); track parking.id) {
                 <app-parking-ticket-card
                   [parking]="parking"
@@ -51,7 +55,7 @@ import { VehicleService } from '../../core/services/vehicle.service';
                   (goToCar)="onGoToCar($event)"
                 />
               }
-            </section>
+            </details>
           } @else {
             <div class="card">
               <p class="text-muted">{{ 'dashboard.noActiveTicket' | translate }}</p>
@@ -107,6 +111,51 @@ import { VehicleService } from '../../core/services/vehicle.service';
         flex-direction: column;
         gap: 0.5rem;
       }
+      .active-parkings-summary {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        min-height: 2.75rem;
+        padding: 0.35rem 0.15rem;
+        color: var(--color-text-muted);
+        cursor: pointer;
+        list-style: none;
+        user-select: none;
+      }
+      .active-parkings-summary::-webkit-details-marker {
+        display: none;
+      }
+      .active-parkings-summary::after {
+        content: '';
+        width: 0.55rem;
+        height: 0.55rem;
+        margin-right: 0.35rem;
+        margin-left: auto;
+        border-right: 2px solid var(--color-primary);
+        border-bottom: 2px solid var(--color-primary);
+        transform: rotate(45deg) translateY(-0.15rem);
+        transition: transform 180ms ease;
+      }
+      .active-parkings-section[open] .active-parkings-summary::after {
+        transform: rotate(225deg) translateY(-0.15rem);
+      }
+      .active-parkings-summary:focus-visible {
+        outline: 2px solid var(--color-primary);
+        outline-offset: 3px;
+        border-radius: var(--radius-sm);
+      }
+      .active-parkings-count {
+        display: inline-grid;
+        min-width: 1.5rem;
+        height: 1.5rem;
+        place-items: center;
+        padding: 0 0.35rem;
+        border-radius: 999px;
+        background: var(--color-primary);
+        color: #fff;
+        font-size: var(--text-xs);
+        font-weight: var(--font-extra);
+      }
       .section-label {
         color: var(--color-text-muted);
         font-size: var(--text-xs);
@@ -114,6 +163,17 @@ import { VehicleService } from '../../core/services/vehicle.service';
         text-transform: uppercase;
         letter-spacing: 0.06em;
         margin: 0.25rem 0 0.1rem;
+      }
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
       }
       @media (min-width: 960px) {
         :host > .page {

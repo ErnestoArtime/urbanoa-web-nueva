@@ -50,18 +50,18 @@ interface MapParkingZone {
             ><b>›</b></a
           >
 
-          <div class="vehicle-control-wrapper">
+          <div class="vehicle-control-wrapper" [class.selector-open]="showVehicleSelector()">
             <button type="button" class="vehicle-control" [disabled]="!hasAvailableVehicles()" (click)="toggleVehicleSelector()">
               <span>▣</span>
               <span
                 ><small>{{ 'parking.map.vehicle' | translate }}</small
-                ><strong>{{ selectedVehicle()?.plate ?? 'Sin vehículos disponibles' }}</strong></span
+                ><strong>{{ selectedVehicle()?.plate ?? ('parking.map.noVehicles' | translate) }}</strong></span
               >
               <b>▼</b>
             </button>
 
-            @if (showVehicleSelector() && selectedVehicle()) {
-              <div class="vehicle-selector-dropdown">
+            @if (hasAvailableVehicles()) {
+              <div class="vehicle-selector-dropdown" [class.is-open]="showVehicleSelector()" role="listbox">
                 @for (v of vehicles(); track v.id) {
                   <button
                     type="button"
@@ -100,7 +100,7 @@ interface MapParkingZone {
             {{ 'parking.map.parkHere' | translate }}
           </button>
           @if (!hasAvailableVehicles()) {
-            <p class="flow-warning">No hay vehículos disponibles para aparcar.</p>
+            <p class="flow-warning">{{ 'parking.map.noVehiclesAvailable' | translate }}</p>
           }
         </section>
 
@@ -216,6 +216,12 @@ interface MapParkingZone {
         width: 100%;
         text-align: left;
       }
+      .vehicle-control b {
+        transition: transform 180ms ease;
+      }
+      .vehicle-control-wrapper.selector-open .vehicle-control b {
+        transform: rotate(180deg);
+      }
       .search-control > span:nth-child(2),
       .vehicle-control > span:nth-child(2) {
         display: flex;
@@ -247,7 +253,16 @@ interface MapParkingZone {
         border-radius: 12px;
         box-shadow: var(--shadow-lg);
         z-index: 1000;
+        max-height: 0;
+        opacity: 0;
         overflow: hidden;
+        pointer-events: none;
+        transition: max-height 180ms ease, opacity 140ms ease;
+      }
+      .vehicle-selector-dropdown.is-open {
+        max-height: 18rem;
+        opacity: 1;
+        pointer-events: auto;
       }
       .vehicle-option {
         display: flex;
@@ -260,7 +275,7 @@ interface MapParkingZone {
         background: #fff;
         text-align: left;
         cursor: pointer;
-        transition: background 0.15s ease;
+        transition: background 150ms ease;
       }
       .vehicle-option:hover {
         background: var(--color-background);
