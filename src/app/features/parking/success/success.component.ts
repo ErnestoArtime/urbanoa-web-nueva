@@ -7,6 +7,7 @@ import { OperationIconComponent } from '../../../shared/components/operation-ico
 import { OperationType } from '../../../shared/models/operation-type';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { ParkingSessionService } from '../../../core/services/parking-session.service';
+import { generateUuid } from '../../../core/utils/generate-uuid';
 
 @Component({
   selector: 'app-parking-success',
@@ -239,7 +240,7 @@ export class ParkingSuccessComponent implements OnInit {
     const hoursPart = String(Math.floor(minutes / 60)).padStart(2, '0');
     const minutesPart = String(minutes % 60).padStart(2, '0');
     this.parkingSessionService.startParking({
-      id: crypto.randomUUID(),
+      id: generateUuid(),
       plate: this.query.plate,
       vehicleId: this.query.vehicleId || '',
       zone: `${this.query.zone} — ${this.query.cityName}`,

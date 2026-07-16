@@ -3,6 +3,7 @@ import { MOCK_OPERATIONS, MOCK_TICKET_ACTIVE } from '../../shared/mock-data';
 import { OperationType } from '../../shared/models/operation-type';
 import { WalletService } from './wallet.service';
 import type { Operation } from '../../shared/models/operation';
+import { generateUuid } from '../utils/generate-uuid';
 
 export interface ActiveParking {
   id: string;
@@ -103,7 +104,7 @@ export class OperationsService {
 
     const operationId = this.nextId();
     const parking: ActiveParking = {
-      id: input.id || crypto.randomUUID(),
+      id: input.id || generateUuid(),
       plate: input.plate,
       vehicleId: input.vehicleId,
       zone: input.zone,

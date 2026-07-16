@@ -1,4 +1,5 @@
 import { computed, Injectable, signal } from '@angular/core';
+import { generateUuid } from '../utils/generate-uuid';
 
 export interface MainCard {
   id: string;
@@ -66,7 +67,7 @@ export class WalletService {
   }
 
   addCard(card: Omit<MainCard, 'id'>): MainCard {
-    const created = { ...card, id: crypto.randomUUID() };
+    const created = { ...card, id: generateUuid() };
     this.cards.update((cards) => [...cards, created]);
     if (!this.defaultCardId()) this.defaultCardId.set(created.id);
     this.persistCards();
@@ -116,7 +117,7 @@ export class WalletService {
   private pushMovement(amount: number, movement: WalletMovementInput): void {
     this.movements.update((list) => [
       {
-        id: crypto.randomUUID(),
+        id: generateUuid(),
         type: movement.type,
         amount,
         date: new Date().toISOString(),

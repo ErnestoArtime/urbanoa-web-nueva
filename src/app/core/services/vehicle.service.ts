@@ -1,5 +1,6 @@
 import { computed, Injectable, signal } from '@angular/core';
 import { MOCK_VEHICLES, type Vehicle } from '../../shared/mock-data';
+import { generateUuid } from '../utils/generate-uuid';
 
 @Injectable({ providedIn: 'root' })
 export class VehicleService {
@@ -14,7 +15,7 @@ export class VehicleService {
   }
 
   add(input: Omit<Vehicle, 'id'>): Vehicle {
-    const vehicle = { ...input, id: crypto.randomUUID() };
+    const vehicle = { ...input, id: generateUuid() };
     this.state.update((vehicles) => [...vehicles.map((item) => (vehicle.isDefault ? { ...item, isDefault: false } : item)), vehicle]);
     this.persist();
     return vehicle;
