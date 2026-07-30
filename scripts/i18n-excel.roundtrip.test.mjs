@@ -288,6 +288,19 @@ try {
     throw new Error('El export no conservó el encabezado ni el ajuste de texto de la plantilla.');
   }
   const completeSummary = completeWorkbook.getWorksheet('Resumen');
+  if (completeSummary.rowCount !== completeBefore.get('es').size + 1) {
+    throw new Error(`Resumen contiene ${completeSummary.rowCount} filas; esperaba encabezado + ${completeBefore.get('es').size} claves.`);
+  }
+  const sectionRows = completeSummary.getColumn(1).values.filter((value) => /^===/.test(String(value ?? '').trim()));
+  if (sectionRows.length) {
+    throw new Error(`Resumen contiene ${sectionRows.length} separadores internos inesperados.`);
+  }
+  const pendingRules = completeWorkbook.getWorksheet('Autenticación').conditionalFormattings.flatMap((formatting) => formatting.rules);
+  for (const language of ['eu', 'fr', 'uk']) {
+    if (!pendingRules.some((rule) => rule.type === 'expression' && rule.formulae?.some((formula) => formula.includes(`"${language}_"`)))) {
+      throw new Error(`El export perdió el resaltado condicional para ${language}_.`);
+    }
+  }
   const completeHeaders = new Map();
   completeSummary.getRow(1).eachCell((cell, column) => {
     completeHeaders.set(

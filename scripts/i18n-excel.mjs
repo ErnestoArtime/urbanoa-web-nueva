@@ -526,6 +526,21 @@ function configuredSheetForKey(key) {
   return matches[0].sheet;
 }
 
+function excelColumnName(columnNumber) {
+  let value = columnNumber;
+  let name = '';
+  while (value > 0) {
+    value -= 1;
+    name = String.fromCharCode(65 + (value % 26)) + name;
+    value = Math.floor(value / 26);
+  }
+  return name;
+}
+
+function excelString(value) {
+  return `"${String(value).replaceAll('"', '""')}"`;
+}
+
 async function readExcelRows(input) {
   const workbook = new ExcelJS.Workbook();
   await workbook.xlsx.readFile(input);
@@ -880,20 +895,55 @@ async function exportWorkbook(options) {
     }
   };
   const languageValues = (key) => languages.map((language) => catalogues.get(language).flat.get(key) ?? '');
+  const refreshPendingFormatting = (sheet, rowCount) => {
+    // Algunas plantillas guardan `beginsWith` sin el campo `text`; ExcelJS
+    // puede leerlas, pero al escribir deja reglas vacías. Sustituir solo esas
+    // reglas por expresiones completas conserva cualquier otro formato.
+    sheet.removeConditionalFormatting((rule) => rule.type === 'beginsWith' && !rule.text);
+    if (rowCount <= 1) return;
+    const referenceColumn = excelColumnName(languages.indexOf(config.referenceLanguage) + 2);
+    for (const [languageIndex, language] of languages.entries()) {
+      const column = excelColumnName(languageIndex + 2);
+      const pattern = config.missingTranslationPattern.replaceAll('{language}', language);
+      const segments = pattern.split('{reference}');
+      const expectedValue = segments
+        .map((segment) => excelString(segment))
+        .flatMap((segment, index) => (index < segments.length - 1 ? [segment, `$${referenceColumn}2`] : [segment]))
+        .join('&');
+      sheet.addConditionalFormatting({
+        ref: `${column}2:${column}${rowCount}`,
+        rules: [
+          {
+            type: 'expression',
+            formulae: [`${column}2=${expectedValue}`],
+            style: {
+              fill: {
+                type: 'pattern',
+                pattern: 'solid',
+                bgColor: { argb: 'FFFFF3CD' },
+              },
+              font: { color: { argb: 'FF7A5D00' } },
+            },
+          },
+        ],
+      });
+    }
+  };
   for (const sheet of functionalSheets) {
     replaceAfterHeader(
       sheet,
       keysBySheet.get(sheet.name).map((key) => [key, ...languageValues(key)]),
     );
+    refreshPendingFormatting(sheet, keysBySheet.get(sheet.name).length + 1);
   }
 
-  const summaryRows = [];
-  for (const sheet of functionalSheets) {
-    const sheetKeys = keysBySheet.get(sheet.name);
-    summaryRows.push([`=== ${sheet.name} (${sheetKeys.length} claves) ===`]);
-    for (const key of sheetKeys) summaryRows.push([key, ...languageValues(key), sheet.name]);
+  const sheetForKey = new Map();
+  for (const [sheetName, sheetKeys] of keysBySheet) {
+    for (const key of sheetKeys) sheetForKey.set(key, sheetName);
   }
+  const summaryRows = keys.map((key) => [key, ...languageValues(key), sheetForKey.get(key) ?? config.generalSheet]);
   replaceAfterHeader(summary, summaryRows);
+  refreshPendingFormatting(summary, summaryRows.length + 1);
 
   let total = 0;
   const indexRows = [];
