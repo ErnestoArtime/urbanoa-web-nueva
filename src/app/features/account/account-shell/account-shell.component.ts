@@ -10,6 +10,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { APP_BRAND } from '../../../shared/constants/app-brand';
 import { UserService } from '../../../core/services/user.service';
 import { WalletService } from '../../../core/services/wallet.service';
+import { TranslationService } from '../../../core/services/translation.service';
 
 @Component({
   selector: 'app-account-shell',
@@ -223,6 +224,7 @@ import { WalletService } from '../../../core/services/wallet.service';
 export class AccountShellComponent {
   private readonly router = inject(Router);
   private readonly userService = inject(UserService);
+  private readonly translationService = inject(TranslationService);
   readonly walletService = inject(WalletService);
   readonly menu = ACCOUNT_MENU;
   readonly user = this.userService.user;
@@ -263,14 +265,18 @@ export class AccountShellComponent {
   private async shareApp(): Promise<void> {
     if (navigator.share) {
       try {
-        await navigator.share({ title: this.brand.name, text: `Descarga ${this.brand.name}`, url: this.STORE_URL });
+        await navigator.share({
+          title: this.brand.name,
+          text: this.translationService.translate('account.shareText', { brand: this.brand.name }),
+          url: this.STORE_URL,
+        });
       } catch {
         /* user dismissed share */
       }
     } else {
       try {
         await navigator.clipboard.writeText(this.STORE_URL);
-        this.showToast('Enlace copiado');
+        this.showToast(this.translationService.translate('account.linkCopied'));
       } catch {
         /* clipboard unavailable */
       }

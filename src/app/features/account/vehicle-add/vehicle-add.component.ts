@@ -117,7 +117,11 @@ export class VehicleAddComponent {
       this.plateError.set(true);
       return;
     }
-    this.vehicleService.add({ plate, isDefault: this.favorite(), label: this.foreignPlate() ? 'Matrícula extranjera' : undefined });
+    this.vehicleService.add({
+      plate,
+      isDefault: this.favorite(),
+      label: this.foreignPlate() ? 'account.vehicle.foreignPlate' : undefined,
+    });
     this.saved.set(true);
   }
 

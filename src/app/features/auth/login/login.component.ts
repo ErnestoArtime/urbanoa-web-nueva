@@ -2,26 +2,28 @@ import { Component, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { APP_BRAND } from '../../../shared/constants/app-brand';
 import { LucideEye, LucideEyeOff } from '@lucide/angular';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 
 @Component({
   selector: 'app-login',
-  imports: [RouterLink, LucideEye, LucideEyeOff],
+  imports: [RouterLink, LucideEye, LucideEyeOff, TranslatePipe],
   template: `
     <main class="auth-page apk-auth-page">
       <section class="auth-panel">
         <img src="/assets/brand/arinpark-logo.png" [alt]="brand.name" class="apk-auth-logo" />
-        <h1>Iniciar sesión</h1>
-        <p class="auth-intro">Accede a tu cuenta para gestionar tus estacionamientos.</p>
+        <h1>{{ 'auth.login.title' | translate }}</h1>
+        <p class="auth-intro">{{ 'auth.login.subtitle' | translate }}</p>
         <label class="outlined-field"
-          ><span>Correo electrónico</span><input type="email" placeholder="xxx@yyy.zzz" autocomplete="email"
+          ><span>{{ 'auth.login.email' | translate }}</span
+          ><input type="email" placeholder="xxx@yyy.zzz" autocomplete="email"
         /></label>
         <label class="outlined-field"
-          ><span>Contraseña</span>
+          ><span>{{ 'auth.login.password' | translate }}</span>
           <div class="password-field">
             <input [type]="showPassword() ? 'text' : 'password'" placeholder="••••••••" autocomplete="current-password" /><button
               type="button"
               (click)="togglePassword()"
-              aria-label="Mostrar u ocultar contraseña"
+              [attr.aria-label]="'auth.togglePassword' | translate"
             >
               @if (showPassword()) {
                 <svg lucideEyeOff size="20"></svg>
@@ -30,9 +32,12 @@ import { LucideEye, LucideEyeOff } from '@lucide/angular';
               }
             </button></div
         ></label>
-        <a routerLink="/auth/reset-password" class="recover-link">¿Olvidaste tu contraseña?</a>
-        <a routerLink="/app" class="btn btn-primary btn-block login-button">Iniciar sesión</a>
-        <p class="register-link">¿No tienes cuenta? <a routerLink="/auth/register">Regístrate</a></p>
+        <a routerLink="/auth/reset-password" class="recover-link">{{ 'auth.login.forgotPassword' | translate }}</a>
+        <a routerLink="/app" class="btn btn-primary btn-block login-button">{{ 'auth.login.title' | translate }}</a>
+        <p class="register-link">
+          {{ 'auth.login.noAccount' | translate }}
+          <a routerLink="/auth/register">{{ 'auth.login.register' | translate }}</a>
+        </p>
       </section>
     </main>
   `,

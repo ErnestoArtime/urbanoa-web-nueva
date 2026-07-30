@@ -67,26 +67,31 @@ import { VehicleService } from '../../core/services/vehicle.service';
 
         <div class="dashboard-col-right">
           <app-vehicle-summary-card [vehicle]="vehicle()" />
-          <app-wallet-summary-card [balance]="walletService.balance()" [mainCard]="walletService.mainCard" [hasCards]="walletService.cards().length > 0" (recharge)="onRecharge()" />
+          <app-wallet-summary-card
+            [balance]="walletService.balance()"
+            [mainCard]="walletService.mainCard"
+            [hasCards]="walletService.cards().length > 0"
+            (recharge)="onRecharge()"
+          />
           <app-profile-progress-card />
         </div>
       </div>
       @if (unparked()) {
         <app-result-modal
           type="unpark"
-          title="Aparcamiento finalizado"
-          message="La devolución de saldo se ha añadido al monedero."
-          primaryText="Aceptar"
+          [title]="'parking.ended' | translate"
+          [message]="'dashboard.unparkSuccessDetail' | translate"
+          [primaryText]="'common.accept' | translate"
           (primaryAction)="unparked.set(false)"
         />
       }
       @if (confirmUnpark()) {
         <app-result-modal
           type="confirmation"
-          title="Desaparcar"
-          message="Al dejar el aparcamiento recibirás un reembolso de EUR3.70."
-          primaryText="Aceptar"
-          secondaryText="Cancelar"
+          [title]="'dashboard.unpark' | translate"
+          [message]="'dashboard.unparkConfirmDetail' | translate: { amount: 'EUR3.70' }"
+          [primaryText]="'common.accept' | translate"
+          [secondaryText]="'common.cancel' | translate"
           (primaryAction)="confirmUnparkAction()"
           (secondaryAction)="confirmUnpark.set(false)"
         />

@@ -9,6 +9,7 @@ import { ParkingFlowQuery, readParkingFlowQuery } from '../parking-flow.model';
 import { VehicleService } from '../../../core/services/vehicle.service';
 import { LocationSettingsService } from '../../../core/services/location-settings.service';
 import { ParkingSessionService } from '../../../core/services/parking-session.service';
+import { TranslationService } from '../../../core/services/translation.service';
 
 interface MapParkingZone {
   zoneId: number;
@@ -257,7 +258,9 @@ interface MapParkingZone {
         opacity: 0;
         overflow: hidden;
         pointer-events: none;
-        transition: max-height 180ms ease, opacity 140ms ease;
+        transition:
+          max-height 180ms ease,
+          opacity 140ms ease;
       }
       .vehicle-selector-dropdown.is-open {
         max-height: 18rem;
@@ -517,6 +520,7 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
   private readonly store = inject(ParkingFlowStore);
   private readonly vehicleService = inject(VehicleService);
   private readonly locationSettings = inject(LocationSettingsService);
+  private readonly translationService = inject(TranslationService);
   private readonly query: ParkingFlowQuery = this.store.hasMinimumParkingData() ? this.store.fromStore() : readParkingFlowQuery(this.route);
   private map?: L.Map;
   private zoneLayer?: L.FeatureGroup;
@@ -551,7 +555,9 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
       this.availableVehicles()[0] ??
       null,
   );
-  readonly canStartParking = computed(() => Boolean(this.selectedZone() && this.selectedVehicle() && !this.isParkedIn(this.selectedVehicle()!)));
+  readonly canStartParking = computed(() =>
+    Boolean(this.selectedZone() && this.selectedVehicle() && !this.isParkedIn(this.selectedVehicle()!)),
+  );
   readonly showVehicleSelector = signal(false);
 
   toggleVehicleSelector(): void {
@@ -744,7 +750,7 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
       this.cleanLocationName(name)
         .replace(/^Z_\d+_/i, '')
         .replaceAll('_', ' ')
-        .trim() || 'Zona regulada'
+        .trim() || this.translationService.translate('parking.map.defaultZoneName')
     );
   }
 

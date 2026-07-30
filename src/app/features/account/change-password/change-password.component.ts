@@ -17,7 +17,7 @@ import { LucideEye, LucideEyeOff } from '@lucide/angular';
             <input class="form-input" [type]="showCurrent() ? 'text' : 'password'" (input)="current.set(valueOf($event))" /><button
               type="button"
               (click)="toggleVisibility('current')"
-              [attr.aria-label]="showCurrent() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+              [attr.aria-label]="(showCurrent() ? 'auth.hidePassword' : 'auth.showPassword') | translate"
             >
               @if (showCurrent()) {
                 <svg lucideEyeOff size="21"></svg>
@@ -33,7 +33,7 @@ import { LucideEye, LucideEyeOff } from '@lucide/angular';
             <input class="form-input" [type]="showNext() ? 'text' : 'password'" (input)="next.set(valueOf($event))" /><button
               type="button"
               (click)="toggleVisibility('next')"
-              [attr.aria-label]="showNext() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+              [attr.aria-label]="(showNext() ? 'auth.hidePassword' : 'auth.showPassword') | translate"
             >
               @if (showNext()) {
                 <svg lucideEyeOff size="21"></svg>
@@ -54,7 +54,7 @@ import { LucideEye, LucideEyeOff } from '@lucide/angular';
             /><button
               type="button"
               (click)="toggleVisibility('confirmation')"
-              [attr.aria-label]="showConfirmation() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+              [attr.aria-label]="(showConfirmation() ? 'auth.hidePassword' : 'auth.showPassword') | translate"
             >
               @if (showConfirmation()) {
                 <svg lucideEyeOff size="21"></svg>
@@ -69,9 +69,9 @@ import { LucideEye, LucideEyeOff } from '@lucide/angular';
       @if (result(); as state) {
         <app-result-modal
           [type]="state"
-          [title]="state === 'success' ? 'Contraseña actualizada' : 'No se pudo actualizar la contraseña'"
-          [message]="state === 'success' ? 'La contraseña se ha cambiado correctamente.' : errorMessage()"
-          primaryText="Aceptar"
+          [title]="(state === 'success' ? 'account.changePassword.successTitle' : 'account.changePassword.errorTitle') | translate"
+          [message]="(state === 'success' ? 'account.changePassword.successDetail' : errorMessage()) | translate"
+          [primaryText]="'common.accept' | translate"
           (primaryAction)="result.set(null)"
         />
       }
@@ -123,7 +123,7 @@ export class AccountChangePasswordComponent {
   readonly showNext = signal(false);
   readonly showConfirmation = signal(false);
   readonly result = signal<'success' | 'error' | null>(null);
-  readonly errorMessage = signal('');
+  readonly errorMessage = signal('account.changePassword.requiredFields');
 
   valueOf(event: Event): string {
     return (event.target as HTMLInputElement).value;
@@ -137,7 +137,7 @@ export class AccountChangePasswordComponent {
   save(): void {
     if (!this.current() || this.next().length < 8 || this.next() !== this.confirmation()) {
       this.errorMessage.set(
-        this.next() !== this.confirmation() ? 'Las contraseñas nuevas no coinciden.' : 'Completa los campos y usa al menos 8 caracteres.',
+        this.next() !== this.confirmation() ? 'account.changePassword.confirmRequired' : 'account.changePassword.requiredFields',
       );
       this.result.set('error');
       return;

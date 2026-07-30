@@ -17,17 +17,19 @@ import { VehicleService } from '../../../core/services/vehicle.service';
         @if (vehicles().length > 0) {
           <ul class="list card" style="padding:0;overflow:hidden">
             @for (v of vehicles(); track v.id) {
-            <a [routerLink]="['/app/account/vehicles/edit', v.id]" class="list-item vehicle-item">
-              <span class="vehicle-icon-wrap"><app-icon name="vehicle" class="vehicle-icon" [size]="22" [stroke]="false" /></span>
-              <div class="list-item-content">
-                <div class="list-item-title">{{ v.plate }}</div>
-                <div class="list-item-subtitle">{{ v.isDefault ? ('account.vehicleFavorite' | translate) : (v.label ?? '') }}</div>
-                @if (v.isDefault) {
-                  <span class="badge badge-primary">{{ 'account.cardPrimary' | translate }}</span>
-                }
-              </div>
-              <span class="list-item-chevron">›</span>
-            </a>
+              <a [routerLink]="['/app/account/vehicles/edit', v.id]" class="list-item vehicle-item">
+                <span class="vehicle-icon-wrap"><app-icon name="vehicle" class="vehicle-icon" [size]="22" [stroke]="false" /></span>
+                <div class="list-item-content">
+                  <div class="list-item-title">{{ v.plate }}</div>
+                  <div class="list-item-subtitle">
+                    {{ v.isDefault ? ('account.vehicleFavorite' | translate) : (v.label ?? '' | translate) }}
+                  </div>
+                  @if (v.isDefault) {
+                    <span class="badge badge-primary">{{ 'account.cardPrimary' | translate }}</span>
+                  }
+                </div>
+                <span class="list-item-chevron">›</span>
+              </a>
             }
           </ul>
         } @else {

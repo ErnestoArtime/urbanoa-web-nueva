@@ -33,9 +33,9 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
       @if (saved()) {
         <app-result-modal
           type="success"
-          title="Notificaciones guardadas"
-          message="Tus preferencias de notificación se han actualizado correctamente."
-          primaryText="Aceptar"
+          [title]="'account.notifications.successTitle' | translate"
+          [message]="'account.notifications.successDetail' | translate"
+          [primaryText]="'common.accept' | translate"
           (primaryAction)="saved.set(false)"
         />
       }

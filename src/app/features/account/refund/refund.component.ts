@@ -17,10 +17,10 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
         <p class="text-muted">{{ 'account.refund.availableBalance' | translate }}</p>
         <strong class="available-balance">{{ walletService.balance() | number: '1.2-2' }} €</strong>
         <p class="refund-explanation">
-          Se solicitará al servicio el saldo que puede devolverse. El importe depende de las recargas realizadas durante el último año.
+          {{ 'account.refund.explanation' | translate }}
         </p>
         <section class="refund-card-selector">
-          <strong>Tarjeta destino</strong>
+          <strong>{{ 'account.refund.destinationCard' | translate }}</strong>
           @for (card of walletService.cards(); track card.id) {
             <label class="payment-card-option" [class.selected]="selectedCardId() === card.id">
               <input
@@ -34,7 +34,7 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
               <small>{{ card.cardholderName }} · {{ card.expiryDate }}</small>
             </label>
           } @empty {
-            <p class="text-muted">Añade una tarjeta para retirar saldo del monedero.</p>
+            <p class="text-muted">{{ 'account.refund.noCard' | translate }}</p>
           }
         </section>
         <button
@@ -43,16 +43,16 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
           [disabled]="requesting() || walletService.balance() <= 0 || !selectedCard()"
           (click)="requestRefund()"
         >
-          {{ requesting() ? 'Calculando saldo…' : 'Solicitar devolución' }}
+          {{ (requesting() ? 'account.refund.calculating' : 'account.refund.request') | translate }}
         </button>
       </div>
       @if (refundQuote(); as amount) {
         <app-result-modal
           type="confirmation"
-          title="Confirmar devolución"
-          [message]="'Se devolverán ' + formatAmount(amount) + ' €. Esta cantidad ha sido calculada por el servicio.'"
-          primaryText="Confirmar devolución"
-          secondaryText="Cancelar"
+          [title]="'account.refund.confirm' | translate"
+          [message]="'account.refund.confirmDetail' | translate: { amount: formatAmount(amount) }"
+          [primaryText]="'account.refund.confirm' | translate"
+          [secondaryText]="'common.cancel' | translate"
           (primaryAction)="confirmRefund()"
           (secondaryAction)="refundQuote.set(null)"
         />
@@ -60,9 +60,9 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
       @if (done()) {
         <app-result-modal
           type="success"
-          title="Devolución solicitada"
-          [message]="'La devolución de ' + formatAmount(refundedAmount()) + ' € se ha registrado correctamente.'"
-          primaryText="Aceptar"
+          [title]="'account.refund.successTitle' | translate"
+          [message]="'account.refund.successDetail' | translate: { amount: formatAmount(refundedAmount()) }"
+          [primaryText]="'common.accept' | translate"
           (primaryAction)="done.set(false)"
         />
       }

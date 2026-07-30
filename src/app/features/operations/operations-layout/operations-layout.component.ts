@@ -96,7 +96,7 @@ import { ParkingTicketCardComponent } from '../../../shared/components/parking-t
 
         <ul class="list history-list">
           @for (group of groupedHistory(); track group.label) {
-            <li class="history-group-label">{{ group.label }}</li>
+            <li class="history-group-label">{{ group.label | translate }}</li>
             @for (op of group.items; track op.id) {
               <a
                 [routerLink]="['/app/operations/detail', op.id]"
@@ -109,7 +109,9 @@ import { ParkingTicketCardComponent } from '../../../shared/components/parking-t
                   <div class="list-item-title" [class.finish-op-title]="isFinishParking(op)">
                     {{ OPERATION_TYPE_LABELS[op.type] | translate }}
                   </div>
-                  <div class="list-item-subtitle">{{ op.date }}{{ operationTime(op) ? ' · ' + operationTime(op) : '' }}{{ op.zone ? ' — ' + op.zone : '' }}</div>
+                  <div class="list-item-subtitle">
+                    {{ op.date }}{{ operationTime(op) ? ' · ' + operationTime(op) : '' }}{{ op.zone ? ' — ' + op.zone : '' }}
+                  </div>
                   @if (op.plate) {
                     <div class="operation-meta">
                       {{ op.plate }}
@@ -136,19 +138,19 @@ import { ParkingTicketCardComponent } from '../../../shared/components/parking-t
     @if (unparked()) {
       <app-result-modal
         type="unpark"
-        title="Aparcamiento finalizado"
-        message="La devolución de saldo se ha añadido al monedero."
-        primaryText="Aceptar"
+        [title]="'parking.ended' | translate"
+        [message]="'dashboard.unparkSuccessDetail' | translate"
+        [primaryText]="'common.accept' | translate"
         (primaryAction)="unparked.set(false)"
       />
     }
     @if (confirmUnpark()) {
       <app-result-modal
         type="confirmation"
-        title="Desaparcar"
-        message="Al dejar el aparcamiento recibirás un reembolso de EUR3.70."
-        primaryText="Aceptar"
-        secondaryText="Cancelar"
+        [title]="'dashboard.unpark' | translate"
+        [message]="'dashboard.unparkConfirmDetail' | translate: { amount: 'EUR3.70' }"
+        [primaryText]="'common.accept' | translate"
+        [secondaryText]="'common.cancel' | translate"
         (primaryAction)="confirmUnparkAction()"
         (secondaryAction)="confirmUnpark.set(false)"
       />
@@ -452,25 +454,25 @@ export class OperationsLayoutComponent {
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
     const groups: Record<string, Operation[]> = {
-      Hoy: [],
-      Ayer: [],
-      'Esta semana': [],
-      'Este mes': [],
-      Anteriores: [],
+      'ops.today': [],
+      'ops.yesterday': [],
+      'ops.thisWeek': [],
+      'ops.thisMonth': [],
+      'ops.previous': [],
     };
 
     for (const op of list) {
       const d = this.parseDate(op.date);
       if (d >= startOfToday) {
-        groups['Hoy'].push(op);
+        groups['ops.today'].push(op);
       } else if (d >= startOfYesterday) {
-        groups['Ayer'].push(op);
+        groups['ops.yesterday'].push(op);
       } else if (d >= startOfWeek) {
-        groups['Esta semana'].push(op);
+        groups['ops.thisWeek'].push(op);
       } else if (d >= startOfMonth) {
-        groups['Este mes'].push(op);
+        groups['ops.thisMonth'].push(op);
       } else {
-        groups['Anteriores'].push(op);
+        groups['ops.previous'].push(op);
       }
     }
 

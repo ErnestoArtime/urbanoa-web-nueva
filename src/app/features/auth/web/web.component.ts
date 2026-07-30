@@ -17,7 +17,7 @@ import { WebContentComponent } from '../../account/web-content/web-content.compo
 export class WebComponent {
   private readonly route = inject(ActivatedRoute);
 
-  readonly title = this.route.snapshot.paramMap.get('type') === 'privacy' ? 'Política de privacidad' : 'Términos y condiciones';
+  readonly title = this.route.snapshot.paramMap.get('type') === 'privacy' ? 'account.menu.privacy' : 'account.menu.terms';
   readonly url =
     this.route.snapshot.paramMap.get('type') === 'privacy' ? '/external-content/arinpark/es.html' : '/external-content/arinpark/CU_es.html';
 }

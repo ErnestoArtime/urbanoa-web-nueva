@@ -20,17 +20,17 @@ export const ACCOUNT_ROUTES: Routes = [
       {
         path: 'help',
         loadComponent: () => import('./web-content/web-content.component').then((m) => m.WebContentComponent),
-        data: { title: 'Ayuda', url: '/external-content/Arinpark/ArinparkFAQ-ESP.html', backLink: '/app/account' },
+        data: { title: 'account.menu.help', url: '/external-content/Arinpark/ArinparkFAQ-ESP.html', backLink: '/app/account' },
       },
       {
         path: 'terms-and-conditions',
         loadComponent: () => import('./web-content/web-content.component').then((m) => m.WebContentComponent),
-        data: { title: 'Términos y condiciones', url: '/external-content/arinpark/CU_es.html', backLink: '/app/account' },
+        data: { title: 'account.menu.terms', url: '/external-content/arinpark/CU_es.html', backLink: '/app/account' },
       },
       {
         path: 'privacy-policy',
         loadComponent: () => import('./web-content/web-content.component').then((m) => m.WebContentComponent),
-        data: { title: 'Política de privacidad', url: '/external-content/arinpark/es.html', backLink: '/app/account' },
+        data: { title: 'account.menu.privacy', url: '/external-content/arinpark/es.html', backLink: '/app/account' },
       },
       { path: 'about', loadComponent: () => import('./about/about.component').then((m) => m.AccountAboutComponent) },
       { path: 'support', loadComponent: () => import('./support/support.component').then((m) => m.AccountSupportComponent) },

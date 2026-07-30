@@ -29,7 +29,7 @@ type CardBrand = 'visa' | 'mastercard' | 'amex' | null;
             (input)="cardholder.set(valueOf($event))"
           />
           @if (submitted() && !cardholder().trim()) {
-            <p class="form-error">El titular es obligatorio.</p>
+            <p class="form-error">{{ 'account.addCard.cardholderRequired' | translate }}</p>
           }
         </div>
 
@@ -55,7 +55,7 @@ type CardBrand = 'visa' | 'mastercard' | 'amex' | null;
               </span>
             }
             @if (rawCardNumber().length >= 15) {
-              <span class="valid-card" aria-label="Número de tarjeta válido">✓</span>
+              <span class="valid-card" [attr.aria-label]="'account.addCard.validNumber' | translate">✓</span>
             }
           </div>
         </div>
@@ -103,7 +103,7 @@ type CardBrand = 'visa' | 'mastercard' | 'amex' | null;
             maxlength="4"
           />
           @if (submitted() && cvc().length < 3) {
-            <p class="form-error">Introduce un CVC válido.</p>
+            <p class="form-error">{{ 'account.addCard.cvcInvalid' | translate }}</p>
           }
         </div>
 
@@ -113,7 +113,7 @@ type CardBrand = 'visa' | 'mastercard' | 'amex' | null;
         </div>
 
         @if (submitted() && !valid()) {
-          <p class="form-error form-summary">Revisa los campos obligatorios de la tarjeta.</p>
+          <p class="form-error form-summary">{{ 'account.addCard.requiredFields' | translate }}</p>
         }
         <button type="button" class="btn btn-primary btn-block" (click)="save()">
           {{ 'account.addCard.button' | translate }}
@@ -129,7 +129,7 @@ type CardBrand = 'visa' | 'mastercard' | 'amex' | null;
           </div>
           <span class="bank-name">{{ 'account.addCard.byBank' | translate }}</span>
         </div>
-        <div class="accepted-cards" aria-label="Tarjetas aceptadas">
+        <div class="accepted-cards" [attr.aria-label]="'account.addCard.acceptedCards' | translate">
           <img src="/assets/payment/visa.svg" alt="Visa" />
           <img src="/assets/payment/mastercard.svg" alt="Mastercard" />
           <span>AMEX</span><span>DINERS</span><span>JCB</span><span>UnionPay</span>
@@ -143,9 +143,9 @@ type CardBrand = 'visa' | 'mastercard' | 'amex' | null;
       @if (saved()) {
         <app-result-modal
           type="success"
-          title="Tarjeta añadida"
-          message="La tarjeta se ha guardado correctamente."
-          primaryText="Volver a métodos de pago"
+          [title]="'account.addCard.successTitle' | translate"
+          [message]="'account.addCard.successDetail' | translate"
+          [primaryText]="'account.addCard.backToPaymentMethods' | translate"
           (primaryAction)="goBack()"
         />
       }

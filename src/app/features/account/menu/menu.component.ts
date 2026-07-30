@@ -18,6 +18,7 @@ import { VehicleEditComponent } from '../vehicle-edit/vehicle-edit.component';
 import { PaymentAddComponent } from '../payment-add/payment-add.component';
 import { WebContentComponent } from '../web-content/web-content.component';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { TranslationService } from '../../../core/services/translation.service';
 
 import { APP_BRAND } from '../../../shared/constants/app-brand';
 
@@ -77,17 +78,19 @@ const STORE_URL = 'https://play.google.com/store/apps/details?id=com.gerteksa.r.
           }
         </ul>
         <div class="account-actions">
-          <a routerLink="/auth/login" class="btn btn-ghost btn-block">Cerrar sesión</a>
-          <button type="button" class="btn btn-danger btn-block" (click)="select('delete-account')">Eliminar cuenta</button>
+          <a routerLink="/auth/login" class="btn btn-ghost btn-block">{{ 'account.logout' | translate }}</a>
+          <button type="button" class="btn btn-danger btn-block" (click)="select('delete-account')">
+            {{ 'account.deleteAccount' | translate }}
+          </button>
         </div>
       </section>
       <aside class="account-detail">
         @if (!selected()) {
-          <div class="detail-placeholder">Selecciona una opción para ver y editar sus datos</div>
+          <div class="detail-placeholder">{{ 'account.selectOption' | translate }}</div>
         } @else {
           <div class="detail-toolbar">
             <span class="back-btn" (click)="goBack()">←</span>
-            <strong>{{ selectedLabel() }}</strong>
+            <strong>{{ selectedLabel() | translate }}</strong>
             <span class="detail-toolbar-actions"></span>
           </div>
           <div class="detail-content">
@@ -105,7 +108,11 @@ const STORE_URL = 'https://play.google.com/store/apps/details?id=com.gerteksa.r.
                 <app-account-tax-data />
               }
               @case ('help') {
-                <app-web-content title="Ayuda" backLink="/app/account" url="/external-content/Arinpark/ArinparkFAQ-ESP.html" />
+                <app-web-content
+                  [title]="'account.menu.help' | translate"
+                  backLink="/app/account"
+                  url="/external-content/Arinpark/ArinparkFAQ-ESP.html"
+                />
               }
               @case ('about') {
                 <app-account-about />
@@ -117,15 +124,23 @@ const STORE_URL = 'https://play.google.com/store/apps/details?id=com.gerteksa.r.
                 <app-account-support-success />
               }
               @case ('terms-and-conditions') {
-                <app-web-content title="Términos y condiciones" backLink="/app/account" url="/external-content/arinpark/CU_es.html" />
+                <app-web-content
+                  [title]="'account.menu.terms' | translate"
+                  backLink="/app/account"
+                  url="/external-content/arinpark/CU_es.html"
+                />
               }
               @case ('privacy-policy') {
-                <app-web-content title="Política de privacidad" backLink="/app/account" url="/external-content/arinpark/es.html" />
+                <app-web-content
+                  [title]="'account.menu.privacy' | translate"
+                  backLink="/app/account"
+                  url="/external-content/arinpark/es.html"
+                />
               }
               @case ('delete-account') {
                 <div class="page account-static-page">
-                  <h1 class="page-title">Eliminar cuenta</h1>
-                  <p>Esta acción eliminaría tu cuenta de forma permanente tras confirmación.</p>
+                  <h1 class="page-title">{{ 'account.deleteAccount' | translate }}</h1>
+                  <p>{{ 'account.deleteAccountDetail' | translate }}</p>
                 </div>
               }
               @case ('change-password') {
@@ -144,7 +159,7 @@ const STORE_URL = 'https://play.google.com/store/apps/details?id=com.gerteksa.r.
                           <div class="list-item-content">
                             <div class="list-item-title">{{ v.plate }}</div>
                             <div class="list-item-subtitle">
-                              {{ v.isDefault ? ('account.vehicleFavorite' | translate) : (v.label ?? '') }}
+                              {{ v.isDefault ? ('account.vehicleFavorite' | translate) : (v.label ?? '' | translate) }}
                             </div>
                           </div>
                           @if (v.isDefault) {
@@ -411,6 +426,7 @@ const STORE_URL = 'https://play.google.com/store/apps/details?id=com.gerteksa.r.
 })
 export class AccountMenuComponent {
   private readonly router = inject(Router);
+  private readonly translationService = inject(TranslationService);
   readonly walletService = inject(WalletService);
   readonly user = MOCK_USER;
   readonly menu = ACCOUNT_MENU;
@@ -502,14 +518,18 @@ export class AccountMenuComponent {
   private async shareApp(): Promise<void> {
     if (navigator.share) {
       try {
-        await navigator.share({ title: this.brand.name, text: `Descarga ${this.brand.name}`, url: STORE_URL });
+        await navigator.share({
+          title: this.brand.name,
+          text: this.translationService.translate('account.shareText', { brand: this.brand.name }),
+          url: STORE_URL,
+        });
       } catch {
         /* user dismissed share */
       }
     } else {
       try {
         await navigator.clipboard.writeText(STORE_URL);
-        this.showToast('Enlace copiado');
+        this.showToast(this.translationService.translate('account.linkCopied'));
       } catch {
         /* clipboard unavailable */
       }

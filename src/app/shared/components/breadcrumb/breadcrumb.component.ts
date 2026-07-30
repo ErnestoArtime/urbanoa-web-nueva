@@ -8,7 +8,7 @@ import { TranslationService } from '../../../core/services/translation.service';
   imports: [RouterLink],
   template: `
     @if (breadcrumbs().length > 0) {
-      <nav class="breadcrumb" aria-label="Breadcrumb">
+      <nav class="breadcrumb" [attr.aria-label]="translationService.translate('common.breadcrumb')">
         @for (crumb of breadcrumbs(); track $index; let last = $last) {
           @if (!last && crumb.path) {
             <a [routerLink]="crumb.path" class="breadcrumb-link">{{ labelText(crumb.label) }}</a>
@@ -52,7 +52,7 @@ import { TranslationService } from '../../../core/services/translation.service';
 })
 export class AppBreadcrumbComponent {
   private breadcrumbService = inject(BreadcrumbService);
-  private readonly translationService = inject(TranslationService);
+  readonly translationService = inject(TranslationService);
   readonly breadcrumbs = this.breadcrumbService.breadcrumbs$;
 
   labelText(label: string): string {

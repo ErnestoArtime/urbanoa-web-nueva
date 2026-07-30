@@ -19,7 +19,7 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
         <h1 class="page-title">{{ 'account.menu.paymentMethods' | translate }}</h1>
         <div class="wallet-card payment-wallet-card mb-2">
           <div class="wallet-section">
-            <strong>Mi monedero</strong>
+            <strong>{{ 'account.wallet' | translate }}</strong>
             <p class="wallet-balance-large">{{ walletService.balance() | number: '1.2-2' }} €</p>
           </div>
         </div>
@@ -46,34 +46,33 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
                 type="button"
                 class="kebab-button"
                 (click)="toggleCardMenu(card.id)"
-                [attr.aria-label]="'Opciones de ' + card.brand + ' terminada en ' + card.last4"
+                [attr.aria-label]="'account.cardOptions' | translate: { brand: card.brand, last4: card.last4 }"
                 [attr.aria-expanded]="activeCardMenu() === card.id"
               >
                 ⋮
               </button>
               @if (activeCardMenu() === card.id) {
                 <div class="card-menu">
-                  <button type="button" (click)="rechargeCard(card.id)"><span>＋</span> Recargar monedero</button>
-                  <button type="button" (click)="refundToCard(card.id)"><span>↗</span> Retirar saldo</button>
+                  <button type="button" (click)="rechargeCard(card.id)"><span>＋</span> {{ 'account.recharge.button' | translate }}</button>
+                  <button type="button" (click)="refundToCard(card.id)"><span>↗</span> {{ 'account.withdrawBalance' | translate }}</button>
                   @if (walletService.defaultCardId() !== card.id) {
-                    <button type="button" (click)="setAsDefault(card.id)"><span>☆</span> Marcar como tarjeta principal</button>
+                    <button type="button" (click)="setAsDefault(card.id)"><span>☆</span> {{ 'account.setPrimaryCard' | translate }}</button>
                   }
-                  <button type="button" class="delete-option" (click)="requestDelete(card.id)"><span>▣</span> Eliminar tarjeta</button>
+                  <button type="button" class="delete-option" (click)="requestDelete(card.id)">
+                    <span>▣</span> {{ 'account.deleteCard' | translate }}
+                  </button>
                 </div>
               }
             </div>
           }
           @if (walletService.cards().length === 0) {
-            <p class="empty-cards">No hay tarjetas guardadas.</p>
+            <p class="empty-cards">{{ 'account.cardsEmpty' | translate }}</p>
           }
         </div>
         <div class="payment-actions mt-2">
-          <button
-            type="button"
-            class="btn btn-primary btn-sm"
-            [disabled]="walletService.cards().length === 0"
-            (click)="goToRecharge()"
-          >{{ 'dashboard.recharge' | translate }}</button>
+          <button type="button" class="btn btn-primary btn-sm" [disabled]="walletService.cards().length === 0" (click)="goToRecharge()">
+            {{ 'dashboard.recharge' | translate }}
+          </button>
           <a routerLink="/app/account/payment-methods/refund" class="btn btn-secondary btn-sm">{{
             'account.withdrawBalance' | translate
           }}</a>
@@ -86,10 +85,10 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
     @if (cardToDelete()) {
       <app-result-modal
         type="confirmation"
-        title="Eliminar tarjeta"
-        message="La tarjeta dejará de estar disponible para pagos, recargas y retiradas."
-        primaryText="Eliminar"
-        secondaryText="Cancelar"
+        [title]="'account.deleteCard' | translate"
+        [message]="'account.deleteCardDetail' | translate"
+        [primaryText]="'common.delete' | translate"
+        [secondaryText]="'common.cancel' | translate"
         (primaryAction)="confirmDelete()"
         (secondaryAction)="cardToDelete.set(null)"
       />

@@ -2,32 +2,39 @@ import { Component, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { APP_BRAND } from '../../../shared/constants/app-brand';
 import { LucideEye, LucideEyeOff } from '@lucide/angular';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 
 @Component({
   selector: 'app-register',
-  imports: [RouterLink, LucideEye, LucideEyeOff],
+  imports: [RouterLink, LucideEye, LucideEyeOff, TranslatePipe],
   template: `
     <main class="auth-page register-page">
       <section class="register-panel">
         <img src="/assets/brand/arinpark-logo.png" [alt]="brand.name" class="register-logo" />
         <header>
-          <a routerLink="/auth/login" aria-label="Volver">←</a>
+          <a routerLink="/auth/login" [attr.aria-label]="'common.back' | translate">←</a>
           <div>
-            <h1>Registro</h1>
-            <p>Crea tu cuenta {{ brand.name }}</p>
+            <h1>{{ 'auth.register.title' | translate }}</h1>
+            <p>{{ 'auth.register.subtitle' | translate: { brand: brand.name } }}</p>
           </div>
         </header>
         <div class="form-grid">
-          <label class="outlined-field"><span>Matrícula</span><input placeholder="1234 ABC" /></label>
-          <label class="foreign-check"><input type="checkbox" /> Matrícula extranjera</label>
-          <label class="outlined-field"><span>Correo electrónico</span><input type="email" placeholder="xxx@yyy.zzz" /></label>
           <label class="outlined-field"
-            ><span>Contraseña</span>
+            ><span>{{ 'auth.register.plate' | translate }}</span
+            ><input placeholder="1234 ABC"
+          /></label>
+          <label class="foreign-check"><input type="checkbox" /> {{ 'auth.register.foreignPlate' | translate }}</label>
+          <label class="outlined-field"
+            ><span>{{ 'auth.register.email' | translate }}</span
+            ><input type="email" placeholder="xxx@yyy.zzz"
+          /></label>
+          <label class="outlined-field"
+            ><span>{{ 'auth.register.password' | translate }}</span>
             <div class="password-field">
               <input [type]="showPassword() ? 'text' : 'password'" /><button
                 type="button"
                 (click)="togglePassword()"
-                aria-label="Mostrar u ocultar contraseña"
+                [attr.aria-label]="'auth.togglePassword' | translate"
               >
                 @if (showPassword()) {
                   <svg lucideEyeOff size="20"></svg>
@@ -37,12 +44,12 @@ import { LucideEye, LucideEyeOff } from '@lucide/angular';
               </button></div
           ></label>
           <label class="outlined-field"
-            ><span>Repetir contraseña</span>
+            ><span>{{ 'auth.register.repeatPassword' | translate }}</span>
             <div class="password-field">
               <input [type]="showConfirmation() ? 'text' : 'password'" /><button
                 type="button"
                 (click)="toggleConfirmation()"
-                aria-label="Mostrar u ocultar contraseña"
+                [attr.aria-label]="'auth.togglePassword' | translate"
               >
                 @if (showConfirmation()) {
                   <svg lucideEyeOff size="20"></svg>
@@ -53,12 +60,18 @@ import { LucideEye, LucideEyeOff } from '@lucide/angular';
           ></label>
           <label class="terms-check"
             ><input type="checkbox" /><span
-              >Acepto los <a routerLink="/auth/web/terms">términos y condiciones</a> y la
-              <a routerLink="/auth/web/privacy">política de privacidad</a>.</span
+              >{{ 'auth.register.acceptPrefix' | translate }}
+              <a routerLink="/auth/web/terms">{{ 'auth.register.terms' | translate }}</a>
+              {{ 'auth.register.acceptJoin' | translate }}
+              <a routerLink="/auth/web/privacy">{{ 'auth.register.privacy' | translate }}</a
+              >.</span
             ></label
           >
-          <a routerLink="/auth/register-confirm" class="btn btn-primary btn-block continue-button">Continuar</a>
-          <p class="login-link">¿Ya tienes cuenta? <a routerLink="/auth/login">Iniciar sesión</a></p>
+          <a routerLink="/auth/register-confirm" class="btn btn-primary btn-block continue-button">{{ 'common.continue' | translate }}</a>
+          <p class="login-link">
+            {{ 'auth.register.hasAccount' | translate }}
+            <a routerLink="/auth/login">{{ 'auth.login.title' | translate }}</a>
+          </p>
         </div>
       </section>
     </main>

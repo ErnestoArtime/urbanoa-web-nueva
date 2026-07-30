@@ -3,6 +3,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { DomSanitizer } from '@angular/platform-browser';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { APP_BRAND } from '../../../shared/constants/app-brand';
+import { TranslationService } from '../../../core/services/translation.service';
 
 @Component({
   selector: 'app-web-content',
@@ -25,7 +26,9 @@ import { APP_BRAND } from '../../../shared/constants/app-brand';
           <div class="web-content-error">
             <strong>{{ 'account.webContent.displayError' | translate }}</strong>
             <p class="text-muted">{{ 'account.webContent.error' | translate }}</p>
-            <a [href]="rawUrl()" target="_blank" rel="noopener" class="btn btn-primary">{{ 'account.webContent.openBrowser' | translate }}</a>
+            <a [href]="rawUrl()" target="_blank" rel="noopener" class="btn btn-primary">{{
+              'account.webContent.openBrowser' | translate
+            }}</a>
           </div>
         } @else {
           <iframe [src]="iframeUrl()" (load)="onLoad()" (error)="onError()" [title]="resolvedTitle()" scrolling="yes"></iframe>
@@ -176,6 +179,7 @@ import { APP_BRAND } from '../../../shared/constants/app-brand';
   ],
 })
 export class WebContentComponent {
+  private readonly translationService = inject(TranslationService);
   readonly url = input('/external-content');
   readonly title = input('');
   readonly backLink = input<string | null>(null);
@@ -184,7 +188,10 @@ export class WebContentComponent {
   private readonly sanitizer = inject(DomSanitizer);
   private readonly route = inject(ActivatedRoute);
 
-  readonly resolvedTitle = computed(() => this.title() || this.route.snapshot.data['title'] || '');
+  readonly resolvedTitle = computed(() => {
+    const value = this.title() || this.route.snapshot.data['title'] || '';
+    return value.includes('.') ? this.translationService.translate(value) : value;
+  });
   readonly resolvedBackLink = computed(() => this.backLink() || this.route.snapshot.data['backLink'] || null);
   readonly resolvedUrl = computed(() => {
     const routeUrl = this.route.snapshot.data['url'];
