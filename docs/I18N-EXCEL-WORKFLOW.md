@@ -31,7 +31,18 @@ npm run i18n:sync
 npm run i18n:excel
 ```
 
-El resultado es `docs/traducciones_agrupadas_urbanoa.xlsx`. Conserva las pestañas conocidas, mantiene `Índice` como última hoja, incorpora las claves nuevas a `General` y actualiza las cantidades.
+El resultado es `docs/traducciones_agrupadas_urbanoa.xlsx`. Conserva las pestañas conocidas, mantiene `Índice` como última hoja y actualiza las cantidades. Las claves nuevas se asignan mediante `sheetRules` de `i18n-excel.config.json`; si ninguna regla coincide, se utiliza `General`.
+
+La correspondencia actual es:
+
+- `app.*`, `nav.*`, `layout.*`, `common.*`, `validation.*` y `breadcrumb.*` → `Inicio y comunes`.
+- `auth.*` → `Autenticación`.
+- `onboarding.*` → `Onboarding`.
+- `dashboard.*` → `Dashboard`.
+- `parking.*` → `Aparcar`.
+- `ops.*` → `Operaciones`.
+- `account.*` → `Cuenta`.
+- `payment.*` y `wallet.*` → `Pagos y cartera`.
 
 Hay que cerrar el archivo en Excel antes de regenerarlo para evitar el error `EBUSY`.
 

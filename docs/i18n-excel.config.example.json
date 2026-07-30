@@ -23,5 +23,15 @@
   "dynamicPrefixes": ["status.", "roles."],
   "ignoredKeyPrefixes": [],
   "translationKeyPrefixes": [],
-  "ignoredDirectLiterals": []
+  "ignoredDirectLiterals": [],
+  "sheetRules": [
+    {
+      "sheet": "Autenticación",
+      "prefixes": ["auth."]
+    },
+    {
+      "sheet": "Cuenta",
+      "prefixes": ["account.", "profile."]
+    }
+  ]
 }

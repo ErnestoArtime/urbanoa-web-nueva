@@ -61,5 +61,39 @@
     "Recarga de saldo",
     "Devolución de saldo",
     "Pago de denuncia"
+  ],
+  "sheetRules": [
+    {
+      "sheet": "Inicio y comunes",
+      "prefixes": ["app.", "nav.", "layout.", "common.", "validation.", "breadcrumb."]
+    },
+    {
+      "sheet": "Autenticación",
+      "prefixes": ["auth."]
+    },
+    {
+      "sheet": "Onboarding",
+      "prefixes": ["onboarding."]
+    },
+    {
+      "sheet": "Dashboard",
+      "prefixes": ["dashboard."]
+    },
+    {
+      "sheet": "Aparcar",
+      "prefixes": ["parking."]
+    },
+    {
+      "sheet": "Operaciones",
+      "prefixes": ["ops."]
+    },
+    {
+      "sheet": "Cuenta",
+      "prefixes": ["account."]
+    },
+    {
+      "sheet": "Pagos y cartera",
+      "prefixes": ["payment.", "wallet."]
+    }
   ]
 }

@@ -36,6 +36,7 @@ const DEFAULT_CONFIG = {
   ignoredKeyPrefixes: [],
   translationKeyPrefixes: [],
   ignoredDirectLiterals: [],
+  sheetRules: [],
 };
 let config = structuredClone(DEFAULT_CONFIG);
 
@@ -62,6 +63,31 @@ async function loadConfig(options) {
   }
   if (!Array.isArray(config.ignoredDirectLiterals)) {
     throw new Error('ignoredDirectLiterals debe ser un array.');
+  }
+  if (!Array.isArray(config.sheetRules)) {
+    throw new Error('sheetRules debe ser un array.');
+  }
+  const configuredPrefixes = new Map();
+  for (const [index, rule] of config.sheetRules.entries()) {
+    if (!rule || typeof rule.sheet !== 'string' || !rule.sheet.trim()) {
+      throw new Error(`sheetRules[${index}].sheet debe ser un nombre de hoja.`);
+    }
+    if ([config.summarySheet, config.indexSheet].includes(rule.sheet)) {
+      throw new Error(`La hoja «${rule.sheet}» está reservada y no puede recibir reglas de claves.`);
+    }
+    if (!Array.isArray(rule.prefixes) || !rule.prefixes.length) {
+      throw new Error(`sheetRules[${index}].prefixes debe contener al menos un prefijo.`);
+    }
+    for (const prefix of rule.prefixes) {
+      if (typeof prefix !== 'string' || !/^[\w-]+(?:\.[\w-]+)*\.?$/.test(prefix)) {
+        throw new Error(`Prefijo de hoja inválido: «${prefix}».`);
+      }
+      const normalized = prefix.replace(/\.$/, '');
+      if (configuredPrefixes.has(normalized)) {
+        throw new Error(`El prefijo «${normalized}» está repetido en ${configuredPrefixes.get(normalized)} y ${rule.sheet}.`);
+      }
+      configuredPrefixes.set(normalized, rule.sheet);
+    }
   }
   if (!['flat', 'nested'].includes(config.catalogueStructure)) {
     throw new Error('catalogueStructure debe ser "flat" o "nested".');
@@ -485,6 +511,21 @@ function isSourceKeyUsed(source, key) {
   );
 }
 
+function configuredSheetForKey(key) {
+  const matches = [];
+  for (const rule of config.sheetRules) {
+    for (const configuredPrefix of rule.prefixes) {
+      const prefix = configuredPrefix.replace(/\.$/, '');
+      if (key === prefix || key.startsWith(`${prefix}.`)) {
+        matches.push({ sheet: rule.sheet, prefix });
+      }
+    }
+  }
+  if (!matches.length) return null;
+  matches.sort((left, right) => right.prefix.length - left.prefix.length);
+  return matches[0].sheet;
+}
+
 async function readExcelRows(input) {
   const workbook = new ExcelJS.Workbook();
   await workbook.xlsx.readFile(input);
@@ -727,9 +768,12 @@ async function exportWorkbook(options) {
     await workbook.xlsx.readFile(template);
   } else {
     const summary = workbook.addWorksheet(config.summarySheet);
+    const configuredSheets = [
+      ...new Set(config.sheetRules.map((rule) => rule.sheet).filter((sheetName) => sheetName !== config.generalSheet)),
+    ].map((sheetName) => workbook.addWorksheet(sheetName));
     const general = workbook.addWorksheet(config.generalSheet);
     const index = workbook.addWorksheet(config.indexSheet);
-    for (const sheet of [summary, general, index]) {
+    for (const sheet of [summary, ...configuredSheets, general, index]) {
       sheet.views = [{ state: 'frozen', ySplit: 1, showGridLines: false }];
       sheet.getRow(1).height = 26;
       sheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
@@ -744,7 +788,9 @@ async function exportWorkbook(options) {
       ...languages.map(() => ({ width: config.languageColumnWidth ?? 28 })),
       { width: config.featureColumnWidth ?? 24 },
     ];
-    general.columns = [{ width: config.keyColumnWidth ?? 44 }, ...languages.map(() => ({ width: config.languageColumnWidth ?? 28 }))];
+    for (const sheet of [...configuredSheets, general]) {
+      sheet.columns = [{ width: config.keyColumnWidth ?? 44 }, ...languages.map(() => ({ width: config.languageColumnWidth ?? 28 }))];
+    }
     index.columns = [{ width: 34 }, { width: 14 }];
   }
   const summary = workbook.getWorksheet(config.summarySheet);
@@ -805,8 +851,14 @@ async function exportWorkbook(options) {
   if (!keysBySheet.has(config.generalSheet)) {
     throw new Error(`La plantilla debe contener la hoja general ${config.generalSheet}.`);
   }
+  for (const rule of config.sheetRules) {
+    if (!keysBySheet.has(rule.sheet)) {
+      throw new Error(`La regla de hoja «${rule.sheet}» no corresponde con una pestaña de la plantilla.`);
+    }
+  }
   for (const key of keys) {
-    keysBySheet.get(originalSheetForKey.get(key) ?? config.generalSheet).push(key);
+    const targetSheet = configuredSheetForKey(key) ?? originalSheetForKey.get(key) ?? config.generalSheet;
+    keysBySheet.get(targetSheet).push(key);
   }
 
   const replaceAfterHeader = (sheet, rows) => {

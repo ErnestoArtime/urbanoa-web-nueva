@@ -15,7 +15,7 @@ const exportedWorkbook = path.join(temporaryRoot, 'json-to-excel.xlsx');
 const reviewedWorkbook = path.join(temporaryRoot, 'excel-to-json.xlsx');
 const completedWorkbook = path.join(temporaryRoot, 'completed-full-excel.xlsx');
 const genericRoot = path.join(temporaryRoot, 'generic-project');
-const testKey = 'i18n_roundtrip_test.new_entry';
+const testKey = 'auth.i18nRoundtripTest.newEntry';
 const serviceKey = 'i18n_roundtrip_test.service_entry';
 const languages = ['es', 'eu', 'fr', 'uk'];
 
@@ -62,7 +62,7 @@ try {
         referenceLanguage: 'es',
         requiredLanguages: languages,
         catalogueStructure: 'flat',
-        template: null,
+        template: path.join(repo, 'docs/traducciones_agrupadas_urbanoa - original.xlsx'),
         output: exportedWorkbook,
         auditOutput: path.join(temporaryRoot, 'audit.json'),
         literalsOutput: path.join(temporaryRoot, 'literals.md'),
@@ -73,6 +73,7 @@ try {
         supportedExtensions: ['.html', '.ts'],
         excludedFileSuffixes: ['.spec.ts'],
         dynamicPrefixes: [],
+        sheetRules: [{ sheet: 'Autenticación', prefixes: ['auth.'] }],
       },
       null,
       2,
@@ -116,6 +117,11 @@ try {
   const workbook = new ExcelJS.Workbook();
   await workbook.xlsx.readFile(exportedWorkbook);
   const summary = workbook.getWorksheet('Resumen');
+  const authenticationSheet = workbook.getWorksheet('Autenticación');
+  const keyIsInAuthentication = authenticationSheet.getColumn(1).values.some((value) => String(value ?? '').trim() === testKey);
+  if (!keyIsInAuthentication) {
+    throw new Error(`La regla auth.* no asignó ${testKey} a Autenticación.`);
+  }
   const headers = new Map();
   summary.getRow(1).eachCell((cell, column) => {
     headers.set(
@@ -211,6 +217,11 @@ try {
         supportedExtensions: ['.ts'],
         excludedFileSuffixes: ['.spec.ts'],
         dynamicPrefixes: ['backend_status.'],
+        sheetRules: [
+          { sheet: 'Textos', prefixes: ['static.'] },
+          { sheet: 'Estados', prefixes: ['backend_status.'] },
+          { sheet: 'Componentes', prefixes: ['widget.'] },
+        ],
         missingTranslationPattern: '{language}_{reference}',
       },
       null,
@@ -244,6 +255,17 @@ try {
   await genericWorkbook.xlsx.readFile(genericOutput);
   const genericSummary = genericWorkbook.getWorksheet('Resumen');
   const genericGeneral = genericWorkbook.getWorksheet('General');
+  const genericSheetOrder = genericWorkbook.worksheets.map((sheet) => sheet.name);
+  if (genericSheetOrder.join(',') !== 'Resumen,Textos,Estados,Componentes,General,Índice') {
+    throw new Error(`Genérico: las reglas no crearon las hojas esperadas: ${genericSheetOrder.join(',')}.`);
+  }
+  const staticKeys = genericWorkbook
+    .getWorksheet('Textos')
+    .getColumn(1)
+    .values.map((value) => String(value ?? ''));
+  if (!staticKeys.includes('static.title') || !staticKeys.includes('static.pending')) {
+    throw new Error('Genérico: las claves static.* no se asignaron a Textos.');
+  }
   const genericHeaders = genericSummary.getRow(1).values.slice(1);
   if (genericHeaders.slice(0, 4).join(',') !== 'Clave,en,es,de') {
     throw new Error(`Genérico: columnas inesperadas ${genericHeaders.join(',')}.`);
