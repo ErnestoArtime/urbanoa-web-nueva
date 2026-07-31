@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { environment } from '../../../environments/environment';
 import { MOCK_STREETS_ZARAUTZ } from '../../shared/mock-data';
 
 export interface ParkingStreet {
@@ -20,7 +21,7 @@ interface StreetsApiItem {
 export class StreetsService {
   async getStreets(cityId: number): Promise<ParkingStreet[]> {
     try {
-      const response = await fetch('/ops-api/OPSWebServicesAPI/QueryStreetsAPI', {
+      const response = await fetch(`${environment.opsApiBaseUrl}/OPSWebServicesAPI/QueryStreetsAPI`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ cityId }),

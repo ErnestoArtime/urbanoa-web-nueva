@@ -240,7 +240,7 @@ export class AccountShellComponent {
 
   readonly isRootRoute = () => this.url() === '/app/account';
 
-  readonly STORE_URL = 'https://play.google.com/store/apps/details?id=com.gerteksa.r.c.mugipark';
+  readonly STORE_URL = APP_BRAND.storeUrl;
 
   readonly itemGroupLabel = (index: number) => {
     const item = this.menu[index];

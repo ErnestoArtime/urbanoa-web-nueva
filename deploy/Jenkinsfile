@@ -1,0 +1,19 @@
+@Library('uoa-version-library') _
+
+// Definimos las variables necesarias
+def simpleName = 'arinpark-web'
+def imageName = 'uoa/uoa-' + simpleName
+def projectName = 'uoa-' + simpleName
+def containerName = 'uoa-' + simpleName
+def port = 10213
+
+frontendPipeline([
+
+    // Como se va a llamar la imagen en GertekHub
+    imageName: imageName,
+    projectName: projectName,
+    containerName: containerName,
+    port: port,
+
+])
+

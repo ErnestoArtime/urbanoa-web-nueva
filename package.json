@@ -5,13 +5,15 @@
     "ng": "ng",
     "start": "ng serve",
     "build": "ng build",
+    "build:prod": "ng build --configuration production",
+    "build:dev": "ng build --configuration development",
     "i18n:check": "node scripts/check-i18n.mjs",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "lint": "ng lint",
     "format": "prettier --write \"src/**/*.{ts,html,css,scss,json}\"",
     "format:check": "prettier --check \"src/**/*.{ts,html,css,scss,json}\"",
-    "check": "npm run i18n:check && npm run lint && npm run format:check && npm run build"
+    "check": "npm run i18n:check && npm run lint && npm run format:check && npm run build:prod"
   },
   "private": true,
   "dependencies": {

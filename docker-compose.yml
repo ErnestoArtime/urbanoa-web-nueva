@@ -1,8 +1,0 @@
-services:
-  web-urbanoa:
-    build: .
-    image: web-urbanoa:${IMAGE_TAG:-latest}
-    container_name: web-urbanoa
-    ports:
-      - "${HOST_PORT:-8080}:80"
-    restart: unless-stopped

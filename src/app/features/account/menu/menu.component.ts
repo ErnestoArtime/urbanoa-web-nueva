@@ -20,8 +20,7 @@ import { WebContentComponent } from '../web-content/web-content.component';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 
 import { APP_BRAND } from '../../../shared/constants/app-brand';
-
-const STORE_URL = 'https://play.google.com/store/apps/details?id=com.gerteksa.r.c.mugipark';
+import { environment } from '../../../../environments/environment';
 
 @Component({
   selector: 'app-account-menu',
@@ -105,7 +104,7 @@ const STORE_URL = 'https://play.google.com/store/apps/details?id=com.gerteksa.r.
                 <app-account-tax-data />
               }
               @case ('help') {
-                <app-web-content title="Ayuda" backLink="/app/account" url="/external-content/Arinpark/ArinparkFAQ-ESP.html" />
+                <app-web-content title="Ayuda" backLink="/app/account" [url]="helpUrl" />
               }
               @case ('about') {
                 <app-account-about />
@@ -117,10 +116,10 @@ const STORE_URL = 'https://play.google.com/store/apps/details?id=com.gerteksa.r.
                 <app-account-support-success />
               }
               @case ('terms-and-conditions') {
-                <app-web-content title="Términos y condiciones" backLink="/app/account" url="/external-content/arinpark/CU_es.html" />
+                <app-web-content title="Términos y condiciones" backLink="/app/account" [url]="termsUrl" />
               }
               @case ('privacy-policy') {
-                <app-web-content title="Política de privacidad" backLink="/app/account" url="/external-content/arinpark/es.html" />
+                <app-web-content title="Política de privacidad" backLink="/app/account" [url]="privacyUrl" />
               }
               @case ('delete-account') {
                 <div class="page account-static-page">
@@ -419,6 +418,9 @@ export class AccountMenuComponent {
   readonly vehiclesSub = signal<string | null>(null);
   readonly paymentSub = signal<string | null>(null);
   readonly brand = APP_BRAND;
+  readonly helpUrl = `${environment.externalContentBaseUrl}/Arinpark/ArinparkFAQ-ESP.html`;
+  readonly termsUrl = `${environment.externalContentBaseUrl}/arinpark/CU_es.html`;
+  readonly privacyUrl = `${environment.externalContentBaseUrl}/arinpark/es.html`;
   readonly toast = signal('');
   private readonly iconByKey: Record<string, string> = {
     profile:
@@ -502,13 +504,13 @@ export class AccountMenuComponent {
   private async shareApp(): Promise<void> {
     if (navigator.share) {
       try {
-        await navigator.share({ title: this.brand.name, text: `Descarga ${this.brand.name}`, url: STORE_URL });
+        await navigator.share({ title: this.brand.name, text: `Descarga ${this.brand.name}`, url: this.brand.storeUrl });
       } catch {
         /* user dismissed share */
       }
     } else {
       try {
-        await navigator.clipboard.writeText(STORE_URL);
+        await navigator.clipboard.writeText(this.brand.storeUrl);
         this.showToast('Enlace copiado');
       } catch {
         /* clipboard unavailable */
@@ -517,7 +519,7 @@ export class AccountMenuComponent {
   }
 
   private rateApp(): void {
-    window.open(STORE_URL, '_blank');
+    window.open(this.brand.storeUrl, '_blank');
   }
 
   private showToast(msg: string): void {
