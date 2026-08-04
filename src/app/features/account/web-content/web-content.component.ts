@@ -2,8 +2,8 @@ import { Component, computed, inject, input, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { DomSanitizer } from '@angular/platform-browser';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
-import { APP_BRAND } from '../../../shared/constants/app-brand';
 import { TranslationService } from '../../../core/services/translation.service';
+import { environment } from '../../../../environments/environment';
 
 @Component({
   selector: 'app-web-content',
@@ -180,7 +180,7 @@ import { TranslationService } from '../../../core/services/translation.service';
 })
 export class WebContentComponent {
   private readonly translationService = inject(TranslationService);
-  readonly url = input('/external-content');
+  readonly url = input(environment.externalContentBaseUrl);
   readonly title = input('');
   readonly backLink = input<string | null>(null);
   readonly loading = signal(true);
@@ -195,10 +195,9 @@ export class WebContentComponent {
   readonly resolvedBackLink = computed(() => this.backLink() || this.route.snapshot.data['backLink'] || null);
   readonly resolvedUrl = computed(() => {
     const routeUrl = this.route.snapshot.data['url'];
-    const value = this.url() === '/external-content' && typeof routeUrl === 'string' ? routeUrl : this.url();
-    return value.startsWith('/external-content')
-      ? `https://${APP_BRAND.name.toLowerCase()}.gerteksa.eus${value.replace('/external-content', '')}`
-      : value;
+    const base = environment.externalContentBaseUrl;
+    const value = this.url() === base && typeof routeUrl === 'string' ? routeUrl : this.url();
+    return value.startsWith(base) ? `${environment.externalContentOrigin}${value.slice(base.length)}` : value;
   });
 
   readonly rawUrl = computed(() => this.resolvedUrl());

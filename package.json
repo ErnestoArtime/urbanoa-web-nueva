@@ -4,6 +4,8 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
+    "start-local": "ng serve --host=127.0.0.1 --configuration=local",
+    "start-desa": "ng serve --host=127.0.0.1 --configuration=development",
     "build": "ng build",
     "i18n:check": "npm run i18n:audit",
     "i18n:audit": "node scripts/i18n-excel.mjs audit --config i18n-excel.config.json --excel docs/traducciones_agrupadas_urbanoa.xlsx",
@@ -12,12 +14,14 @@
     "i18n:excel": "node scripts/i18n-excel.mjs export --config i18n-excel.config.json",
     "i18n:import": "node scripts/i18n-excel.mjs import --config i18n-excel.config.json",
     "i18n:test": "node scripts/i18n-excel.roundtrip.test.mjs",
+    "build-dev": "ng build --configuration=development",
+    "i18n:literal-check": "node scripts/check-i18n.mjs",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "lint": "ng lint",
     "format": "prettier --write \"src/**/*.{ts,html,css,scss,json}\"",
     "format:check": "prettier --check \"src/**/*.{ts,html,css,scss,json}\"",
-    "check": "npm run i18n:check && npm run lint && npm run format:check && npm run build"
+    "check": "npm run i18n:check && npm run lint && npm run format:check && npm run build:prod"
   },
   "private": true,
   "dependencies": {
