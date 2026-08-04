@@ -4,9 +4,10 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
+    "start-local": "ng serve --host=127.0.0.1 --configuration=local",
+    "start-desa": "ng serve --host=127.0.0.1 --configuration=development",
     "build": "ng build",
-    "build:prod": "ng build --configuration production",
-    "build:dev": "ng build --configuration development",
+    "build-dev": "ng build --configuration=development",
     "i18n:check": "node scripts/check-i18n.mjs",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
