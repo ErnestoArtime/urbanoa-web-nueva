@@ -17,6 +17,10 @@ const completedWorkbook = path.join(temporaryRoot, 'completed-full-excel.xlsx');
 const genericRoot = path.join(temporaryRoot, 'generic-project');
 const testKey = 'auth.i18nRoundtripTest.newEntry';
 const serviceKey = 'i18n_roundtrip_test.service_entry';
+const conditionalKey = 'i18n_roundtrip_test.conditional_entry';
+const alternateConditionalKey = 'i18n_roundtrip_test.alternate_entry';
+const bindingKey = 'i18n_roundtrip_test.page_title';
+const ampersandKey = 'i18n_roundtrip_test.key&hint';
 const languages = ['es', 'eu', 'fr', 'uk'];
 
 const setByPath = (target, dottedKey, value) => {
@@ -48,7 +52,13 @@ try {
 
   for (const language of languages) {
     const input = JSON.parse(await fs.readFile(path.join(repo, 'public/assets/i18n', `${language}.json`), 'utf8'));
-    if (language === 'es') input[testKey] = 'MASTER_ES';
+    if (language === 'es') {
+      input[testKey] = 'MASTER_ES';
+      input[conditionalKey] = 'CONDITIONAL_ES';
+      input[alternateConditionalKey] = 'ALTERNATE_ES';
+      input[bindingKey] = 'PAGE_TITLE_ES';
+      input[ampersandKey] = 'AMPERSAND_ES';
+    }
     input[serviceKey] = `SERVICE_${language.toUpperCase()}`;
     if (language === 'eu') input['i18n_roundtrip_orphan.only'] = 'ORPHAN';
     await fs.writeFile(path.join(languageDirectory, `${language}.json`), `${JSON.stringify(input, null, 2)}\n`, 'utf8');
@@ -97,12 +107,30 @@ try {
     beforeImport.set(language, structuredClone(synced));
     await fs.writeFile(path.join(languageDirectory, `${language}.json`), `${JSON.stringify(synced, null, 2)}\n`, 'utf8');
   }
-  await fs.writeFile(path.join(sourceDirectory, 'fixture.html'), `<span>{{ '${testKey}' | translate }}</span>\n`, 'utf8');
+  await fs.writeFile(
+    path.join(sourceDirectory, 'fixture.html'),
+    [
+      `<span>{{ '${testKey}' | translate }}</span>`,
+      '<span>{{',
+      `  expanded ? '${conditionalKey}' :`,
+      `    '${alternateConditionalKey}'`,
+      '  | translate',
+      '}}</span>',
+      `<app-payment-method [pageTitle]="'${bindingKey}'"></app-payment-method>`,
+      `<span>{{ '${ampersandKey}' | translate }}</span>`,
+    ].join('\n') + '\n',
+    'utf8',
+  );
   await fs.writeFile(path.join(sourceDirectory, 'service-call.ts'), `translationService.translate('${serviceKey}');\n`, 'utf8');
 
   run('prune', '--config', flatConfig);
   for (const language of languages) {
     const prunedCatalogue = JSON.parse(await fs.readFile(path.join(languageDirectory, `${language}.json`), 'utf8'));
+    for (const key of [conditionalKey, alternateConditionalKey, bindingKey, ampersandKey]) {
+      if (typeof prunedCatalogue[key] !== 'string') {
+        throw new Error(`${language}: prune removed ${key} even though the code uses it.`);
+      }
+    }
     if (typeof prunedCatalogue[serviceKey] !== 'string') {
       throw new Error(`${language}: prune eliminó ${serviceKey} usado por TranslationService.translate.`);
     }

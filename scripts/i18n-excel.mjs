@@ -140,7 +140,9 @@ async function filesRecursively(directory) {
 
 function flatten(node, prefix = '', output = new Map()) {
   if (typeof node === 'string') output.set(prefix, node);
-  else if (node && typeof node === 'object' && !Array.isArray(node)) {
+  else if (Array.isArray(node)) {
+    for (const [index, value] of node.entries()) flatten(value, `${prefix}.${index}`, output);
+  } else if (node && typeof node === 'object') {
     for (const [key, value] of Object.entries(node)) flatten(value, prefix ? `${prefix}.${key}` : key, output);
   }
   return output;
@@ -271,8 +273,39 @@ async function loadCatalogues(languageDirectory) {
   return catalogues;
 }
 
+function isLikelyTranslationKey(value) {
+  const key = value.trim();
+  return /^(?!\.\.\.$)(?!.*\.$)[\w-]+(?:\.[\w][\w ?&+/-]*)*$/.test(key);
+}
+
+function isValidExcelKey(value) {
+  const key = value.trim();
+  return /^(?!\.\.\.$)(?!.*\.$)[\w-]+(?:\.[\w][\w?&+/-]*)*$/.test(key);
+}
+
+function isStrictTranslationKey(value) {
+  return /^(?!\.\.\.$)(?!.*\.$)[\w-]+(?:\.[\w][\w?&+/-]*)+$/.test(value.trim());
+}
+
+function addQuotedKeys(expression, keys) {
+  for (const match of expression.matchAll(/['"]([^'"`\n]+)['"](?=[^|{}]*\|\s*translate\b)/g)) {
+    const key = match[1].trim();
+    if (key.includes('.') && isLikelyTranslationKey(key)) keys.add(key);
+  }
+}
+
 function extractTranslationKeys(content) {
   const keys = new Set();
+  for (const match of content.matchAll(/\{\{([\s\S]*?)\}\}/g)) {
+    if (/\|\s*translate\b/.test(match[1])) addQuotedKeys(match[1], keys);
+  }
+  for (const match of content.matchAll(/\[[^\]]+\]\s*=\s*["']([\s\S]*?)["']/g)) {
+    if (/\|\s*translate\b/.test(match[1])) addQuotedKeys(match[1], keys);
+  }
+  for (const match of content.matchAll(/\[pageTitle\]\s*=\s*["']\s*["']([^"'\n]+)["']\s*["']/g)) {
+    const key = match[1].trim();
+    if (isLikelyTranslationKey(key)) keys.add(key);
+  }
   const expressions = [
     /['\"]([^'\"`]+)['\"]\s*\|\s*translate\b/g,
     /\b(?:this\.)?(?:translationService|translateService)\s*(?:\?\.|\.)\s*(?:translate|instant|get|stream)\s*\(\s*['\"]([^'\"`]+)['\"]/g,
@@ -280,7 +313,8 @@ function extractTranslationKeys(content) {
   ];
   for (const expression of expressions)
     for (const match of content.matchAll(expression)) {
-      if (/^(?!\.\.\.$)(?!.*\.$)[\w-]+(?:\.[\w-]+)*$/.test(match[1])) keys.add(match[1]);
+      const key = match[1].trim();
+      if (isLikelyTranslationKey(key)) keys.add(key);
     }
   return keys;
 }
@@ -291,7 +325,7 @@ function extractPotentialTranslationKeys(content, relativePath) {
   if (!relativePath.endsWith('.ts') || /[\\/]environments[\\/]/i.test(relativePath)) {
     return { keys, prefixes };
   }
-  for (const match of content.matchAll(/['\"]((?!\.\.\.$)(?!.*\.$)[\w-]+(?:\.[\w-]+)+)['\"]/g)) {
+  for (const match of content.matchAll(/['\"]((?!\.\.\.$)(?!.*\.$)[\w-]+(?:\.[\w][\w?&+/-]*)+)['\"]/g)) {
     const value = match[1];
     const acceptedPrefix =
       !config.translationKeyPrefixes.length ||
@@ -307,7 +341,7 @@ function extractPotentialTranslationKeys(content, relativePath) {
     if (/^(?:\.{0,2}\/|https?:\/\/)/.test(value)) return;
     if (/^v?\d+(?:\.\d+)+$/i.test(value)) return;
     if (/\.(?:ts|html|css|scss|svg|png|jpe?g|json|mjs)$/i.test(value)) return;
-    if (/^(?!\.\.\.$)(?!.*\.$)[\w-]+(?:\.[\w-]+)+$/.test(value)) keys.add(value);
+    if (isStrictTranslationKey(value)) keys.add(value);
   };
   const visit = (node) => {
     if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) {
@@ -975,7 +1009,7 @@ async function importWorkbook(options) {
   }
   const seen = new Set();
   for (const row of excel.rows) {
-    if (!/^[\w.-]+$/.test(row.key)) errors.push(`Fila ${row.number}: clave inválida «${row.key}».`);
+    if (!isValidExcelKey(row.key)) errors.push(`Fila ${row.number}: clave inválida «${row.key}».`);
     if (seen.has(row.key)) errors.push(`Fila ${row.number}: clave duplicada «${row.key}».`);
     seen.add(row.key);
     for (const language of excel.languages) {
