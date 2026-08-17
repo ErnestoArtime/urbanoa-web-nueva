@@ -16,6 +16,15 @@ import { TranslationService } from '../../../core/services/translation.service';
       <div class="page">
         <app-detail-panel-header [title]="'ops.fineDetail.title' | translate" backRoute="/app/operations/unpaid-fines" />
         @if (fine) {
+          @if (fine.discountPercent) {
+            <aside class="early-payment-banner">
+              <span class="discount-badge">−{{ fine.discountPercent }}%</span>
+              <div>
+                <strong>{{ 'ops.fineDetail.earlyPayment.title' | translate }}</strong>
+                <p>{{ 'ops.fineDetail.earlyPayment.description' | translate: { date: fine.earlyPaymentDeadline ?? '' } }}</p>
+              </div>
+            </aside>
+          }
           <div class="fine-ticket-shell mt-2">
             <article class="fine-ticket-card">
               <div class="fine-ticket-accent"></div>
@@ -33,7 +42,12 @@ import { TranslationService } from '../../../core/services/translation.service';
               <div class="fine-ticket-cut"></div>
               <div class="fine-ticket-total">
                 <strong>{{ 'ops.fineDetail.amount' | translate }}</strong>
-                <span>{{ fine.amount }}</span>
+                <div class="amount-stack">
+                  @if (fine.originalAmount) {
+                    <del>{{ fine.originalAmount }}</del>
+                  }
+                  <span>{{ fine.amount }}</span>
+                </div>
               </div>
             </article>
           </div>
@@ -89,6 +103,34 @@ import { TranslationService } from '../../../core/services/translation.service';
       .fine-ticket-shell {
         border-radius: 16px;
         filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.14));
+      }
+      .early-payment-banner {
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+        margin-top: 1rem;
+        padding: 0.8rem 0.9rem;
+        border: 1px solid color-mix(in srgb, var(--color-primary) 28%, transparent);
+        border-radius: var(--radius-lg);
+        background: var(--color-active);
+      }
+      .early-payment-banner strong {
+        display: block;
+        color: var(--color-primary-dark);
+        font-size: var(--text-sm);
+      }
+      .early-payment-banner p {
+        margin: 0.15rem 0 0;
+        color: var(--color-text-muted);
+        font-size: var(--text-xs);
+      }
+      .discount-badge {
+        flex: 0 0 auto;
+        padding: 0.45rem 0.55rem;
+        border-radius: 12px;
+        color: #fff;
+        background: var(--color-primary);
+        font-weight: var(--font-bold);
       }
       .fine-ticket-card {
         --ticket-notch-r: 10px;
@@ -147,6 +189,15 @@ import { TranslationService } from '../../../core/services/translation.service';
       .fine-ticket-total span {
         font-size: var(--text-xl);
         font-weight: var(--font-bold);
+      }
+      .amount-stack {
+        display: flex;
+        align-items: baseline;
+        gap: 0.55rem;
+      }
+      .amount-stack del {
+        color: var(--color-text-muted);
+        font-size: var(--text-sm);
       }
       .payment-breakdown-card {
         padding: 0.75rem;
@@ -220,11 +271,11 @@ export class UnpaidFineDetailComponent {
     return this.walletService.balance() < this.numericAmount();
   };
 
-  pay(): void {
+  async pay(): Promise<void> {
     if (!this.fine) return;
     const walletAmt = this.walletAmount();
     const cardAmt = this.cardAmount();
-    const ok = this.unpaidFinesService.payFine(this.fineId, this.selectedCardId());
+    const ok = await this.unpaidFinesService.payFine(this.fineId, this.selectedCardId());
     if (ok) {
       this.capturedWalletAmount.set(walletAmt);
       this.capturedCardAmount.set(cardAmt);

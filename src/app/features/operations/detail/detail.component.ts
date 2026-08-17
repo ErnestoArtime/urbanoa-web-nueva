@@ -309,6 +309,10 @@ export class OperationsDetailComponent {
   private readonly service = inject(OperationsService);
   private readonly translationService = inject(TranslationService);
   readonly id = toSignal(this.route.paramMap.pipe(map((p) => p.get('id') ?? '1')), { initialValue: '1' });
+  constructor() {
+    void this.service.loadDetail(this.id());
+    void this.service.loadReceipt(this.id());
+  }
   readonly op = computed(() => {
     this.service.operations();
     return this.service.getOperationById(this.id());

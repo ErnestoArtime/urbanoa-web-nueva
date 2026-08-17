@@ -14,6 +14,7 @@ import { RecentOperationsCardComponent } from './components/recent-operations-ca
 import { ProfileProgressCardComponent } from './components/profile-progress-card.component';
 import { ResultModalComponent } from '../../shared/components/result-modal/result-modal.component';
 import { VehicleService } from '../../core/services/vehicle.service';
+import { DashboardApiService } from '../../core/services/dashboard-api.service';
 
 @Component({
   selector: 'app-home',
@@ -208,6 +209,7 @@ export class HomeComponent {
   private readonly userService = inject(UserService);
   private readonly navigationToCar = inject(NavigationToCarService);
   private readonly vehicleService = inject(VehicleService);
+  private readonly dashboardApi = inject(DashboardApiService);
   readonly user = this.userService.user;
   readonly fullName = computed(() => `${this.user().name} ${this.user().surname}`);
   readonly activeParkings = this.parkingSessionService.activeParkings;
@@ -222,6 +224,8 @@ export class HomeComponent {
   readonly unparked = signal(false);
   readonly confirmUnpark = signal(false);
   private pendingUnparkId = '';
+
+  constructor() { void this.dashboardApi.load(); }
 
   confirmUnparkFor(parking: ActiveParking): void {
     this.pendingUnparkId = parking.id;

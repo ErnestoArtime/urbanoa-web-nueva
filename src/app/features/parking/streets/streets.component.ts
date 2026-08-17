@@ -3,17 +3,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { ParkingStreet, StreetsService } from '../../../core/services/streets.service';
 import { ParkingFlowStore } from '../parking-flow.store';
-
-const CITY_API_IDS: Record<string, number> = {
-  durango: 1,
-  zarautz: 3,
-  tolosa: 5,
-  bergara: 23,
-  arrasate: 61,
-  soria: 73,
-  deba: 79,
-  mutriku: 81,
-};
+import { CitiesService } from '../../../core/services/cities.service';
 
 @Component({
   selector: 'app-parking-streets',
@@ -24,6 +14,9 @@ const CITY_API_IDS: Record<string, number> = {
         'parking.streets.back' | translate
       }}</a>
       <h1 class="page-title">{{ 'parking.selectStreet' | translate }}</h1>
+      @if (dataSource() === 'mock') {
+        <p class="data-notice" role="status">El servicio de calles no está disponible. Se muestran datos de demostración.</p>
+      }
       <div class="form-group">
         <input
           class="form-input"
@@ -88,16 +81,26 @@ const CITY_API_IDS: Record<string, number> = {
         justify-content: center;
         color: var(--color-text-muted);
       }
+      .data-notice {
+        margin: 0 0 1rem;
+        padding: 0.75rem 0.9rem;
+        border: 1px solid #e5b85c;
+        border-radius: var(--radius-md);
+        background: #fff8e7;
+        color: #714b00;
+      }
     `,
   ],
 })
 export class ParkingStreetsComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly streetsService = inject(StreetsService);
+  private readonly citiesService = inject(CitiesService);
   private readonly flowStore = inject(ParkingFlowStore);
   readonly streets = signal<ParkingStreet[]>([]);
   readonly search = signal('');
   readonly loading = signal(true);
+  readonly dataSource = signal<'remote' | 'mock' | null>(null);
   readonly cityId = this.route.snapshot.queryParamMap.get('city') ?? this.route.snapshot.queryParamMap.get('municipio') ?? 'zarautz';
   readonly cityName = this.route.snapshot.queryParamMap.get('cityName') ?? 'Zarautz';
   readonly plate = this.route.snapshot.queryParamMap.get('plate') ?? this.flowStore.vm().plate ?? '1234 ABC';
@@ -112,9 +115,10 @@ export class ParkingStreetsComponent implements OnInit {
   });
 
   async ngOnInit(): Promise<void> {
-    const numericId = Number(this.cityId);
-    const apiCityId = Number.isFinite(numericId) ? numericId : (CITY_API_IDS[this.cityId.toLowerCase()] ?? 3);
-    this.streets.set(await this.streetsService.getStreets(apiCityId));
+    const contractId = this.citiesService.contractIdFor(this.cityId);
+    const result = await this.streetsService.getStreets(contractId);
+    this.streets.set(result.data);
+    this.dataSource.set(result.source);
     this.loading.set(false);
   }
 
@@ -126,7 +130,7 @@ export class ParkingStreetsComponent implements OnInit {
     return {
       city: this.cityId,
       cityName: this.cityName,
-      cityId: this.cityId,
+      cityId: String(this.citiesService.contractIdFor(this.cityId)),
       plate: this.plate,
       vehicleId: this.vehicleId,
       zoneId: String(street.zoneId),

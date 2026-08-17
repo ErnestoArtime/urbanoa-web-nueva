@@ -10,6 +10,7 @@ import { VehicleService } from '../../../core/services/vehicle.service';
 import { LocationSettingsService } from '../../../core/services/location-settings.service';
 import { ParkingSessionService } from '../../../core/services/parking-session.service';
 import { TranslationService } from '../../../core/services/translation.service';
+import { MapLocationControlComponent, type MapLocationState } from './map-location-control.component';
 
 interface MapParkingZone {
   zoneId: number;
@@ -22,7 +23,7 @@ interface MapParkingZone {
 
 @Component({
   selector: 'app-parking-map',
-  imports: [RouterLink, LoaderComponent, TranslatePipe],
+  imports: [RouterLink, LoaderComponent, TranslatePipe, MapLocationControlComponent],
   template: `
     <app-loader [visible]="mapLoading()" [message]="'parking.map.loading' | translate" imageSrc="/assets/brand/login-logo.jpg" />
     <section class="parking-map-page">
@@ -41,6 +42,7 @@ interface MapParkingZone {
       <div class="map-frame">
         <div #mapContainer class="leaflet-map" [attr.aria-label]="'parking.map.ariaLabel' | translate"></div>
         <div class="map-target" aria-hidden="true"><span></span></div>
+        <app-map-location-control [state]="locationState()" (locate)="locateUser()" />
 
         <section class="parking-controls">
           <a routerLink="/app/parking/cities" [queryParams]="vehicleQueryParams()" class="search-control"
@@ -526,6 +528,7 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
   private zoneLayer?: L.FeatureGroup;
   private resizeObserver?: ResizeObserver;
   private resizeFrame?: number;
+  private locationMarker?: L.CircleMarker;
   private readonly zones: MapParkingZone[] = [];
   private highlightedZone?: MapParkingZone;
   readonly selected: Municipio = this.resolveMunicipio();
@@ -543,6 +546,7 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
   readonly mapLoading = signal(true);
   readonly flowError = signal(this.route.snapshot.queryParamMap.get('flowError') === 'missingData');
   readonly mapError = signal(false);
+  readonly locationState = signal<MapLocationState>('idle');
   readonly zoneCount = signal(0);
   readonly selectedZone = signal<MapParkingZone | null>(null);
   readonly vehicles = this.vehicleService.vehicles;
@@ -596,6 +600,28 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
     this.resizeObserver?.disconnect();
     if (this.resizeFrame !== undefined) cancelAnimationFrame(this.resizeFrame);
     this.map?.remove();
+  }
+
+  async locateUser(): Promise<void> {
+    if (this.locationState() === 'locating') return;
+    this.locationState.set('locating');
+    const result = await this.locationSettings.requestCurrentLocation();
+    if (!result.ok) {
+      this.locationState.set(result.status === 'denied' ? 'denied' : 'unavailable');
+      return;
+    }
+    const { lastLatitude, lastLongitude } = this.locationSettings.settings();
+    if (lastLatitude === undefined || lastLongitude === undefined || !this.map) {
+      this.locationState.set('unavailable');
+      return;
+    }
+    const point: L.LatLngExpression = [lastLatitude, lastLongitude];
+    this.locationMarker?.remove();
+    this.locationMarker = L.circleMarker(point, { radius: 9, color: '#fff', weight: 3, fillColor: '#16765d', fillOpacity: 1 }).addTo(
+      this.map,
+    );
+    this.map.flyTo(point, 17, { duration: 0.8 });
+    this.locationState.set('located');
   }
 
   private scheduleMapResize(): void {

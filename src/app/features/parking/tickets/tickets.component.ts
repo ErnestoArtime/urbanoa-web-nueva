@@ -5,6 +5,7 @@ import { LoaderComponent } from '../../../shared/components/loader/loader.compon
 import { ParkingFlowStore } from '../parking-flow.store';
 import { ParkingFlowQuery, readParkingFlowQuery } from '../parking-flow.model';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { ParkingApiService, ParkingTicketOption } from '../../../core/services/parking-api.service';
 
 @Component({
   selector: 'app-parking-tickets',
@@ -23,7 +24,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
         </div>
       </div>
       <div class="tariff-list">
-        @for (tariff of tariffs; track tariff.id) {
+        @for (tariff of tariffs(); track tariff.id) {
           <a routerLink="/app/parking/time-steps" [queryParams]="withTariff(tariff)" (click)="onSelectTariff(tariff)" class="ticket-option">
             <span class="ticket-color" [style.background]="'#' + (query.sectorColor || '2b6767')"></span>
             <div class="ticket-option-head">
@@ -164,16 +165,26 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 export class ParkingTicketsComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly store = inject(ParkingFlowStore);
-  readonly tariffs = MOCK_TARIFFS;
+  private readonly parkingApi = inject(ParkingApiService);
+  readonly tariffs = signal<ParkingTicketOption[]>(MOCK_TARIFFS.map((tariff) => ({ ...tariff })));
+  readonly source = signal<'remote' | 'mock'>('mock');
   readonly query: ParkingFlowQuery = this.store.hasMinimumParkingData() ? this.store.fromStore() : readParkingFlowQuery(this.route);
   readonly loading = signal(true);
-  ngOnInit(): void {
-    setTimeout(() => this.loading.set(false), 600);
+  async ngOnInit(): Promise<void> {
+    const result = await this.parkingApi.tickets({
+      contractId: Number(this.query.cityId || 0),
+      plate: this.query.plate,
+      zone: Number(this.query.zoneId || 0),
+      date: new Date().toISOString(),
+    });
+    if (result.data.length) this.tariffs.set(result.data);
+    this.source.set(result.source);
+    this.loading.set(false);
   }
-  withTariff(tariff: (typeof MOCK_TARIFFS)[number]): Record<string, string> {
+  withTariff(tariff: ParkingTicketOption): Record<string, string> {
     return { ...this.query, tariffId: tariff.id, tariff: tariff.name, tariffPrice: tariff.price };
   }
-  onSelectTariff(tariff: (typeof MOCK_TARIFFS)[number]): void {
+  onSelectTariff(tariff: ParkingTicketOption): void {
     this.store.update({ tariffId: tariff.id, tariffName: tariff.name, tariffPrice: tariff.price });
   }
 }

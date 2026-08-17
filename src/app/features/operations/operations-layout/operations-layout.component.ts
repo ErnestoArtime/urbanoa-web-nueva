@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { RouterLink, RouterLinkActive, NavigationEnd, Router } from '@angular/router';
 import { filter, map, startWith } from 'rxjs/operators';
@@ -9,6 +9,7 @@ import { OperationType, OPERATION_TYPE_LABELS } from '../../../shared/models/ope
 import { UnpaidFinesService } from '../../../core/services/unpaid-fines.service';
 import { OperationsService, type ActiveParking } from '../../../core/services/operations.service';
 import { ParkingSessionService } from '../../../core/services/parking-session.service';
+import { ParkingApiService } from '../../../core/services/parking-api.service';
 import { NavigationToCarService } from '../../../core/services/navigation-to-car.service';
 import type { Operation } from '../../../shared/models/operation';
 import { OperationIconComponent } from '../../../shared/components/operation-icon/operation-icon.component';
@@ -346,10 +347,11 @@ import { ParkingTicketCardComponent } from '../../../shared/components/parking-t
     `,
   ],
 })
-export class OperationsLayoutComponent {
+export class OperationsLayoutComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly operationsService = inject(OperationsService);
   private readonly parkingSessionService = inject(ParkingSessionService);
+  private readonly parkingApi = inject(ParkingApiService);
   private readonly navigationToCar = inject(NavigationToCarService);
   private readonly operations = this.operationsService.operations;
   private readonly rangeFilter = signal<DateRange>({ from: '', to: '' });
@@ -374,6 +376,10 @@ export class OperationsLayoutComponent {
     { initialValue: this.router.url },
   );
 
+  ngOnInit(): void {
+    void this.operationsService.load();
+  }
+
   isDetailRoute = () => {
     const path = this.url().split('?')[0].replace(/\/$/, '');
     return path !== '/app/operations';
@@ -393,9 +399,17 @@ export class OperationsLayoutComponent {
     this.confirmUnpark.set(true);
   }
 
-  confirmUnparkAction(): void {
+  async confirmUnparkAction(): Promise<void> {
     this.confirmUnpark.set(false);
-    if (this.parkingSessionService.leaveParking(this.pendingUnparkId)) {
+    const parking = this.parkingSessionService.activeParkings().find((item) => item.id === this.pendingUnparkId);
+    if (!parking) return;
+    const result = await this.parkingApi.unpark({
+      contractId: 0,
+      plate: parking.plate,
+      groupId: Number(parking.operationId || 0),
+      ticketId: 0,
+    });
+    if (result.success && this.parkingSessionService.leaveParking(this.pendingUnparkId)) {
       this.pendingUnparkId = '';
       this.unparked.set(true);
     }
