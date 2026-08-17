@@ -1,6 +1,9 @@
 import { Injectable } from '@angular/core';
-import { environment } from '../../../environments/environment';
 import { MOCK_STREETS_ZARAUTZ } from '../../shared/mock-data';
+import { withMockFallback } from '../api/mock-fallback';
+import { OpsApiClient } from '../api/ops-api-client.service';
+import { DataResult } from '../api/ops-api.types';
+import { OPS_ENDPOINTS } from '../api/ops-endpoints';
 
 export interface ParkingStreet {
   id: number;
@@ -11,55 +14,45 @@ export interface ParkingStreet {
 }
 
 interface StreetsApiItem {
-  streetId?: number;
-  street?: string;
-  zone?: number;
-  zoneDesc?: string;
+  streetId: number;
+  street: string;
+  zone: number;
+  zoneDesc: string;
+}
+
+interface StreetsApiValue {
+  streetsFullNumber: number;
+  streetsFulllist: StreetsApiItem[];
 }
 
 @Injectable({ providedIn: 'root' })
 export class StreetsService {
-  async getStreets(cityId: number): Promise<ParkingStreet[]> {
-    try {
-      const response = await fetch(`${environment.opsApiBaseUrl}/OPSWebServicesAPI/QueryStreetsAPI`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cityId }),
-      });
-      if (!response.ok) throw new Error(`QueryStreetsAPI: ${response.status}`);
+  constructor(private readonly api: OpsApiClient) {}
 
-      const payload: unknown = await response.json();
-      const items = this.extractItems(payload);
-      if (items.length === 0) throw new Error('QueryStreetsAPI returned no streets');
-
-      return items.map((item, index) => ({
-        id: Number(item.streetId ?? index + 1),
-        name: String(item.street ?? ''),
-        zoneId: Number(item.zone ?? 0),
-        zoneDescription: String(item.zoneDesc ?? ''),
-      }));
-    } catch {
-      return MOCK_STREETS_ZARAUTZ.map((street, index) => ({
-        id: index + 1,
-        name: street.nombre,
-        zoneId: 1,
-        zoneDescription: street.zona,
-        tariff: street.tarifa,
-      }));
-    }
+  getStreets(contractId: number): Promise<DataResult<ParkingStreet[]>> {
+    return withMockFallback(
+      async () => {
+        const value = await this.api.post<StreetsApiValue>(OPS_ENDPOINTS.parking.streets, { contractId });
+        if (!Array.isArray(value.streetsFulllist)) throw new Error('QueryStreetsAPI no devolvió streetsFulllist');
+        return value.streetsFulllist.map((item) => ({
+          id: item.streetId,
+          name: item.street,
+          zoneId: item.zone,
+          zoneDescription: item.zoneDesc,
+        }));
+      },
+      () => this.mockStreets(contractId),
+    );
   }
 
-  private extractItems(payload: unknown): StreetsApiItem[] {
-    if (!payload || typeof payload !== 'object') return [];
-    const root = payload as Record<string, unknown>;
-    const candidates = [root['streetsList'], root['data'], root['result'], root['response']];
-    for (const candidate of candidates) {
-      if (Array.isArray(candidate)) return candidate as StreetsApiItem[];
-      if (candidate && typeof candidate === 'object') {
-        const nested = (candidate as Record<string, unknown>)['streetsList'];
-        if (Array.isArray(nested)) return nested as StreetsApiItem[];
-      }
-    }
-    return [];
+  private mockStreets(contractId: number): ParkingStreet[] {
+    if (contractId !== 3) return [];
+    return MOCK_STREETS_ZARAUTZ.map((street, index) => ({
+      id: index + 1,
+      name: street.nombre,
+      zoneId: 1,
+      zoneDescription: street.zona,
+      tariff: street.tarifa,
+    }));
   }
 }

@@ -1,3 +1,5 @@
+import { OpsApiClient } from '../api/ops-api-client.service';
+import { OpsSessionService } from '../api/ops-session.service';
 import { WalletService } from './wallet.service';
 
 describe('WalletService', () => {
@@ -23,5 +25,85 @@ describe('WalletService', () => {
     expect(paid).toBeFalse();
     expect(service.balance()).toBe(12.5);
     expect(service.movements().length).toBe(0);
+  });
+
+  it('loads balance and payment methods with the APK response contract', async () => {
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'post']);
+    api.get.and.returnValues(
+      Promise.resolve(1250) as Promise<never>,
+      Promise.resolve({
+        payMethods: [
+          {
+            id: 7,
+            description: 'Personal',
+            mask: '************4321',
+            tokenUserCard: 'token-card',
+            idUserCard: 9,
+            expDate: '12/28',
+            cardBrand: 'Visa',
+            cardType: 'CREDIT',
+            type: 1,
+            favorite: 1,
+          },
+        ],
+      }) as Promise<never>,
+    );
+    const session = new OpsSessionService();
+    session.setToken('token');
+    const service = new WalletService(api, session);
+
+    await service.load();
+
+    expect(service.balance()).toBe(12.5);
+    expect(service.cards()).toEqual([{ id: '7', brand: 'Visa', last4: '4321', expiryDate: '12/28', cardholderName: 'Personal' }]);
+    expect(service.defaultCardId()).toBe('7');
+    expect(service.source()).toBe('remote');
+  });
+
+  it('recharges in cents using RechargeUserCreditAPI', async () => {
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'post']);
+    api.post.and.resolveTo({ payMethodId: 7, amountRecharged: 250, newBalance: 1500, challengeUrl: null });
+    const session = new OpsSessionService();
+    session.setToken('token');
+    const service = new WalletService(api, session);
+
+    const result = await service.recharge(2.5, '7');
+
+    expect(api.post).toHaveBeenCalledWith(
+      'OPSWebServicesAPI/RechargeUserCreditAPI',
+      { contractId: 0, amount: 250, payMethodId: 7 },
+      { token: 'token' },
+    );
+    expect(result).toEqual({ success: true, source: 'remote', amount: 2.5 });
+    expect(service.balance()).toBe(15);
+  });
+
+  it('refunds with the exact APK fields and converts cents to euros', async () => {
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'post']);
+    api.post.and.resolveTo({ result: 1, refundAmount: 500 });
+    const session = new OpsSessionService();
+    session.setToken('token');
+    const service = new WalletService(api, session);
+
+    const result = await service.refund(5, 'cloud-token');
+
+    expect(api.post).toHaveBeenCalledWith(
+      'OPSWebServicesAPI/RefundUserCreditAPI',
+      { contractId: 0, cloudToken: 'cloud-token', operatingSystem: 1, amount: 500, simulate: 0 },
+      { token: 'token' },
+    );
+    expect(result.source).toBe('remote');
+    expect(service.balance()).toBe(7.5);
+  });
+
+  it('uses an explicit local mock when login is postponed', async () => {
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'post']);
+    const service = new WalletService(api, new OpsSessionService());
+
+    const result = await service.recharge(2, 'visa-1234');
+
+    expect(api.post).not.toHaveBeenCalled();
+    expect(result.source).toBe('mock');
+    expect(service.balance()).toBe(14.5);
   });
 });

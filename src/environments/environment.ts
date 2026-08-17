@@ -1,5 +1,6 @@
 export const environment = {
   production: true,
+  apiBaseUrl: '/api',
   opsApiBaseUrl: '/ops-api',
   externalContentBaseUrl: '/external-content',
   externalContentOrigin: 'https://arinpark.gerteksa.eus',
