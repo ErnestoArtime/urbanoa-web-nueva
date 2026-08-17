@@ -1,12 +1,15 @@
-import { Component, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { APP_BRAND } from '../../../shared/constants/app-brand';
 import { LucideEye, LucideEyeOff } from '@lucide/angular';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
+import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   selector: 'app-register',
-  imports: [RouterLink, LucideEye, LucideEyeOff, TranslatePipe],
+  imports: [RouterLink, LucideEye, LucideEyeOff, TranslatePipe, FormsModule],
   template: `
     <main class="auth-page register-page">
       <section class="register-panel">
@@ -21,17 +24,17 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
         <div class="form-grid">
           <label class="outlined-field"
             ><span>{{ 'auth.register.plate' | translate }}</span
-            ><input placeholder="1234 ABC"
+          ><input placeholder="1234 ABC" [(ngModel)]="plate"
           /></label>
           <label class="foreign-check"><input type="checkbox" /> {{ 'auth.register.foreignPlate' | translate }}</label>
           <label class="outlined-field"
             ><span>{{ 'auth.register.email' | translate }}</span
-            ><input type="email" placeholder="xxx@yyy.zzz"
+            ><input type="email" placeholder="xxx@yyy.zzz" [(ngModel)]="email"
           /></label>
           <label class="outlined-field"
             ><span>{{ 'auth.register.password' | translate }}</span>
             <div class="password-field">
-              <input [type]="showPassword() ? 'text' : 'password'" /><button
+              <input [type]="showPassword() ? 'text' : 'password'" [(ngModel)]="password" /><button
                 type="button"
                 (click)="togglePassword()"
                 [attr.aria-label]="'auth.togglePassword' | translate"
@@ -67,7 +70,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
               >.</span
             ></label
           >
-          <a routerLink="/auth/register-confirm" class="btn btn-primary btn-block continue-button">{{ 'common.continue' | translate }}</a>
+          <button type="button" class="btn btn-primary btn-block continue-button" (click)="submit()">{{ 'common.continue' | translate }}</button>
           <p class="login-link">
             {{ 'auth.register.hasAccount' | translate }}
             <a routerLink="/auth/login">{{ 'auth.login.title' | translate }}</a>
@@ -203,6 +206,9 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
   ],
 })
 export class RegisterComponent {
+  private readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
+  plate = ''; email = ''; password = '';
   readonly showPassword = signal(false);
   readonly showConfirmation = signal(false);
   togglePassword(): void {
@@ -212,4 +218,10 @@ export class RegisterComponent {
     this.showConfirmation.update((value) => !value);
   }
   readonly brand = APP_BRAND;
+
+  async submit(): Promise<void> {
+    if (!this.email || !this.password || !this.plate) return;
+    await this.auth.register({ plate: this.plate, email: this.email, password: this.password, foreignPlate: false });
+    await this.router.navigate(['/auth/register-confirm'], { queryParams: { email: this.email } });
+  }
 }

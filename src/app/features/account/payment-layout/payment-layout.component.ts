@@ -1,4 +1,4 @@
-import { Component, HostListener, inject, signal } from '@angular/core';
+import { Component, HostListener, inject, OnInit, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { RouterLink, NavigationEnd, Router } from '@angular/router';
 import { filter, map, startWith } from 'rxjs/operators';
@@ -17,6 +17,9 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
     <app-split-view [hideList]="isChildRoute()" [hideDetail]="!isChildRoute()">
       <div splitList class="page">
         <h1 class="page-title">{{ 'account.menu.paymentMethods' | translate }}</h1>
+        @if (walletService.source() === 'mock') {
+          <p class="data-notice" role="status">La billetera y las tarjetas muestran datos locales hasta que el servicio esté disponible.</p>
+        }
         <div class="wallet-card payment-wallet-card mb-2">
           <div class="wallet-section">
             <strong>{{ 'account.wallet' | translate }}</strong>
@@ -79,7 +82,7 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
         </div>
         <a routerLink="/app/account/payment-methods/add" class="btn btn-secondary btn-block mt-2">{{ 'account.addCard' | translate }}</a>
 
-        <app-wallet-movement-list class="mt-2" [movements]="walletService.movements()" [title]="'account.movements' | translate" />
+        <app-wallet-movement-list class="mt-2" [movements]="walletService.movements()" title="account.movements" />
       </div>
     </app-split-view>
     @if (cardToDelete()) {
@@ -110,6 +113,14 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
       box-shadow:
         inset 0 0 0 1px rgba(0, 0, 0, 0.2),
         0 5px 14px rgba(19, 68, 65, 0.18);
+    }
+    .data-notice {
+      margin: 0 0 1rem;
+      padding: 0.75rem 0.9rem;
+      border: 1px solid #e5b85c;
+      border-radius: var(--radius-md);
+      background: #fff8e7;
+      color: #714b00;
     }
     .payment-wallet-card::before {
       content: '';
@@ -262,7 +273,7 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
     }
   `,
 })
-export class PaymentLayoutComponent {
+export class PaymentLayoutComponent implements OnInit {
   private readonly userService = inject(UserService);
   readonly walletService = inject(WalletService);
   readonly user = this.userService.user;
@@ -277,6 +288,9 @@ export class PaymentLayoutComponent {
     ),
     { initialValue: this.router.url },
   );
+  ngOnInit(): void {
+    void this.walletService.load();
+  }
   isChildRoute = () => {
     const path = this.url().split('?')[0].replace(/\/$/, '');
     return path !== '/app/account/payment-methods';
@@ -294,8 +308,8 @@ export class PaymentLayoutComponent {
   closeCardMenuOnEscape(): void {
     this.activeCardMenu.set(null);
   }
-  setAsDefault(id: string): void {
-    this.walletService.setDefaultCard(id);
+  async setAsDefault(id: string): Promise<void> {
+    await this.walletService.setDefaultCard(id);
     this.activeCardMenu.set(null);
   }
   requestDelete(id: string): void {
@@ -315,9 +329,9 @@ export class PaymentLayoutComponent {
     this.activeCardMenu.set(null);
     void this.router.navigate(['/app/account/payment-methods/refund'], { queryParams: { cardId: id } });
   }
-  confirmDelete(): void {
+  async confirmDelete(): Promise<void> {
     const id = this.cardToDelete();
-    if (id) this.walletService.removeCard(id);
+    if (id) await this.walletService.removeCard(id);
     this.cardToDelete.set(null);
   }
   brandAsset(brand: string): string | null {

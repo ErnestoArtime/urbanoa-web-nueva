@@ -1,4 +1,6 @@
 import { Component, signal } from '@angular/core';
+import { inject } from '@angular/core';
+import { AccountApiService } from '../../../core/services/account-api.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
 import { ResultModalComponent } from '../../../shared/components/result-modal/result-modal.component';
@@ -116,6 +118,7 @@ import { LucideEye, LucideEyeOff } from '@lucide/angular';
   ],
 })
 export class AccountChangePasswordComponent {
+  private readonly accountApi = inject(AccountApiService);
   readonly current = signal('');
   readonly next = signal('');
   readonly confirmation = signal('');
@@ -134,7 +137,7 @@ export class AccountChangePasswordComponent {
     visibility.update((value) => !value);
   }
 
-  save(): void {
+  async save(): Promise<void> {
     if (!this.current() || this.next().length < 8 || this.next() !== this.confirmation()) {
       this.errorMessage.set(
         this.next() !== this.confirmation() ? 'account.changePassword.confirmRequired' : 'account.changePassword.requiredFields',
@@ -142,6 +145,7 @@ export class AccountChangePasswordComponent {
       this.result.set('error');
       return;
     }
+    await this.accountApi.changePassword(this.current(), this.next());
     this.result.set('success');
   }
 }

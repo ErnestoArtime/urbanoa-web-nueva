@@ -36,11 +36,23 @@ export const ACCOUNT_ROUTES: Routes = [
         data: { title: 'account.menu.privacy', url: `${externalContent}/arinpark/es.html`, backLink: '/app/account' },
       },
       { path: 'about', loadComponent: () => import('./about/about.component').then((m) => m.AccountAboutComponent) },
-      { path: 'support', loadComponent: () => import('./support/support.component').then((m) => m.AccountSupportComponent) },
       {
         path: 'support-success',
         loadComponent: () => import('./support-success/support-success.component').then((m) => m.AccountSupportSuccessComponent),
       },
+      {
+        path: 'support/new',
+        loadComponent: () => import('./support-form/support-form.component').then((m) => m.AccountSupportFormComponent),
+      },
+      {
+        path: 'support/:id/reply',
+        loadComponent: () => import('./support-form/support-form.component').then((m) => m.AccountSupportFormComponent),
+      },
+      {
+        path: 'support/:id',
+        loadComponent: () => import('./support-detail/support-detail.component').then((m) => m.AccountSupportDetailComponent),
+      },
+      { path: 'support', loadComponent: () => import('./support/support.component').then((m) => m.AccountSupportComponent) },
       {
         path: 'vehicles',
         loadComponent: () => import('./vehicles-layout/vehicles-layout.component').then((m) => m.VehiclesLayoutComponent),
@@ -53,6 +65,10 @@ export const ACCOUNT_ROUTES: Routes = [
         path: 'payment-methods',
         loadComponent: () => import('./payment-layout/payment-layout.component').then((m) => m.PaymentLayoutComponent),
         children: [
+          {
+            path: 'challenge',
+            loadComponent: () => import('./payment-challenge/payment-challenge.component').then((m) => m.PaymentChallengeComponent),
+          },
           {
             path: 'add',
             loadComponent: () => import('./payment-add/payment-add.component').then((m) => m.PaymentAddComponent),

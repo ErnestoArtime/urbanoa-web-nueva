@@ -1,11 +1,13 @@
-import { Component, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Component, inject, signal } from '@angular/core';
 import { LucideEye, LucideEyeOff } from '@lucide/angular';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
+import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   selector: 'app-register-confirm',
-  imports: [RouterLink, LucideEye, LucideEyeOff, TranslatePipe],
+  imports: [LucideEye, LucideEyeOff, TranslatePipe, FormsModule],
   template: `
     <div class="auth-page">
       <div class="auth-form">
@@ -13,12 +15,12 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
         <p class="page-subtitle">{{ 'auth.registerConfirm.subtitle' | translate }}</p>
         <div class="form-group">
           <label class="form-label">{{ 'auth.registerConfirm.code' | translate }}</label>
-          <input class="form-input" placeholder="000000" />
+          <input class="form-input" placeholder="000000" [(ngModel)]="code" />
         </div>
         <div class="form-group">
           <label class="form-label">{{ 'auth.registerConfirm.confirmPassword' | translate }}</label>
           <div class="password-field">
-            <input class="form-input" [type]="showPassword() ? 'text' : 'password'" /><button
+            <input class="form-input" [type]="showPassword() ? 'text' : 'password'" [(ngModel)]="password" /><button
               type="button"
               (click)="togglePassword()"
               [attr.aria-label]="'auth.togglePassword' | translate"
@@ -32,14 +34,17 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
           </div>
         </div>
         <button type="button" class="btn-text mb-2">{{ 'auth.registerConfirm.resend' | translate }}</button>
-        <a routerLink="/onboarding/user" class="btn btn-primary btn-block">{{ 'auth.registerConfirm.submit' | translate }}</a>
+        <button type="button" class="btn btn-primary btn-block" (click)="submit()">{{ 'auth.registerConfirm.submit' | translate }}</button>
       </div>
     </div>
   `,
 })
 export class RegisterConfirmComponent {
+  private readonly auth = inject(AuthService); private readonly route = inject(ActivatedRoute); private readonly router = inject(Router);
+  code = ''; password = '';
   readonly showPassword = signal(false);
   togglePassword(): void {
     this.showPassword.update((value) => !value);
   }
+  async submit(): Promise<void> { if (!this.code || !this.password) return; await this.auth.confirmRegister(this.route.snapshot.queryParamMap.get('email') ?? '', this.code, this.password); await this.router.navigate(['/onboarding/user']); }
 }

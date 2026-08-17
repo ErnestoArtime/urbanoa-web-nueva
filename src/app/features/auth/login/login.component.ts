@@ -1,12 +1,15 @@
-import { Component, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { APP_BRAND } from '../../../shared/constants/app-brand';
 import { LucideEye, LucideEyeOff } from '@lucide/angular';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
+import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   selector: 'app-login',
-  imports: [RouterLink, LucideEye, LucideEyeOff, TranslatePipe],
+  imports: [RouterLink, LucideEye, LucideEyeOff, TranslatePipe, FormsModule],
   template: `
     <main class="auth-page apk-auth-page">
       <section class="auth-panel">
@@ -15,12 +18,12 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
         <p class="auth-intro">{{ 'auth.login.subtitle' | translate }}</p>
         <label class="outlined-field"
           ><span>{{ 'auth.login.email' | translate }}</span
-          ><input type="email" placeholder="xxx@yyy.zzz" autocomplete="email"
+          ><input type="email" placeholder="xxx@yyy.zzz" autocomplete="email" [(ngModel)]="email"
         /></label>
         <label class="outlined-field"
           ><span>{{ 'auth.login.password' | translate }}</span>
           <div class="password-field">
-            <input [type]="showPassword() ? 'text' : 'password'" placeholder="••••••••" autocomplete="current-password" /><button
+            <input [type]="showPassword() ? 'text' : 'password'" placeholder="••••••••" autocomplete="current-password" [(ngModel)]="password" /><button
               type="button"
               (click)="togglePassword()"
               [attr.aria-label]="'auth.togglePassword' | translate"
@@ -33,7 +36,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
             </button></div
         ></label>
         <a routerLink="/auth/reset-password" class="recover-link">{{ 'auth.login.forgotPassword' | translate }}</a>
-        <a routerLink="/app" class="btn btn-primary btn-block login-button">{{ 'auth.login.title' | translate }}</a>
+        <button type="button" class="btn btn-primary btn-block login-button" [disabled]="loading()" (click)="submit()">{{ 'auth.login.title' | translate }}</button>
         <p class="register-link">
           {{ 'auth.login.noAccount' | translate }}
           <a routerLink="/auth/register">{{ 'auth.login.register' | translate }}</a>
@@ -155,9 +158,21 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
   ],
 })
 export class LoginComponent {
+  private readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
+  email = '';
+  password = '';
+  readonly loading = signal(false);
   readonly showPassword = signal(false);
   togglePassword(): void {
     this.showPassword.update((value) => !value);
   }
   readonly brand = APP_BRAND;
+
+  async submit(): Promise<void> {
+    if (!this.email.trim() || !this.password) return;
+    this.loading.set(true);
+    try { await this.auth.login({ email: this.email, password: this.password }); await this.router.navigate(['/app']); }
+    finally { this.loading.set(false); }
+  }
 }

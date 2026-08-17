@@ -567,8 +567,8 @@ export class AccountMenuComponent {
       this.paymentSub.set('refund');
       return;
     }
-    if (accountPath === 'support-success') {
-      this.selected.set(accountPath);
+    if (accountPath === 'support-success' || accountPath.startsWith('support/')) {
+      this.selected.set('support');
       return;
     }
 
