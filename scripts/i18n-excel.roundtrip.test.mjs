@@ -21,6 +21,8 @@ const conditionalKey = 'i18n_roundtrip_test.conditional_entry';
 const alternateConditionalKey = 'i18n_roundtrip_test.alternate_entry';
 const bindingKey = 'i18n_roundtrip_test.page_title';
 const ampersandKey = 'i18n_roundtrip_test.key&hint';
+const simpleKey = 'mv_i18n_roundtrip_simple';
+const attributeBindingKey = 'i18n_roundtrip_test.attribute_binding';
 const languages = ['es', 'eu', 'fr', 'uk'];
 
 const setByPath = (target, dottedKey, value) => {
@@ -58,6 +60,8 @@ try {
       input[alternateConditionalKey] = 'ALTERNATE_ES';
       input[bindingKey] = 'PAGE_TITLE_ES';
       input[ampersandKey] = 'AMPERSAND_ES';
+      input[simpleKey] = 'SIMPLE_ES';
+      input[attributeBindingKey] = 'ATTRIBUTE_BINDING_ES';
     }
     input[serviceKey] = `SERVICE_${language.toUpperCase()}`;
     if (language === 'eu') input['i18n_roundtrip_orphan.only'] = 'ORPHAN';
@@ -83,6 +87,7 @@ try {
         supportedExtensions: ['.html', '.ts'],
         excludedFileSuffixes: ['.spec.ts'],
         dynamicPrefixes: [],
+        simpleTranslationKeyPrefixes: ['mv_'],
         sheetRules: [{ sheet: 'Autenticación', prefixes: ['auth.'] }],
       },
       null,
@@ -118,6 +123,8 @@ try {
       '}}</span>',
       `<app-payment-method [pageTitle]="'${bindingKey}'"></app-payment-method>`,
       `<span>{{ '${ampersandKey}' | translate }}</span>`,
+      `<span>{{ '${simpleKey}' | translate }}</span>`,
+      `<img [attr.alt]="'${attributeBindingKey}' | translate">`,
     ].join('\n') + '\n',
     'utf8',
   );
@@ -126,7 +133,14 @@ try {
   run('prune', '--config', flatConfig);
   for (const language of languages) {
     const prunedCatalogue = JSON.parse(await fs.readFile(path.join(languageDirectory, `${language}.json`), 'utf8'));
-    for (const key of [conditionalKey, alternateConditionalKey, bindingKey, ampersandKey]) {
+    for (const key of [
+      conditionalKey,
+      alternateConditionalKey,
+      bindingKey,
+      ampersandKey,
+      simpleKey,
+      attributeBindingKey,
+    ]) {
       if (typeof prunedCatalogue[key] !== 'string') {
         throw new Error(`${language}: prune removed ${key} even though the code uses it.`);
       }

@@ -38,6 +38,7 @@
     "validation",
     "wallet"
   ],
+  "simpleTranslationKeyPrefixes": ["mv_"],
   "ignoredDirectLiterals": [
     "ArinPark",
     "ap",

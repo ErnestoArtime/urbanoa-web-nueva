@@ -35,6 +35,7 @@ const DEFAULT_CONFIG = {
   dynamicPrefixes: [],
   ignoredKeyPrefixes: [],
   translationKeyPrefixes: [],
+  simpleTranslationKeyPrefixes: [],
   ignoredDirectLiterals: [],
   sheetRules: [],
 };
@@ -60,6 +61,9 @@ async function loadConfig(options) {
   }
   if (!Array.isArray(config.translationKeyPrefixes)) {
     throw new Error('translationKeyPrefixes debe ser un array.');
+  }
+  if (!Array.isArray(config.simpleTranslationKeyPrefixes)) {
+    throw new Error('simpleTranslationKeyPrefixes debe ser un array.');
   }
   if (!Array.isArray(config.ignoredDirectLiterals)) {
     throw new Error('ignoredDirectLiterals debe ser un array.');
@@ -290,7 +294,11 @@ function isStrictTranslationKey(value) {
 function addQuotedKeys(expression, keys) {
   for (const match of expression.matchAll(/['"]([^'"`\n]+)['"](?=[^|{}]*\|\s*translate\b)/g)) {
     const key = match[1].trim();
-    if (key.includes('.') && isLikelyTranslationKey(key)) keys.add(key);
+    const isConfiguredSimpleKey = config.simpleTranslationKeyPrefixes
+      .some((prefix) => key.startsWith(prefix));
+    if (isLikelyTranslationKey(key) && (key.includes('.') || isConfiguredSimpleKey)) {
+      keys.add(key);
+    }
   }
 }
 
@@ -299,8 +307,9 @@ function extractTranslationKeys(content) {
   for (const match of content.matchAll(/\{\{([\s\S]*?)\}\}/g)) {
     if (/\|\s*translate\b/.test(match[1])) addQuotedKeys(match[1], keys);
   }
-  for (const match of content.matchAll(/\[[^\]]+\]\s*=\s*["']([\s\S]*?)["']/g)) {
-    if (/\|\s*translate\b/.test(match[1])) addQuotedKeys(match[1], keys);
+  for (const match of content.matchAll(/\[[^\]]+\]\s*=\s*(?:"([^"]*)"|'([^']*)')/g)) {
+    const expression = match[1] ?? match[2];
+    if (/\|\s*translate\b/.test(expression)) addQuotedKeys(expression, keys);
   }
   for (const match of content.matchAll(/\[pageTitle\]\s*=\s*["']\s*["']([^"'\n]+)["']\s*["']/g)) {
     const key = match[1].trim();
