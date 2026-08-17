@@ -12,6 +12,9 @@
 # Local APK analysis and reference dumps
 /PANTALLAS_APK
 /_apk-analysis
+/_apk-analysis-v2
+/outputs
+/.codex-spreadsheet-work
 
 # Local assistant notes / docs
 /AGENT.md
