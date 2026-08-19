@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { requireSession } from './core/guards/auth.guard';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'auth/login', pathMatch: 'full' },
@@ -12,6 +13,7 @@ export const routes: Routes = [
   },
   {
     path: 'app',
+    canActivate: [requireSession],
     loadComponent: () => import('./layout/app-shell/app-shell.component').then((m) => m.AppShellComponent),
     children: [
       {

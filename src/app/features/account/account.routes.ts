@@ -35,6 +35,10 @@ export const ACCOUNT_ROUTES: Routes = [
         loadComponent: () => import('./web-content/web-content.component').then((m) => m.WebContentComponent),
         data: { title: 'Política de privacidad', url: `${externalContent}/arinpark/es.html`, backLink: '/app/account' },
       },
+      {
+        path: 'delete-account',
+        loadComponent: () => import('./delete-account/delete-account.component').then((m) => m.AccountDeleteAccountComponent),
+      },
       { path: 'about', loadComponent: () => import('./about/about.component').then((m) => m.AccountAboutComponent) },
       { path: 'support', loadComponent: () => import('./support/support.component').then((m) => m.AccountSupportComponent) },
       {

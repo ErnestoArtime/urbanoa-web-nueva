@@ -40,6 +40,7 @@ const TITLE_KEYS: Record<string, string> = {
   '/app/account/payment-methods/add': 'account.paymentMethods',
   '/app/account/payment-methods/recharge': 'dashboard.recharge',
   '/app/account/payment-methods/refund': 'ops.type.balanceRefund',
+  '/app/account/delete-account': 'account.deleteAccount.title',
   '/app/account/about': 'app.title',
   '/app/account/support': 'account.support',
   '/app/account/support-success': 'account.support',

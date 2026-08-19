@@ -8,6 +8,7 @@ import { AppIconComponent } from '../../../shared/icons/app-icon.component';
 import { SplitViewComponent } from '../../../layout/split-view/split-view.component';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { APP_BRAND } from '../../../shared/constants/app-brand';
+import { AuthService } from '../../../core/services/auth.service';
 import { UserService } from '../../../core/services/user.service';
 import { WalletService } from '../../../core/services/wallet.service';
 
@@ -222,6 +223,7 @@ import { WalletService } from '../../../core/services/wallet.service';
 })
 export class AccountShellComponent {
   private readonly router = inject(Router);
+  private readonly authService = inject(AuthService);
   private readonly userService = inject(UserService);
   readonly walletService = inject(WalletService);
   readonly menu = ACCOUNT_MENU;
@@ -249,6 +251,7 @@ export class AccountShellComponent {
   };
 
   logout(): void {
+    this.authService.logout();
     void this.router.navigate(['/auth/login']);
   }
 

@@ -77,8 +77,28 @@ export const MOCK_WALLET: Wallet = {
 };
 
 export const MOCK_OPERATIONS: Operation[] = [
-  { id: '1', type: OperationType.PARKING, plate: '1234 ABC', date: '16/06/2026', amount: -1.2, zone: 'Zona Azul — Centro', durationLabel: '1h 30min', startTime: '18:36', endTime: '20:06' },
-  { id: '2', type: OperationType.PARKING_EXTENSION, plate: '1234 ABC', date: '15/06/2026', amount: -0.6, zone: 'Zona Azul — Centro', durationLabel: '+30min', startTime: '19:40', endTime: '20:10' },
+  {
+    id: '1',
+    type: OperationType.PARKING,
+    plate: '1234 ABC',
+    date: '16/06/2026',
+    amount: -1.2,
+    zone: 'Zona Azul — Centro',
+    durationLabel: '1h 30min',
+    startTime: '18:36',
+    endTime: '20:06',
+  },
+  {
+    id: '2',
+    type: OperationType.PARKING_EXTENSION,
+    plate: '1234 ABC',
+    date: '15/06/2026',
+    amount: -0.6,
+    zone: 'Zona Azul — Centro',
+    durationLabel: '+30min',
+    startTime: '19:40',
+    endTime: '20:10',
+  },
   { id: '3', type: OperationType.REFUND, plate: '5678 DEF', date: '14/06/2026', amount: 3.5, zone: 'Zona Verde — Ensanche' },
   {
     id: '4',
@@ -91,7 +111,17 @@ export const MOCK_OPERATIONS: Operation[] = [
     paymentBreakdown: { walletAmount: 12.5, cardAmount: 7.5, cardLabel: 'Visa •••• 1234' },
   },
   { id: '5', type: OperationType.TOP_UP, plate: null, date: '08/06/2026', amount: 20.0, zone: null },
-  { id: '6', type: OperationType.PARKING_END, plate: '1234 ABC', date: '01/06/2026', amount: 0.4, zone: 'Zona Azul — Centro', startTime: '13:15', endTime: '19:00', durationLabel: '5h 45min' },
+  {
+    id: '6',
+    type: OperationType.PARKING_END,
+    plate: '1234 ABC',
+    date: '01/06/2026',
+    amount: 0.4,
+    zone: 'Zona Azul — Centro',
+    startTime: '13:15',
+    endTime: '19:00',
+    durationLabel: '5h 45min',
+  },
 ];
 
 export const MOCK_TICKET_ACTIVE: TicketActive = {
@@ -241,4 +271,11 @@ export const ACCOUNT_MENU = [
   },
   { key: 'about', path: '/app/account/about', labelKey: 'account.menu.about', icon: 'about', groupKey: 'account.menu.group.other' },
   { key: 'support', path: '/app/account/support', labelKey: 'account.menu.support', icon: 'support', groupKey: 'account.menu.group.other' },
+  {
+    key: 'delete-account',
+    path: '/app/account/delete-account',
+    labelKey: 'account.deleteAccount.action',
+    icon: 'lock',
+    groupKey: 'account.menu.group.other',
+  },
 ];
