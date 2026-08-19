@@ -7,6 +7,7 @@ import { ParkingFlowStore } from '../parking-flow.store';
 import { ParkingFlowQuery, readParkingFlowQuery } from '../parking-flow.model';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { WalletService } from '../../../core/services/wallet.service';
+import { ParkingApiService } from '../../../core/services/parking-api.service';
 
 @Component({
   selector: 'app-parking-confirm',
@@ -199,6 +200,7 @@ export class ParkingConfirmComponent {
   private readonly router = inject(Router);
   private readonly store = inject(ParkingFlowStore);
   readonly walletService = inject(WalletService);
+  private readonly parkingApi = inject(ParkingApiService);
   readonly query: ParkingFlowQuery = this.store.hasMinimumParkingData() ? this.store.fromStore() : readParkingFlowQuery(this.route);
   readonly selectedCardId = signal(this.walletService.defaultCardId());
   readonly selectedCard = computed(
@@ -221,13 +223,34 @@ export class ParkingConfirmComponent {
     return this.query.sectorColor ? `#${this.query.sectorColor.replace('#', '')}` : 'var(--color-primary)';
   }
 
-  onSwipeComplete(): void {
+  async onSwipeComplete(): Promise<void> {
     if (this.loading()) return;
     const amount = this.totalAmount();
     if (this.requiresCard() && !this.walletService.cards().some((card) => card.id === this.selectedCardId())) return;
     const walletAmount = Math.min(amount, this.walletService.balance());
+    this.loading.set(true);
+    const result = await this.parkingApi.confirmParking({
+      contractId: Number(this.query.cityId || 0),
+      plate: this.query.plate,
+      sector: Number(this.query.sectorId || 0),
+      quantity: Math.round(amount * 100),
+      tariffType: Number(this.query.tariffId || 0),
+      date: new Date().toISOString(),
+      time: Number(this.query.minutes || 0),
+      latitude: Number(this.query.latitude || 0),
+      longitude: Number(this.query.longitude || 0),
+      street: this.query.street,
+      payMethodId: Number(this.selectedCardId() || 0),
+    });
+    if (!result.success) {
+      this.loading.set(false);
+      return;
+    }
     const paid = walletAmount <= 0 || this.walletService.debit(walletAmount, 'Estacionamiento', 'parking-payment');
-    if (!paid) return;
+    if (!paid) {
+      this.loading.set(false);
+      return;
+    }
 
     const paymentQuery = {
       ...this.query,
@@ -237,7 +260,6 @@ export class ParkingConfirmComponent {
       paymentCardLabel: this.requiresCard() ? `${this.selectedCard().brand} •••• ${this.selectedCard().last4}` : '',
     };
 
-    this.loading.set(true);
-    setTimeout(() => void this.router.navigate(['/app/parking/success'], { queryParams: paymentQuery }), 1500);
+    void this.router.navigate(['/app/parking/success'], { queryParams: paymentQuery });
   }
 }

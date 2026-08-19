@@ -1,4 +1,5 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
+import { OpsSessionService } from '../api/ops-session.service';
 import { postJson } from '../http/api-client';
 import { readStorage, writeStorage } from '../storage/signal-storage';
 import { UserService, UserData } from './user.service';
@@ -26,12 +27,17 @@ export interface RegisterPayload {
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly userService = inject(UserService);
+  private readonly opsSession = inject(OpsSessionService);
   private readonly storageKey = 'urbanoa.auth.session';
   private readonly session = signal<AuthSession | null>(readStorage<AuthSession | null>(this.storageKey, null));
 
   readonly currentSession = this.session.asReadonly();
   readonly token = computed(() => this.session()?.token ?? '');
   readonly isAuthenticated = computed(() => !!this.session()?.token);
+
+  constructor() {
+    this.syncOpsSession(this.token());
+  }
 
   async login(email: string, password: string): Promise<void> {
     const response = await postJson<unknown>('/LoginUserAPI', { email, password });
@@ -58,6 +64,7 @@ export class AuthService {
   private storeSession(session: AuthSession): void {
     this.session.set(session);
     writeStorage(this.storageKey, session);
+    this.syncOpsSession(session.token);
     this.userService.updateUser({
       name: session.user.name,
       surname: session.user.surname,
@@ -70,6 +77,15 @@ export class AuthService {
   private clearSession(): void {
     this.session.set(null);
     writeStorage<AuthSession | null>(this.storageKey, null);
+    this.syncOpsSession('');
+  }
+
+  private syncOpsSession(token: string): void {
+    if (token) {
+      this.opsSession.setToken(token);
+    } else {
+      this.opsSession.clear();
+    }
   }
 
   private normalizeSession(payload: unknown, fallbackEmail: string): AuthSession {

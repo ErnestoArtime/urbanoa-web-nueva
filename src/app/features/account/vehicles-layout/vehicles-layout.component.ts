@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { RouterLink, NavigationEnd, Router } from '@angular/router';
 import { filter, map, startWith } from 'rxjs/operators';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -14,20 +14,25 @@ import { VehicleService } from '../../../core/services/vehicle.service';
     <app-split-view [hideList]="isChildRoute()" [hideDetail]="!isChildRoute()">
       <div splitList class="page has-sticky-actions">
         <h1 class="page-title">{{ 'account.menu.vehicles' | translate }}</h1>
+        @if (source() === 'mock') {
+          <p class="data-notice" role="status">Las matrículas se guardan localmente hasta que haya una sesión conectada.</p>
+        }
         @if (vehicles().length > 0) {
           <ul class="list card" style="padding:0;overflow:hidden">
             @for (v of vehicles(); track v.id) {
-            <a [routerLink]="['/app/account/vehicles/edit', v.id]" class="list-item vehicle-item">
-              <span class="vehicle-icon-wrap"><app-icon name="vehicle" class="vehicle-icon" [size]="22" [stroke]="false" /></span>
-              <div class="list-item-content">
-                <div class="list-item-title">{{ v.plate }}</div>
-                <div class="list-item-subtitle">{{ v.isDefault ? ('account.vehicleFavorite' | translate) : (v.label ?? '') }}</div>
-                @if (v.isDefault) {
-                  <span class="badge badge-primary">{{ 'account.cardPrimary' | translate }}</span>
-                }
-              </div>
-              <span class="list-item-chevron">›</span>
-            </a>
+              <a [routerLink]="['/app/account/vehicles/edit', v.id]" class="list-item vehicle-item">
+                <span class="vehicle-icon-wrap"><app-icon name="vehicle" class="vehicle-icon" [size]="22" [stroke]="false" /></span>
+                <div class="list-item-content">
+                  <div class="list-item-title">{{ v.plate }}</div>
+                  <div class="list-item-subtitle">
+                    {{ v.isDefault ? ('account.vehicleFavorite' | translate) : (v.label ?? '' | translate) }}
+                  </div>
+                  @if (v.isDefault) {
+                    <span class="badge badge-primary">{{ 'account.cardPrimary' | translate }}</span>
+                  }
+                </div>
+                <span class="list-item-chevron">›</span>
+              </a>
             }
           </ul>
         } @else {
@@ -48,6 +53,14 @@ import { VehicleService } from '../../../core/services/vehicle.service';
     `
       .vehicle-item {
         gap: 0.75rem !important;
+      }
+      .data-notice {
+        margin: 0 0 1rem;
+        padding: 0.75rem 0.9rem;
+        border: 1px solid #e5b85c;
+        border-radius: var(--radius-md);
+        background: #fff8e7;
+        color: #714b00;
       }
       .vehicle-icon-wrap {
         display: grid;
@@ -83,9 +96,10 @@ import { VehicleService } from '../../../core/services/vehicle.service';
     `,
   ],
 })
-export class VehiclesLayoutComponent {
+export class VehiclesLayoutComponent implements OnInit {
   private readonly vehicleService = inject(VehicleService);
   readonly vehicles = this.vehicleService.vehicles;
+  readonly source = this.vehicleService.source;
   private readonly router = inject(Router);
   private readonly url = toSignal(
     this.router.events.pipe(
@@ -99,4 +113,8 @@ export class VehiclesLayoutComponent {
     const u = this.url();
     return u.includes('/vehicles/add') || u.includes('/vehicles/edit');
   };
+
+  async ngOnInit(): Promise<void> {
+    await this.vehicleService.load();
+  }
 }

@@ -368,11 +368,15 @@ export class ParkingTimeStepsComponent implements OnInit {
   readonly loading = signal(true);
   private readonly startedAt = new Date();
 
-  ngOnInit(): void {
+  async ngOnInit(): Promise<void> {
     const hourlyPrice = this.parsePrice(this.query.tariffPrice);
-    const generatedSteps = this.timeStepsService.generateSteps({
+    const generatedSteps = await this.timeStepsService.queryTimeSteps({
       tariffId: this.query.tariffId || '1',
       tariffPrice: hourlyPrice,
+      contractId: Number(this.query.cityId || 0),
+      sectorId: Number(this.query.sectorId || 0),
+      ticketId: Number(this.query.ticketId || 0),
+      plate: this.query.plate,
       startDate: this.startedAt,
       stepMinutes: this.isZarautz() ? 3 : 5,
     });
@@ -380,7 +384,7 @@ export class ParkingTimeStepsComponent implements OnInit {
     const oneHourIndex = generatedSteps.findIndex((step) => step.time === 60);
     const defaultIndex = oneHourIndex >= 0 ? oneHourIndex : 0;
     this.selectedStep.set(generatedSteps[defaultIndex]);
-    setTimeout(() => this.loading.set(false), 700);
+    this.loading.set(false);
   }
 
   selectStep(step: ParkingTimeStep): void {

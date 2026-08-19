@@ -1,9 +1,10 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
-import { MOCK_MUNICIPIOS, type Municipio } from '../../../shared/mock-data';
+import { MOCK_MUNICIPIOS } from '../../../shared/mock-data';
 import { LocationSettingsService } from '../../../core/services/location-settings.service';
 import { ParkingFlowStore } from '../parking-flow.store';
+import { CitiesService, ParkingMunicipio } from '../../../core/services/cities.service';
 
 @Component({
   selector: 'app-parking-cities',
@@ -11,6 +12,9 @@ import { ParkingFlowStore } from '../parking-flow.store';
   template: `
     <div class="page has-sticky-actions">
       <h1 class="page-title">{{ 'parking.selectMunicipio' | translate }}</h1>
+      @if (dataSource() === 'mock') {
+        <p class="data-notice" role="status">El servicio de municipios no está disponible. Se muestran datos de demostración.</p>
+      }
       <label class="municipio-search">
         <span aria-hidden="true">⌕</span>
         <input
@@ -25,7 +29,9 @@ import { ParkingFlowStore } from '../parking-flow.store';
           @for (m of filteredMunicipios(); track m.id) {
             <button type="button" class="municipio-card" [class.active]="selected().id === m.id" (click)="selected.set(m)">
               <div class="municipio-img">
-                <img [src]="'assets/municipios/' + m.imagen" [alt]="'parking.cities.viewOf' | translate: { name: m.nombre }" />
+                @if (m.imagen) {
+                  <img [src]="'assets/municipios/' + m.imagen" [alt]="'parking.cities.viewOf' | translate: { name: m.nombre }" />
+                }
                 <span class="municipio-map-label">{{ m.nombre }}</span>
               </div>
               <div class="municipio-body">
@@ -58,12 +64,18 @@ import { ParkingFlowStore } from '../parking-flow.store';
             </li>
           </ul>
           <div class="sticky-actions">
-            <a routerLink="/app/parking" [queryParams]="{ city: selected().id, vehicleId: vehicleId, plate: vehiclePlate }" class="btn btn-primary btn-block">{{
-              'parking.cities.viewMap' | translate
-            }}</a>
-            <a routerLink="/app/parking/streets" [queryParams]="{ municipio: selected().id, vehicleId: vehicleId, plate: vehiclePlate }" class="btn btn-secondary btn-block">{{
-              'parking.cities.viewStreets' | translate
-            }}</a>
+            <a
+              routerLink="/app/parking"
+              [queryParams]="{ city: selected().id, vehicleId: vehicleId, plate: vehiclePlate }"
+              class="btn btn-primary btn-block"
+              >{{ 'parking.cities.viewMap' | translate }}</a
+            >
+            <a
+              routerLink="/app/parking/streets"
+              [queryParams]="{ municipio: selected().id, vehicleId: vehicleId, plate: vehiclePlate }"
+              class="btn btn-secondary btn-block"
+              >{{ 'parking.cities.viewStreets' | translate }}</a
+            >
           </div>
         </aside>
       </div>
@@ -74,6 +86,14 @@ import { ParkingFlowStore } from '../parking-flow.store';
       .municipios-layout {
         display: grid;
         gap: 1rem;
+      }
+      .data-notice {
+        margin: 0.75rem 0 0;
+        padding: 0.75rem 0.9rem;
+        border: 1px solid #e5b85c;
+        border-radius: var(--radius-md);
+        background: #fff8e7;
+        color: #714b00;
       }
       .municipio-search {
         display: flex;
@@ -242,29 +262,40 @@ import { ParkingFlowStore } from '../parking-flow.store';
     `,
   ],
 })
-export class ParkingCitiesComponent {
+export class ParkingCitiesComponent implements OnInit {
   private readonly locationSettings = inject(LocationSettingsService);
+  private readonly citiesService = inject(CitiesService);
   readonly flowStore = inject(ParkingFlowStore);
   readonly route = inject(ActivatedRoute);
   readonly vehicleId = this.route.snapshot.queryParamMap.get('vehicleId') ?? this.flowStore.vm().vehicleId ?? '';
   readonly vehiclePlate = this.route.snapshot.queryParamMap.get('plate') ?? this.flowStore.vm().plate ?? '';
-  readonly municipios = MOCK_MUNICIPIOS;
+  readonly municipios = signal<ParkingMunicipio[]>(
+    MOCK_MUNICIPIOS.map((city) => ({ ...city, contractId: this.citiesService.contractIdFor(city.id) })),
+  );
   readonly selected = signal(this.defaultCity());
+  readonly dataSource = signal<'remote' | 'mock' | null>(null);
 
-  private defaultCity(): Municipio {
+  async ngOnInit(): Promise<void> {
+    const result = await this.citiesService.getCities();
+    this.municipios.set(result.data);
+    this.dataSource.set(result.source);
+    this.selected.set(this.defaultCity());
+  }
+
+  private defaultCity(): ParkingMunicipio {
     const preferredId = this.locationSettings.settings().preferredCityId;
     if (preferredId) {
-      const match = MOCK_MUNICIPIOS.find((m) => m.id === preferredId);
+      const match = this.municipios().find((m) => m.id === preferredId);
       if (match) return match;
     }
-    return MOCK_MUNICIPIOS[1];
+    return this.municipios().find((city) => city.id === 'zarautz') ?? this.municipios()[0];
   }
 
   readonly search = signal('');
   readonly filteredMunicipios = computed(() => {
     const query = this.search().trim().toLocaleLowerCase('es');
-    if (!query) return this.municipios;
-    return this.municipios.filter((municipio) => `${municipio.nombre} ${municipio.provincia}`.toLocaleLowerCase('es').includes(query));
+    if (!query) return this.municipios();
+    return this.municipios().filter((municipio) => `${municipio.nombre} ${municipio.provincia}`.toLocaleLowerCase('es').includes(query));
   });
 
   updateSearch(event: Event): void {

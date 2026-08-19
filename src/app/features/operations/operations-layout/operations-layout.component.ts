@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { RouterLink, RouterLinkActive, NavigationEnd, Router } from '@angular/router';
 import { filter, map, startWith } from 'rxjs/operators';
@@ -9,6 +9,7 @@ import { OperationType, OPERATION_TYPE_LABELS } from '../../../shared/models/ope
 import { UnpaidFinesService } from '../../../core/services/unpaid-fines.service';
 import { OperationsService, type ActiveParking } from '../../../core/services/operations.service';
 import { ParkingSessionService } from '../../../core/services/parking-session.service';
+import { ParkingApiService } from '../../../core/services/parking-api.service';
 import { NavigationToCarService } from '../../../core/services/navigation-to-car.service';
 import type { Operation } from '../../../shared/models/operation';
 import { OperationIconComponent } from '../../../shared/components/operation-icon/operation-icon.component';
@@ -96,7 +97,7 @@ import { ParkingTicketCardComponent } from '../../../shared/components/parking-t
 
         <ul class="list history-list">
           @for (group of groupedHistory(); track group.label) {
-            <li class="history-group-label">{{ group.label }}</li>
+            <li class="history-group-label">{{ group.label | translate }}</li>
             @for (op of group.items; track op.id) {
               <a
                 [routerLink]="['/app/operations/detail', op.id]"
@@ -109,7 +110,9 @@ import { ParkingTicketCardComponent } from '../../../shared/components/parking-t
                   <div class="list-item-title" [class.finish-op-title]="isFinishParking(op)">
                     {{ OPERATION_TYPE_LABELS[op.type] | translate }}
                   </div>
-                  <div class="list-item-subtitle">{{ op.date }}{{ operationTime(op) ? ' · ' + operationTime(op) : '' }}{{ op.zone ? ' — ' + op.zone : '' }}</div>
+                  <div class="list-item-subtitle">
+                    {{ op.date }}{{ operationTime(op) ? ' · ' + operationTime(op) : '' }}{{ op.zone ? ' — ' + op.zone : '' }}
+                  </div>
                   @if (op.plate) {
                     <div class="operation-meta">
                       {{ op.plate }}
@@ -136,19 +139,19 @@ import { ParkingTicketCardComponent } from '../../../shared/components/parking-t
     @if (unparked()) {
       <app-result-modal
         type="unpark"
-        title="Aparcamiento finalizado"
-        message="La devolución de saldo se ha añadido al monedero."
-        primaryText="Aceptar"
+        [title]="'parking.ended' | translate"
+        [message]="'dashboard.unparkSuccessDetail' | translate"
+        [primaryText]="'common.accept' | translate"
         (primaryAction)="unparked.set(false)"
       />
     }
     @if (confirmUnpark()) {
       <app-result-modal
         type="confirmation"
-        title="Desaparcar"
-        message="Al dejar el aparcamiento recibirás un reembolso de EUR3.70."
-        primaryText="Aceptar"
-        secondaryText="Cancelar"
+        [title]="'dashboard.unpark' | translate"
+        [message]="'dashboard.unparkConfirmDetail' | translate: { amount: 'EUR3.70' }"
+        [primaryText]="'common.accept' | translate"
+        [secondaryText]="'common.cancel' | translate"
         (primaryAction)="confirmUnparkAction()"
         (secondaryAction)="confirmUnpark.set(false)"
       />
@@ -344,10 +347,11 @@ import { ParkingTicketCardComponent } from '../../../shared/components/parking-t
     `,
   ],
 })
-export class OperationsLayoutComponent {
+export class OperationsLayoutComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly operationsService = inject(OperationsService);
   private readonly parkingSessionService = inject(ParkingSessionService);
+  private readonly parkingApi = inject(ParkingApiService);
   private readonly navigationToCar = inject(NavigationToCarService);
   private readonly operations = this.operationsService.operations;
   private readonly rangeFilter = signal<DateRange>({ from: '', to: '' });
@@ -372,6 +376,10 @@ export class OperationsLayoutComponent {
     { initialValue: this.router.url },
   );
 
+  ngOnInit(): void {
+    void this.operationsService.load();
+  }
+
   isDetailRoute = () => {
     const path = this.url().split('?')[0].replace(/\/$/, '');
     return path !== '/app/operations';
@@ -391,9 +399,17 @@ export class OperationsLayoutComponent {
     this.confirmUnpark.set(true);
   }
 
-  confirmUnparkAction(): void {
+  async confirmUnparkAction(): Promise<void> {
     this.confirmUnpark.set(false);
-    if (this.parkingSessionService.leaveParking(this.pendingUnparkId)) {
+    const parking = this.parkingSessionService.activeParkings().find((item) => item.id === this.pendingUnparkId);
+    if (!parking) return;
+    const result = await this.parkingApi.unpark({
+      contractId: 0,
+      plate: parking.plate,
+      groupId: Number(parking.operationId || 0),
+      ticketId: 0,
+    });
+    if (result.success && this.parkingSessionService.leaveParking(this.pendingUnparkId)) {
       this.pendingUnparkId = '';
       this.unparked.set(true);
     }
@@ -452,25 +468,25 @@ export class OperationsLayoutComponent {
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
     const groups: Record<string, Operation[]> = {
-      Hoy: [],
-      Ayer: [],
-      'Esta semana': [],
-      'Este mes': [],
-      Anteriores: [],
+      'ops.today': [],
+      'ops.yesterday': [],
+      'ops.thisWeek': [],
+      'ops.thisMonth': [],
+      'ops.previous': [],
     };
 
     for (const op of list) {
       const d = this.parseDate(op.date);
       if (d >= startOfToday) {
-        groups['Hoy'].push(op);
+        groups['ops.today'].push(op);
       } else if (d >= startOfYesterday) {
-        groups['Ayer'].push(op);
+        groups['ops.yesterday'].push(op);
       } else if (d >= startOfWeek) {
-        groups['Esta semana'].push(op);
+        groups['ops.thisWeek'].push(op);
       } else if (d >= startOfMonth) {
-        groups['Este mes'].push(op);
+        groups['ops.thisMonth'].push(op);
       } else {
-        groups['Anteriores'].push(op);
+        groups['ops.previous'].push(op);
       }
     }
 

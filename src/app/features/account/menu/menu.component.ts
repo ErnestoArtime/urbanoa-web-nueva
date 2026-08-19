@@ -18,6 +18,7 @@ import { VehicleEditComponent } from '../vehicle-edit/vehicle-edit.component';
 import { PaymentAddComponent } from '../payment-add/payment-add.component';
 import { WebContentComponent } from '../web-content/web-content.component';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { TranslationService } from '../../../core/services/translation.service';
 
 import { APP_BRAND } from '../../../shared/constants/app-brand';
 import { environment } from '../../../../environments/environment';
@@ -76,17 +77,19 @@ import { environment } from '../../../../environments/environment';
           }
         </ul>
         <div class="account-actions">
-          <a routerLink="/auth/login" class="btn btn-ghost btn-block">Cerrar sesión</a>
-          <button type="button" class="btn btn-danger btn-block" (click)="select('delete-account')">Eliminar cuenta</button>
+          <a routerLink="/auth/login" class="btn btn-ghost btn-block">{{ 'account.logout' | translate }}</a>
+          <button type="button" class="btn btn-danger btn-block" (click)="select('delete-account')">
+            {{ 'account.deleteAccount' | translate }}
+          </button>
         </div>
       </section>
       <aside class="account-detail">
         @if (!selected()) {
-          <div class="detail-placeholder">Selecciona una opción para ver y editar sus datos</div>
+          <div class="detail-placeholder">{{ 'account.selectOption' | translate }}</div>
         } @else {
           <div class="detail-toolbar">
             <span class="back-btn" (click)="goBack()">←</span>
-            <strong>{{ selectedLabel() }}</strong>
+            <strong>{{ selectedLabel() | translate }}</strong>
             <span class="detail-toolbar-actions"></span>
           </div>
           <div class="detail-content">
@@ -104,7 +107,7 @@ import { environment } from '../../../../environments/environment';
                 <app-account-tax-data />
               }
               @case ('help') {
-                <app-web-content title="Ayuda" backLink="/app/account" [url]="helpUrl" />
+                <app-web-content [title]="'account.menu.help' | translate" backLink="/app/account" [url]="helpUrl" />
               }
               @case ('about') {
                 <app-account-about />
@@ -116,15 +119,15 @@ import { environment } from '../../../../environments/environment';
                 <app-account-support-success />
               }
               @case ('terms-and-conditions') {
-                <app-web-content title="Términos y condiciones" backLink="/app/account" [url]="termsUrl" />
+                <app-web-content [title]="'account.menu.terms' | translate" backLink="/app/account" [url]="termsUrl" />
               }
               @case ('privacy-policy') {
-                <app-web-content title="Política de privacidad" backLink="/app/account" [url]="privacyUrl" />
+                <app-web-content [title]="'account.menu.privacy' | translate" backLink="/app/account" [url]="privacyUrl" />
               }
               @case ('delete-account') {
                 <div class="page account-static-page">
-                  <h1 class="page-title">Eliminar cuenta</h1>
-                  <p>Esta acción eliminaría tu cuenta de forma permanente tras confirmación.</p>
+                  <h1 class="page-title">{{ 'account.deleteAccount' | translate }}</h1>
+                  <p>{{ 'account.deleteAccountDetail' | translate }}</p>
                 </div>
               }
               @case ('change-password') {
@@ -143,7 +146,7 @@ import { environment } from '../../../../environments/environment';
                           <div class="list-item-content">
                             <div class="list-item-title">{{ v.plate }}</div>
                             <div class="list-item-subtitle">
-                              {{ v.isDefault ? ('account.vehicleFavorite' | translate) : (v.label ?? '') }}
+                              {{ v.isDefault ? ('account.vehicleFavorite' | translate) : (v.label ?? '' | translate) }}
                             </div>
                           </div>
                           @if (v.isDefault) {
@@ -410,6 +413,7 @@ import { environment } from '../../../../environments/environment';
 })
 export class AccountMenuComponent {
   private readonly router = inject(Router);
+  private readonly translationService = inject(TranslationService);
   readonly walletService = inject(WalletService);
   readonly user = MOCK_USER;
   readonly menu = ACCOUNT_MENU;
@@ -504,14 +508,18 @@ export class AccountMenuComponent {
   private async shareApp(): Promise<void> {
     if (navigator.share) {
       try {
-        await navigator.share({ title: this.brand.name, text: `Descarga ${this.brand.name}`, url: this.brand.storeUrl });
+        await navigator.share({
+          title: this.brand.name,
+          text: this.translationService.translate('account.shareText', { brand: this.brand.name }),
+          url: this.brand.storeUrl,
+        });
       } catch {
         /* user dismissed share */
       }
     } else {
       try {
         await navigator.clipboard.writeText(this.brand.storeUrl);
-        this.showToast('Enlace copiado');
+        this.showToast(this.translationService.translate('account.linkCopied'));
       } catch {
         /* clipboard unavailable */
       }
@@ -559,8 +567,8 @@ export class AccountMenuComponent {
       this.paymentSub.set('refund');
       return;
     }
-    if (accountPath === 'support-success') {
-      this.selected.set(accountPath);
+    if (accountPath === 'support-success' || accountPath.startsWith('support/')) {
+      this.selected.set('support');
       return;
     }
 

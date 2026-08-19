@@ -3,14 +3,13 @@ import { Router } from '@angular/router';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { AppIconComponent } from '../../../shared/icons/app-icon.component';
 import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
-import { ResultModalComponent } from '../../../shared/components/result-modal/result-modal.component';
-import { WalletService } from '../../../core/services/wallet.service';
+import { PaymentChallengeService } from '../../../core/services/payment-challenge.service';
 
 type CardBrand = 'visa' | 'mastercard' | 'amex' | null;
 
 @Component({
   selector: 'app-payment-add',
-  imports: [TranslatePipe, AppIconComponent, DetailPanelHeaderComponent, ResultModalComponent],
+  imports: [TranslatePipe, AppIconComponent, DetailPanelHeaderComponent],
   template: `
     <div class="page account-static-page">
       <app-detail-panel-header
@@ -29,7 +28,7 @@ type CardBrand = 'visa' | 'mastercard' | 'amex' | null;
             (input)="cardholder.set(valueOf($event))"
           />
           @if (submitted() && !cardholder().trim()) {
-            <p class="form-error">El titular es obligatorio.</p>
+            <p class="form-error">{{ 'account.addCard.cardholderRequired' | translate }}</p>
           }
         </div>
 
@@ -55,7 +54,7 @@ type CardBrand = 'visa' | 'mastercard' | 'amex' | null;
               </span>
             }
             @if (rawCardNumber().length >= 15) {
-              <span class="valid-card" aria-label="Número de tarjeta válido">✓</span>
+              <span class="valid-card" [attr.aria-label]="'account.addCard.validNumber' | translate">✓</span>
             }
           </div>
         </div>
@@ -103,7 +102,7 @@ type CardBrand = 'visa' | 'mastercard' | 'amex' | null;
             maxlength="4"
           />
           @if (submitted() && cvc().length < 3) {
-            <p class="form-error">Introduce un CVC válido.</p>
+            <p class="form-error">{{ 'account.addCard.cvcInvalid' | translate }}</p>
           }
         </div>
 
@@ -113,7 +112,7 @@ type CardBrand = 'visa' | 'mastercard' | 'amex' | null;
         </div>
 
         @if (submitted() && !valid()) {
-          <p class="form-error form-summary">Revisa los campos obligatorios de la tarjeta.</p>
+          <p class="form-error form-summary">{{ 'account.addCard.requiredFields' | translate }}</p>
         }
         <button type="button" class="btn btn-primary btn-block" (click)="save()">
           {{ 'account.addCard.button' | translate }}
@@ -129,7 +128,7 @@ type CardBrand = 'visa' | 'mastercard' | 'amex' | null;
           </div>
           <span class="bank-name">{{ 'account.addCard.byBank' | translate }}</span>
         </div>
-        <div class="accepted-cards" aria-label="Tarjetas aceptadas">
+        <div class="accepted-cards" [attr.aria-label]="'account.addCard.acceptedCards' | translate">
           <img src="/assets/payment/visa.svg" alt="Visa" />
           <img src="/assets/payment/mastercard.svg" alt="Mastercard" />
           <span>AMEX</span><span>DINERS</span><span>JCB</span><span>UnionPay</span>
@@ -139,16 +138,6 @@ type CardBrand = 'visa' | 'mastercard' | 'amex' | null;
           944399809<br />Email: soporte&#64;arinpark.eus<br />CIF: A95158895
         </p>
       </div>
-
-      @if (saved()) {
-        <app-result-modal
-          type="success"
-          title="Tarjeta añadida"
-          message="La tarjeta se ha guardado correctamente."
-          primaryText="Volver a métodos de pago"
-          (primaryAction)="goBack()"
-        />
-      }
     </div>
   `,
   styles: [
@@ -336,7 +325,7 @@ type CardBrand = 'visa' | 'mastercard' | 'amex' | null;
   ],
 })
 export class PaymentAddComponent {
-  private readonly walletService = inject(WalletService);
+  private readonly paymentChallenge = inject(PaymentChallengeService);
   private readonly router = inject(Router);
   readonly rawCardNumber = signal('');
   readonly cardholder = signal('');
@@ -345,7 +334,6 @@ export class PaymentAddComponent {
   readonly cvc = signal('');
   readonly alias = signal('');
   readonly submitted = signal(false);
-  readonly saved = signal(false);
   readonly valid = computed(
     () =>
       !!this.cardholder().trim() &&
@@ -400,13 +388,13 @@ export class PaymentAddComponent {
     this.submitted.set(true);
     if (!this.valid()) return;
     const brand = this.cardBrand() === 'mastercard' ? 'Mastercard' : this.cardBrand() === 'amex' ? 'Amex' : 'Visa';
-    this.walletService.addCard({
+    this.paymentChallenge.begin({
       brand,
       last4: this.rawCardNumber().slice(-4),
       expiryDate: `${this.expiryMonth()}/${this.expiryYear().slice(-2)}`,
       cardholderName: this.cardholder().trim(),
     });
-    this.saved.set(true);
+    void this.router.navigate(['/app/account/payment-methods/challenge']);
   }
   goBack(): void {
     void this.router.navigate(['/app/account/payment-methods']);

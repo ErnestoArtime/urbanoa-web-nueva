@@ -2,6 +2,7 @@ import { Component, computed, inject, input, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { DomSanitizer } from '@angular/platform-browser';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { TranslationService } from '../../../core/services/translation.service';
 import { environment } from '../../../../environments/environment';
 
 @Component({
@@ -25,7 +26,9 @@ import { environment } from '../../../../environments/environment';
           <div class="web-content-error">
             <strong>{{ 'account.webContent.displayError' | translate }}</strong>
             <p class="text-muted">{{ 'account.webContent.error' | translate }}</p>
-            <a [href]="rawUrl()" target="_blank" rel="noopener" class="btn btn-primary">{{ 'account.webContent.openBrowser' | translate }}</a>
+            <a [href]="rawUrl()" target="_blank" rel="noopener" class="btn btn-primary">{{
+              'account.webContent.openBrowser' | translate
+            }}</a>
           </div>
         } @else {
           <iframe [src]="iframeUrl()" (load)="onLoad()" (error)="onError()" [title]="resolvedTitle()" scrolling="yes"></iframe>
@@ -176,6 +179,7 @@ import { environment } from '../../../../environments/environment';
   ],
 })
 export class WebContentComponent {
+  private readonly translationService = inject(TranslationService);
   readonly url = input(environment.externalContentBaseUrl);
   readonly title = input('');
   readonly backLink = input<string | null>(null);
@@ -184,15 +188,16 @@ export class WebContentComponent {
   private readonly sanitizer = inject(DomSanitizer);
   private readonly route = inject(ActivatedRoute);
 
-  readonly resolvedTitle = computed(() => this.title() || this.route.snapshot.data['title'] || '');
+  readonly resolvedTitle = computed(() => {
+    const value = this.title() || this.route.snapshot.data['title'] || '';
+    return value.includes('.') ? this.translationService.translate(value) : value;
+  });
   readonly resolvedBackLink = computed(() => this.backLink() || this.route.snapshot.data['backLink'] || null);
   readonly resolvedUrl = computed(() => {
     const routeUrl = this.route.snapshot.data['url'];
     const base = environment.externalContentBaseUrl;
     const value = this.url() === base && typeof routeUrl === 'string' ? routeUrl : this.url();
-    return value.startsWith(base)
-      ? `${environment.externalContentOrigin}${value.slice(base.length)}`
-      : value;
+    return value.startsWith(base) ? `${environment.externalContentOrigin}${value.slice(base.length)}` : value;
   });
 
   readonly rawUrl = computed(() => this.resolvedUrl());

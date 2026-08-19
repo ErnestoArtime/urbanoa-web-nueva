@@ -4,6 +4,30 @@ import { OperationType } from '../../shared/models/operation-type';
 import { WalletService } from './wallet.service';
 import type { Operation } from '../../shared/models/operation';
 import { generateUuid } from '../utils/generate-uuid';
+import { OPS_ENDPOINTS } from '../api/ops-endpoints';
+import { OpsApiClient } from '../api/ops-api-client.service';
+import { OpsSessionService } from '../api/ops-session.service';
+import { AppApiClient } from '../api/app-api-client.service';
+
+interface OperationResponseDto {
+  operationNumber?: number | string | null;
+  operationType: number;
+  paymentAmount: number;
+  opDate: string;
+  plate?: string | null;
+  zoneDesc?: string | null;
+  sectorDesc?: string | null;
+  parkingStartDate?: string | null;
+  parkingEndDate?: string | null;
+  duration: number;
+  opBaseId: number;
+  idPaymentMethod1: number;
+  descPaymentMethod1: string;
+  amountPaymentMethod1: number;
+  idPaymentMethod2?: number | null;
+  descPaymentMethod2?: string | null;
+  amountPaymentMethod2?: number | null;
+}
 
 export interface ActiveParking {
   id: string;
@@ -26,6 +50,9 @@ export interface ActiveParking {
 @Injectable({ providedIn: 'root' })
 export class OperationsService {
   private readonly walletService = inject(WalletService);
+  private readonly api = inject(OpsApiClient);
+  private readonly session = inject(OpsSessionService);
+  private readonly restApi = inject(AppApiClient);
   private readonly storageKey = 'urbanoa.operations';
   private readonly activeKey = 'urbanoa.operations.active';
   private readonly _operations = signal<Operation[]>(this.readOps());
@@ -35,6 +62,55 @@ export class OperationsService {
   readonly activeParkings = this._activeParkings.asReadonly();
   readonly activeParkingsCount = computed(() => this._activeParkings().length);
   readonly hasActiveParkings = computed(() => this._activeParkings().length > 0);
+  readonly source = signal<'remote' | 'mock'>('mock');
+  readonly loading = signal(false);
+
+  async load(
+    dateStart = '2000-01-01',
+    dateEnd = '2100-12-31',
+    operationTypeList = Object.values(OperationType).filter(Number.isInteger),
+  ): Promise<void> {
+    const token = this.session.token();
+    if (!token) {
+      this.source.set('mock');
+      return;
+    }
+    this.loading.set(true);
+    try {
+      const response = await this.api.post<OperationResponseDto[]>(
+        OPS_ENDPOINTS.user.operations,
+        { dateStart, dateEnd, operationTypeList },
+        { token },
+      );
+      this._operations.set(response.map((item) => this.mapRemoteOperation(item)));
+      this.source.set('remote');
+      this.persistOps();
+    } catch (error) {
+      console.warn('[OPS API] Operaciones utiliza fallback mock', error);
+      this.source.set('mock');
+    } finally {
+      this.loading.set(false);
+    }
+  }
+
+  async loadDetail(id: string): Promise<Operation | undefined> {
+    try {
+      const response = await this.restApi.get<OperationResponseDto>(`/operations/${encodeURIComponent(id)}`);
+      const operation = this.mapRemoteOperation(response);
+      this._operations.update((items) => [operation, ...items.filter((item) => item.id !== operation.id)]);
+      this.source.set('remote');
+      return operation;
+    } catch (error) {
+      console.warn('[API] Detalle de operación usa fallback local', error);
+      this.source.set('mock');
+      return this.getOperationById(id);
+    }
+  }
+
+  async loadReceipt(id: string): Promise<unknown | null> {
+    try { this.source.set('remote'); return await this.restApi.get(`/operations/${encodeURIComponent(id)}/receipt`); }
+    catch (error) { console.warn('[API] Recibo usa fallback local', error); this.source.set('mock'); return null; }
+  }
 
   isVehicleParked(vehicleId: string): boolean {
     return this._activeParkings().some((p) => p.vehicleId === vehicleId);
@@ -295,5 +371,46 @@ export class OperationsService {
       used.add(id);
       return { ...op, id };
     });
+  }
+
+  private mapRemoteOperation(item: OperationResponseDto): Operation {
+    const amount = item.paymentAmount / 100;
+    const start = this.dateTimePart(item.parkingStartDate);
+    const end = this.dateTimePart(item.parkingEndDate);
+    return {
+      id: String(item.operationNumber ?? item.opBaseId),
+      type: (Object.values(OperationType).includes(item.operationType) ? item.operationType : OperationType.PARKING) as OperationType,
+      plate: item.plate ?? null,
+      date: this.datePart(item.opDate),
+      amount: [OperationType.TOP_UP, OperationType.REFUND, OperationType.PARKING_END].includes(item.operationType)
+        ? amount
+        : -Math.abs(amount),
+      zone: item.sectorDesc ?? item.zoneDesc ?? null,
+      startTime: start,
+      endTime: end,
+      durationLabel: item.duration ? `${item.duration} min` : undefined,
+      relatedOperationId: item.opBaseId ? String(item.opBaseId) : undefined,
+      cardId: item.idPaymentMethod2 ? String(item.idPaymentMethod2) : undefined,
+      cardLabel: item.descPaymentMethod2 ?? undefined,
+      paymentBreakdown: {
+        walletAmount: Math.abs(item.amountPaymentMethod1 ?? 0) / 100,
+        cardAmount: Math.abs(item.amountPaymentMethod2 ?? 0) / 100,
+        cardLabel: item.descPaymentMethod2 ?? undefined,
+      },
+    };
+  }
+
+  private datePart(value: string | null | undefined): string {
+    if (!value) return this.todayDateString();
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? value.slice(0, 10) : parsed.toLocaleDateString('es-ES');
+  }
+
+  private dateTimePart(value: string | null | undefined): string | undefined {
+    if (!value) return undefined;
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime())
+      ? value.slice(11, 16)
+      : parsed.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
   }
 }

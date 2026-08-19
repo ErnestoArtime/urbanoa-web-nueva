@@ -6,6 +6,7 @@ import { WalletService } from '../../../core/services/wallet.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
 import { ResultModalComponent } from '../../../shared/components/result-modal/result-modal.component';
+import { TranslationService } from '../../../core/services/translation.service';
 
 @Component({
   selector: 'app-unpaid-fine-detail',
@@ -13,8 +14,17 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
   template: `
     @if (!paid()) {
       <div class="page">
-        <app-detail-panel-header title="Detalle de denuncia" backRoute="/app/operations/unpaid-fines" />
+        <app-detail-panel-header [title]="'ops.fineDetail.title' | translate" backRoute="/app/operations/unpaid-fines" />
         @if (fine) {
+          @if (fine.discountPercent) {
+            <aside class="early-payment-banner">
+              <span class="discount-badge">−{{ fine.discountPercent }}%</span>
+              <div>
+                <strong>{{ 'ops.fineDetail.earlyPayment.title' | translate }}</strong>
+                <p>{{ 'ops.fineDetail.earlyPayment.description' | translate: { date: fine.earlyPaymentDeadline ?? '' } }}</p>
+              </div>
+            </aside>
+          }
           <div class="fine-ticket-shell mt-2">
             <article class="fine-ticket-card">
               <div class="fine-ticket-accent"></div>
@@ -32,7 +42,12 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
               <div class="fine-ticket-cut"></div>
               <div class="fine-ticket-total">
                 <strong>{{ 'ops.fineDetail.amount' | translate }}</strong>
-                <span>{{ fine.amount }}</span>
+                <div class="amount-stack">
+                  @if (fine.originalAmount) {
+                    <del>{{ fine.originalAmount }}</del>
+                  }
+                  <span>{{ fine.amount }}</span>
+                </div>
               </div>
             </article>
           </div>
@@ -44,7 +59,7 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
           </div>
           @if (insufficientFunds()) {
             <fieldset class="payment-card-selector">
-              <legend>Tarjeta para completar el pago</legend>
+              <legend>{{ 'ops.fineDetail.cardForPayment' | translate }}</legend>
               @for (card of walletService.cards(); track card.id) {
                 <label class="payment-card-option" [class.selected]="selectedCardId() === card.id"
                   ><input
@@ -54,7 +69,7 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
                     (change)="selectedCardId.set(card.id)"
                   /><span
                     ><strong>{{ card.brand }} •••• {{ card.last4 }}</strong
-                    ><small>Caduca {{ card.expiryDate }}</small></span
+                    ><small>{{ 'ops.fineDetail.expires' | translate: { date: card.expiryDate } }}</small></span
                   ></label
                 >
               }
@@ -76,9 +91,9 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
     } @else {
       <app-result-modal
         type="success"
-        title="Denuncia pagada"
+        [title]="'ops.fineDetail.paid' | translate"
         [message]="successMessage()"
-        primaryText="Volver a denuncias"
+        [primaryText]="'ops.unpaidFines.back' | translate"
         (primaryAction)="onBackToFines()"
       />
     }
@@ -88,6 +103,34 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
       .fine-ticket-shell {
         border-radius: 16px;
         filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.14));
+      }
+      .early-payment-banner {
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+        margin-top: 1rem;
+        padding: 0.8rem 0.9rem;
+        border: 1px solid color-mix(in srgb, var(--color-primary) 28%, transparent);
+        border-radius: var(--radius-lg);
+        background: var(--color-active);
+      }
+      .early-payment-banner strong {
+        display: block;
+        color: var(--color-primary-dark);
+        font-size: var(--text-sm);
+      }
+      .early-payment-banner p {
+        margin: 0.15rem 0 0;
+        color: var(--color-text-muted);
+        font-size: var(--text-xs);
+      }
+      .discount-badge {
+        flex: 0 0 auto;
+        padding: 0.45rem 0.55rem;
+        border-radius: 12px;
+        color: #fff;
+        background: var(--color-primary);
+        font-weight: var(--font-bold);
       }
       .fine-ticket-card {
         --ticket-notch-r: 10px;
@@ -147,6 +190,15 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
         font-size: var(--text-xl);
         font-weight: var(--font-bold);
       }
+      .amount-stack {
+        display: flex;
+        align-items: baseline;
+        gap: 0.55rem;
+      }
+      .amount-stack del {
+        color: var(--color-text-muted);
+        font-size: var(--text-sm);
+      }
       .payment-breakdown-card {
         padding: 0.75rem;
       }
@@ -182,6 +234,7 @@ export class UnpaidFineDetailComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly unpaidFinesService = inject(UnpaidFinesService);
+  private readonly translationService = inject(TranslationService);
   readonly walletService = inject(WalletService);
 
   readonly fineId = this.route.snapshot.paramMap.get('id') ?? '';
@@ -199,20 +252,18 @@ export class UnpaidFineDetailComponent {
   readonly capturedCardAmount = signal(0);
 
   readonly successMessage = computed(() => {
-    const base = 'La denuncia de ' + (this.fine?.plate ?? '') + ' en ' + (this.fine?.location ?? '') + ' ha sido pagada.';
     const wallet = this.capturedWalletAmount();
     const card = this.capturedCardAmount();
+    const params = {
+      plate: this.fine?.plate ?? '',
+      location: this.fine?.location ?? '',
+      wallet: wallet.toFixed(2).replace('.', ','),
+      card: card.toFixed(2).replace('.', ','),
+    };
     if (card > 0) {
-      return (
-        base +
-        ' Se han cobrado ' +
-        wallet.toFixed(2).replace('.', ',') +
-        ' € del saldo y ' +
-        card.toFixed(2).replace('.', ',') +
-        ' € de la tarjeta.'
-      );
+      return this.translationService.translate('ops.fineDetail.paidWithWalletAndCard', params);
     }
-    return base + ' Se han cobrado ' + wallet.toFixed(2).replace('.', ',') + ' € del saldo.';
+    return this.translationService.translate('ops.fineDetail.paidWithWallet', params);
   });
 
   readonly insufficientFunds = () => {
@@ -220,11 +271,11 @@ export class UnpaidFineDetailComponent {
     return this.walletService.balance() < this.numericAmount();
   };
 
-  pay(): void {
+  async pay(): Promise<void> {
     if (!this.fine) return;
     const walletAmt = this.walletAmount();
     const cardAmt = this.cardAmount();
-    const ok = this.unpaidFinesService.payFine(this.fineId, this.selectedCardId());
+    const ok = await this.unpaidFinesService.payFine(this.fineId, this.selectedCardId());
     if (ok) {
       this.capturedWalletAmount.set(walletAmt);
       this.capturedCardAmount.set(cardAmt);

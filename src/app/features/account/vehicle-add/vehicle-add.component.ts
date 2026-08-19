@@ -33,7 +33,9 @@ import { VehicleService } from '../../../core/services/vehicle.service';
           ><span>{{ 'account.vehicleAdd.favorite' | translate }}</span
           ><input type="checkbox" [checked]="favorite()" (change)="favorite.set(checked($event))" /><span class="switch"></span
         ></label>
-        <button type="button" class="btn btn-primary btn-block mt-2" (click)="save()">{{ 'account.vehicleAdd.save' | translate }}</button>
+        <button type="button" class="btn btn-primary btn-block mt-2" [disabled]="saving()" (click)="save()">
+          {{ 'account.vehicleAdd.save' | translate }}
+        </button>
       </div>
       @if (saved()) {
         <app-result-modal
@@ -101,6 +103,7 @@ export class VehicleAddComponent {
   readonly favorite = signal(false);
   readonly plateError = signal(false);
   readonly saved = signal(false);
+  readonly saving = signal(false);
 
   setPlate(event: Event): void {
     this.plate.set((event.target as HTMLInputElement).value.toUpperCase());
@@ -111,13 +114,19 @@ export class VehicleAddComponent {
     return (event.target as HTMLInputElement).checked;
   }
 
-  save(): void {
+  async save(): Promise<void> {
     const plate = this.plate().trim();
     if (!plate) {
       this.plateError.set(true);
       return;
     }
-    this.vehicleService.add({ plate, isDefault: this.favorite(), label: this.foreignPlate() ? 'Matrícula extranjera' : undefined });
+    this.saving.set(true);
+    await this.vehicleService.add({
+      plate,
+      isDefault: this.favorite(),
+      label: this.foreignPlate() ? 'account.vehicle.foreignPlate' : undefined,
+    });
+    this.saving.set(false);
     this.saved.set(true);
   }
 
