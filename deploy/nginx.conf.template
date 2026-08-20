@@ -6,23 +6,18 @@ server {
   client_max_body_size 20M;
   resolver_timeout 5s;
 
-  # Timeouts
   client_body_timeout 30s;
   client_header_timeout 30s;
   send_timeout 30s;
-
-  # Habilitar tiempos de keep-alive para optimizar conexiones
   keepalive_timeout 65;
   keepalive_requests 100;
 
-  # Cabeceras de seguridad
   add_header Access-Control-Allow-Origin * always;
   add_header Strict-Transport-Security "max-age=63072000; includeSubDomains; preload";
   add_header X-Frame-Options DENY;
   add_header X-Content-Type-Options nosniff;
   add_header X-XSS-Protection "1; mode=block";
 
-  # Healthz SIEMPRE 200
   location = /healthz {
     return 200 'ok';
     add_header Content-Type text/plain;
@@ -38,8 +33,8 @@ server {
 
   location /ops-api/ {
     rewrite ^/ops-api/OPSWebServicesAPI/(.*)$ /OPSWebServicesAPI3/$1 break;
-    proxy_pass http://185.76.212.27;
-    proxy_set_header Host 185.76.212.27;
+    proxy_pass __OPS_BACKEND_URL__;
+    proxy_set_header Host $proxy_host;
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
@@ -48,8 +43,6 @@ server {
   location / {
     rewrite ^/ui(.*)$ /$1 break;
     try_files $uri $uri/ /index.html;
-
-    # Configuración de buffering para optimizar el rendimiento
     proxy_buffering on;
     proxy_buffers 16 16k;
     proxy_buffer_size 16k;

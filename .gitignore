@@ -2,6 +2,7 @@
 
 # Compiled output
 /dist
+/proxy.conf.local.js
 /tmp
 /out-tsc
 /bazel-out

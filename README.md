@@ -10,6 +10,24 @@ To start a local development server, run:
 ng serve
 ```
 
+El frontend mantiene la URL `/ops-api` y el proxy de desarrollo decide a qué
+servidor OPS reenviar las llamadas. Para apuntar a otro backend:
+
+```powershell
+$env:URBANOA_OPS_BACKEND_URL = 'http://servidor-ops/'; ng serve
+```
+
+Si no se define la variable, se usa `http://185.76.212.27`. En Docker, el
+destino de producción se configura al construir la imagen:
+
+`proxy.conf.json` se conserva como configuración legacy para pipelines que la
+referencien explícitamente; Angular usa `proxy.conf.js` para permitir la
+variable de entorno.
+
+```bash
+docker build --build-arg OPS_BACKEND_URL=http://servidor-ops -f deploy/Dockerfile .
+```
+
 Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
 
 ## Code scaffolding
