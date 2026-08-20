@@ -195,10 +195,24 @@ export class WebContentComponent {
   readonly resolvedBackLink = computed(() => this.backLink() || this.route.snapshot.data['backLink'] || null);
   readonly resolvedUrl = computed(() => {
     const routeUrl = this.route.snapshot.data['url'];
+    const contentType = this.route.snapshot.data['contentType'];
     const base = environment.externalContentBaseUrl;
+    if (typeof contentType === 'string') return this.legalUrl(base, contentType);
     const value = this.url() === base && typeof routeUrl === 'string' ? routeUrl : this.url();
     return value.startsWith(base) ? `${environment.externalContentOrigin}${value.slice(base.length)}` : value;
   });
+
+  private legalUrl(base: string, contentType: string): string {
+    const language = this.translationService.currentLang$();
+    const code = language === 'uk' ? 'en' : language === 'eu' ? 'eus' : language;
+    const faq = { es: 'ESP', eu: 'EUS', fr: 'FRA', uk: 'ENG' }[language];
+    const path = contentType === 'help'
+      ? `/Arinpark/ArinparkFAQ-${faq}.html`
+      : contentType === 'terms'
+        ? `/arinpark/CU_${code}.html`
+        : `/arinpark/${code}.html`;
+    return `${environment.externalContentOrigin}${path}`;
+  }
 
   readonly rawUrl = computed(() => this.resolvedUrl());
 
