@@ -1,9 +1,14 @@
 import { Injectable, inject, signal } from '@angular/core';
-import { AppApiClient } from '../api/app-api-client.service';
+import { OperationsService } from './operations.service';
+import { VehicleService } from './vehicle.service';
+import { WalletService } from './wallet.service';
 
 @Injectable({ providedIn: 'root' })
 export class DashboardApiService {
-  private readonly api = inject(AppApiClient);
+  private readonly operations = inject(OperationsService);
+  private readonly vehiclesService = inject(VehicleService);
+  private readonly wallet = inject(WalletService);
+
   readonly source = signal<'remote' | 'mock'>('mock');
   readonly activeParkings = signal<unknown[]>([]);
   readonly recentOperations = signal<unknown[]>([]);
@@ -13,16 +18,15 @@ export class DashboardApiService {
 
   async load(): Promise<void> {
     try {
-      const [active, operations, vehicles, balance, progress] = await Promise.all([
-        this.api.get<unknown[]>('/parkings/active'),
-        this.api.get<unknown[]>('/operations/recent'),
-        this.api.get<unknown[]>('/vehicles'),
-        this.api.get<unknown>('/wallet/balance'),
-        this.api.get<unknown>('/users/profile/progress'),
-      ]);
-      this.activeParkings.set(active); this.recentOperations.set(operations); this.vehicles.set(vehicles); this.balance.set(balance); this.profileProgress.set(progress); this.source.set('remote');
+      await Promise.all([this.operations.load(), this.vehiclesService.load(), this.wallet.load()]);
+      this.activeParkings.set(this.operations.activeParkings());
+      this.recentOperations.set(this.operations.operations().slice(0, 5));
+      this.vehicles.set(this.vehiclesService.vehicles());
+      this.balance.set(this.wallet.balance());
+      this.profileProgress.set(null);
+      this.source.set([this.operations.source(), this.vehiclesService.source(), this.wallet.source()].includes('remote') ? 'remote' : 'mock');
     } catch (error) {
-      console.warn('[API] Dashboard usa datos mock', this.api.errorMessage(error));
+      console.warn('[OPS API] Dashboard usa datos mock', error);
       this.source.set('mock');
     }
   }

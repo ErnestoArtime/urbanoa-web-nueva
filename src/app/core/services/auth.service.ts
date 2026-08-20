@@ -1,6 +1,8 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { AppApiClient } from '../api/app-api-client.service';
+import { OpsApiClient } from '../api/ops-api-client.service';
+import { OPS_ENDPOINTS } from '../api/ops-endpoints';
 import { OpsSessionService } from '../api/ops-session.service';
 import { AccountApiService } from './account-api.service';
 
@@ -19,6 +21,7 @@ export interface RegisterInput { plate: string; email: string; password: string;
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly api = inject(AppApiClient);
+  private readonly opsApi = inject(OpsApiClient);
   private readonly session = inject(OpsSessionService);
   private readonly router = inject(Router);
   private readonly accountApi = inject(AccountApiService);
@@ -53,17 +56,17 @@ export class AuthService {
   }
 
   async requestPasswordReset(email: string): Promise<void> {
-    try { await this.api.post('/auth/password/reset', { email }); this.source.set('remote'); }
+    try { await this.opsApi.post(OPS_ENDPOINTS.auth.recoverPassword, { contractId: 0, userName: email.trim(), email: email.trim() }); this.source.set('remote'); }
     catch (error) { console.warn('[API] Reset usa fallback mock', this.api.errorMessage(error)); this.source.set('mock'); }
   }
 
   async verifyResetCode(email: string, code: string): Promise<void> {
-    try { await this.api.post('/auth/password/verify-code', { email, code }); this.source.set('remote'); }
+    try { await this.opsApi.post(OPS_ENDPOINTS.auth.verifyRecoveryPassword, { contractId: 0, userName: email.trim(), email: email.trim(), recode: code.trim() }); this.source.set('remote'); }
     catch (error) { console.warn('[API] Verificación usa fallback mock', this.api.errorMessage(error)); this.source.set('mock'); }
   }
 
   async changeResetPassword(email: string, code: string, password: string): Promise<void> {
-    try { await this.api.post('/auth/password/change', { email, code, password }); this.source.set('remote'); }
+    try { await this.opsApi.post(OPS_ENDPOINTS.user.changePassword, { contractId: 0, userName: email.trim(), email: email.trim(), password, recode: code.trim() }); this.source.set('remote'); }
     catch (error) { console.warn('[API] Cambio de password usa fallback mock', this.api.errorMessage(error)); this.source.set('mock'); }
   }
 

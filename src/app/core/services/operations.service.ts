@@ -79,7 +79,7 @@ export class OperationsService {
     try {
       const response = await this.api.post<OperationResponseDto[]>(
         OPS_ENDPOINTS.user.operations,
-        { dateStart, dateEnd, operationTypeList },
+        { contractId: 0, dateStart, dateEnd, operationTypeList },
         { token },
       );
       this._operations.set(response.map((item) => this.mapRemoteOperation(item)));
