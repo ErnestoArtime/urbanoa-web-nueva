@@ -89,7 +89,7 @@ describe('WalletService', () => {
 
     expect(api.post).toHaveBeenCalledWith(
       'OPSWebServicesAPI/RefundUserCreditAPI',
-      { contractId: 0, cloudToken: 'cloud-token', operatingSystem: 1, amount: 500, simulate: 0 },
+      { contractId: 0, cloudToken: 'cloud-token', operatingSystem: 3, amount: 500, simulate: 0 },
       { token: 'token' },
     );
     expect(result.source).toBe('remote');

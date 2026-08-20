@@ -229,7 +229,7 @@ export class WalletService {
     try {
       const response = await this.api.post<BalanceRefundResponseDto>(
         OPS_ENDPOINTS.wallet.refund,
-        { contractId: 0, cloudToken, operatingSystem: 1, amount: this.toCents(value), simulate: 0 },
+        { contractId: 0, cloudToken, operatingSystem: 3, amount: this.toCents(value), simulate: 0 },
         { token },
       );
       const refunded = this.fromCents(response.refundAmount || this.toCents(value));

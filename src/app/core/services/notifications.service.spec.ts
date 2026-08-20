@@ -6,7 +6,9 @@ describe('NotificationsService', () => {
   const preferences: NotificationPreferences = {
     balance: 1,
     fineNotifications: 1,
+    quantityBalance: 500,
     rechargeNotifications: 0,
+    minutesBeforeUnparking: 10,
     unparkingNotifications: 1,
     emailBalance: 0,
     emailFineNotifications: 1,
@@ -29,7 +31,7 @@ describe('NotificationsService', () => {
     expect(service.source()).toBe('remote');
   });
 
-  it('sends contractId and the nine notification flags', async () => {
+  it('sends contractId and the complete notification contract', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'post']);
     api.post.and.resolveTo('OK');
     const session = new OpsSessionService();
