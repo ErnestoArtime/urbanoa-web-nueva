@@ -24,7 +24,7 @@ function passwordsMatch(control: AbstractControl): ValidationErrors | null {
           <a routerLink="/auth/login" [attr.aria-label]="'common.back' | translate">←</a>
           <div>
             <h1>{{ 'auth.register.title' | translate }}</h1>
-            <p>{{ 'auth.register.subtitle' | translate: { name: brand.name } }}</p>
+            <p>{{ 'auth.register.subtitle' | translate: { brand: brand.name } }}</p>
           </div>
         </header>
         <form class="form-grid" [formGroup]="form" (ngSubmit)="onSubmit()">
