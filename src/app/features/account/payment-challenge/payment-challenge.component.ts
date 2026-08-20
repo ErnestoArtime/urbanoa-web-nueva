@@ -225,7 +225,12 @@ export class PaymentChallengeComponent {
     const card = this.challenge.pendingCard();
     if (!card || this.stage() !== 'ready') return;
     this.stage.set('processing');
-    await this.accountApi.complete3ds({ card: card.last4, brand: card.brand, expiryDate: card.expiryDate, cardholderName: card.cardholderName });
+    await this.accountApi.complete3ds({
+      card: card.last4,
+      brand: card.brand,
+      expiryDate: card.expiryDate,
+      cardholderName: card.cardholderName,
+    });
     window.setTimeout(() => {
       this.wallet.addCard(card);
       this.stage.set('success');

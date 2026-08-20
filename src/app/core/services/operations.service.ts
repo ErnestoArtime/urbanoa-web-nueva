@@ -108,8 +108,14 @@ export class OperationsService {
   }
 
   async loadReceipt(id: string): Promise<unknown | null> {
-    try { this.source.set('remote'); return await this.restApi.get(`/operations/${encodeURIComponent(id)}/receipt`); }
-    catch (error) { console.warn('[API] Recibo usa fallback local', error); this.source.set('mock'); return null; }
+    try {
+      this.source.set('remote');
+      return await this.restApi.get(`/operations/${encodeURIComponent(id)}/receipt`);
+    } catch (error) {
+      console.warn('[API] Recibo usa fallback local', error);
+      this.source.set('mock');
+      return null;
+    }
   }
 
   isVehicleParked(vehicleId: string): boolean {

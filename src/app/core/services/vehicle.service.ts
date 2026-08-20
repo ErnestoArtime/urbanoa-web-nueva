@@ -1,4 +1,4 @@
-import { computed, Injectable, signal } from '@angular/core';
+import { computed, inject, Injectable, signal } from '@angular/core';
 import { MOCK_VEHICLES, type Vehicle } from '../../shared/mock-data';
 import { OpsApiClient } from '../api/ops-api-client.service';
 import { OpsApiError } from '../api/ops-api.types';
@@ -33,10 +33,8 @@ export class VehicleService {
   readonly lastError = this.errorState.asReadonly();
   readonly mainVehicle = computed(() => this.state().find((vehicle) => vehicle.isDefault) ?? this.state()[0] ?? null);
 
-  constructor(
-    private readonly api: OpsApiClient,
-    private readonly session: OpsSessionService,
-  ) {}
+  private readonly api = inject(OpsApiClient);
+  private readonly session = inject(OpsSessionService);
 
   async load(): Promise<void> {
     const token = this.session.token();

@@ -20,7 +20,12 @@ export class DashboardApiService {
         this.api.get<unknown>('/wallet/balance'),
         this.api.get<unknown>('/users/profile/progress'),
       ]);
-      this.activeParkings.set(active); this.recentOperations.set(operations); this.vehicles.set(vehicles); this.balance.set(balance); this.profileProgress.set(progress); this.source.set('remote');
+      this.activeParkings.set(active);
+      this.recentOperations.set(operations);
+      this.vehicles.set(vehicles);
+      this.balance.set(balance);
+      this.profileProgress.set(progress);
+      this.source.set('remote');
     } catch (error) {
       console.warn('[API] Dashboard usa datos mock', this.api.errorMessage(error));
       this.source.set('mock');

@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { MOCK_MUNICIPIOS, Municipio } from '../../shared/mock-data';
 import { withMockFallback } from '../api/mock-fallback';
 import { OpsApiClient } from '../api/ops-api-client.service';
@@ -32,7 +32,7 @@ const CONTRACT_IDS: Record<string, number> = {
 
 @Injectable({ providedIn: 'root' })
 export class CitiesService {
-  constructor(private readonly api: OpsApiClient) {}
+  private readonly api = inject(OpsApiClient);
 
   getCities(): Promise<DataResult<ParkingMunicipio[]>> {
     return withMockFallback(

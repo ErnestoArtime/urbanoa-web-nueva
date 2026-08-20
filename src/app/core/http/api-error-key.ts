@@ -6,6 +6,7 @@ const DEFAULT_KEYS: Record<ApiErrorCode, string> = {
   invalidCode: 'errors.invalidCode',
   conflict: 'errors.conflict',
   missingParam: 'errors.server',
+  notActivated: 'errors.notActivated',
   server: 'errors.server',
 };
 

@@ -1,6 +1,13 @@
+import { provideZonelessChangeDetection } from '@angular/core';
+import { TestBed } from '@angular/core/testing';
 import { OpsApiClient } from '../api/ops-api-client.service';
 import { OpsSessionService } from '../api/ops-session.service';
 import { VehicleService } from './vehicle.service';
+
+function serviceWith(api: jasmine.SpyObj<OpsApiClient>): VehicleService {
+  TestBed.configureTestingModule({ providers: [provideZonelessChangeDetection(), { provide: OpsApiClient, useValue: api }] });
+  return TestBed.inject(VehicleService);
+}
 
 describe('VehicleService', () => {
   beforeEach(() => localStorage.clear());
@@ -8,9 +15,8 @@ describe('VehicleService', () => {
   it('loads plates using the APK response contract when a token exists', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'post']);
     api.get.and.resolveTo({ plates: [{ plate: '1234ABC', favorite: true }] });
-    const session = new OpsSessionService();
-    session.setToken('token');
-    const service = new VehicleService(api, session);
+    const service = serviceWith(api);
+    TestBed.inject(OpsSessionService).setToken('token');
 
     await service.load();
 
@@ -22,9 +28,8 @@ describe('VehicleService', () => {
   it('uses AddUserPlateAPI and UpdateUserPlateAPI with only the plate', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'post']);
     api.post.and.resolveTo('OK');
-    const session = new OpsSessionService();
-    session.setToken('token');
-    const service = new VehicleService(api, session);
+    const service = serviceWith(api);
+    TestBed.inject(OpsSessionService).setToken('token');
 
     const result = await service.add({ plate: ' 9999 xyz ', isDefault: true });
 
@@ -35,7 +40,7 @@ describe('VehicleService', () => {
 
   it('keeps local mock behavior when login is postponed', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'post']);
-    const service = new VehicleService(api, new OpsSessionService());
+    const service = serviceWith(api);
 
     const result = await service.add({ plate: '9999 XYZ', isDefault: false });
 

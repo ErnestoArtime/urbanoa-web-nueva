@@ -1,7 +1,8 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { OpsSessionService } from '../api/ops-session.service';
-import { postJson } from '../http/api-client';
+import { ApiError, postJson } from '../http/api-client';
 import { readStorage, writeStorage } from '../storage/signal-storage';
+import { TranslationService } from './translation.service';
 import { UserService, UserData } from './user.service';
 
 export interface AuthUser extends UserData {
@@ -17,17 +18,20 @@ export interface AuthSession {
 export interface RegisterPayload {
   email: string;
   password: string;
-  plate?: string;
+  plates: string[];
   name?: string;
   surname?: string;
   nif?: string;
-  phone?: string;
+  mainMobilePhone?: string;
 }
+
+const OPERATING_SYSTEM_WEB = 1;
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly userService = inject(UserService);
   private readonly opsSession = inject(OpsSessionService);
+  private readonly translationService = inject(TranslationService);
   private readonly storageKey = 'urbanoa.auth.session';
   private readonly session = signal<AuthSession | null>(readStorage<AuthSession | null>(this.storageKey, null));
 
@@ -40,8 +44,17 @@ export class AuthService {
   }
 
   async login(email: string, password: string): Promise<void> {
-    const response = await postJson<unknown>('/LoginUserAPI', { email, password });
-    this.storeSession(this.normalizeSession(response, email));
+    const response = await postJson<unknown>('/LoginUserAPI', {
+      userName: email,
+      password,
+      operatingSystem: OPERATING_SYSTEM_WEB,
+      language: this.translationService.currentLang$(),
+    });
+    const session = this.normalizeSession(response, email);
+    if (!session.token) {
+      throw new ApiError(0, 'unauthorized');
+    }
+    this.storeSession(session);
   }
 
   async register(payload: RegisterPayload): Promise<void> {
@@ -50,6 +63,14 @@ export class AuthService {
     if (session.token) {
       this.storeSession(session);
     }
+  }
+
+  adoptToken(token: string, email: string): void {
+    this.storeSession({
+      token,
+      refreshToken: '',
+      user: { id: '', name: '', surname: '', email, nif: '', phone: '' },
+    });
   }
 
   async cancelAccount(password: string, reason: string): Promise<void> {

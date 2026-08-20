@@ -1,3 +1,5 @@
+import { provideZonelessChangeDetection } from '@angular/core';
+import { provideHttpClient } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { ParkingSessionService } from './parking-session.service';
 
@@ -5,7 +7,7 @@ describe('ParkingSessionService', () => {
   beforeEach(() => {
     localStorage.clear();
     localStorage.setItem('urbanoa.operations.active', '[]');
-    TestBed.configureTestingModule({});
+    TestBed.configureTestingModule({ providers: [provideZonelessChangeDetection(), provideHttpClient()] });
   });
 
   it('does not start a second active parking for the same vehicle', () => {

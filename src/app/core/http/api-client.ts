@@ -15,7 +15,7 @@ export interface OpsApiError {
   message_FR?: string;
 }
 
-export type ApiErrorCode = 'network' | 'unauthorized' | 'invalidCode' | 'conflict' | 'missingParam' | 'server';
+export type ApiErrorCode = 'network' | 'unauthorized' | 'invalidCode' | 'conflict' | 'missingParam' | 'notActivated' | 'server';
 
 export class ApiError extends Error {
   constructor(
@@ -34,7 +34,7 @@ interface RequestOptions {
   signal?: AbortSignal;
 }
 
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '4.0.0';
 
 function getOrCreateCloudToken(): string {
   let token = localStorage.getItem('urbanoa.deviceToken');
@@ -51,7 +51,7 @@ function buildUrl(path: string): string {
 }
 
 function buildHeaders(token?: string): HeadersInit {
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  const headers: Record<string, string> = { 'Content-Type': 'application/json', cityId: '0' };
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
@@ -61,6 +61,8 @@ function buildHeaders(token?: string): HeadersInit {
 function codeForServerError(serverCode: number): ApiErrorCode {
   if (serverCode === -101 || serverCode === -106 || serverCode === -130) return 'missingParam';
   if (serverCode === -1) return 'unauthorized';
+  if (serverCode === -21) return 'conflict';
+  if (serverCode === -29) return 'notActivated';
   return 'server';
 }
 
@@ -81,7 +83,7 @@ async function request<TRes>(method: 'GET' | 'POST', path: string, body?: unknow
       body && typeof body === 'object'
         ? {
             cloudToken: getOrCreateCloudToken(),
-            version: APP_VERSION,
+            appVersion: APP_VERSION,
             ...body,
           }
         : body;

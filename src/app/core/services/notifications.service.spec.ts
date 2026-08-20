@@ -1,6 +1,14 @@
+import { provideZonelessChangeDetection } from '@angular/core';
+import { TestBed } from '@angular/core/testing';
 import { OpsApiClient } from '../api/ops-api-client.service';
 import { OpsSessionService } from '../api/ops-session.service';
 import { NotificationPreferences, NotificationsService } from './notifications.service';
+
+function serviceWith(api: jasmine.SpyObj<OpsApiClient>): NotificationsService {
+  TestBed.configureTestingModule({ providers: [provideZonelessChangeDetection(), { provide: OpsApiClient, useValue: api }] });
+  TestBed.inject(OpsSessionService).setToken('token');
+  return TestBed.inject(NotificationsService);
+}
 
 describe('NotificationsService', () => {
   const preferences: NotificationPreferences = {
@@ -18,9 +26,7 @@ describe('NotificationsService', () => {
   it('loads notifications from the APK response wrapper', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'post']);
     api.get.and.resolveTo({ notifications: preferences });
-    const session = new OpsSessionService();
-    session.setToken('token');
-    const service = new NotificationsService(api, session);
+    const service = serviceWith(api);
 
     await service.load();
 
@@ -32,9 +38,7 @@ describe('NotificationsService', () => {
   it('sends contractId and the nine notification flags', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'post']);
     api.post.and.resolveTo('OK');
-    const session = new OpsSessionService();
-    session.setToken('token');
-    const service = new NotificationsService(api, session);
+    const service = serviceWith(api);
 
     await service.save(preferences);
 

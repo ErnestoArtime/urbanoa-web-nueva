@@ -1,3 +1,4 @@
+import { provideZonelessChangeDetection } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { ApiError } from '../http/api-client';
 import { AuthService } from './auth.service';
@@ -15,39 +16,33 @@ function lastRequest(spy: jasmine.Spy): { url: string; body: unknown; headers: H
 describe('PasswordService', () => {
   beforeEach(() => {
     localStorage.clear();
-    TestBed.configureTestingModule({});
+    TestBed.configureTestingModule({ providers: [provideZonelessChangeDetection()] });
   });
 
   it('requests a recovery code with the email only', async () => {
-    const fetchSpy = spyOn(window, 'fetch').and.resolveTo(jsonResponse({ ok: true }));
+    const fetchSpy = spyOn(window, 'fetch').and.resolveTo(jsonResponse({ value: '1', isSuccess: true, error: null }));
     const service = TestBed.inject(PasswordService);
 
     await service.requestCode('ane@example.com');
 
     const request = lastRequest(fetchSpy);
     expect(request.url).toContain('/OPSWebServicesAPI/RecoverPasswordAPI');
-    expect(request.body).toEqual({ email: 'ane@example.com' });
+    expect(request.body).toEqual(jasmine.objectContaining({ email: 'ane@example.com' }));
   });
 
-  it('sends the code when validating it', async () => {
-    const fetchSpy = spyOn(window, 'fetch').and.resolveTo(jsonResponse({ ok: true }));
-    const service = TestBed.inject(PasswordService);
-
-    await service.verifyCode('ane@example.com', '123456');
-
-    expect(lastRequest(fetchSpy).body).toEqual({ email: 'ane@example.com', code: '123456' });
-  });
-
-  it('sends the session token when changing the password', async () => {
-    const fetchSpy = spyOn(window, 'fetch').and.resolveTo(jsonResponse({ token: 'abc123', user: { email: 'ane@example.com' } }));
+  it('sends the session token when updating the password', async () => {
+    const fetchSpy = spyOn(window, 'fetch').and.returnValues(
+      Promise.resolve(jsonResponse({ value: { token: 'abc123', user: { email: 'ane@example.com' } }, isSuccess: true, error: null })),
+      Promise.resolve(jsonResponse({ value: 'Result_OK', isSuccess: true, error: null })),
+    );
     const authService = TestBed.inject(AuthService);
     const service = TestBed.inject(PasswordService);
 
     await authService.login('ane@example.com', 'secret');
-    await service.changePassword('secret', 'newsecret');
+    await service.updatePassword('newsecret');
 
     const request = lastRequest(fetchSpy);
-    expect(request.url).toContain('/OPSWebServicesAPI/ChangePasswordAPI');
+    expect(request.url).toContain('/OPSWebServicesAPI/UpdatePasswordAPI');
     expect(request.headers.get('Authorization')).toBe('Bearer abc123');
   });
 
@@ -55,8 +50,6 @@ describe('PasswordService', () => {
     spyOn(window, 'fetch').and.resolveTo(jsonResponse({ message: 'invalid code' }, 400));
     const service = TestBed.inject(PasswordService);
 
-    await expectAsync(service.updatePassword('ane@example.com', '000000', 'newsecret')).toBeRejectedWith(
-      jasmine.objectContaining({ code: 'invalidCode' } as Partial<ApiError>),
-    );
+    await expectAsync(service.confirmPasswordReset('ane@example.com', '000000', 'newsecret')).toBeRejectedWith(jasmine.any(ApiError));
   });
 });

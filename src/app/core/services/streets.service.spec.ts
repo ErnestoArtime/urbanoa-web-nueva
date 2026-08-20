@@ -1,5 +1,12 @@
+import { provideZonelessChangeDetection } from '@angular/core';
+import { TestBed } from '@angular/core/testing';
 import { OpsApiClient } from '../api/ops-api-client.service';
 import { StreetsService } from './streets.service';
+
+function serviceWith(api: jasmine.SpyObj<OpsApiClient>): StreetsService {
+  TestBed.configureTestingModule({ providers: [provideZonelessChangeDetection(), { provide: OpsApiClient, useValue: api }] });
+  return TestBed.inject(StreetsService);
+}
 
 describe('StreetsService', () => {
   it('uses the APK contractId request and streetsFulllist response', async () => {
@@ -8,7 +15,7 @@ describe('StreetsService', () => {
       streetsFullNumber: 1,
       streetsFulllist: [{ streetId: 7, street: 'AITZA KALEA', zone: 2, zoneDesc: 'Z2 AZUL' }],
     });
-    const service = new StreetsService(api);
+    const service = serviceWith(api);
 
     const result = await service.getStreets(3);
 
@@ -20,7 +27,7 @@ describe('StreetsService', () => {
   it('uses the Zarautz fallback and marks it as mock', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
     api.post.and.rejectWith(new Error('offline'));
-    const service = new StreetsService(api);
+    const service = serviceWith(api);
 
     const result = await service.getStreets(3);
 
@@ -31,7 +38,7 @@ describe('StreetsService', () => {
   it('does not show Zarautz streets for another municipality', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
     api.post.and.rejectWith(new Error('offline'));
-    const service = new StreetsService(api);
+    const service = serviceWith(api);
 
     const result = await service.getStreets(5);
 

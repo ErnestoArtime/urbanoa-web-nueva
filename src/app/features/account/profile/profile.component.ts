@@ -47,7 +47,13 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
             <label>{{ 'account.profile.email' | translate }} <span aria-hidden="true">*</span></label
             ><input class="form-input" type="email" formControlName="email" [placeholder]="'account.profile.email' | translate" />
             @if (form.controls.email.touched && form.controls.email.invalid) {
-              <p class="form-error">{{ form.controls.email.hasError('email') ? ('account.profile.emailInvalid' | translate) : ('account.profile.emailRequired' | translate) }}</p>
+              <p class="form-error">
+                {{
+                  form.controls.email.hasError('email')
+                    ? ('account.profile.emailInvalid' | translate)
+                    : ('account.profile.emailRequired' | translate)
+                }}
+              </p>
             }
           </div>
           <button type="submit" class="btn btn-primary btn-block" [disabled]="saving()">

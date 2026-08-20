@@ -22,10 +22,9 @@ export class WebComponent {
   private readonly session = inject(OpsSessionService);
 
   readonly title = this.route.snapshot.paramMap.get('type') === 'privacy' ? 'account.menu.privacy' : 'account.menu.terms';
-  readonly url =
-    this.session.token()
-      ? `${environment.apiBaseUrl}/content/${this.route.snapshot.paramMap.get('type') ?? 'terms'}`
-      : this.route.snapshot.paramMap.get('type') === 'privacy'
-        ? `${this.contentBase}/arinpark/es.html`
-        : `${this.contentBase}/arinpark/CU_es.html`;
+  readonly url = this.session.token()
+    ? `${environment.apiBaseUrl}/content/${this.route.snapshot.paramMap.get('type') ?? 'terms'}`
+    : this.route.snapshot.paramMap.get('type') === 'privacy'
+      ? `${this.contentBase}/arinpark/es.html`
+      : `${this.contentBase}/arinpark/CU_es.html`;
 }

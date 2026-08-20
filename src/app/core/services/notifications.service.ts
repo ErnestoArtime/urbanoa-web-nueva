@@ -1,4 +1,4 @@
-import { Injectable, signal } from '@angular/core';
+import { inject, Injectable, signal } from '@angular/core';
 import { OPS_ENDPOINTS } from '../api/ops-endpoints';
 import { OpsApiClient } from '../api/ops-api-client.service';
 import { OpsSessionService } from '../api/ops-session.service';
@@ -32,10 +32,8 @@ export class NotificationsService {
   readonly preferences = signal<NotificationPreferences>({ ...DEFAULTS });
   readonly source = signal<'remote' | 'mock'>('mock');
 
-  constructor(
-    private readonly api: OpsApiClient,
-    private readonly session: OpsSessionService,
-  ) {}
+  private readonly api = inject(OpsApiClient);
+  private readonly session = inject(OpsSessionService);
 
   async load(): Promise<NotificationPreferences> {
     const token = this.session.token();

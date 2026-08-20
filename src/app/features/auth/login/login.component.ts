@@ -207,7 +207,9 @@ export class LoginComponent {
       await this.authService.login(email, password);
       await this.router.navigateByUrl(this.returnUrl() || '/app');
     } catch (error) {
-      this.errorKey.set(apiErrorKey(error, { unauthorized: 'auth.login.invalidCredentials' }));
+      this.errorKey.set(
+        apiErrorKey(error, { unauthorized: 'auth.login.invalidCredentials', notActivated: 'auth.login.accountNotActivated' }),
+      );
     } finally {
       this.submitting.set(false);
     }

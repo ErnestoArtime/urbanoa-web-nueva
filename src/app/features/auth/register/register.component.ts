@@ -277,7 +277,7 @@ export class RegisterComponent {
     const { email, password, plate } = this.form.getRawValue();
 
     try {
-      await this.authService.register({ email, password, plate });
+      await this.authService.register({ email, password, plates: [plate] });
       await this.router.navigate(['/auth/register-confirm'], { queryParams: { email } });
     } catch (error) {
       this.errorKey.set(apiErrorKey(error, { conflict: 'auth.register.emailTaken' }));
