@@ -26,7 +26,7 @@ describe('PasswordService', () => {
     await service.requestCode('ane@example.com');
 
     const request = lastRequest(fetchSpy);
-    expect(request.url).toContain('/OPSWebServicesAPI/RecoverPasswordAPI');
+    expect(request.url).toContain('/OPSWebServicesAPI3/RecoverPasswordAPI');
     expect(request.body).toEqual(jasmine.objectContaining({ email: 'ane@example.com' }));
   });
 
@@ -42,7 +42,7 @@ describe('PasswordService', () => {
     await service.updatePassword('newsecret');
 
     const request = lastRequest(fetchSpy);
-    expect(request.url).toContain('/OPSWebServicesAPI/UpdatePasswordAPI');
+    expect(request.url).toContain('/OPSWebServicesAPI3/UpdatePasswordAPI');
     expect(request.headers.get('Authorization')).toBe('Bearer abc123');
   });
 

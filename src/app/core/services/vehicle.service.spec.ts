@@ -20,7 +20,7 @@ describe('VehicleService', () => {
 
     await service.load();
 
-    expect(api.get).toHaveBeenCalledWith('OPSWebServicesAPI/QueryUserPlatesAPI', { token: 'token' });
+    expect(api.get).toHaveBeenCalledWith('OPSWebServicesAPI3/QueryUserPlatesAPI', { token: 'token' });
     expect(service.source()).toBe('remote');
     expect(service.vehicles()).toEqual([{ id: '1234ABC', plate: '1234ABC', isDefault: true }]);
   });
@@ -33,8 +33,8 @@ describe('VehicleService', () => {
 
     const result = await service.add({ plate: ' 9999 xyz ', isDefault: true });
 
-    expect(api.post.calls.argsFor(0)).toEqual(['OPSWebServicesAPI/AddUserPlateAPI', { plate: '9999 XYZ' }, { token: 'token' }]);
-    expect(api.post.calls.argsFor(1)).toEqual(['OPSWebServicesAPI/UpdateUserPlateAPI', { plate: '9999 XYZ' }, { token: 'token' }]);
+    expect(api.post.calls.argsFor(0)).toEqual(['OPSWebServicesAPI3/AddUserPlateAPI', { plate: '9999 XYZ' }, { token: 'token' }]);
+    expect(api.post.calls.argsFor(1)).toEqual(['OPSWebServicesAPI3/UpdateUserPlateAPI', { plate: '9999 XYZ' }, { token: 'token' }]);
     expect(result.source).toBe('remote');
   });
 

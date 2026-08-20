@@ -47,7 +47,7 @@ function getOrCreateCloudToken(): string {
 
 function buildUrl(path: string): string {
   const normalized = path.startsWith('/') ? path : `/${path}`;
-  return `${environment.opsApiBaseUrl}/OPSWebServicesAPI${normalized}`;
+  return `${environment.opsApiBaseUrl}/OPSWebServicesAPI3${normalized}`;
 }
 
 function buildHeaders(token?: string): HeadersInit {
