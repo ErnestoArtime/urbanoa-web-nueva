@@ -59,13 +59,12 @@ export class AccountDeleteAccountComponent {
 
     this.submitting.set(true);
     this.errorKey.set('');
-    const { password, reason } = this.form.getRawValue();
 
     try {
-      await this.authService.cancelAccount(password, reason);
+      await this.authService.cancelAccount();
       await this.router.navigateByUrl('/auth/login');
     } catch (error) {
-      this.errorKey.set(apiErrorKey(error, { unauthorized: 'account.deleteAccount.wrongPassword' }));
+      this.errorKey.set(apiErrorKey(error));
     } finally {
       this.submitting.set(false);
     }

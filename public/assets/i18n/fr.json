@@ -256,7 +256,6 @@
   "account.deleteAccount.reason": "fr_Motivo (opcional)",
   "account.deleteAccount.confirm": "fr_Eliminar mi cuenta",
   "account.deleteAccount.deleting": "fr_Eliminando…",
-  "account.deleteAccount.wrongPassword": "fr_La contraseña no es correcta",
   "account.selectOption": "fr_Selecciona una opción para ver y editar sus datos",
   "account.vehicleFavorite": "fr_Vehículo favorito",
   "account.addVehicle": "fr_Añadir vehículo",

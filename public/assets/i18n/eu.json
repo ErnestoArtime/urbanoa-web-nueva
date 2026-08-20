@@ -256,7 +256,6 @@
   "account.deleteAccount.reason": "eu_Motivo (opcional)",
   "account.deleteAccount.confirm": "eu_Eliminar mi cuenta",
   "account.deleteAccount.deleting": "eu_Eliminando…",
-  "account.deleteAccount.wrongPassword": "eu_La contraseña no es correcta",
   "account.selectOption": "eu_Selecciona una opción para ver y editar sus datos",
   "account.vehicleFavorite": "eu_Vehículo favorito",
   "account.addVehicle": "eu_Añadir vehículo",

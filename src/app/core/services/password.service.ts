@@ -25,8 +25,19 @@ export class PasswordService {
     await postJson('/UpdatePasswordAPI', { password: newPassword }, { token: this.authService.token() });
   }
 
+  async verifyRecoveryCode(email: string, code: string): Promise<void> {
+    await postJson('/VerifyRecoveryPasswordAPI', { contractId: 0, userName: email, email, recode: code });
+  }
+
   async confirmPasswordReset(email: string, code: string, newPassword: string): Promise<void> {
-    const token = await postJson<string>('/ChangePasswordAPI', { email, newPassword, recode: code });
+    await this.verifyRecoveryCode(email, code);
+    const token = await postJson<string>('/ChangePasswordAPI', {
+      contractId: 0,
+      userName: email,
+      email,
+      password: newPassword,
+      recode: code,
+    });
     this.authService.adoptToken(token, email);
   }
 }
