@@ -10,23 +10,46 @@ import { OpsSessionService } from '../api/ops-session.service';
 import { AppApiClient } from '../api/app-api-client.service';
 
 interface OperationResponseDto {
+  contractId?: number;
+  contractName?: string | null;
   operationNumber?: number | string | null;
   operationType: number;
-  paymentAmount: number;
+  paymentAmount?: number | null;
   opDate: string;
   plate?: string | null;
   zoneDesc?: string | null;
   sectorDesc?: string | null;
   parkingStartDate?: string | null;
   parkingEndDate?: string | null;
-  duration: number;
-  opBaseId: number;
-  idPaymentMethod1: number;
-  descPaymentMethod1: string;
-  amountPaymentMethod1: number;
+  duration?: number;
+  parkingDuration?: number;
+  opBaseId?: number | string | null;
+  idPaymentMethod1?: number;
+  descPaymentMethod1?: string;
+  amountPaymentMethod1?: number;
   idPaymentMethod2?: number | null;
   descPaymentMethod2?: string | null;
   amountPaymentMethod2?: number | null;
+  zoneId?: number;
+  sectorId?: number;
+  sectorColor?: string | null;
+  cityId?: number;
+  cityName?: string | null;
+  fineNumber?: string | null;
+  fineProcessingDate?: string | null;
+  farticle?: string | null;
+  fineArticle?: string | null;
+  fcolor?: string | null;
+  fmake?: string | null;
+  fineStatus?: number | null;
+  fstreet?: string | null;
+  fineStreet?: string | null;
+  fstrnum?: string | null;
+  fineStreetNumber?: string | null;
+  fineValidDate?: string | null;
+  fineAmount?: number | null;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 export interface ActiveParking {
@@ -128,7 +151,24 @@ export class OperationsService {
     return this._operations().find((op) => op.id === id);
   }
 
-  registerFinePayment(input: { plate: string; location: string; amount: number; paymentBreakdown?: Operation['paymentBreakdown'] }): void {
+  removeOperation(id: string): void {
+    this._operations.update((operations) => operations.filter((operation) => operation.id !== id));
+    this.persistOps();
+  }
+
+  registerFinePayment(input: {
+    plate: string;
+    location: string;
+    amount: number;
+    paymentBreakdown?: Operation['paymentBreakdown'];
+    fineNumber?: string;
+    fineArticle?: string;
+    zoneName?: string;
+    sectorName?: string;
+    cityName?: string;
+    latitude?: number;
+    longitude?: number;
+  }): void {
     const amount = Math.abs(input.amount);
     const operation: Operation = {
       id: this.nextId(),
@@ -138,6 +178,14 @@ export class OperationsService {
       amount: -amount,
       zone: input.location,
       paymentBreakdown: input.paymentBreakdown,
+      fineNumber: input.fineNumber,
+      fineArticle: input.fineArticle,
+      zoneName: input.zoneName,
+      sectorName: input.sectorName,
+      cityName: input.cityName,
+      latitude: input.latitude,
+      longitude: input.longitude,
+      startTime: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
     };
     this._operations.update((list) => [operation, ...list]);
     this.persistOps();
@@ -244,7 +292,7 @@ export class OperationsService {
 
     const finishParking: Operation = {
       id: finishParkingId,
-      type: OperationType.PARKING_END,
+      type: OperationType.REFUND,
       plate: active.plate,
       date: today,
       amount: 0.4,
@@ -355,13 +403,17 @@ export class OperationsService {
   }
 
   private normalizeOperationIds(list: Operation[]): Operation[] {
+    const normalized = list.map((operation) => ({
+      ...operation,
+      type: this.normalizeStoredOperationType(operation.type),
+    }));
     const used = new Set<string>();
-    let max = list.reduce((acc, op) => {
+    let max = normalized.reduce((acc, op) => {
       const n = Number(op.id);
       return Number.isFinite(n) ? Math.max(acc, n) : acc;
     }, 0);
 
-    return list.map((op) => {
+    return normalized.map((op) => {
       if (op.id && !used.has(op.id)) {
         used.add(op.id);
         return op;
@@ -373,22 +425,32 @@ export class OperationsService {
     });
   }
 
+  private normalizeStoredOperationType(type: number): OperationType {
+    if (type === 6) return OperationType.REFUND;
+    return Object.values(OperationType).includes(type) ? (type as OperationType) : OperationType.PARKING;
+  }
+
   private mapRemoteOperation(item: OperationResponseDto): Operation {
-    const amount = item.paymentAmount / 100;
+    const remoteAmount = item.operationType === OperationType.UNPAID_FINES && !item.paymentAmount
+      ? item.fineAmount ?? 0
+      : item.paymentAmount ?? 0;
+    const amount = remoteAmount / 100;
     const start = this.dateTimePart(item.parkingStartDate);
     const end = this.dateTimePart(item.parkingEndDate);
+    const duration = item.parkingDuration ?? item.duration;
+    const fineStatus = [1, 2, 3].includes(item.fineStatus ?? 0) ? (item.fineStatus as 1 | 2 | 3) : undefined;
     return {
       id: String(item.operationNumber ?? item.opBaseId),
       type: (Object.values(OperationType).includes(item.operationType) ? item.operationType : OperationType.PARKING) as OperationType,
       plate: item.plate ?? null,
       date: this.datePart(item.opDate),
-      amount: [OperationType.TOP_UP, OperationType.REFUND, OperationType.PARKING_END].includes(item.operationType)
+      amount: [OperationType.TOP_UP, OperationType.REFUND].includes(item.operationType)
         ? amount
         : -Math.abs(amount),
       zone: item.sectorDesc ?? item.zoneDesc ?? null,
-      startTime: start,
+      startTime: start ?? this.dateTimePart(item.opDate),
       endTime: end,
-      durationLabel: item.duration ? `${item.duration} min` : undefined,
+      durationLabel: duration ? `${duration} min` : undefined,
       relatedOperationId: item.opBaseId ? String(item.opBaseId) : undefined,
       cardId: item.idPaymentMethod2 ? String(item.idPaymentMethod2) : undefined,
       cardLabel: item.descPaymentMethod2 ?? undefined,
@@ -397,20 +459,64 @@ export class OperationsService {
         cardAmount: Math.abs(item.amountPaymentMethod2 ?? 0) / 100,
         cardLabel: item.descPaymentMethod2 ?? undefined,
       },
+      contractId: item.contractId,
+      contractName: item.contractName ?? undefined,
+      fineNumber: item.fineNumber ?? undefined,
+      fineProcessingDate: this.dateTimeLabel(item.fineProcessingDate),
+      fineArticle: item.fineArticle ?? item.farticle ?? undefined,
+      fineVehicleColor: item.fcolor ?? undefined,
+      fineVehicleMake: item.fmake ?? undefined,
+      fineStatus,
+      fineStreet: item.fineStreet ?? item.fstreet ?? undefined,
+      fineStreetNumber: item.fineStreetNumber ?? item.fstrnum ?? undefined,
+      fineValidDate: this.datePartOptional(item.fineValidDate),
+      fineAmount: item.fineAmount == null ? undefined : Math.abs(item.fineAmount) / 100,
+      cityId: item.cityId,
+      cityName: item.cityName ?? undefined,
+      zoneId: item.zoneId,
+      zoneName: item.zoneDesc ?? undefined,
+      sectorId: item.sectorId,
+      sectorName: item.sectorDesc ?? undefined,
+      latitude: item.latitude ?? undefined,
+      longitude: item.longitude ?? undefined,
     };
+  }
+
+  private datePartOptional(value: string | null | undefined): string | undefined {
+    return value ? this.datePart(value) : undefined;
+  }
+
+  private dateTimeLabel(value: string | null | undefined): string | undefined {
+    if (!value) return undefined;
+    const date = this.datePart(value);
+    const time = this.dateTimePart(value);
+    return time ? `${date} | ${time}` : date;
   }
 
   private datePart(value: string | null | undefined): string {
     if (!value) return this.todayDateString();
-    const parsed = new Date(value);
+    const parsed = this.parseBackendDate(value);
     return Number.isNaN(parsed.getTime()) ? value.slice(0, 10) : parsed.toLocaleDateString('es-ES');
   }
 
   private dateTimePart(value: string | null | undefined): string | undefined {
     if (!value) return undefined;
-    const parsed = new Date(value);
+    const parsed = this.parseBackendDate(value);
     return Number.isNaN(parsed.getTime())
       ? value.slice(11, 16)
       : parsed.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  private parseBackendDate(value: string): Date {
+    if (/^\d{12}$/.test(value)) {
+      const hour = Number(value.slice(0, 2));
+      const minute = Number(value.slice(2, 4));
+      const second = Number(value.slice(4, 6));
+      const day = Number(value.slice(6, 8));
+      const month = Number(value.slice(8, 10)) - 1;
+      const year = 2000 + Number(value.slice(10, 12));
+      return new Date(year, month, day, hour, minute, second);
+    }
+    return new Date(value);
   }
 }

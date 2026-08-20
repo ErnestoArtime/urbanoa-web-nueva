@@ -93,7 +93,7 @@ export class RecentOperationsCardComponent {
   readonly OPERATION_TYPE_LABELS = OPERATION_TYPE_LABELS;
 
   isFinishParking(op: { type: OperationType; plate: string | null }): boolean {
-    return (op.type === OperationType.PARKING_END || op.type === OperationType.BALANCE_REFUND) && !!op.plate;
+    return op.type === OperationType.REFUND && !!op.plate;
   }
 
   isParking(op: Operation): boolean {

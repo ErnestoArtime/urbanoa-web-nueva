@@ -8,9 +8,13 @@ import { APP_BRAND } from '../../../shared/constants/app-brand';
 import { OperationsService } from '../../../core/services/operations.service';
 import { DateRangeFilterComponent, type DateRange } from '../../../shared/components/date-range-filter/date-range-filter.component';
 import type { Operation } from '../../../shared/models/operation';
+import { OpsApiClient } from '../../../core/api/ops-api-client.service';
+import { OpsSessionService } from '../../../core/api/ops-session.service';
+import { OPS_ENDPOINTS } from '../../../core/api/ops-endpoints';
+import { UserService } from '../../../core/services/user.service';
 
 type ReportRange = 'last7' | 'last14' | 'last30' | 'last6m' | 'last12m' | 'last5y';
-type ReportFilterKey = 'parks' | 'extends' | 'refunds' | 'recharges' | 'parkingEnd' | 'balanceRefunds' | 'fines';
+type ReportFilterKey = 'parks' | 'extends' | 'refunds' | 'recharges' | 'balanceRefunds' | 'fines';
 
 interface ReportFilterItem {
   key: ReportFilterKey;
@@ -247,6 +251,9 @@ export class ReportComponent {
   private readonly operationsService = inject(OperationsService);
   private readonly translationService = inject(TranslationService);
   private readonly fb = inject(FormBuilder);
+  private readonly api = inject(OpsApiClient);
+  private readonly session = inject(OpsSessionService);
+  private readonly userService = inject(UserService);
 
   readonly form = this.fb.nonNullable.group({
     customDates: [false],
@@ -254,7 +261,6 @@ export class ReportComponent {
     extends: [true],
     refunds: [true],
     recharges: [true],
-    parkingEnd: [true],
     balanceRefunds: [true],
     fines: [true],
   });
@@ -276,7 +282,6 @@ export class ReportComponent {
     { key: 'extends', labelKey: 'ops.report.extension', descKey: 'ops.report.extensionDesc', type: OperationType.PARKING_EXTENSION },
     { key: 'refunds', labelKey: 'ops.report.refunds', descKey: 'ops.report.refundsDesc', type: OperationType.REFUND },
     { key: 'recharges', labelKey: 'ops.report.topUps', descKey: 'ops.report.topUpsDesc', type: OperationType.TOP_UP },
-    { key: 'parkingEnd', labelKey: 'ops.type.parkingEndRefund', descKey: 'ops.report.parkingEndDesc', type: OperationType.PARKING_END },
     {
       key: 'balanceRefunds',
       labelKey: 'ops.report.balanceRefunds',
@@ -363,18 +368,39 @@ export class ReportComponent {
 </body></html>`;
   }
 
-  generateReport(): void {
+  async generateReport(): Promise<void> {
     if (this.dateRangeError()) return;
     this.isGenerating.set(true);
-    const operations = this.buildFilteredOperations();
-    const html = this.buildReportHtml(operations);
-    this.reportHtml.set(html);
-    const blob = new Blob([html], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    globalThis.open(url, '_blank');
-    setTimeout(() => URL.revokeObjectURL(url), 10_000);
-    this.isGenerating.set(false);
-    this.router.navigate(['/app/operations/report-success']);
+    const viewer = globalThis.open('', '_blank');
+    try {
+      const token = this.session.token();
+      if (!token) throw new Error('No hay una sesión OPS activa');
+      const range = this.resolveRange();
+      const content = await this.api.post<string>(OPS_ENDPOINTS.user.report, {
+        contractId: 0,
+        dateStart: this.toBackendDate(range.start),
+        dateEnd: this.toBackendDate(range.end),
+        operationTypeList: this.filters.filter((filter) => this.isFilterEnabled(filter.key)).map((filter) => filter.type),
+        mail: this.userService.user().email,
+        reportFormat: 0,
+      }, { token });
+      const pdf = this.base64Pdf(content);
+      const url = URL.createObjectURL(pdf);
+      if (viewer) viewer.location.href = url;
+      else globalThis.open(url, '_blank');
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (error) {
+      console.warn('[OPS API] Informe PDF utiliza fallback mock', error);
+      const html = this.buildReportHtml(this.buildFilteredOperations());
+      this.reportHtml.set(html);
+      const url = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
+      if (viewer) viewer.location.href = url;
+      else globalThis.open(url, '_blank');
+      setTimeout(() => URL.revokeObjectURL(url), 10_000);
+    } finally {
+      this.isGenerating.set(false);
+    }
+    void this.router.navigate(['/app/operations/report-success']);
   }
 
   private buildFilteredOperations(): Operation[] {
@@ -425,8 +451,6 @@ export class ReportComponent {
         return 'refunds';
       case OperationType.TOP_UP:
         return 'recharges';
-      case OperationType.PARKING_END:
-        return 'parkingEnd';
       case OperationType.BALANCE_REFUND:
         return 'balanceRefunds';
       case OperationType.FINE_PAYMENT:
@@ -443,5 +467,17 @@ export class ReportComponent {
     }
     const [day, month, year] = value.split('/').map(Number);
     return new Date(year, month - 1, day, 12, 0, 0, 0);
+  }
+
+  private toBackendDate(value: Date): string {
+    const part = (number: number) => String(number).padStart(2, '0');
+    return `${part(value.getHours())}${part(value.getMinutes())}${part(value.getSeconds())}${part(value.getDate())}${part(value.getMonth() + 1)}${part(value.getFullYear() % 100)}`;
+  }
+
+  private base64Pdf(content: string): Blob {
+    const normalized = content.replace(/^data:application\/pdf;base64,/, '').replace(/\s/g, '');
+    const binary = atob(normalized);
+    const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
+    return new Blob([bytes], { type: 'application/pdf' });
   }
 }
