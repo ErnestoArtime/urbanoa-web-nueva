@@ -258,6 +258,8 @@
   "account.deleteAccount.deleting": "eu_Eliminando…",
   "account.selectOption": "eu_Selecciona una opción para ver y editar sus datos",
   "account.vehicleFavorite": "eu_Vehículo favorito",
+  "account.vehicles.markFavorite": "eu_Marcar como vehículo favorito",
+  "account.vehicles.currentFavorite": "eu_Vehículo favorito actual",
   "account.addVehicle": "eu_Añadir vehículo",
   "account.linkCopied": "eu_Enlace copiado",
   "account.version": "eu_Versión: 1.0 (1)",

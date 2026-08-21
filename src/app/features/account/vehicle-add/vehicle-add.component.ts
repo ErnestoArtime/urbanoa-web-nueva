@@ -121,13 +121,13 @@ export class VehicleAddComponent {
       return;
     }
     this.saving.set(true);
-    await this.vehicleService.add({
+    const mutation = await this.vehicleService.add({
       plate,
       isDefault: this.favorite(),
       label: this.foreignPlate() ? 'account.vehicle.foreignPlate' : undefined,
     });
     this.saving.set(false);
-    this.saved.set(true);
+    if (mutation.success) this.saved.set(true);
   }
 
   goBack(): void {
