@@ -19,7 +19,7 @@ describe('StreetsService', () => {
 
     const result = await service.getStreets(3);
 
-    expect(api.post).toHaveBeenCalledWith('OPSWebServicesAPI3/QueryStreetsAPI', { contractId: 3 });
+    expect(api.post).toHaveBeenCalledWith('OPSWebServicesAPI/QueryStreetsAPI', { contractId: 3 });
     expect(result.source).toBe('remote');
     expect(result.data).toEqual([{ id: 7, name: 'AITZA KALEA', zoneId: 2, zoneDescription: 'Z2 AZUL' }]);
   });

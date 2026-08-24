@@ -1,4 +1,4 @@
-const API_PREFIX = 'OPSWebServicesAPI3/';
+const API_PREFIX = 'OPSWebServicesAPI/';
 
 const endpoint = (name: string): string => `${API_PREFIX}${name}`;
 
@@ -7,7 +7,6 @@ export const OPS_ENDPOINTS = {
     login: endpoint('LoginUserAPI'),
     register: endpoint('RegisterUserAPI'),
     recoverPassword: endpoint('RecoverPasswordAPI'),
-    verifyRecoveryPassword: endpoint('VerifyRecoveryPasswordAPI'),
     updatePassword: endpoint('UpdatePasswordAPI'),
     resendMail: endpoint('ResendMailAPI'),
   },

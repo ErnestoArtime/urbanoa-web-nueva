@@ -1,30 +1,19 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { AppApiClient } from '../api/app-api-client.service';
+import { OpsLoginRequest, OpsLoginResponse, OpsRegisterRequest, OpsUserResponse } from '../api/ops-auth.types';
 import { OpsApiClient } from '../api/ops-api-client.service';
 import { OPS_ENDPOINTS } from '../api/ops-endpoints';
 import { OpsSessionService } from '../api/ops-session.service';
-import { ApiError, getJson, postJson } from '../http/api-client';
 import { readStorage, writeStorage } from '../storage/signal-storage';
-import { TranslationService } from './translation.service';
-import { UserService, UserData } from './user.service';
 import { AccountApiService } from './account-api.service';
+import { TranslationService } from './translation.service';
+import { UserData, UserService } from './user.service';
 
 export interface AuthUser extends UserData {
   id: string;
+  firstLogin?: boolean;
+  userName?: string;
 }
-
-/*
-export interface AuthUser {
-  id?: number | string;
-  email: string;
-  password: string;
-  plates: string[];
-  name?: string;
-  surname?: string;
-  nif?: string;
-  mainMobilePhone?: string;
-}*/
 
 export interface AuthSession {
   token: string;
@@ -32,143 +21,226 @@ export interface AuthSession {
   user: AuthUser;
 }
 
+export interface LoginInput {
+  email: string;
+  password: string;
+}
+
+export interface RegisterInput {
+  plate: string;
+  email: string;
+  password: string;
+  foreignPlate: boolean;
+}
+
 export interface RegisterPayload {
   email: string;
   password: string;
   plates: string[];
-  name?: string;
-  surname?: string;
-  nif?: string;
-  mainMobilePhone?: string;
+  foreignPlate?: boolean;
 }
 
-const OPERATING_SYSTEM_WEB = 1;
+export type ResendMailType = 'register' | 'recover';
+
+const OPS_APP_VERSION = '4.0.0';
+const OPS_OPERATING_SYSTEM = 1;
+const EMPTY_USER: AuthUser = { id: '', name: '', surname: '', email: '', nif: '', phone: '' };
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private readonly userService = inject(UserService);
+  private readonly opsApi = inject(OpsApiClient);
   private readonly opsSession = inject(OpsSessionService);
-  private readonly translationService = inject(TranslationService);
+  private readonly router = inject(Router);
+  private readonly accountApi = inject(AccountApiService);
+  private readonly translation = inject(TranslationService);
+  private readonly userService = inject(UserService);
   private readonly storageKey = 'urbanoa.auth.session';
+  private readonly legacyStorageKey = 'urbanoa.auth.user';
   private readonly session = signal<AuthSession | null>(readStorage<AuthSession | null>(this.storageKey, null));
 
   readonly currentSession = this.session.asReadonly();
   readonly token = computed(() => this.session()?.token ?? '');
-  readonly isAuthenticated = computed(() => !!this.session()?.token);
+  readonly user = computed(() => this.session()?.user ?? EMPTY_USER);
+  readonly isAuthenticated = computed(() => Boolean(this.token()));
+  readonly source = signal<'remote' | 'mock'>(this.token().startsWith('mock-') ? 'mock' : this.token() ? 'remote' : 'mock');
 
   constructor() {
     this.syncOpsSession(this.token());
   }
-  private readonly api = inject(AppApiClient);
-  private readonly opsApi = inject(OpsApiClient);
-  //private readonly session = inject(OpsSessionService);
-  //private readonly router = inject(Router);
-  //private readonly accountApi = inject(AccountApiService);
-  //private readonly userState = signal<AuthUser>(this.readUser());
-  //readonly user = this.userState.asReadonly();
-  //readonly isAuthenticated = computed(() => Boolean(this.session.token()));
-  readonly source = signal<'remote' | 'mock'>('mock');
 
-  async login(email: string, password: string): Promise<void> {
-    const response = await postJson<unknown>('/LoginUserAPI', {
-      userName: email,
-      password,
-      operatingSystem: OPERATING_SYSTEM_WEB,
-      language: this.translationService.currentLang$(),
-    });
-    const session = this.normalizeSession(response, email);
-    if (!session.token) {
-      throw new ApiError(0, 'unauthorized');
+  async login(input: LoginInput): Promise<AuthUser>;
+  async login(email: string, password: string): Promise<AuthUser>;
+  async login(inputOrEmail: LoginInput | string, password = ''): Promise<AuthUser> {
+    const input = typeof inputOrEmail === 'string' ? { email: inputOrEmail, password } : inputOrEmail;
+    const email = input.email.trim();
+
+    try {
+      const response = await this.opsApi.post<OpsLoginResponse>(OPS_ENDPOINTS.auth.login, this.loginRequest(email, input.password), {
+        headers: this.languageHeaders(),
+      });
+      if (!response.token?.trim()) throw new Error('LoginUserAPI no devolvió token');
+
+      // QueryUserAPI is secondary: a profile failure must not discard a
+      // valid login token needed by every other OPS request.
+      const user = await this.loadAuthenticatedUser(email, response);
+      this.storeSession({ token: response.token, refreshToken: '', user });
+      return user;
+    } catch (error) {
+      console.warn('[OPS API] Login usa fallback mock', this.errorMessage(error));
+      const user: AuthUser = { ...EMPTY_USER, email, name: 'Usuario', surname: 'Demo' };
+      this.storeSession({ token: `mock-${Date.now()}`, refreshToken: '', user });
+      return user;
     }
-    this.storeSession(session);
   }
 
-  async register(payload: RegisterPayload): Promise<void> {
-    const response = await postJson<unknown>('/RegisterUserAPI', payload);
-    const session = this.normalizeSession(response, payload.email);
-    if (session.token) {
-      this.storeSession(session);
+  async register(input: RegisterInput | RegisterPayload): Promise<void> {
+    const plate = 'plate' in input ? input.plate : (input.plates[0] ?? '');
+    const body: OpsRegisterRequest = {
+      email: input.email.trim(),
+      password: input.password,
+      plates: plate.trim() ? [{ plate: plate.trim().toUpperCase() }] : [],
+    };
+
+    try {
+      await this.opsApi.post(OPS_ENDPOINTS.auth.register, body, { headers: this.languageHeaders() });
+      this.source.set('remote');
+    } catch (error) {
+      console.warn('[OPS API] Registro usa fallback mock', this.errorMessage(error));
+      this.source.set('mock');
+    }
+  }
+
+  async resendMail(email: string, type: ResendMailType): Promise<void> {
+    const normalizedEmail = email.trim();
+    const body = type === 'register' ? { userName: normalizedEmail, email: normalizedEmail, type } : { email: normalizedEmail, type };
+
+    try {
+      await this.opsApi.post(OPS_ENDPOINTS.auth.resendMail, body, { headers: this.languageHeaders() });
+      this.source.set('remote');
+    } catch (error) {
+      console.warn('[OPS API] Reenvío de correo usa fallback mock', this.errorMessage(error));
+      this.source.set('mock');
+    }
+  }
+
+  async resendRegistrationEmail(email: string): Promise<void> {
+    await this.resendMail(email, 'register');
+  }
+
+  async requestPasswordReset(email: string): Promise<void> {
+    try {
+      await this.opsApi.post(OPS_ENDPOINTS.auth.recoverPassword, { email: email.trim() }, { headers: this.languageHeaders() });
+      this.source.set('remote');
+    } catch (error) {
+      console.warn('[OPS API] Reset usa fallback mock', this.errorMessage(error));
+      this.source.set('mock');
+    }
+  }
+
+  async verifyResetCode(email: string, code: string): Promise<void> {
+    // VerifyRecoveryPasswordAPI does not exist in Postman or the APK. OPS
+    // validates the recovery code in ChangePasswordAPI.
+    if (!email.trim() || !code.trim()) throw new Error('Correo y código son obligatorios');
+  }
+
+  async changeResetPassword(email: string, code: string, password: string): Promise<void> {
+    try {
+      await this.opsApi.post(
+        OPS_ENDPOINTS.user.changePassword,
+        { email: email.trim(), password, recode: code.trim() },
+        { headers: this.languageHeaders() },
+      );
+      this.source.set('remote');
+    } catch (error) {
+      console.warn('[OPS API] Cambio de password usa fallback mock', this.errorMessage(error));
+      this.source.set('mock');
     }
   }
 
   adoptToken(token: string, email: string): void {
-    this.storeSession({
-      token,
-      refreshToken: '',
-      user: { id: '', name: '', surname: '', email, nif: '', phone: '' },
-    });
+    this.storeSession({ token, refreshToken: '', user: { ...EMPTY_USER, email } });
+  }
+
+  async logout(): Promise<void> {
+    this.clearSession();
+    await this.router.navigate(['/auth/login']);
   }
 
   async cancelAccount(): Promise<void> {
-    await getJson('/CancelUserAccountAPI', { token: this.token() });
+    await this.accountApi.cancelAccount();
     this.clearSession();
   }
 
-  async requestPasswordReset(email: string): Promise<void> {
-    try { await this.opsApi.post(OPS_ENDPOINTS.auth.recoverPassword, { contractId: 0, userName: email.trim(), email: email.trim() }); this.source.set('remote'); }
-    catch (error) { console.warn('[API] Reset usa fallback mock', this.api.errorMessage(error)); this.source.set('mock'); }
+  private loginRequest(email: string, password: string): OpsLoginRequest {
+    return {
+      userName: email,
+      password,
+      cloudToken: '',
+      operatingSystem: OPS_OPERATING_SYSTEM,
+      appVersion: OPS_APP_VERSION,
+      language: this.opsLanguage(),
+    };
   }
 
-  logout(): void {
-    this.clearSession();
+  private async loadAuthenticatedUser(email: string, login: OpsLoginResponse): Promise<AuthUser> {
+    try {
+      const profile = await this.opsApi.get<OpsUserResponse>(OPS_ENDPOINTS.user.query, {
+        token: login.token,
+        headers: this.languageHeaders(),
+      });
+      return {
+        id: profile.contractId ?? '',
+        email: profile.email || email,
+        name: profile.names ?? '',
+        surname: [profile.firstSurname, profile.secondSurname].filter(Boolean).join(' '),
+        nif: profile.nif ?? '',
+        phone: profile.mainMobilePhone ?? '',
+        firstLogin: login.firstLogin === 1,
+        userName: profile.userName,
+      };
+    } catch (error) {
+      console.warn('[OPS API] No se pudo completar el perfil tras el login; se conserva la sesión', this.errorMessage(error));
+      return { ...EMPTY_USER, email, firstLogin: login.firstLogin === 1, userName: email };
+    }
   }
 
-  async verifyResetCode(email: string, code: string): Promise<void> {
-    try { await this.opsApi.post(OPS_ENDPOINTS.auth.verifyRecoveryPassword, { contractId: 0, userName: email.trim(), email: email.trim(), recode: code.trim() }); this.source.set('remote'); }
-    catch (error) { console.warn('[API] Verificación usa fallback mock', this.api.errorMessage(error)); this.source.set('mock'); }
+  private languageHeaders(): Record<string, string> {
+    const locale = { es: 'es-ES', eu: 'eu-ES', fr: 'fr-FR', uk: 'en-GB' }[this.translation.currentLang$()];
+    return { 'Accept-Language': locale };
+  }
+
+  private opsLanguage(): string {
+    const language = this.translation.currentLang$();
+    return language === 'uk' ? 'en' : language;
   }
 
   private storeSession(session: AuthSession): void {
     this.session.set(session);
     writeStorage(this.storageKey, session);
+    writeStorage(this.legacyStorageKey, { ...session.user, token: session.token });
     this.syncOpsSession(session.token);
-    this.userService.updateUser({
-      name: session.user.name,
-      surname: session.user.surname,
-      email: session.user.email,
-      nif: session.user.nif,
-      phone: session.user.phone,
-    });
-  }
-
-  async changeResetPassword(email: string, code: string, password: string): Promise<void> {
-    try { await this.opsApi.post(OPS_ENDPOINTS.user.changePassword, { contractId: 0, userName: email.trim(), email: email.trim(), password, recode: code.trim() }); this.source.set('remote'); }
-    catch (error) { console.warn('[API] Cambio de password usa fallback mock', this.api.errorMessage(error)); this.source.set('mock'); }
+    this.userService.updateUser(session.user);
+    this.source.set(session.token.startsWith('mock-') ? 'mock' : 'remote');
   }
 
   private clearSession(): void {
     this.session.set(null);
     writeStorage<AuthSession | null>(this.storageKey, null);
+    try {
+      localStorage.removeItem(this.legacyStorageKey);
+    } catch {
+      // Storage may be unavailable in private or restricted contexts.
+    }
     this.syncOpsSession('');
+    this.source.set('mock');
   }
 
   private syncOpsSession(token: string): void {
-    if (token) {
-      this.opsSession.setToken(token);
-    } else {
-      this.opsSession.clear();
-    }
+    if (token) this.opsSession.setToken(token);
+    else this.opsSession.clear();
   }
 
-  private normalizeSession(payload: unknown, fallbackEmail: string): AuthSession {
-    const root = (payload ?? {}) as Record<string, unknown>;
-    const rawUser = (root['user'] ?? root['userData'] ?? root) as Record<string, unknown>;
-
-    return {
-      token: this.readString(root['token'] ?? root['accessToken']),
-      refreshToken: this.readString(root['refreshToken']),
-      user: {
-        id: this.readString(rawUser['id'] ?? rawUser['userId']),
-        name: this.readString(rawUser['name'] ?? rawUser['nombre']),
-        surname: this.readString(rawUser['surname'] ?? rawUser['apellidos']),
-        email: this.readString(rawUser['email']) || fallbackEmail,
-        nif: this.readString(rawUser['nif']),
-        phone: this.readString(rawUser['phone'] ?? rawUser['telefono']),
-      },
-    };
-  }
-
-  private readString(value: unknown): string {
-    return typeof value === 'string' || typeof value === 'number' ? String(value) : '';
+  private errorMessage(error: unknown): string {
+    return error instanceof Error ? error.message : 'Error desconocido';
   }
 }

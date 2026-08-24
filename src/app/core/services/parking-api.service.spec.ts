@@ -31,7 +31,7 @@ describe('ParkingApiService', () => {
     });
 
     expect(api.post).toHaveBeenCalledWith(
-      'OPSWebServicesAPI3/ConfirmParkingOperationAPI',
+      'OPSWebServicesAPI/ConfirmParkingOperationAPI',
       jasmine.objectContaining({
         contractId: 3,
         plate: '1234ABC',
