@@ -1,11 +1,13 @@
 import { Injectable, inject } from '@angular/core';
 import { OperationsService, type ActiveParking } from './operations.service';
+import { ParkingApiService } from './parking-api.service';
 
 export type StartParkingInput = ActiveParking & { amount: number };
 
 @Injectable({ providedIn: 'root' })
 export class ParkingSessionService {
   private readonly operationsService = inject(OperationsService);
+  private readonly parkingApi = inject(ParkingApiService);
 
   readonly activeParkings = this.operationsService.activeParkings;
   readonly activeParkingsCount = this.operationsService.activeParkingsCount;
@@ -16,8 +18,15 @@ export class ParkingSessionService {
     return started ? (this.operationsService.getActiveParking(input.id) ?? null) : null;
   }
 
-  leaveParking(parkingId: string): boolean {
-    return this.operationsService.unpark(parkingId);
+  async leaveParking(parkingId: string): Promise<boolean> {
+    const parking = this.operationsService.getActiveParking(parkingId);
+    if (!parking) return false;
+    const result = await this.parkingApi.unpark({
+      contractId: parking.contractId ?? 0,
+      plate: parking.plate,
+      ticketId: parking.tariffId,
+    });
+    return result.success ? this.operationsService.unpark(parkingId, result.refundAmount) : false;
   }
 
   extendParking(parkingId: string, minutes: number): boolean {

@@ -68,4 +68,25 @@ describe('ParkingApiService', () => {
     expect(api.post).not.toHaveBeenCalled();
     expect(result.source).toBe('mock');
   });
+
+  it('queries and confirms unparking with the Swagger date and refund contracts', async () => {
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
+    api.post.and.resolveTo({ payAmount: 125, moneyReturned: true });
+    const service = serviceWith(api);
+    TestBed.inject(OpsSessionService).setToken('token');
+
+    const result = await service.unpark({ contractId: 3, plate: '1234ABC', ticketId: 7 });
+
+    expect(api.post.calls.argsFor(0)).toEqual([
+      'OPSWebServicesAPI/QueryUnParkingOperationAPI',
+      jasmine.objectContaining({ contractId: 3, plate: '1234ABC', ticketId: 7, datetime: jasmine.stringMatching(/^\d{12}$/) }),
+      { token: 'token' },
+    ]);
+    expect(api.post.calls.argsFor(1)).toEqual([
+      'OPSWebServicesAPI/ConfirmUnParkingOperationAPI',
+      jasmine.objectContaining({ contractId: 3, plate: '1234ABC', quantity: 125, date: jasmine.stringMatching(/^\d{12}$/) }),
+      { token: 'token' },
+    ]);
+    expect(result).toEqual(jasmine.objectContaining({ source: 'remote', refundAmount: 1.25 }));
+  });
 });

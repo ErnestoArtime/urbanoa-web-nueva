@@ -376,14 +376,18 @@ export class ReportComponent {
       const token = this.session.token();
       if (!token) throw new Error('No hay una sesión OPS activa');
       const range = this.resolveRange();
-      const content = await this.api.post<string>(OPS_ENDPOINTS.user.report, {
-        contractId: 0,
-        dateStart: this.toBackendDate(range.start),
-        dateEnd: this.toBackendDate(range.end),
-        operationTypeList: this.filters.filter((filter) => this.isFilterEnabled(filter.key)).map((filter) => filter.type),
-        mail: this.userService.user().email,
-        reportFormat: 0,
-      }, { token });
+      const content = await this.api.post<string>(
+        OPS_ENDPOINTS.user.report,
+        {
+          contractId: 0,
+          dateStart: this.toBackendDate(range.start),
+          dateEnd: this.toBackendDate(range.end),
+          operationTypeList: this.filters.filter((filter) => this.isFilterEnabled(filter.key)).map((filter) => filter.type),
+          mail: this.userService.user().email,
+          reportFormat: 1,
+        },
+        { token },
+      );
       const pdf = this.base64Pdf(content);
       const url = URL.createObjectURL(pdf);
       if (viewer) viewer.location.href = url;
