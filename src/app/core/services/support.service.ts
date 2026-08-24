@@ -8,7 +8,7 @@ import { AppApiClient } from '../api/app-api-client.service';
 
 export type FeedbackType = 'incident' | 'suggestion' | 'inquiry' | 'service-complaint' | 'compliment';
 export type FeedbackSubtype =
-  'app' | 'citizen-services' | 'information' | 'regulations' | 'areas-hours' | 'parking-meters' | 'fines' | 'surveillance';
+  'app' | 'citizen-services' | 'information' | 'regulations' | 'areas-hours' | 'parking-meters' | 'fines' | 'surveillance' | 'web';
 export type FeedbackStatus = 'submitted' | 'assigned' | 'in-progress' | 'closed';
 
 export interface SupportAttachment {
@@ -295,7 +295,7 @@ export class SupportService {
 
   private feedbackSubtype(subtype: FeedbackSubtype): number {
     return (
-      ['app', 'citizen-services', 'information', 'regulations', 'areas-hours', 'parking-meters', 'fines', 'surveillance'].indexOf(subtype) +
+      ['app', 'citizen-services', 'information', 'regulations', 'areas-hours', 'parking-meters', 'fines', 'surveillance', 'web'].indexOf(subtype) +
       1
     );
   }
@@ -305,7 +305,7 @@ export class SupportService {
   }
 
   private localSubtype(subtype: number): FeedbackSubtype {
-    return (['app', 'citizen-services', 'information', 'regulations', 'areas-hours', 'parking-meters', 'fines', 'surveillance'][
+    return (['app', 'citizen-services', 'information', 'regulations', 'areas-hours', 'parking-meters', 'fines', 'surveillance', 'web'][
       subtype - 1
     ] ?? 'information') as FeedbackSubtype;
   }

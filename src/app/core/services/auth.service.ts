@@ -1,13 +1,30 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
+import { Router } from '@angular/router';
+import { AppApiClient } from '../api/app-api-client.service';
+import { OpsApiClient } from '../api/ops-api-client.service';
+import { OPS_ENDPOINTS } from '../api/ops-endpoints';
 import { OpsSessionService } from '../api/ops-session.service';
 import { ApiError, postJson } from '../http/api-client';
 import { readStorage, writeStorage } from '../storage/signal-storage';
 import { TranslationService } from './translation.service';
 import { UserService, UserData } from './user.service';
+import { AccountApiService } from './account-api.service';
 
 export interface AuthUser extends UserData {
   id: string;
 }
+
+/*
+export interface AuthUser {
+  id?: number | string;
+  email: string;
+  password: string;
+  plates: string[];
+  name?: string;
+  surname?: string;
+  nif?: string;
+  mainMobilePhone?: string;
+}*/
 
 export interface AuthSession {
   token: string;
@@ -42,6 +59,15 @@ export class AuthService {
   constructor() {
     this.syncOpsSession(this.token());
   }
+  private readonly api = inject(AppApiClient);
+  private readonly opsApi = inject(OpsApiClient);
+  //private readonly session = inject(OpsSessionService);
+  //private readonly router = inject(Router);
+  //private readonly accountApi = inject(AccountApiService);
+  //private readonly userState = signal<AuthUser>(this.readUser());
+  //readonly user = this.userState.asReadonly();
+  //readonly isAuthenticated = computed(() => Boolean(this.session.token()));
+  readonly source = signal<'remote' | 'mock'>('mock');
 
   async login(email: string, password: string): Promise<void> {
     const response = await postJson<unknown>('/LoginUserAPI', {
@@ -78,8 +104,18 @@ export class AuthService {
     this.clearSession();
   }
 
+  async requestPasswordReset(email: string): Promise<void> {
+    try { await this.opsApi.post(OPS_ENDPOINTS.auth.recoverPassword, { contractId: 0, userName: email.trim(), email: email.trim() }); this.source.set('remote'); }
+    catch (error) { console.warn('[API] Reset usa fallback mock', this.api.errorMessage(error)); this.source.set('mock'); }
+  }
+
   logout(): void {
     this.clearSession();
+  }
+
+  async verifyResetCode(email: string, code: string): Promise<void> {
+    try { await this.opsApi.post(OPS_ENDPOINTS.auth.verifyRecoveryPassword, { contractId: 0, userName: email.trim(), email: email.trim(), recode: code.trim() }); this.source.set('remote'); }
+    catch (error) { console.warn('[API] Verificación usa fallback mock', this.api.errorMessage(error)); this.source.set('mock'); }
   }
 
   private storeSession(session: AuthSession): void {
@@ -93,6 +129,11 @@ export class AuthService {
       nif: session.user.nif,
       phone: session.user.phone,
     });
+  }
+
+  async changeResetPassword(email: string, code: string, password: string): Promise<void> {
+    try { await this.opsApi.post(OPS_ENDPOINTS.user.changePassword, { contractId: 0, userName: email.trim(), email: email.trim(), password, recode: code.trim() }); this.source.set('remote'); }
+    catch (error) { console.warn('[API] Cambio de password usa fallback mock', this.api.errorMessage(error)); this.source.set('mock'); }
   }
 
   private clearSession(): void {

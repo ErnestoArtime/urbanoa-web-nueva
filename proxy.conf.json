@@ -12,7 +12,7 @@
     "secure": false,
     "changeOrigin": true,
     "pathRewrite": {
-      "^/ops-api": ""
+      "^/ops-api/OPSWebServicesAPI": "/OPSWebServicesAPI3"
     }
   }
 }

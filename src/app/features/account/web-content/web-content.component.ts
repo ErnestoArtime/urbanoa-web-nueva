@@ -27,11 +27,12 @@ import { environment } from '../../../../environments/environment';
             <strong>{{ 'account.webContent.displayError' | translate }}</strong>
             <p class="text-muted">{{ 'account.webContent.error' | translate }}</p>
             <a [href]="rawUrl()" target="_blank" rel="noopener" class="btn btn-primary">{{
-              'account.webContent.openBrowser' | translate
-            }}</a>
+                'account.webContent.openBrowser' | translate
+              }}</a>
           </div>
         } @else {
-          <iframe [src]="iframeUrl()" (load)="onLoad()" (error)="onError()" [title]="resolvedTitle()" scrolling="yes"></iframe>
+          <iframe [src]="iframeUrl()" (load)="onLoad()" (error)="onError()" [title]="resolvedTitle()"
+                  scrolling="yes"></iframe>
         }
       </section>
     </div>
@@ -45,6 +46,7 @@ import { environment } from '../../../../environments/environment';
         min-height: 0;
         background: var(--color-background);
       }
+
       .web-content-shell {
         display: flex;
         flex-direction: column;
@@ -53,6 +55,7 @@ import { environment } from '../../../../environments/environment';
         overflow: hidden;
         background: var(--color-background);
       }
+
       .web-content-header {
         display: grid;
         grid-template-columns: 44px minmax(0, 1fr) 44px;
@@ -63,11 +66,13 @@ import { environment } from '../../../../environments/environment';
         border-bottom: 1px solid var(--color-border);
         flex-shrink: 0;
       }
+
       @media (max-width: 959px) {
         .web-content-header {
           display: none;
         }
       }
+
       .web-content-header h1 {
         display: block;
         grid-column: 2;
@@ -80,6 +85,7 @@ import { environment } from '../../../../environments/environment';
         text-overflow: ellipsis;
         white-space: nowrap;
       }
+
       .web-content-back,
       .web-content-open {
         display: grid;
@@ -90,21 +96,25 @@ import { environment } from '../../../../environments/environment';
         border-radius: 50%;
         text-decoration: none;
       }
+
       .web-content-back:hover,
       .web-content-open:hover {
         background: var(--color-accent-soft);
         text-decoration: none;
       }
+
       .web-content-back span {
         margin-top: -0.15rem;
         font-size: var(--text-2xl);
         line-height: 1;
       }
+
       .web-content-open svg {
         width: 20px;
         height: 20px;
         fill: currentColor;
       }
+
       .web-content-frame {
         position: relative;
         flex: 1;
@@ -114,6 +124,7 @@ import { environment } from '../../../../environments/environment';
         touch-action: pan-x pan-y;
         background: #fff;
       }
+
       .web-content-frame iframe {
         display: block;
         width: 100%;
@@ -123,6 +134,7 @@ import { environment } from '../../../../environments/environment';
         overscroll-behavior: contain;
         touch-action: pan-x pan-y;
       }
+
       .web-content-state,
       .web-content-error {
         position: absolute;
@@ -137,10 +149,12 @@ import { environment } from '../../../../environments/environment';
         text-align: center;
         background: var(--color-background);
       }
+
       .web-content-state p,
       .web-content-error p {
         color: var(--color-text-muted);
       }
+
       .web-content-spinner {
         width: 30px;
         height: 30px;
@@ -149,27 +163,32 @@ import { environment } from '../../../../environments/environment';
         border-radius: 50%;
         animation: web-content-spin 0.8s linear infinite;
       }
+
       @keyframes web-content-spin {
         to {
           transform: rotate(360deg);
         }
       }
+
       @media (min-width: 960px) {
         .web-content-header {
           grid-template-columns: minmax(0, 1fr) 44px;
           min-height: 58px;
           padding-left: 1.1rem;
         }
+
         .web-content-header h1 {
           grid-column: 1;
           font-size: var(--text-lg);
           text-align: left;
         }
+
         .web-content-back,
         .web-content-header-space {
           display: none;
         }
       }
+
       @media (prefers-reduced-motion: reduce) {
         .web-content-spinner {
           animation: none;
@@ -177,6 +196,7 @@ import { environment } from '../../../../environments/environment';
       }
     `,
   ],
+  standalone: true,
 })
 export class WebContentComponent {
   private readonly translationService = inject(TranslationService);
@@ -195,10 +215,24 @@ export class WebContentComponent {
   readonly resolvedBackLink = computed(() => this.backLink() || this.route.snapshot.data['backLink'] || null);
   readonly resolvedUrl = computed(() => {
     const routeUrl = this.route.snapshot.data['url'];
+    const contentType = this.route.snapshot.data['contentType'];
     const base = environment.externalContentBaseUrl;
+    if (typeof contentType === 'string') return this.legalUrl(base, contentType);
     const value = this.url() === base && typeof routeUrl === 'string' ? routeUrl : this.url();
     return value.startsWith(base) ? `${environment.externalContentOrigin}${value.slice(base.length)}` : value;
   });
+
+  private legalUrl(base: string, contentType: string): string {
+    const language = this.translationService.currentLang$();
+    const code = language === 'uk' ? 'en' : language === 'eu' ? 'eus' : language;
+    const faq = { es: 'ESP', eu: 'EUS', fr: 'FRA', uk: 'ENG' }[language];
+    const path = contentType === 'help'
+      ? `/Arinpark/ArinparkFAQ-${faq}.html`
+      : contentType === 'terms'
+        ? `/arinpark/CU_${code}.html`
+        : `/arinpark/${code}.html`;
+    return `${environment.externalContentOrigin}${path}`;
+  }
 
   readonly rawUrl = computed(() => this.resolvedUrl());
 

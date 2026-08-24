@@ -1,7 +1,4 @@
 import { Routes } from '@angular/router';
-import { environment } from '../../../environments/environment';
-
-const externalContent = environment.externalContentBaseUrl;
 
 export const ACCOUNT_ROUTES: Routes = [
   {
@@ -23,17 +20,17 @@ export const ACCOUNT_ROUTES: Routes = [
       {
         path: 'help',
         loadComponent: () => import('./web-content/web-content.component').then((m) => m.WebContentComponent),
-        data: { title: 'account.menu.help', url: `${externalContent}/Arinpark/ArinparkFAQ-ESP.html`, backLink: '/app/account' },
+        data: { title: 'account.menu.help', contentType: 'help', backLink: '/app/account' },
       },
       {
         path: 'terms-and-conditions',
         loadComponent: () => import('./web-content/web-content.component').then((m) => m.WebContentComponent),
-        data: { title: 'account.menu.terms', url: `${externalContent}/arinpark/CU_es.html`, backLink: '/app/account' },
+        data: { title: 'account.menu.terms', contentType: 'terms', backLink: '/app/account' },
       },
       {
         path: 'privacy-policy',
         loadComponent: () => import('./web-content/web-content.component').then((m) => m.WebContentComponent),
-        data: { title: 'account.menu.privacy', url: `${externalContent}/arinpark/es.html`, backLink: '/app/account' },
+        data: { title: 'account.menu.privacy', contentType: 'privacy', backLink: '/app/account' },
       },
       {
         path: 'delete-account',

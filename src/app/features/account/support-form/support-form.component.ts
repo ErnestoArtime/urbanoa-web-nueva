@@ -30,6 +30,7 @@ const FEEDBACK_SUBTYPES: SelectOption<FeedbackSubtype>[] = [
   { value: 'parking-meters', labelKey: 'account.support.subtype.parking-meters' },
   { value: 'fines', labelKey: 'account.support.subtype.fines' },
   { value: 'surveillance', labelKey: 'account.support.subtype.surveillance' },
+  { value: 'web', labelKey: 'account.support.subtype.web' },
 ];
 
 @Component({

@@ -23,16 +23,13 @@ import { OperationType } from '../../models/operation-type';
           <svg lucideClockPlus></svg>
         }
         @case (types.REFUND) {
-          <svg lucideBanknoteArrowDown></svg>
+          <svg lucideCircleStop></svg>
         }
         @case (types.FINE_PAYMENT) {
           <svg lucideReceiptText></svg>
         }
         @case (types.TOP_UP) {
           <svg lucideBanknoteArrowUp></svg>
-        }
-        @case (types.PARKING_END) {
-          <svg lucideCircleStop></svg>
         }
         @case (types.BALANCE_REFUND) {
           <svg lucideBanknoteArrowDown></svg>
@@ -69,7 +66,6 @@ import { OperationType } from '../../models/operation-type';
         color: #2b7675;
       }
       .operation-icon[data-type='3'],
-      .operation-icon[data-type='6'],
       .operation-icon[data-type='8'] {
         background: #e4f3e9;
         color: var(--color-success);

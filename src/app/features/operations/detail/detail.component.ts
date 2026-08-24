@@ -10,14 +10,68 @@ import { AppIconComponent } from '../../../shared/icons/app-icon.component';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { TranslationService } from '../../../core/services/translation.service';
 import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
+import { LocationMap } from '../../../shared/components/location-map/location-map';
 
 @Component({
   selector: 'app-operations-detail',
-  imports: [DecimalPipe, OperationIconComponent, AppIconComponent, TranslatePipe, DetailPanelHeaderComponent],
+  imports: [DecimalPipe, OperationIconComponent, AppIconComponent, TranslatePipe, DetailPanelHeaderComponent, LocationMap],
   template: `
     <div class="page operation-detail-page">
-      <app-detail-panel-header [title]="'common.back' | translate" backRoute="/app/operations" />
+      <app-detail-panel-header [title]="detailTitle() | translate" backRoute="/app/operations" />
       @if (op(); as operation) {
+        @if (operation.type === types.FINE_PAYMENT) {
+          <section class="fine-payment-detail">
+            <div class="fine-payment-kind">
+              <app-operation-icon [type]="operation.type" />
+              <strong>{{ 'ops.fineDetail.sanction' | translate }}</strong>
+            </div>
+
+            <strong class="fine-payment-amount">{{ formatFineAmount(absoluteAmount()) }} €</strong>
+
+            <div class="fine-payment-method">
+              <span>{{ 'ops.detail.paymentMethod' | translate }}</span>
+              <strong>{{ finePaymentMethodLabel() }}</strong>
+              @if (walletPaymentAmount() > 0) {
+                <span>{{ 'ops.detail.wallet' | translate }}</span>
+                <strong>−{{ formatFineAmount(walletPaymentAmount()) }} €</strong>
+              }
+              @if (cardPaymentAmount() > 0) {
+                <span>{{ cardPaymentLabel() }}</span>
+                <strong>−{{ formatFineAmount(cardPaymentAmount()) }} €</strong>
+              }
+            </div>
+
+            <div class="fine-payment-info">
+              <div class="fine-payment-row">
+                <span class="fine-payment-row-icon">#</span>
+                <div><span>{{ 'ops.fineDetail.fineNumber' | translate }}</span><strong>{{ operation.fineNumber ?? operation.id }}</strong></div>
+              </div>
+              <div class="fine-payment-row">
+                <span class="fine-payment-row-icon"><app-icon name="vehicle" [stroke]="false" /></span>
+                <div><span>{{ 'ops.detail.plate' | translate }}</span><strong>{{ operation.plate }}</strong></div>
+              </div>
+              <div class="fine-payment-row">
+                <span class="fine-payment-row-icon"><app-icon name="dateRange" [stroke]="false" /></span>
+                <div><span>{{ 'ops.detail.datetime' | translate }}</span><strong>{{ dateTime(operation) }}</strong></div>
+              </div>
+              <div class="fine-payment-row fine-payment-location">
+                <span class="fine-payment-row-icon"><app-icon name="location" [stroke]="false" /></span>
+                <div>
+                  <strong>{{ fineLocationTitle() }}</strong>
+                  @if (fineLocationSubtitle()) { <span>{{ fineLocationSubtitle() }}</span> }
+                </div>
+              </div>
+            </div>
+
+            @if (fineCoordinates(); as coordinates) {
+              <app-location-map
+                [latitude]="coordinates.latitude"
+                [longitude]="coordinates.longitude"
+                [label]="'ops.detail.fineMapAria' | translate"
+              />
+            }
+          </section>
+        } @else {
         <header class="detail-heading">
           <app-operation-icon [type]="operation.type" />
           <div>
@@ -99,6 +153,7 @@ import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/
             }
           </article>
         }
+        }
       }
     </div>
   `,
@@ -108,6 +163,90 @@ import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/
         max-width: 760px;
         margin: 0 auto;
         padding: 1.4rem;
+      }
+      .fine-payment-detail {
+        max-width: 560px;
+        margin: 0 auto;
+        padding: 0.5rem 0 1.5rem;
+      }
+      .fine-payment-kind {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin: 0.4rem 0 1rem;
+      }
+      .fine-payment-kind strong {
+        font-size: var(--text-base);
+      }
+      .fine-payment-amount {
+        display: block;
+        margin-bottom: 0.2rem;
+        color: #813832;
+        font-size: clamp(1.65rem, 5vw, 2.15rem);
+        line-height: 1.1;
+      }
+      .fine-payment-method {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 0.2rem 1rem;
+        margin-bottom: 1.15rem;
+        font-size: var(--text-sm);
+      }
+      .fine-payment-method strong {
+        text-align: right;
+        font-weight: var(--font-medium);
+      }
+      .fine-payment-info {
+        display: grid;
+        gap: 0.2rem;
+      }
+      .fine-payment-row {
+        display: grid;
+        grid-template-columns: 28px minmax(0, 1fr);
+        align-items: start;
+        gap: 0.75rem;
+        min-height: 64px;
+        padding: 0.65rem 0;
+      }
+      .fine-payment-row-icon {
+        display: grid;
+        place-items: center;
+        width: 28px;
+        height: 28px;
+        color: var(--color-text);
+        font-size: var(--text-xl);
+        font-weight: var(--font-bold);
+      }
+      .fine-payment-row > div {
+        display: flex;
+        min-width: 0;
+        flex-direction: column;
+        gap: 0.12rem;
+      }
+      .fine-payment-row span {
+        color: var(--color-text-muted);
+        font-size: var(--text-sm);
+      }
+      .fine-payment-row strong {
+        font-size: var(--text-sm);
+        font-weight: var(--font-medium);
+      }
+      .fine-payment-location {
+        min-height: 72px;
+      }
+      .fine-payment-location strong {
+        text-transform: uppercase;
+      }
+      .fine-payment-detail app-location-map {
+        margin-top: 0.25rem;
+      }
+      @media (max-width: 600px) {
+        .operation-detail-page {
+          padding: 0.75rem 1rem 1.5rem;
+        }
+        .fine-payment-detail {
+          padding-top: 0;
+        }
       }
       .detail-heading {
         display: flex;
@@ -308,6 +447,7 @@ export class OperationsDetailComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly service = inject(OperationsService);
   private readonly translationService = inject(TranslationService);
+  readonly types = OperationType;
   readonly id = toSignal(this.route.paramMap.pipe(map((p) => p.get('id') ?? '1')), { initialValue: '1' });
   constructor() {
     void this.service.loadDetail(this.id());
@@ -325,7 +465,6 @@ export class OperationsDetailComponent {
       [OperationType.REFUND]: 'ops.detail.parkingEnd',
       [OperationType.FINE_PAYMENT]: 'ops.detail.finePayment',
       [OperationType.TOP_UP]: 'ops.detail.walletRecharge',
-      [OperationType.PARKING_END]: 'ops.type.parkingEndRefund',
       [OperationType.BALANCE_REFUND]: 'ops.detail.balanceRefundLabel',
       [OperationType.UNPAID_FINES]: 'ops.detail.pendingFine',
     };
@@ -357,6 +496,24 @@ export class OperationsDetailComponent {
     if (card > 0) return this.cardPaymentLabel();
     return this.translationService.translate('ops.detail.wallet');
   });
+  readonly finePaymentMethodLabel = computed(() => {
+    if (this.walletPaymentAmount() > 0 && this.cardPaymentAmount() > 0) return this.translationService.translate('payment.mixed');
+    if (this.cardPaymentAmount() > 0) return this.cardPaymentLabel();
+    return this.translationService.translate('ops.detail.wallet');
+  });
+  readonly fineLocationTitle = computed(() => this.op()?.zoneName || this.op()?.zone || '—');
+  readonly fineLocationSubtitle = computed(() => {
+    const operation = this.op();
+    if (!operation) return '';
+    return [operation.sectorName, operation.cityName].filter(Boolean).join(' · ');
+  });
+  readonly fineCoordinates = computed(() => {
+    const operation = this.op();
+    if (Number.isFinite(operation?.latitude) && Number.isFinite(operation?.longitude)) {
+      return { latitude: operation!.latitude!, longitude: operation!.longitude! };
+    }
+    return this.service.source() === 'mock' ? { latitude: 43.28441, longitude: -2.16432 } : null;
+  });
   readonly detailRows = computed(() => {
     const o = this.op();
     if (!o) return [];
@@ -364,7 +521,7 @@ export class OperationsDetailComponent {
     const calendar = 'dateRange' as const;
     const clock = 'schedule' as const;
     const money = 'wallet' as const;
-    if (o.type === OperationType.REFUND || o.type === OperationType.PARKING_END)
+    if (o.type === OperationType.REFUND)
       return [
         { label: 'ops.detail.plate', value: o.plate ?? '5678 DEF', icon: car, positive: undefined },
         { label: 'ops.detail.datetime', value: this.dateTime(o), icon: calendar, positive: undefined },
@@ -379,6 +536,7 @@ export class OperationsDetailComponent {
       ];
     if (o.type === OperationType.FINE_PAYMENT)
       return [
+        ...(o.fineNumber ? [{ label: 'ops.fineDetail.fineNumber', value: o.fineNumber, icon: calendar, positive: undefined }] : []),
         { label: 'ops.detail.plate', value: o.plate ?? '', icon: car, positive: undefined },
         { label: 'ops.detail.datetime', value: this.dateTime(o), icon: calendar, positive: undefined },
         { label: 'ops.detail.location', value: o.zone ?? '', icon: calendar, positive: undefined },
@@ -415,8 +573,12 @@ export class OperationsDetailComponent {
     return amount > 0 ? '+' : amount < 0 ? '-' : '';
   }
 
-  private dateTime(operation: { date: string; startTime?: string; endTime?: string }): string {
+  dateTime(operation: { date: string; startTime?: string; endTime?: string }): string {
     const time = operation.endTime ?? operation.startTime;
     return time ? `${operation.date} · ${time}` : operation.date;
+  }
+
+  formatFineAmount(amount: number): string {
+    return Math.abs(amount).toFixed(2).replace('.', ',');
   }
 }

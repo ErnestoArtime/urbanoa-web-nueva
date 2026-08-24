@@ -35,6 +35,23 @@ import { ParkingTicketCardComponent } from '../../../shared/components/parking-t
       <div splitList class="page">
         <h1 class="page-title">{{ 'ops.title' | translate }}</h1>
 
+        @if (unpaidFinesCount() > 0) {
+          <section class="sanctions-alert">
+            <a
+              routerLink="/app/operations/unpaid-fines"
+              [class.active]="isUnpaidFinesRoute()"
+              [attr.aria-current]="isUnpaidFinesRoute() ? 'page' : null"
+              class="sanctions-alert-link"
+            >
+              <div class="sanctions-alert-copy">
+                <strong>{{ 'ops.unpaidFines.bannerTitle' | translate }}</strong>
+                <span>{{ 'ops.unpaidFines.bannerCount' | translate: { count: unpaidFinesCount() } }} &gt;</span>
+              </div>
+              <app-operation-icon [type]="OperationType.UNPAID_FINES" />
+            </a>
+          </section>
+        }
+
         <section class="current-section">
           <p class="section-label">
             {{ 'ops.inProgress' | translate }}
@@ -63,19 +80,6 @@ import { ParkingTicketCardComponent } from '../../../shared/components/parking-t
         </section>
 
         <section class="actions-section">
-          <a
-            routerLink="/app/operations/unpaid-fines"
-            [class.active]="isUnpaidFinesRoute()"
-            [attr.aria-current]="isUnpaidFinesRoute() ? 'page' : null"
-            class="list-item action-item"
-          >
-            <div class="list-item-content">
-              <div class="list-item-title">
-                {{ 'ops.unpaidFines.title' | translate: { count: unpaidFinesCount() } }}
-              </div>
-            </div>
-            <span class="list-item-chevron">›</span>
-          </a>
           <a
             routerLink="/app/operations/report"
             routerLinkActive="active"
@@ -271,6 +275,55 @@ import { ParkingTicketCardComponent } from '../../../shared/components/parking-t
         border-radius: var(--radius-md);
         border: 1px solid var(--color-border);
       }
+      .sanctions-alert {
+        margin-top: 0.85rem;
+      }
+      .sanctions-alert-link {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        min-height: 76px;
+        padding: 0.85rem 1rem;
+        border: 1px solid #d97770;
+        border-radius: var(--radius-md);
+        background: #fbd5d0;
+        color: #813832;
+        text-decoration: none;
+        transition:
+          background 0.18s ease,
+          box-shadow 0.18s ease;
+      }
+      .sanctions-alert-link:hover,
+      .sanctions-alert-link.active {
+        background: #f8cbc5;
+        box-shadow: var(--shadow-sm);
+        text-decoration: none;
+      }
+      .sanctions-alert-copy {
+        display: flex;
+        min-width: 0;
+        flex-direction: column;
+        gap: 0.2rem;
+      }
+      .sanctions-alert-copy strong {
+        font-size: var(--text-sm);
+        font-weight: var(--font-medium);
+      }
+      .sanctions-alert-copy span {
+        font-size: var(--text-xs);
+      }
+      :host ::ng-deep .sanctions-alert .operation-icon {
+        flex-basis: 42px;
+        width: 42px;
+        height: 42px;
+        background: transparent;
+        color: #93433d;
+      }
+      :host ::ng-deep .sanctions-alert .operation-icon svg {
+        width: 28px;
+        height: 28px;
+      }
       .action-item {
         background: transparent;
         border-radius: var(--radius-sm);
@@ -428,7 +481,7 @@ export class OperationsLayoutComponent implements OnInit {
   }
 
   isFinishParking(op: Operation): boolean {
-    return op.type === OperationType.PARKING_END;
+    return op.type === OperationType.REFUND;
   }
 
   isParking(op: Operation): boolean {
