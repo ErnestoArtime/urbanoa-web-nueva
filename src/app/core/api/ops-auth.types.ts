@@ -13,6 +13,7 @@ export interface OpsLoginResponse {
 }
 
 export interface OpsRegisterRequest {
+  contractId: number;
   email: string;
   password: string;
   plates: { plate: string }[];

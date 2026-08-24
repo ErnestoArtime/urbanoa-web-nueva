@@ -7,6 +7,7 @@ export const OPS_ENDPOINTS = {
     login: endpoint('LoginUserAPI'),
     register: endpoint('RegisterUserAPI'),
     recoverPassword: endpoint('RecoverPasswordAPI'),
+    verifyRecoveryPassword: endpoint('VerifyRecoveryPasswordAPI'),
     updatePassword: endpoint('UpdatePasswordAPI'),
     resendMail: endpoint('ResendMailAPI'),
   },
@@ -52,10 +53,5 @@ export const OPS_ENDPOINTS = {
     paymentMethods: endpoint('QueryUserPaymentMethodsAPI'),
     removePaymentMethod: endpoint('RemoveUserPaymentMethodAPI'),
     updatePaymentMethod: endpoint('UpdateUserPaymentMethodAPI'),
-  },
-  support: {
-    add: endpoint('AddUserFeedbackAPI'),
-    query: endpoint('QueryUserFeedbackAPI'),
-    update: endpoint('UpdateUserFeedbackAPI'),
   },
 } as const;

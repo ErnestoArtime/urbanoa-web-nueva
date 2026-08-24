@@ -1,7 +1,5 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { generateUuid } from '../utils/generate-uuid';
-import { OPS_ENDPOINTS } from '../api/ops-endpoints';
-import { OpsApiClient } from '../api/ops-api-client.service';
 import { OpsSessionService } from '../api/ops-session.service';
 import { CitiesService } from './cities.service';
 import { AppApiClient } from '../api/app-api-client.service';
@@ -113,23 +111,16 @@ export class SupportService {
   readonly unreadCount = computed(() => this.state().filter((thread) => thread.unread).length);
   readonly source = signal<'remote' | 'mock'>('mock');
 
-  private readonly api = inject(OpsApiClient);
   private readonly session = inject(OpsSessionService);
   private readonly cities = inject(CitiesService);
   private readonly restApi = inject(AppApiClient);
 
   async load(): Promise<void> {
     const token = this.session?.token();
-    if (!token || (!this.api && !this.restApi)) return;
+    if (!token) return;
     try {
-      const response = this.restApi
-        ? await this.restApi.get<RemoteFeedbackDto[]>('/support/tickets')
-        : await this.api!.post<{ feedback: RemoteFeedbackDto[] | null }>(
-            OPS_ENDPOINTS.support.query,
-            { contractId: 0, dateStart: '2000-01-01', dateEnd: '2100-12-31' },
-            { token },
-          );
-      this.state.set(this.mapRemoteThreads(Array.isArray(response) ? response : (response.feedback ?? [])));
+      const response = await this.restApi.get<RemoteFeedbackDto[]>('/support/tickets');
+      this.state.set(this.mapRemoteThreads(response));
       this.source.set('remote');
       this.persist();
     } catch (error) {
@@ -196,13 +187,6 @@ export class SupportService {
     if (!this.getById(id)?.unread) return;
     this.state.update((threads) => threads.map((thread) => (thread.id === id ? { ...thread, unread: false } : thread)));
     this.persist();
-    const token = this.session?.token();
-    const remoteId = Number(id);
-    if (token && this.api && Number.isInteger(remoteId)) {
-      void this.api
-        .post<string>(OPS_ENDPOINTS.support.update, { id: remoteId, contractId: 0, read: 1 }, { token })
-        .catch((error) => console.warn('[OPS API] Lectura de soporte utiliza fallback mock', error));
-    }
   }
 
   private readThreads(): SupportThread[] {
@@ -224,7 +208,7 @@ export class SupportService {
 
   private async syncMessage(thread: SupportThread, message: string, attachment?: SupportAttachment, baseId?: number): Promise<void> {
     const token = this.session?.token();
-    if (!token || (!this.api && !this.restApi)) {
+    if (!token) {
       this.source.set('mock');
       return;
     }
@@ -240,28 +224,7 @@ export class SupportService {
         cityId: this.cities?.contractIdFor(thread.cityId) ?? (Number(thread.cityId) || 0),
         files,
       };
-      if (this.restApi) {
-        await this.restApi.post<string>(baseId ? `/support/tickets/${baseId}` : '/support/tickets', payload);
-      } else {
-        await this.api?.post<string>(
-          OPS_ENDPOINTS.support.add,
-          {
-            baseId: Number.isInteger(baseId) ? baseId : null,
-            userId: null,
-            userEmail: '',
-            channel: 0,
-            contractId: payload.cityId,
-            date: new Date().toISOString(),
-            type: this.feedbackType(thread.type),
-            subtype: this.feedbackSubtype(thread.subtype),
-            message: message.trim(),
-            plate: thread.plate,
-            numFiles: files.length,
-            files,
-          },
-          { token },
-        );
-      }
+      await this.restApi.post<string>(baseId ? `/support/tickets/${baseId}` : '/support/tickets', payload);
       this.source.set('remote');
     } catch (error) {
       console.warn('[OPS API] Envío de soporte utiliza fallback mock', error);
@@ -295,8 +258,9 @@ export class SupportService {
 
   private feedbackSubtype(subtype: FeedbackSubtype): number {
     return (
-      ['app', 'citizen-services', 'information', 'regulations', 'areas-hours', 'parking-meters', 'fines', 'surveillance', 'web'].indexOf(subtype) +
-      1
+      ['app', 'citizen-services', 'information', 'regulations', 'areas-hours', 'parking-meters', 'fines', 'surveillance', 'web'].indexOf(
+        subtype,
+      ) + 1
     );
   }
 

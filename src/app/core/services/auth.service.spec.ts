@@ -92,12 +92,12 @@ describe('AuthService', () => {
 
     expect(opsApi.post).toHaveBeenCalledOnceWith(
       OPS_ENDPOINTS.auth.register,
-      { email: 'user@example.com', password: 'secret', plates: [{ plate: '1234 ABC' }] },
+      { contractId: 0, email: 'user@example.com', password: 'secret', plates: [{ plate: '1234 ABC' }] },
       { headers: { 'Accept-Language': 'es-ES' } },
     );
   });
 
-  it('uses the recovery contract without VerifyRecoveryPasswordAPI', async () => {
+  it('uses the complete Swagger recovery contract', async () => {
     opsApi.post.and.resolveTo('ok');
 
     await service.requestPasswordReset(' user@example.com ');
@@ -106,15 +106,26 @@ describe('AuthService', () => {
 
     expect(opsApi.post.calls.argsFor(0)).toEqual([
       OPS_ENDPOINTS.auth.recoverPassword,
-      { email: 'user@example.com' },
+      { contractId: 0, userName: 'user@example.com', email: 'user@example.com' },
       { headers: { 'Accept-Language': 'es-ES' } },
     ]);
     expect(opsApi.post.calls.argsFor(1)).toEqual([
-      OPS_ENDPOINTS.user.changePassword,
-      { email: 'user@example.com', password: 'new-secret', recode: '123456' },
+      OPS_ENDPOINTS.auth.verifyRecoveryPassword,
+      { contractId: 0, userName: 'user@example.com', email: 'user@example.com', recode: '123456' },
       { headers: { 'Accept-Language': 'es-ES' } },
     ]);
-    expect(opsApi.post).toHaveBeenCalledTimes(2);
+    expect(opsApi.post.calls.argsFor(2)).toEqual([
+      OPS_ENDPOINTS.user.changePassword,
+      {
+        contractId: 0,
+        userName: 'user@example.com',
+        email: 'user@example.com',
+        password: 'new-secret',
+        recode: '123456',
+      },
+      { headers: { 'Accept-Language': 'es-ES' } },
+    ]);
+    expect(opsApi.post).toHaveBeenCalledTimes(3);
   });
 
   it('matches both Postman ResendMailAPI bodies', async () => {

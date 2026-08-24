@@ -96,6 +96,7 @@ export class AuthService {
   async register(input: RegisterInput | RegisterPayload): Promise<void> {
     const plate = 'plate' in input ? input.plate : (input.plates[0] ?? '');
     const body: OpsRegisterRequest = {
+      contractId: 0,
       email: input.email.trim(),
       password: input.password,
       plates: plate.trim() ? [{ plate: plate.trim().toUpperCase() }] : [],
@@ -129,7 +130,11 @@ export class AuthService {
 
   async requestPasswordReset(email: string): Promise<void> {
     try {
-      await this.opsApi.post(OPS_ENDPOINTS.auth.recoverPassword, { email: email.trim() }, { headers: this.languageHeaders() });
+      await this.opsApi.post(
+        OPS_ENDPOINTS.auth.recoverPassword,
+        { contractId: 0, userName: email.trim(), email: email.trim() },
+        { headers: this.languageHeaders() },
+      );
       this.source.set('remote');
     } catch (error) {
       console.warn('[OPS API] Reset usa fallback mock', this.errorMessage(error));
@@ -138,16 +143,25 @@ export class AuthService {
   }
 
   async verifyResetCode(email: string, code: string): Promise<void> {
-    // VerifyRecoveryPasswordAPI does not exist in Postman or the APK. OPS
-    // validates the recovery code in ChangePasswordAPI.
     if (!email.trim() || !code.trim()) throw new Error('Correo y código son obligatorios');
+    try {
+      await this.opsApi.post(
+        OPS_ENDPOINTS.auth.verifyRecoveryPassword,
+        { contractId: 0, userName: email.trim(), email: email.trim(), recode: code.trim() },
+        { headers: this.languageHeaders() },
+      );
+      this.source.set('remote');
+    } catch (error) {
+      console.warn('[OPS API] Verificación del código usa fallback mock', this.errorMessage(error));
+      this.source.set('mock');
+    }
   }
 
   async changeResetPassword(email: string, code: string, password: string): Promise<void> {
     try {
       await this.opsApi.post(
         OPS_ENDPOINTS.user.changePassword,
-        { email: email.trim(), password, recode: code.trim() },
+        { contractId: 0, userName: email.trim(), email: email.trim(), password, recode: code.trim() },
         { headers: this.languageHeaders() },
       );
       this.source.set('remote');
