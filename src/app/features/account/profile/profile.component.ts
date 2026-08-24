@@ -1,7 +1,6 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { MOCK_USER } from '../../../shared/mock-data';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
 import { UserService } from '../../../core/services/user.service';
@@ -76,7 +75,7 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
   `,
   styles: [':host{display:block}'],
 })
-export class AccountProfileComponent {
+export class AccountProfileComponent implements OnInit {
   readonly saved = signal(false);
   readonly saving = signal(false);
   private readonly fb = inject(FormBuilder);
@@ -94,18 +93,20 @@ export class AccountProfileComponent {
     this.form.patchValue(this.userService.user());
   }
 
-  onSave(): void {
+  async ngOnInit(): Promise<void> {
+    this.form.patchValue(await this.userService.load());
+  }
+
+  async onSave(): Promise<void> {
     this.form.markAllAsTouched();
     if (this.form.invalid) return;
 
     this.saving.set(true);
-    setTimeout(() => {
-      const raw = this.form.getRawValue();
-      const data = { name: raw.name || '', surname: raw.surname || '', email: raw.email || '', nif: raw.nif || '', phone: raw.phone || '' };
-      Object.assign(MOCK_USER, data);
-      this.userService.updateUser(data);
-      this.saving.set(false);
+    try {
+      await this.userService.save(this.form.getRawValue());
       this.saved.set(true);
-    }, 1500);
+    } finally {
+      this.saving.set(false);
+    }
   }
 }

@@ -1,7 +1,8 @@
-import { Component, signal } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
 import { ResultModalComponent } from '../../../shared/components/result-modal/result-modal.component';
+import { UserService } from '../../../core/services/user.service';
 
 @Component({
   selector: 'app-account-tax-data',
@@ -91,7 +92,9 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
             <p class="form-error">{{ 'common.required' | translate }}</p>
           }
         </div>
-        <button type="button" class="btn btn-primary btn-block" (click)="save()">{{ 'common.save' | translate }}</button>
+        <button type="button" class="btn btn-primary btn-block" [disabled]="saving()" (click)="save()">
+          {{ saving() ? ('common.saving' | translate) : ('common.save' | translate) }}
+        </button>
       </div>
       @if (saved()) {
         <app-result-modal
@@ -106,7 +109,7 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
   `,
   styles: [':host{display:block}'],
 })
-export class AccountTaxDataComponent {
+export class AccountTaxDataComponent implements OnInit {
   readonly nif = signal('');
   readonly street = signal('');
   readonly number = signal('');
@@ -116,12 +119,39 @@ export class AccountTaxDataComponent {
   readonly postalCode = signal('');
   readonly submitted = signal(false);
   readonly saved = signal(false);
+  readonly saving = signal(false);
+  private readonly userService = inject(UserService);
 
-  save(): void {
+  async ngOnInit(): Promise<void> {
+    const user = await this.userService.load();
+    this.nif.set(user.nif);
+    this.street.set(user.street ?? '');
+    this.number.set(user.buildingNumber ?? '');
+    this.floor.set(user.floor ?? '');
+    this.city.set(user.city ?? '');
+    this.province.set(user.province ?? '');
+    this.postalCode.set(user.postalCode ?? '');
+  }
+
+  async save(): Promise<void> {
     this.submitted.set(true);
     if (!this.nif() || !this.street() || !this.number() || !this.city() || !this.province() || !this.postalCode()) {
       return;
     }
-    this.saved.set(true);
+    this.saving.set(true);
+    try {
+      await this.userService.save({
+        nif: this.nif(),
+        street: this.street(),
+        buildingNumber: this.number(),
+        floor: this.floor(),
+        city: this.city(),
+        province: this.province(),
+        postalCode: this.postalCode(),
+      });
+      this.saved.set(true);
+    } finally {
+      this.saving.set(false);
+    }
   }
 }

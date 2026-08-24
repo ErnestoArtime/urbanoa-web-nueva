@@ -23,6 +23,8 @@ describe('NotificationsService', () => {
     emailRechargeNotifications: 0,
     emailUnparkingNotifications: 1,
     emailParkingNotifications: 1,
+    feedbackNotifications: 1,
+    emailFeedbackNotifications: 0,
   };
 
   it('loads notifications from the APK response wrapper', async () => {
