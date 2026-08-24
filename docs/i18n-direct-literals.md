@@ -1,6 +1,6 @@
 # Candidatos de textos directos para i18n
 
-Total: **16**. Son candidatos revisables: no incluyen comentarios, logs, clases CSS, iconos, URLs, correos, direcciones, horarios ni marcas.
+Total: **15**. Son candidatos revisables: no incluyen comentarios, logs, clases CSS, iconos, URLs, correos, direcciones, horarios ni marcas.
 
 Antes de migrar una fila, confirmar que se muestra al usuario. Si lo hace, crear una clave, sustituir el literal por la traducción y regenerar el Excel.
 
@@ -21,12 +21,6 @@ Antes de migrar una fila, confirmar que se muestra al usuario. Si lo hace, crear
 | Línea | Tipo | Texto |
 | ---: | --- | --- |
 | 69 | ts-string | Error de red desconocido |
-
-## src/app/core/services/auth.service.ts
-
-| Línea | Tipo | Texto |
-| ---: | --- | --- |
-| 85 | ts-string | {"email":""} |
 
 ## src/app/core/services/vehicle.service.ts
 

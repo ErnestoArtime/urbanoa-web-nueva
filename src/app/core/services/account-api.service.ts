@@ -10,7 +10,6 @@ export class AccountApiService {
   readonly source = signal<'remote' | 'mock'>('mock');
 
   async changePassword(currentPassword: string, newPassword: string): Promise<void> {
-    void currentPassword;
     try {
       await this.api.post(OPS_ENDPOINTS.user.updatePassword, { password: newPassword }, { token: this.session.token() });
       this.source.set('remote');
@@ -19,7 +18,6 @@ export class AccountApiService {
       this.source.set('mock');
     }
   }
-
   async cancelAccount(): Promise<void> {
     try {
       await this.api.get(OPS_ENDPOINTS.user.cancel, { token: this.session.token() });
@@ -29,8 +27,14 @@ export class AccountApiService {
       this.source.set('mock');
     }
   }
-
   async complete3ds(payload: unknown): Promise<void> {
+    /*try {
+      await this.api.post('/payments/3ds-complete', payload);
+      this.source.set('remote');
+    } catch (e) {
+      console.warn('[API] 3DS usa fallback mock', this.api.errorMessage(e));
+      this.source.set('mock');
+    }*/
     void payload;
     console.info('[OPS API] 3DS no tiene endpoint propio en Swagger; se mantiene el flujo WebView/local.');
     this.source.set('mock');

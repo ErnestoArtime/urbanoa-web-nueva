@@ -1,15 +1,21 @@
 import { Component, inject, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
-import { APP_BRAND } from '../../../shared/constants/app-brand';
+import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
+import { Router, RouterLink } from '@angular/router';
 import { LucideEye, LucideEyeOff } from '@lucide/angular';
-import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
-import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { apiErrorKey } from '../../../core/http/api-error-key';
 import { AuthService } from '../../../core/services/auth.service';
+import { APP_BRAND } from '../../../shared/constants/app-brand';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+
+function passwordsMatch(control: AbstractControl): ValidationErrors | null {
+  const password = control.get('password')?.value;
+  const confirmation = control.get('confirmation')?.value;
+  return password && confirmation && password !== confirmation ? { passwordMismatch: true } : null;
+}
 
 @Component({
   selector: 'app-register',
-  imports: [RouterLink, LucideEye, LucideEyeOff, TranslatePipe, FormsModule],
+  imports: [ReactiveFormsModule, RouterLink, LucideEye, LucideEyeOff, TranslatePipe],
   template: `
     <main class="auth-page register-page">
       <section class="register-panel">
@@ -21,23 +27,33 @@ import { AuthService } from '../../../core/services/auth.service';
             <p>{{ 'auth.register.subtitle' | translate: { brand: brand.name } }}</p>
           </div>
         </header>
-        <div class="form-grid">
+        <form class="form-grid" [formGroup]="form" (ngSubmit)="onSubmit()">
           <label class="outlined-field"
             ><span>{{ 'auth.register.plate' | translate }}</span
-          ><input placeholder="1234 ABC" [(ngModel)]="plate"
+            ><input formControlName="plate" placeholder="1234 ABC"
           /></label>
-          <label class="foreign-check"><input type="checkbox" /> {{ 'auth.register.foreignPlate' | translate }}</label>
+          @if (form.controls.plate.touched && form.controls.plate.invalid) {
+            <p class="form-error">{{ 'auth.register.plateRequired' | translate }}</p>
+          }
+          <label class="foreign-check"
+            ><input type="checkbox" formControlName="foreignPlate" /> {{ 'auth.register.foreignPlate' | translate }}</label
+          >
           <label class="outlined-field"
             ><span>{{ 'auth.register.email' | translate }}</span
-            ><input type="email" placeholder="xxx@yyy.zzz" [(ngModel)]="email"
+            ><input type="email" formControlName="email" placeholder="xxx@yyy.zzz" autocomplete="email"
           /></label>
+          @if (form.controls.email.touched && form.controls.email.invalid) {
+            <p class="form-error">
+              {{ (form.controls.email.hasError('email') ? 'auth.register.emailInvalid' : 'auth.register.emailRequired') | translate }}
+            </p>
+          }
           <label class="outlined-field"
             ><span>{{ 'auth.register.password' | translate }}</span>
             <div class="password-field">
-              <input [type]="showPassword() ? 'text' : 'password'" [(ngModel)]="password" /><button
+              <input [type]="showPassword() ? 'text' : 'password'" formControlName="password" autocomplete="new-password" /><button
                 type="button"
                 (click)="togglePassword()"
-                [attr.aria-label]="'auth.togglePassword' | translate"
+                [attr.aria-label]="'auth.register.togglePassword' | translate"
               >
                 @if (showPassword()) {
                   <svg lucideEyeOff size="20"></svg>
@@ -46,13 +62,16 @@ import { AuthService } from '../../../core/services/auth.service';
                 }
               </button></div
           ></label>
+          @if (form.controls.password.touched && form.controls.password.invalid) {
+            <p class="form-error">{{ 'auth.register.passwordTooShort' | translate }}</p>
+          }
           <label class="outlined-field"
             ><span>{{ 'auth.register.repeatPassword' | translate }}</span>
             <div class="password-field">
-              <input [type]="showConfirmation() ? 'text' : 'password'" /><button
+              <input [type]="showConfirmation() ? 'text' : 'password'" formControlName="confirmation" autocomplete="new-password" /><button
                 type="button"
                 (click)="toggleConfirmation()"
-                [attr.aria-label]="'auth.togglePassword' | translate"
+                [attr.aria-label]="'auth.register.togglePassword' | translate"
               >
                 @if (showConfirmation()) {
                   <svg lucideEyeOff size="20"></svg>
@@ -61,21 +80,31 @@ import { AuthService } from '../../../core/services/auth.service';
                 }
               </button></div
           ></label>
+          @if (form.controls.confirmation.touched && form.hasError('passwordMismatch')) {
+            <p class="form-error">{{ 'auth.register.passwordMismatch' | translate }}</p>
+          }
           <label class="terms-check"
-            ><input type="checkbox" /><span
+            ><input type="checkbox" formControlName="terms" /><span
               >{{ 'auth.register.acceptPrefix' | translate }}
               <a routerLink="/auth/web/terms">{{ 'auth.register.terms' | translate }}</a>
-              {{ 'auth.register.acceptJoin' | translate }}
+              {{ 'auth.register.and' | translate }}
               <a routerLink="/auth/web/privacy">{{ 'auth.register.privacy' | translate }}</a
               >.</span
             ></label
           >
-          <button type="button" class="btn btn-primary btn-block continue-button" (click)="submit()">{{ 'common.continue' | translate }}</button>
+          @if (form.controls.terms.touched && form.controls.terms.invalid) {
+            <p class="form-error">{{ 'auth.register.termsRequired' | translate }}</p>
+          }
+          @if (errorKey()) {
+            <p class="form-error" role="alert">{{ errorKey() | translate }}</p>
+          }
+          <button type="submit" class="btn btn-primary btn-block continue-button" [disabled]="submitting()">
+            {{ (submitting() ? 'auth.register.submitting' : 'auth.register.continue') | translate }}
+          </button>
           <p class="login-link">
-            {{ 'auth.register.hasAccount' | translate }}
-            <a routerLink="/auth/login">{{ 'auth.login.title' | translate }}</a>
+            {{ 'auth.register.haveAccount' | translate }} <a routerLink="/auth/login">{{ 'auth.register.login' | translate }}</a>
           </p>
-        </div>
+        </form>
       </section>
     </main>
   `,
@@ -206,22 +235,54 @@ import { AuthService } from '../../../core/services/auth.service';
   ],
 })
 export class RegisterComponent {
-  private readonly auth = inject(AuthService);
+  private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
-  plate = ''; email = ''; password = '';
+  private readonly formBuilder = inject(FormBuilder);
+
   readonly showPassword = signal(false);
   readonly showConfirmation = signal(false);
+  readonly submitting = signal(false);
+  readonly errorKey = signal('');
+  readonly brand = APP_BRAND;
+
+  readonly form = this.formBuilder.nonNullable.group(
+    {
+      plate: ['', Validators.required],
+      foreignPlate: [false],
+      email: ['', [Validators.required, Validators.email]],
+      password: ['', [Validators.required, Validators.minLength(8)]],
+      confirmation: ['', Validators.required],
+      terms: [false, Validators.requiredTrue],
+    },
+    { validators: passwordsMatch },
+  );
+
   togglePassword(): void {
     this.showPassword.update((value) => !value);
   }
+
   toggleConfirmation(): void {
     this.showConfirmation.update((value) => !value);
   }
-  readonly brand = APP_BRAND;
 
-  async submit(): Promise<void> {
-    if (!this.email || !this.password || !this.plate) return;
-    await this.auth.register({ plate: this.plate, email: this.email, password: this.password, foreignPlate: false });
-    await this.router.navigate(['/auth/register-confirm'], { queryParams: { email: this.email } });
+  async onSubmit(): Promise<void> {
+    if (this.submitting()) return;
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
+      return;
+    }
+
+    this.submitting.set(true);
+    this.errorKey.set('');
+    const { email, password, plate } = this.form.getRawValue();
+
+    try {
+      await this.authService.register({ email, password, plates: [plate] });
+      await this.router.navigate(['/auth/register-confirm'], { queryParams: { email } });
+    } catch (error) {
+      this.errorKey.set(apiErrorKey(error, { conflict: 'auth.register.emailTaken' }));
+    } finally {
+      this.submitting.set(false);
+    }
   }
 }

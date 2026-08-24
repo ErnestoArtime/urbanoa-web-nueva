@@ -1,4 +1,4 @@
-import { computed, Injectable, signal } from '@angular/core';
+import { computed, inject, Injectable, signal } from '@angular/core';
 import { OPS_ENDPOINTS } from '../api/ops-endpoints';
 import { OpsApiClient } from '../api/ops-api-client.service';
 import { OpsSessionService } from '../api/ops-session.service';
@@ -107,10 +107,8 @@ export class WalletService {
   readonly defaultCardId = signal(this.readDefaultCardId());
   readonly defaultCard = computed(() => this.cards().find((card) => card.id === this.defaultCardId()) ?? this.cards()[0]);
 
-  constructor(
-    private readonly api?: OpsApiClient,
-    private readonly session?: OpsSessionService,
-  ) {}
+  private readonly api = inject(OpsApiClient);
+  private readonly session = inject(OpsSessionService);
 
   get mainCard(): MainCard {
     return this.defaultCard() ?? this.fallbackCards[0];

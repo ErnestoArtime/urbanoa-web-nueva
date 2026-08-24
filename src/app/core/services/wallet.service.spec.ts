@@ -1,14 +1,22 @@
+import { provideZonelessChangeDetection } from '@angular/core';
+import { TestBed } from '@angular/core/testing';
 import { OpsApiClient } from '../api/ops-api-client.service';
 import { OpsSessionService } from '../api/ops-session.service';
 import { WalletService } from './wallet.service';
 
+function serviceWith(api: jasmine.SpyObj<OpsApiClient>): WalletService {
+  TestBed.configureTestingModule({ providers: [provideZonelessChangeDetection(), { provide: OpsApiClient, useValue: api }] });
+  return TestBed.inject(WalletService);
+}
+
 describe('WalletService', () => {
   beforeEach(() => {
     localStorage.clear();
+    TestBed.configureTestingModule({ providers: [provideZonelessChangeDetection()] });
   });
 
   it('credits balance and records a top-up movement', () => {
-    const service = new WalletService();
+    const service = TestBed.inject(WalletService);
 
     service.credit(10, { type: 'top-up', descriptionKey: 'wallet.movement.topUp' });
 
@@ -18,7 +26,7 @@ describe('WalletService', () => {
   });
 
   it('does not debit when balance is insufficient', () => {
-    const service = new WalletService();
+    const service = TestBed.inject(WalletService);
 
     const paid = service.debit(99, { type: 'fine-payment', descriptionKey: 'wallet.movement.finePayment' });
 
@@ -48,9 +56,8 @@ describe('WalletService', () => {
         ],
       }) as Promise<never>,
     );
-    const session = new OpsSessionService();
-    session.setToken('token');
-    const service = new WalletService(api, session);
+    const service = serviceWith(api);
+    TestBed.inject(OpsSessionService).setToken('token');
 
     await service.load();
 
@@ -63,14 +70,13 @@ describe('WalletService', () => {
   it('recharges in cents using RechargeUserCreditAPI', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'post']);
     api.post.and.resolveTo({ payMethodId: 7, amountRecharged: 250, newBalance: 1500, challengeUrl: null });
-    const session = new OpsSessionService();
-    session.setToken('token');
-    const service = new WalletService(api, session);
+    const service = serviceWith(api);
+    TestBed.inject(OpsSessionService).setToken('token');
 
     const result = await service.recharge(2.5, '7');
 
     expect(api.post).toHaveBeenCalledWith(
-      'OPSWebServicesAPI/RechargeUserCreditAPI',
+      'OPSWebServicesAPI3/RechargeUserCreditAPI',
       { contractId: 0, amount: 250, payMethodId: 7 },
       { token: 'token' },
     );
@@ -81,15 +87,14 @@ describe('WalletService', () => {
   it('refunds with the exact APK fields and converts cents to euros', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'post']);
     api.post.and.resolveTo({ result: 1, refundAmount: 500 });
-    const session = new OpsSessionService();
-    session.setToken('token');
-    const service = new WalletService(api, session);
+    const service = serviceWith(api);
+    TestBed.inject(OpsSessionService).setToken('token');
 
     const result = await service.refund(5, 'cloud-token');
 
     expect(api.post).toHaveBeenCalledWith(
-      'OPSWebServicesAPI/RefundUserCreditAPI',
-      { contractId: 0, cloudToken: 'cloud-token', operatingSystem: 3, amount: 500, simulate: 0 },
+      'OPSWebServicesAPI3/RefundUserCreditAPI',
+      { contractId: 0, cloudToken: 'cloud-token', operatingSystem: 1, amount: 500, simulate: 0 },
       { token: 'token' },
     );
     expect(result.source).toBe('remote');
@@ -98,7 +103,7 @@ describe('WalletService', () => {
 
   it('uses an explicit local mock when login is postponed', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'post']);
-    const service = new WalletService(api, new OpsSessionService());
+    const service = serviceWith(api);
 
     const result = await service.recharge(2, 'visa-1234');
 

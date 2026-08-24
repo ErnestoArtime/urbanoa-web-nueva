@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { OPS_ENDPOINTS } from '../api/ops-endpoints';
 import { OpsApiClient } from '../api/ops-api-client.service';
 import { OpsSessionService } from '../api/ops-session.service';
@@ -41,10 +41,8 @@ export interface ParkingTicketOption {
 
 @Injectable({ providedIn: 'root' })
 export class ParkingApiService {
-  constructor(
-    private readonly api: OpsApiClient,
-    private readonly session: OpsSessionService,
-  ) {}
+  private readonly api = inject(OpsApiClient);
+  private readonly session = inject(OpsSessionService);
 
   async confirmParking(input: ConfirmParkingInput): Promise<ParkingApiResult> {
     const token = this.session.token();
@@ -114,7 +112,7 @@ export class ParkingApiService {
     if (!token) return { data: [], source: 'mock' };
     try {
       const response = await this.api.post<{
-        ticketlist: Array<{ ticketId: number; ticketDesc: string; minAmount: number; schedule: string; ticketBehText: string }> | null;
+        ticketlist: { ticketId: number; ticketDesc: string; minAmount: number; schedule: string; ticketBehText: string }[] | null;
       }>(OPS_ENDPOINTS.parking.tickets, { ...input, language: 'ES' }, { token });
       return {
         data: (response.ticketlist ?? []).map((ticket) => ({

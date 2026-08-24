@@ -1,45 +1,60 @@
-import { Component, inject, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
-import { APP_BRAND } from '../../../shared/constants/app-brand';
+import { Component, inject, input, signal } from '@angular/core';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Router, RouterLink } from '@angular/router';
 import { LucideEye, LucideEyeOff } from '@lucide/angular';
-import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
-import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { apiErrorKey } from '../../../core/http/api-error-key';
 import { AuthService } from '../../../core/services/auth.service';
+import { APP_BRAND } from '../../../shared/constants/app-brand';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 
 @Component({
   selector: 'app-login',
-  imports: [RouterLink, LucideEye, LucideEyeOff, TranslatePipe, FormsModule],
+  imports: [ReactiveFormsModule, RouterLink, LucideEye, LucideEyeOff, TranslatePipe],
   template: `
     <main class="auth-page apk-auth-page">
       <section class="auth-panel">
         <img src="/assets/brand/arinpark-logo.png" [alt]="brand.name" class="apk-auth-logo" />
         <h1>{{ 'auth.login.title' | translate }}</h1>
         <p class="auth-intro">{{ 'auth.login.subtitle' | translate }}</p>
-        <label class="outlined-field"
-          ><span>{{ 'auth.login.email' | translate }}</span
-          ><input type="email" placeholder="xxx@yyy.zzz" autocomplete="email" [(ngModel)]="email"
-        /></label>
-        <label class="outlined-field"
-          ><span>{{ 'auth.login.password' | translate }}</span>
-          <div class="password-field">
-            <input [type]="showPassword() ? 'text' : 'password'" placeholder="••••••••" autocomplete="current-password" [(ngModel)]="password" /><button
-              type="button"
-              (click)="togglePassword()"
-              [attr.aria-label]="'auth.togglePassword' | translate"
-            >
-              @if (showPassword()) {
-                <svg lucideEyeOff size="20"></svg>
-              } @else {
-                <svg lucideEye size="20"></svg>
-              }
-            </button></div
-        ></label>
-        <a routerLink="/auth/reset-password" class="recover-link">{{ 'auth.login.forgotPassword' | translate }}</a>
-        <button type="button" class="btn btn-primary btn-block login-button" [disabled]="loading()" (click)="submit()">{{ 'auth.login.title' | translate }}</button>
+        <form [formGroup]="form" (ngSubmit)="onSubmit()">
+          <label class="outlined-field"
+            ><span>{{ 'auth.login.email' | translate }}</span
+            ><input type="email" formControlName="email" placeholder="xxx@yyy.zzz" autocomplete="email"
+          /></label>
+          @if (form.controls.email.touched && form.controls.email.invalid) {
+            <p class="form-error">
+              {{ (form.controls.email.hasError('email') ? 'auth.login.emailInvalid' : 'auth.login.emailRequired') | translate }}
+            </p>
+          }
+          <label class="outlined-field"
+            ><span>{{ 'auth.login.password' | translate }}</span>
+            <div class="password-field">
+              <input
+                [type]="showPassword() ? 'text' : 'password'"
+                formControlName="password"
+                placeholder="••••••••"
+                autocomplete="current-password"
+              /><button type="button" (click)="togglePassword()" [attr.aria-label]="'auth.login.togglePassword' | translate">
+                @if (showPassword()) {
+                  <svg lucideEyeOff size="20"></svg>
+                } @else {
+                  <svg lucideEye size="20"></svg>
+                }
+              </button></div
+          ></label>
+          @if (form.controls.password.touched && form.controls.password.invalid) {
+            <p class="form-error">{{ 'auth.login.passwordRequired' | translate }}</p>
+          }
+          <a routerLink="/auth/reset-password" class="recover-link">{{ 'auth.login.forgotPassword' | translate }}</a>
+          @if (errorKey()) {
+            <p class="form-error" role="alert">{{ errorKey() | translate }}</p>
+          }
+          <button type="submit" class="btn btn-primary btn-block login-button" [disabled]="submitting()">
+            {{ (submitting() ? 'auth.login.submitting' : 'auth.login.submit') | translate }}
+          </button>
+        </form>
         <p class="register-link">
-          {{ 'auth.login.noAccount' | translate }}
-          <a routerLink="/auth/register">{{ 'auth.login.register' | translate }}</a>
+          {{ 'auth.login.noAccount' | translate }} <a routerLink="/auth/register">{{ 'auth.login.register' | translate }}</a>
         </p>
       </section>
     </main>
@@ -158,21 +173,45 @@ import { AuthService } from '../../../core/services/auth.service';
   ],
 })
 export class LoginComponent {
-  private readonly auth = inject(AuthService);
+  private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
-  email = '';
-  password = '';
-  readonly loading = signal(false);
+  private readonly formBuilder = inject(FormBuilder);
+
+  readonly returnUrl = input('');
   readonly showPassword = signal(false);
+  readonly submitting = signal(false);
+  readonly errorKey = signal('');
+  readonly brand = APP_BRAND;
+
+  readonly form = this.formBuilder.nonNullable.group({
+    email: ['', [Validators.required, Validators.email]],
+    password: ['', Validators.required],
+  });
+
   togglePassword(): void {
     this.showPassword.update((value) => !value);
   }
-  readonly brand = APP_BRAND;
 
-  async submit(): Promise<void> {
-    if (!this.email.trim() || !this.password) return;
-    this.loading.set(true);
-    try { await this.auth.login({ email: this.email, password: this.password }); await this.router.navigate(['/app']); }
-    finally { this.loading.set(false); }
+  async onSubmit(): Promise<void> {
+    if (this.submitting()) return;
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
+      return;
+    }
+
+    this.submitting.set(true);
+    this.errorKey.set('');
+    const { email, password } = this.form.getRawValue();
+
+    try {
+      await this.authService.login(email, password);
+      await this.router.navigateByUrl(this.returnUrl() || '/app');
+    } catch (error) {
+      this.errorKey.set(
+        apiErrorKey(error, { unauthorized: 'auth.login.invalidCredentials', notActivated: 'auth.login.accountNotActivated' }),
+      );
+    } finally {
+      this.submitting.set(false);
+    }
   }
 }

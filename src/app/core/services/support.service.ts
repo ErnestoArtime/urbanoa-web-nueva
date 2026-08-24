@@ -1,4 +1,4 @@
-import { Injectable, computed, signal } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
 import { generateUuid } from '../utils/generate-uuid';
 import { OPS_ENDPOINTS } from '../api/ops-endpoints';
 import { OpsApiClient } from '../api/ops-api-client.service';
@@ -113,12 +113,10 @@ export class SupportService {
   readonly unreadCount = computed(() => this.state().filter((thread) => thread.unread).length);
   readonly source = signal<'remote' | 'mock'>('mock');
 
-  constructor(
-    private readonly api?: OpsApiClient,
-    private readonly session?: OpsSessionService,
-    private readonly cities?: CitiesService,
-    private readonly restApi?: AppApiClient,
-  ) {}
+  private readonly api = inject(OpsApiClient);
+  private readonly session = inject(OpsSessionService);
+  private readonly cities = inject(CitiesService);
+  private readonly restApi = inject(AppApiClient);
 
   async load(): Promise<void> {
     const token = this.session?.token();
@@ -126,8 +124,12 @@ export class SupportService {
     try {
       const response = this.restApi
         ? await this.restApi.get<RemoteFeedbackDto[]>('/support/tickets')
-        : await this.api!.post<{ feedback: RemoteFeedbackDto[] | null }>(OPS_ENDPOINTS.support.query, { contractId: 0, dateStart: '2000-01-01', dateEnd: '2100-12-31' }, { token });
-      this.state.set(this.mapRemoteThreads(Array.isArray(response) ? response : response.feedback ?? []));
+        : await this.api!.post<{ feedback: RemoteFeedbackDto[] | null }>(
+            OPS_ENDPOINTS.support.query,
+            { contractId: 0, dateStart: '2000-01-01', dateEnd: '2100-12-31' },
+            { token },
+          );
+      this.state.set(this.mapRemoteThreads(Array.isArray(response) ? response : (response.feedback ?? [])));
       this.source.set('remote');
       this.persist();
     } catch (error) {
@@ -242,23 +244,23 @@ export class SupportService {
         await this.restApi.post<string>(baseId ? `/support/tickets/${baseId}` : '/support/tickets', payload);
       } else {
         await this.api?.post<string>(
-        OPS_ENDPOINTS.support.add,
-        {
-          baseId: Number.isInteger(baseId) ? baseId : null,
-          userId: null,
-          userEmail: '',
-          channel: 0,
-          contractId: payload.cityId,
-          date: new Date().toISOString(),
-          type: this.feedbackType(thread.type),
-          subtype: this.feedbackSubtype(thread.subtype),
-          message: message.trim(),
-          plate: thread.plate,
-          numFiles: files.length,
-          files,
-        },
-        { token },
-      );
+          OPS_ENDPOINTS.support.add,
+          {
+            baseId: Number.isInteger(baseId) ? baseId : null,
+            userId: null,
+            userEmail: '',
+            channel: 0,
+            contractId: payload.cityId,
+            date: new Date().toISOString(),
+            type: this.feedbackType(thread.type),
+            subtype: this.feedbackSubtype(thread.subtype),
+            message: message.trim(),
+            plate: thread.plate,
+            numFiles: files.length,
+            files,
+          },
+          { token },
+        );
       }
       this.source.set('remote');
     } catch (error) {

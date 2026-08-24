@@ -23,7 +23,9 @@ import type { Operation } from '../../../shared/models/operation';
               } @else {
                 <div class="list-item-title">{{ OPERATION_TYPE_LABELS[op.type] | translate }}</div>
               }
-              <div class="list-item-subtitle">{{ op.date }}{{ operationTime(op) ? ' · ' + operationTime(op) : '' }}{{ op.zone ? ' — ' + op.zone : '' }}</div>
+              <div class="list-item-subtitle">
+                {{ op.date }}{{ operationTime(op) ? ' · ' + operationTime(op) : '' }}{{ op.zone ? ' — ' + op.zone : '' }}
+              </div>
               @if (op.plate) {
                 <div class="operation-meta">
                   {{ op.plate }}

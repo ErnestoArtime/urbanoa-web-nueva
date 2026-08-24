@@ -1,4 +1,4 @@
-import { Injectable, signal } from '@angular/core';
+import { inject, Injectable, signal } from '@angular/core';
 import { OPS_ENDPOINTS } from '../../core/api/ops-endpoints';
 import { OpsApiClient } from '../../core/api/ops-api-client.service';
 import { OpsSessionService } from '../../core/api/ops-session.service';
@@ -10,10 +10,8 @@ export class ParkingTimeStepsService {
   readonly vm = this.steps.asReadonly();
   readonly source = signal<'remote' | 'mock'>('mock');
 
-  constructor(
-    private readonly api: OpsApiClient,
-    private readonly session: OpsSessionService,
-  ) {}
+  private readonly api = inject(OpsApiClient);
+  private readonly session = inject(OpsSessionService);
 
   generateSteps(input: ParkingTimeStepInput): ParkingTimeStep[] {
     const now = input.startDate ?? new Date();
@@ -69,7 +67,6 @@ export class ParkingTimeStepsService {
         },
         { token },
       );
-      const initial = new Date(response.dateInitial);
       const mapped = (response.steps ?? []).map((step) => ({
         time: step.time,
         quantity: step.quantity,

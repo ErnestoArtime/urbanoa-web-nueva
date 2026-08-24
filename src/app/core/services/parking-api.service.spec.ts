@@ -1,14 +1,20 @@
+import { provideZonelessChangeDetection } from '@angular/core';
+import { TestBed } from '@angular/core/testing';
 import { OpsApiClient } from '../api/ops-api-client.service';
 import { OpsSessionService } from '../api/ops-session.service';
 import { ParkingApiService } from './parking-api.service';
+
+function serviceWith(api: jasmine.SpyObj<OpsApiClient>): ParkingApiService {
+  TestBed.configureTestingModule({ providers: [provideZonelessChangeDetection(), { provide: OpsApiClient, useValue: api }] });
+  return TestBed.inject(ParkingApiService);
+}
 
 describe('ParkingApiService', () => {
   it('uses the exact APK contract to confirm parking', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
     api.post.and.resolveTo('OK');
-    const session = new OpsSessionService();
-    session.setToken('token');
-    const service = new ParkingApiService(api, session);
+    const service = serviceWith(api);
+    TestBed.inject(OpsSessionService).setToken('token');
 
     const result = await service.confirmParking({
       contractId: 3,
@@ -25,7 +31,7 @@ describe('ParkingApiService', () => {
     });
 
     expect(api.post).toHaveBeenCalledWith(
-      'OPSWebServicesAPI/ConfirmParkingOperationAPI',
+      'OPSWebServicesAPI3/ConfirmParkingOperationAPI',
       jasmine.objectContaining({
         contractId: 3,
         plate: '1234ABC',
@@ -43,7 +49,7 @@ describe('ParkingApiService', () => {
 
   it('keeps the parking flow local while login is postponed', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
-    const service = new ParkingApiService(api, new OpsSessionService());
+    const service = serviceWith(api);
 
     const result = await service.confirmParking({
       contractId: 0,

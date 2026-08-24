@@ -225,7 +225,9 @@ export class HomeComponent {
   readonly confirmUnpark = signal(false);
   private pendingUnparkId = '';
 
-  constructor() { void this.dashboardApi.load(); }
+  constructor() {
+    void this.dashboardApi.load();
+  }
 
   confirmUnparkFor(parking: ActiveParking): void {
     this.pendingUnparkId = parking.id;
