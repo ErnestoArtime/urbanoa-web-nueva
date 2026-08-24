@@ -34,9 +34,9 @@ interface RequestOptions {
   signal?: AbortSignal;
 }
 
-const APP_VERSION = '4.0.0';
+export const APP_VERSION = '4.0.0';
 
-function getOrCreateCloudToken(): string {
+export function getOrCreateCloudToken(): string {
   let token = localStorage.getItem('urbanoa.deviceToken');
   if (!token) {
     token = crypto.randomUUID?.() || `device-${Date.now()}`;

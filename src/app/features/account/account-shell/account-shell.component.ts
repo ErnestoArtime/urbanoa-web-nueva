@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { filter, map, startWith } from 'rxjs/operators';
@@ -222,7 +222,7 @@ import { TranslationService } from '../../../core/services/translation.service';
     `,
   ],
 })
-export class AccountShellComponent {
+export class AccountShellComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly authService = inject(AuthService);
   private readonly userService = inject(UserService);
@@ -243,6 +243,10 @@ export class AccountShellComponent {
   );
 
   readonly isRootRoute = () => this.url() === '/app/account';
+
+  ngOnInit(): void {
+    void this.userService.load();
+  }
 
   readonly STORE_URL = APP_BRAND.storeUrl;
 

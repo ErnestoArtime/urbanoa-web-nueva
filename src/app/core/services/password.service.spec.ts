@@ -34,6 +34,7 @@ describe('PasswordService', () => {
   it('sends the session token when updating the password', async () => {
     const fetchSpy = spyOn(window, 'fetch').and.returnValues(
       Promise.resolve(jsonResponse({ value: { token: 'abc123', user: { email: 'ane@example.com' } }, isSuccess: true, error: null })),
+      Promise.resolve(jsonResponse({ value: {}, isSuccess: true, error: null })),
       Promise.resolve(jsonResponse({ value: 'Result_OK', isSuccess: true, error: null })),
     );
     const authService = TestBed.inject(AuthService);

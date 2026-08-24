@@ -55,6 +55,7 @@ export class AuthService {
       throw new ApiError(0, 'unauthorized');
     }
     this.storeSession(session);
+    await this.loadUserProfile();
   }
 
   async register(payload: RegisterPayload): Promise<void> {
@@ -69,7 +70,7 @@ export class AuthService {
     this.storeSession({
       token,
       refreshToken: '',
-      user: { id: '', name: '', surname: '', email, nif: '', phone: '' },
+      user: { id: '', ...this.emptyProfileUser(email) },
     });
   }
 
@@ -86,13 +87,23 @@ export class AuthService {
     this.session.set(session);
     writeStorage(this.storageKey, session);
     this.syncOpsSession(session.token);
-    this.userService.updateUser({
+    this.userService.updateLocal({
       name: session.user.name,
       surname: session.user.surname,
+      secondSurname: session.user.secondSurname,
       email: session.user.email,
       nif: session.user.nif,
       phone: session.user.phone,
+      address: session.user.address,
     });
+  }
+
+  private async loadUserProfile(): Promise<void> {
+    try {
+      await this.userService.load();
+    } catch {
+      // El perfil se queda con los datos locales si QueryUserAPI no está disponible.
+    }
   }
 
   private clearSession(): void {
@@ -118,13 +129,36 @@ export class AuthService {
       refreshToken: this.readString(root['refreshToken']),
       user: {
         id: this.readString(rawUser['id'] ?? rawUser['userId']),
-        name: this.readString(rawUser['name'] ?? rawUser['nombre']),
-        surname: this.readString(rawUser['surname'] ?? rawUser['apellidos']),
-        email: this.readString(rawUser['email']) || fallbackEmail,
-        nif: this.readString(rawUser['nif']),
-        phone: this.readString(rawUser['phone'] ?? rawUser['telefono']),
+        ...this.normalizeProfileUser(rawUser, fallbackEmail),
       },
     };
+  }
+
+  private normalizeProfileUser(rawUser: Record<string, unknown>, fallbackEmail: string): Omit<AuthUser, 'id'> {
+    return {
+      name: this.readString(rawUser['names'] ?? rawUser['name'] ?? rawUser['nombre']),
+      surname: this.readString(rawUser['firstSurname'] ?? rawUser['surname'] ?? rawUser['apellidos']),
+      secondSurname: this.readString(rawUser['secondSurname']),
+      email: this.readString(rawUser['email']) || fallbackEmail,
+      nif: this.readString(rawUser['nif']),
+      phone: this.readString(rawUser['mainMobilePhone'] ?? rawUser['phone'] ?? rawUser['telefono']),
+      address: {
+        street: this.readString(rawUser['addressStreetName']),
+        number: this.readString(rawUser['addressBuildingNumber']),
+        floor: this.readString(rawUser['addressDepartmentFloor']),
+        door: this.readString(rawUser['addressDepartmentDoor']),
+        stair: this.readString(rawUser['addressDepartmentStair']),
+        letter: this.readString(rawUser['addressLetterNumber']),
+        city: this.readString(rawUser['addressCity']),
+        province: this.readString(rawUser['addressProvince']),
+        postalCode: this.readString(rawUser['addressPostalCode']),
+        country: this.readString(rawUser['addressCountry']) || 'ESPANA',
+      },
+    };
+  }
+
+  private emptyProfileUser(email: string): Omit<AuthUser, 'id'> {
+    return this.normalizeProfileUser({}, email);
   }
 
   private readString(value: unknown): string {
