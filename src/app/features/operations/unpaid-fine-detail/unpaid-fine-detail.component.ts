@@ -1,7 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { DecimalPipe } from '@angular/common';
-import { UnpaidFinesService } from '../../../core/services/unpaid-fines.service';
+import { FineStatus, UnpaidFinesService } from '../../../core/services/unpaid-fines.service';
 import { WalletService } from '../../../core/services/wallet.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
@@ -16,13 +16,19 @@ import { TranslationService } from '../../../core/services/translation.service';
       <div class="page">
         <app-detail-panel-header [title]="'ops.fineDetail.title' | translate" backRoute="/app/operations/unpaid-fines" />
         @if (fine) {
-          @if (fine.discountPercent) {
+          @if (fine.status === fineStatus.PAYABLE && fine.discountPercent) {
             <aside class="early-payment-banner">
               <span class="discount-badge">−{{ fine.discountPercent }}%</span>
               <div>
                 <strong>{{ 'ops.fineDetail.earlyPayment.title' | translate }}</strong>
                 <p>{{ 'ops.fineDetail.earlyPayment.description' | translate: { date: fine.earlyPaymentDeadline ?? '' } }}</p>
               </div>
+            </aside>
+          }
+          @if (fine.status !== fineStatus.PAYABLE) {
+            <aside class="fine-status-banner" [class.expired]="fine.status === fineStatus.EXPIRED">
+              <strong>{{ 'ops.fineDetail.status.' + fine.status | translate }}</strong>
+              <p>{{ 'ops.fineDetail.statusMessage.' + fine.status | translate }}</p>
             </aside>
           }
           <div class="fine-ticket-shell mt-2">
@@ -33,11 +39,34 @@ import { TranslationService } from '../../../core/services/translation.service';
                   <strong>{{ 'ops.fineDetail.plate' | translate }}</strong> {{ fine.plate }}
                 </p>
                 <p class="mt-1">
+                  <strong>{{ 'ops.fineDetail.fineNumber' | translate }}</strong> {{ fine.fineNumber }}
+                </p>
+                @if (fine.article) {
+                  <p class="mt-1">
+                    <strong>{{ 'ops.fineDetail.article' | translate }}</strong> {{ fine.article }}
+                  </p>
+                }
+                @if (fine.vehicleMake || fine.vehicleColor) {
+                  <p class="mt-1">
+                    <strong>{{ 'ops.fineDetail.vehicle' | translate }}</strong> {{ fine.vehicleMake }} {{ fine.vehicleColor }}
+                  </p>
+                }
+                <p class="mt-1">
                   <strong>{{ 'ops.fineDetail.location' | translate }}</strong> {{ fine.location }}
                 </p>
                 <p class="mt-1">
                   <strong>{{ 'ops.fineDetail.date' | translate }}</strong> {{ fine.date }}
                 </p>
+                @if (fine.processingDate) {
+                  <p class="mt-1">
+                    <strong>{{ 'ops.fineDetail.processingDate' | translate }}</strong> {{ fine.processingDate }}
+                  </p>
+                }
+                @if (fine.contractName) {
+                  <p class="mt-1">
+                    <strong>{{ 'ops.fineDetail.contract' | translate }}</strong> {{ fine.contractName }}
+                  </p>
+                }
               </div>
               <div class="fine-ticket-cut"></div>
               <div class="fine-ticket-total">
@@ -51,38 +80,40 @@ import { TranslationService } from '../../../core/services/translation.service';
               </div>
             </article>
           </div>
-          <div class="mt-2 card payment-breakdown-card">
-            <div class="payment-breakdown-row">
-              <span class="payment-breakdown-label">{{ 'ops.fineDetail.availableBalance' | translate }}</span>
-              <span class="payment-breakdown-value">{{ walletService.balance() | number: '1.2-2' }} €</span>
+          @if (fine.status === fineStatus.PAYABLE) {
+            <div class="mt-2 card payment-breakdown-card">
+              <div class="payment-breakdown-row">
+                <span class="payment-breakdown-label">{{ 'ops.fineDetail.availableBalance' | translate }}</span>
+                <span class="payment-breakdown-value">{{ walletService.balance() | number: '1.2-2' }} €</span>
+              </div>
             </div>
-          </div>
-          @if (insufficientFunds()) {
-            <fieldset class="payment-card-selector">
-              <legend>{{ 'ops.fineDetail.cardForPayment' | translate }}</legend>
-              @for (card of walletService.cards(); track card.id) {
-                <label class="payment-card-option" [class.selected]="selectedCardId() === card.id"
-                  ><input
-                    type="radio"
-                    name="fine-card"
-                    [checked]="selectedCardId() === card.id"
-                    (change)="selectedCardId.set(card.id)"
-                  /><span
-                    ><strong>{{ card.brand }} •••• {{ card.last4 }}</strong
-                    ><small>{{ 'ops.fineDetail.expires' | translate: { date: card.expiryDate } }}</small></span
-                  ></label
-                >
-              }
-            </fieldset>
+            @if (insufficientFunds()) {
+              <fieldset class="payment-card-selector">
+                <legend>{{ 'ops.fineDetail.cardForPayment' | translate }}</legend>
+                @for (card of walletService.cards(); track card.id) {
+                  <label class="payment-card-option" [class.selected]="selectedCardId() === card.id"
+                    ><input
+                      type="radio"
+                      name="fine-card"
+                      [checked]="selectedCardId() === card.id"
+                      (change)="selectedCardId.set(card.id)"
+                    /><span
+                      ><strong>{{ card.brand }} •••• {{ card.last4 }}</strong
+                      ><small>{{ 'ops.fineDetail.expires' | translate: { date: card.expiryDate } }}</small></span
+                    ></label
+                  >
+                }
+              </fieldset>
+            }
+            <button
+              type="button"
+              class="btn btn-primary btn-block mt-2"
+              (click)="pay()"
+              [disabled]="insufficientFunds() && !selectedCardId()"
+            >
+              {{ 'ops.fineDetail.pay' | translate }} {{ fine.amount }}
+            </button>
           }
-          <button
-            type="button"
-            class="btn btn-primary btn-block mt-2"
-            (click)="pay()"
-            [disabled]="insufficientFunds() && !selectedCardId()"
-          >
-            {{ 'ops.fineDetail.pay' | translate }} {{ fine.amount }}
-          </button>
         } @else {
           <p class="mt-2 text-muted">{{ 'ops.unpaidFines.notFound' | translate }}</p>
           <a routerLink="/app/operations/unpaid-fines" class="btn btn-primary btn-block mt-2">{{ 'ops.unpaidFines.back' | translate }}</a>
@@ -113,6 +144,21 @@ import { TranslationService } from '../../../core/services/translation.service';
         border: 1px solid color-mix(in srgb, var(--color-primary) 28%, transparent);
         border-radius: var(--radius-lg);
         background: var(--color-active);
+      }
+      .fine-status-banner {
+        margin-top: 1rem;
+        padding: 0.85rem 1rem;
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-lg);
+        background: var(--color-active);
+      }
+      .fine-status-banner.expired {
+        color: var(--color-error);
+        background: var(--color-error-bg);
+      }
+      .fine-status-banner p {
+        margin: 0.25rem 0 0;
+        font-size: var(--text-sm);
       }
       .early-payment-banner strong {
         display: block;
@@ -236,6 +282,7 @@ export class UnpaidFineDetailComponent {
   private readonly unpaidFinesService = inject(UnpaidFinesService);
   private readonly translationService = inject(TranslationService);
   readonly walletService = inject(WalletService);
+  readonly fineStatus = FineStatus;
 
   readonly fineId = this.route.snapshot.paramMap.get('id') ?? '';
   readonly fine = this.unpaidFinesService.getFine(this.fineId);
@@ -243,7 +290,7 @@ export class UnpaidFineDetailComponent {
   readonly selectedCardId = signal(this.walletService.defaultCardId());
   readonly numericAmount = computed(() => {
     if (!this.fine) return 0;
-    return Number.parseFloat(this.fine.amount.replace(',', '.').replace(/[^0-9.,]/g, ''));
+    return this.fine.amountValue;
   });
   readonly walletAmount = computed(() => Math.min(this.walletService.balance(), this.numericAmount()));
   readonly cardAmount = computed(() => Math.max(0, this.numericAmount() - this.walletAmount()));

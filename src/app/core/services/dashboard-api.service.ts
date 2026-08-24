@@ -1,8 +1,15 @@
 import { Injectable, inject, signal } from '@angular/core';
+import { OperationsService } from './operations.service';
+import { VehicleService } from './vehicle.service';
+import { WalletService } from './wallet.service';
 import { AppApiClient } from '../api/app-api-client.service';
 
 @Injectable({ providedIn: 'root' })
 export class DashboardApiService {
+  private readonly operations = inject(OperationsService);
+  private readonly vehiclesService = inject(VehicleService);
+  private readonly wallet = inject(WalletService);
+
   private readonly api = inject(AppApiClient);
   readonly source = signal<'remote' | 'mock'>('mock');
   readonly activeParkings = signal<unknown[]>([]);
@@ -27,7 +34,7 @@ export class DashboardApiService {
       this.profileProgress.set(progress);
       this.source.set('remote');
     } catch (error) {
-      console.warn('[API] Dashboard usa datos mock', this.api.errorMessage(error));
+      console.warn('[OPS API] Dashboard usa datos mock', error);
       this.source.set('mock');
     }
   }

@@ -6,7 +6,9 @@ import { OpsSessionService } from '../api/ops-session.service';
 export interface NotificationPreferences {
   balance: number;
   fineNotifications: number;
+  quantityBalance: number;
   rechargeNotifications: number;
+  minutesBeforeUnparking: number;
   unparkingNotifications: number;
   emailBalance: number;
   emailFineNotifications: number;
@@ -18,7 +20,9 @@ export interface NotificationPreferences {
 const DEFAULTS: NotificationPreferences = {
   balance: 1,
   fineNotifications: 1,
+  quantityBalance: 500,
   rechargeNotifications: 1,
+  minutesBeforeUnparking: 10,
   unparkingNotifications: 1,
   emailBalance: 0,
   emailFineNotifications: 0,
@@ -40,7 +44,7 @@ export class NotificationsService {
     if (!token) return this.preferences();
     try {
       const response = await this.api.get<{ notifications: NotificationPreferences }>(OPS_ENDPOINTS.user.notifications, { token });
-      this.preferences.set(response.notifications);
+      this.preferences.set({ ...DEFAULTS, ...response.notifications });
       this.source.set('remote');
     } catch (error) {
       console.warn('[OPS API] Notificaciones utiliza fallback mock', error);
