@@ -15,6 +15,8 @@ export interface NotificationPreferences {
   emailRechargeNotifications: number;
   emailUnparkingNotifications: number;
   emailParkingNotifications: number;
+  feedbackNotifications?: number;
+  emailFeedbackNotifications?: number;
 }
 
 const DEFAULTS: NotificationPreferences = {
@@ -29,6 +31,8 @@ const DEFAULTS: NotificationPreferences = {
   emailRechargeNotifications: 0,
   emailUnparkingNotifications: 0,
   emailParkingNotifications: 1,
+  feedbackNotifications: 1,
+  emailFeedbackNotifications: 0,
 };
 
 @Injectable({ providedIn: 'root' })

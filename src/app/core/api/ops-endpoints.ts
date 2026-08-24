@@ -1,4 +1,4 @@
-const API_PREFIX = 'OPSWebServicesAPI3/';
+const API_PREFIX = 'OPSWebServicesAPI/';
 
 const endpoint = (name: string): string => `${API_PREFIX}${name}`;
 
@@ -53,10 +53,5 @@ export const OPS_ENDPOINTS = {
     paymentMethods: endpoint('QueryUserPaymentMethodsAPI'),
     removePaymentMethod: endpoint('RemoveUserPaymentMethodAPI'),
     updatePaymentMethod: endpoint('UpdateUserPaymentMethodAPI'),
-  },
-  support: {
-    add: endpoint('AddUserFeedbackAPI'),
-    query: endpoint('QueryUserFeedbackAPI'),
-    update: endpoint('UpdateUserFeedbackAPI'),
   },
 } as const;

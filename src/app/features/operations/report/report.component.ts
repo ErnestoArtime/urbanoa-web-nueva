@@ -384,7 +384,7 @@ export class ReportComponent {
           dateEnd: this.toBackendDate(range.end),
           operationTypeList: this.filters.filter((filter) => this.isFilterEnabled(filter.key)).map((filter) => filter.type),
           mail: this.userService.user().email,
-          reportFormat: 0,
+          reportFormat: 1,
         },
         { token },
       );

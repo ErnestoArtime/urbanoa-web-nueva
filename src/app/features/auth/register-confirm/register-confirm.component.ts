@@ -40,7 +40,7 @@ export class RegisterConfirmComponent {
   readonly noticeKey = signal('');
 
   async onResend(): Promise<void> {
-    if (this.resending()) return;
+    if (this.resending() || !this.email()) return;
 
     this.resending.set(true);
     this.errorKey.set('');

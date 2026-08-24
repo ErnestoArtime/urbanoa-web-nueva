@@ -60,7 +60,7 @@ describe('UserService', () => {
 
     await service.load();
 
-    expect(api.get).toHaveBeenCalledWith('OPSWebServicesAPI3/QueryUserAPI', { token: 'token' });
+    expect(api.get).toHaveBeenCalledWith('OPSWebServicesAPI/QueryUserAPI', { token: 'token' });
     expect(service.source()).toBe('remote');
     expect(service.user()).toEqual(
       jasmine.objectContaining({
@@ -96,7 +96,7 @@ describe('UserService', () => {
     const result = await service.save({ name: 'Andoni', address: { ...baseUser().address, street: 'Calle Nueva', city: 'Bilbao' } });
 
     const [endpoint, body] = api.post.calls.argsFor(0);
-    expect(endpoint).toBe('OPSWebServicesAPI3/UpdateUserAPI');
+    expect(endpoint).toBe('OPSWebServicesAPI/UpdateUserAPI');
     expect(body).toEqual(
       jasmine.objectContaining({
         names: 'Andoni',

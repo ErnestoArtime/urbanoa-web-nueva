@@ -4,7 +4,6 @@ import { OpsApiClient } from '../api/ops-api-client.service';
 import { OpsApiError, type DataSource } from '../api/ops-api.types';
 import { OPS_ENDPOINTS } from '../api/ops-endpoints';
 import { OpsSessionService } from '../api/ops-session.service';
-import { getOrCreateCloudToken, APP_VERSION } from '../http/api-client';
 import { readStorage, writeStorage } from '../storage/signal-storage';
 
 export interface UserAddress {
@@ -54,6 +53,13 @@ interface UserApiPayload {
   addressProvince?: unknown;
   addressPostalCode?: unknown;
   addressCountry?: unknown;
+  cloudToken?: unknown;
+  contractId?: unknown;
+  operatingSystem?: unknown;
+  password?: unknown;
+  version?: unknown;
+  validateConditions?: unknown;
+  firstLogin?: unknown;
 }
 
 function emptyAddress(): UserAddress {
@@ -83,29 +89,33 @@ export class UserService {
   private readonly state = signal<UserData>(readStorage(this.storageKey, this.fallbackUser));
   private readonly sourceState = signal<DataSource>('mock');
   private readonly errorState = signal<OpsApiError | null>(null);
+  private remoteProfile: UserApiPayload | null = null;
 
   readonly user = this.state.asReadonly();
   readonly source = this.sourceState.asReadonly();
   readonly lastError = this.errorState.asReadonly();
 
-  async load(): Promise<void> {
+  async load(): Promise<UserData> {
     const token = this.session.token();
     if (!token) {
       this.sourceState.set('mock');
-      return;
+      return this.state();
     }
 
     try {
       const value = await this.api.get<UserApiPayload>(OPS_ENDPOINTS.user.query, { token });
+      this.remoteProfile = value;
       this.state.set(this.fromApi(value, this.state()));
       this.sourceState.set('remote');
       this.errorState.set(null);
       this.persist();
+      return this.state();
     } catch (error) {
       const apiError = error instanceof OpsApiError ? error : new OpsApiError('invalid-response', OPS_ENDPOINTS.user.query, String(error));
       this.sourceState.set('mock');
       this.errorState.set(apiError);
       console.warn('[OPS API] Se conservan los datos locales del perfil', apiError);
+      return this.state();
     }
   }
 
@@ -183,12 +193,15 @@ export class UserService {
   }
 
   private toApiBody(user: UserData): Record<string, unknown> {
+    const profile = this.remoteProfile ?? {};
     return {
-      cloudToken: getOrCreateCloudToken(),
-      appVersion: APP_VERSION,
-      operatingSystem: 1,
-      contractId: 0,
-      userName: user.email,
+      ...profile,
+      cloudToken: readString(profile.cloudToken),
+      version: readString(profile.version) || '4.0.0',
+      operatingSystem: 3,
+      contractId: Number(profile.contractId) || 0,
+      userName: readString(profile.userName) || user.email,
+      password: readString(profile.password),
       names: user.name,
       firstSurname: user.surname,
       secondSurname: user.secondSurname,
