@@ -4,7 +4,7 @@ import { AppApiClient } from '../api/app-api-client.service';
 import { OpsApiClient } from '../api/ops-api-client.service';
 import { OPS_ENDPOINTS } from '../api/ops-endpoints';
 import { OpsSessionService } from '../api/ops-session.service';
-import { ApiError, postJson } from '../http/api-client';
+import { ApiError, getJson, postJson } from '../http/api-client';
 import { readStorage, writeStorage } from '../storage/signal-storage';
 import { TranslationService } from './translation.service';
 import { UserService, UserData } from './user.service';
@@ -99,8 +99,8 @@ export class AuthService {
     });
   }
 
-  async cancelAccount(password: string, reason: string): Promise<void> {
-    await postJson('/CancelUserAccountAPI', { password, reason }, { token: this.token() });
+  async cancelAccount(): Promise<void> {
+    await getJson('/CancelUserAccountAPI', { token: this.token() });
     this.clearSession();
   }
 

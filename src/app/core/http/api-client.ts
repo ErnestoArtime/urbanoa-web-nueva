@@ -63,6 +63,7 @@ function codeForServerError(serverCode: number): ApiErrorCode {
   if (serverCode === -1) return 'unauthorized';
   if (serverCode === -21) return 'conflict';
   if (serverCode === -29) return 'notActivated';
+  if (serverCode === -31) return 'invalidCode';
   return 'server';
 }
 

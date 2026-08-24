@@ -1,15 +1,17 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { RouterLink, NavigationEnd, Router } from '@angular/router';
 import { filter, map, startWith } from 'rxjs/operators';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { LucideStar } from '@lucide/angular';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { SplitViewComponent } from '../../../layout/split-view/split-view.component';
 import { AppIconComponent } from '../../../shared/icons/app-icon.component';
 import { VehicleService } from '../../../core/services/vehicle.service';
+import type { Vehicle } from '../../../shared/mock-data';
 
 @Component({
   selector: 'app-vehicles-layout',
-  imports: [RouterLink, SplitViewComponent, TranslatePipe, AppIconComponent],
+  imports: [RouterLink, SplitViewComponent, TranslatePipe, AppIconComponent, LucideStar],
   template: `
     <app-split-view [hideList]="isChildRoute()" [hideDetail]="!isChildRoute()">
       <div splitList class="page has-sticky-actions">
@@ -20,19 +22,31 @@ import { VehicleService } from '../../../core/services/vehicle.service';
         @if (vehicles().length > 0) {
           <ul class="list card" style="padding:0;overflow:hidden">
             @for (v of vehicles(); track v.id) {
-              <a [routerLink]="['/app/account/vehicles/edit', v.id]" class="list-item vehicle-item">
-                <span class="vehicle-icon-wrap"><app-icon name="vehicle" class="vehicle-icon" [size]="22" [stroke]="false" /></span>
-                <div class="list-item-content">
-                  <div class="list-item-title">{{ v.plate }}</div>
-                  <div class="list-item-subtitle">
-                    {{ v.isDefault ? ('account.vehicleFavorite' | translate) : (v.label ?? '' | translate) }}
+              <li class="list-item vehicle-item">
+                <a [routerLink]="['/app/account/vehicles/edit', v.id]" class="vehicle-item-link">
+                  <span class="vehicle-icon-wrap"><app-icon name="vehicle" class="vehicle-icon" [size]="22" [stroke]="false" /></span>
+                  <div class="list-item-content">
+                    <div class="list-item-title">{{ v.plate }}</div>
+                    <div class="list-item-subtitle">
+                      {{ v.isDefault ? ('account.vehicleFavorite' | translate) : (v.label ?? '' | translate) }}
+                    </div>
+                    @if (v.isDefault) {
+                      <span class="badge badge-primary">{{ 'account.cardPrimary' | translate }}</span>
+                    }
                   </div>
-                  @if (v.isDefault) {
-                    <span class="badge badge-primary">{{ 'account.cardPrimary' | translate }}</span>
-                  }
-                </div>
-                <span class="list-item-chevron">›</span>
-              </a>
+                  <span class="list-item-chevron">›</span>
+                </a>
+                <button
+                  type="button"
+                  class="favorite-toggle"
+                  [class.is-favorite]="v.isDefault"
+                  [disabled]="v.isDefault || togglingId() !== null"
+                  [attr.aria-label]="(v.isDefault ? 'account.vehicles.currentFavorite' : 'account.vehicles.markFavorite') | translate"
+                  (click)="toggleFavorite(v)"
+                >
+                  <svg lucideStar [attr.fill]="v.isDefault ? 'currentColor' : 'none'" size="20" strokeWidth="2"></svg>
+                </button>
+              </li>
             }
           </ul>
         } @else {
@@ -51,8 +65,39 @@ import { VehicleService } from '../../../core/services/vehicle.service';
   `,
   styles: [
     `
-      .vehicle-item {
-        gap: 0.75rem !important;
+      .list-item.vehicle-item {
+        padding: 0;
+        align-items: stretch;
+        gap: 0;
+      }
+      .vehicle-item-link {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        flex: 1;
+        min-width: 0;
+        padding: 0.78rem 0.9rem;
+        color: inherit;
+        text-decoration: none;
+      }
+      .favorite-toggle {
+        display: grid;
+        place-items: center;
+        flex: none;
+        width: 44px;
+        align-self: stretch;
+        border: 0;
+        border-left: 1px solid var(--color-border);
+        background: transparent;
+        color: var(--color-text-muted);
+        cursor: pointer;
+      }
+      .favorite-toggle.is-favorite {
+        color: var(--color-primary);
+      }
+      .favorite-toggle:disabled {
+        cursor: not-allowed;
+        opacity: 0.55;
       }
       .data-notice {
         margin: 0 0 1rem;
@@ -100,6 +145,7 @@ export class VehiclesLayoutComponent implements OnInit {
   private readonly vehicleService = inject(VehicleService);
   readonly vehicles = this.vehicleService.vehicles;
   readonly source = this.vehicleService.source;
+  readonly togglingId = signal<string | null>(null);
   private readonly router = inject(Router);
   private readonly url = toSignal(
     this.router.events.pipe(
@@ -116,5 +162,12 @@ export class VehiclesLayoutComponent implements OnInit {
 
   async ngOnInit(): Promise<void> {
     await this.vehicleService.load();
+  }
+
+  async toggleFavorite(vehicle: Vehicle): Promise<void> {
+    if (vehicle.isDefault || this.togglingId()) return;
+    this.togglingId.set(vehicle.id);
+    await this.vehicleService.setDefault(vehicle.id);
+    this.togglingId.set(null);
   }
 }
