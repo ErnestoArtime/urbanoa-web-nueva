@@ -66,7 +66,7 @@ describe('ParkingSessionService', () => {
     const status = await service.queryParkingStatus('1234 ABC');
 
     expect(api.post).toHaveBeenCalledWith(
-      'OPSWebServicesAPI3/QueryParkingStatusAPI',
+      'OPSWebServicesAPI/QueryParkingStatusAPI',
       jasmine.objectContaining({ contractId: jasmine.any(Number), plate: '1234 ABC' }),
       { token: 'token' },
     );

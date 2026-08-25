@@ -34,7 +34,7 @@ describe('NotificationsService', () => {
 
     await service.load();
 
-    expect(api.get).toHaveBeenCalledWith('OPSWebServicesAPI3/QueryUserNotificationsAPI', { token: 'token' });
+    expect(api.get).toHaveBeenCalledWith('OPSWebServicesAPI/QueryUserNotificationsAPI', { token: 'token' });
     expect(service.preferences()).toEqual(preferences);
     expect(service.source()).toBe('remote');
   });
@@ -47,7 +47,7 @@ describe('NotificationsService', () => {
     await service.save(preferences);
 
     expect(api.post).toHaveBeenCalledWith(
-      'OPSWebServicesAPI3/UpdateUserNotificationsAPI',
+      'OPSWebServicesAPI/UpdateUserNotificationsAPI',
       { contractId: 0, notifications: preferences },
       { token: 'token' },
     );

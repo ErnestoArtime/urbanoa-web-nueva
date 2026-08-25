@@ -31,7 +31,7 @@ describe('ParkingApiService', () => {
     });
 
     expect(api.post).toHaveBeenCalledWith(
-      'OPSWebServicesAPI3/ConfirmParkingOperationAPI',
+      'OPSWebServicesAPI/ConfirmParkingOperationAPI',
       jasmine.objectContaining({
         contractId: 3,
         plate: '1234ABC',
@@ -78,12 +78,12 @@ describe('ParkingApiService', () => {
     const result = await service.unpark({ contractId: 3, plate: '1234ABC', ticketId: 7 });
 
     expect(api.post.calls.argsFor(0)).toEqual([
-      'OPSWebServicesAPI3/QueryUnParkingOperationAPI',
+      'OPSWebServicesAPI/QueryUnParkingOperationAPI',
       jasmine.objectContaining({ contractId: 3, plate: '1234ABC', ticketId: 7, datetime: jasmine.stringMatching(/^\d{12}$/) }),
       { token: 'token' },
     ]);
     expect(api.post.calls.argsFor(1)).toEqual([
-      'OPSWebServicesAPI3/ConfirmUnParkingOperationAPI',
+      'OPSWebServicesAPI/ConfirmUnParkingOperationAPI',
       jasmine.objectContaining({ contractId: 3, plate: '1234ABC', quantity: 125, date: jasmine.stringMatching(/^\d{12}$/) }),
       { token: 'token' },
     ]);
