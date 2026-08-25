@@ -8,7 +8,7 @@ describe('CitiesService', () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get']);
     api.get.and.resolveTo({
       contractsNumber: '1',
-      contractlist: [{ contractId: 3, description2: 'Zarautz' }],
+      contractlist: [{ contractId: 3, description1: '', description2: 'Zarautz', address: '', email: '', imagePath: '', longitude: 0, latitude: 0, phone: '', radius: '' }],
     });
     TestBed.configureTestingModule({ providers: [provideZonelessChangeDetection(), { provide: OpsApiClient, useValue: api }] });
     const service = TestBed.inject(CitiesService);
