@@ -257,8 +257,7 @@ export class AccountShellComponent implements OnInit {
   };
 
   logout(): void {
-    this.authService.logout();
-    void this.router.navigate(['/auth/login']);
+    void this.authService.logout();
   }
 
   handleAction(key: string): void {

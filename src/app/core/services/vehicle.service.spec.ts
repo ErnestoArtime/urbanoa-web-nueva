@@ -20,7 +20,7 @@ describe('VehicleService', () => {
 
     await service.load();
 
-    expect(api.get).toHaveBeenCalledWith('OPSWebServicesAPI/QueryUserPlatesAPI', { token: 'token' });
+    expect(api.get).toHaveBeenCalledWith('OPSWebServicesAPI3/QueryUserPlatesAPI', { token: 'token' });
     expect(service.source()).toBe('remote');
     expect(service.vehicles()).toEqual([{ id: '1234ABC', plate: '1234ABC', isDefault: true }]);
   });
@@ -33,14 +33,14 @@ describe('VehicleService', () => {
 
     const result = await service.add({ plate: ' 9999 xyz ', isDefault: true });
 
-    expect(api.post.calls.argsFor(0)).toEqual(['OPSWebServicesAPI/AddUserPlateAPI', { plate: '9999 XYZ' }, { token: 'token' }]);
+    expect(api.post.calls.argsFor(0)).toEqual(['OPSWebServicesAPI3/AddUserPlateAPI', { plate: '9999 XYZ' }, { token: 'token' }]);
     expect(api.post.calls.argsFor(1)).toEqual([
-      'OPSWebServicesAPI/UpdateUserPlateAPI',
+      'OPSWebServicesAPI3/UpdateUserPlateAPI',
       { plate: '9999 XYZ', favorite: 1 },
       { token: 'token' },
     ]);
     expect(api.post.calls.argsFor(2)).toEqual([
-      'OPSWebServicesAPI/UpdateUserPlateAPI',
+      'OPSWebServicesAPI3/UpdateUserPlateAPI',
       { plate: '1234 ABC', favorite: 0 },
       { token: 'token' },
     ]);
@@ -71,8 +71,8 @@ describe('VehicleService', () => {
 
     const result = await service.remove(favorite.id);
 
-    expect(api.post).toHaveBeenCalledWith('OPSWebServicesAPI/RemoveUserPlateAPI', { plate: favorite.plate }, { token: 'token' });
-    expect(api.post).toHaveBeenCalledWith('OPSWebServicesAPI/UpdateUserPlateAPI', { plate: other.plate, favorite: 1 }, { token: 'token' });
+    expect(api.post).toHaveBeenCalledWith('OPSWebServicesAPI3/RemoveUserPlateAPI', { plate: favorite.plate }, { token: 'token' });
+    expect(api.post).toHaveBeenCalledWith('OPSWebServicesAPI3/UpdateUserPlateAPI', { plate: other.plate, favorite: 1 }, { token: 'token' });
     expect(api.post.calls.count()).toBe(2);
     expect(service.vehicles().find((v) => v.id === other.id)?.isDefault).toBeTrue();
     expect(result.success).toBeTrue();
@@ -87,7 +87,7 @@ describe('VehicleService', () => {
 
     await service.remove(nonFavorite.id);
 
-    expect(api.post).toHaveBeenCalledWith('OPSWebServicesAPI/RemoveUserPlateAPI', { plate: nonFavorite.plate }, { token: 'token' });
+    expect(api.post).toHaveBeenCalledWith('OPSWebServicesAPI3/RemoveUserPlateAPI', { plate: nonFavorite.plate }, { token: 'token' });
     expect(api.post.calls.count()).toBe(1);
     expect(service.vehicles().find((v) => v.isDefault)).toBeTruthy();
   });

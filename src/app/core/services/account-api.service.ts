@@ -23,8 +23,9 @@ export class AccountApiService {
       await this.api.get(OPS_ENDPOINTS.user.cancel, { token: this.session.token() });
       this.source.set('remote');
     } catch (error) {
-      console.warn('[OPS API] Baja de cuenta usa fallback mock', error);
+      console.warn('[OPS API] Baja de cuenta rechazada por la API', error);
       this.source.set('mock');
+      throw error;
     }
   }
   async complete3ds(payload: unknown): Promise<void> {

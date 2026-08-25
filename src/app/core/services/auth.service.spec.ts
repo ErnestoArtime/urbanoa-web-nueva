@@ -57,13 +57,15 @@ describe('AuthService', () => {
       {
         userName: 'user@example.com',
         password: 'secret',
-        cloudToken: '',
+        cloudToken: jasmine.any(String),
         operatingSystem: 1,
         appVersion: '4.0.0',
         language: 'es',
       },
       { headers: { 'Accept-Language': 'es-ES' } },
     );
+    const loginBody = opsApi.post.calls.mostRecent().args[1] as { cloudToken: string };
+    expect(loginBody.cloudToken.length).toBeGreaterThan(0);
     expect(opsApi.get).toHaveBeenCalledOnceWith(OPS_ENDPOINTS.user.query, {
       token: 'real-token',
       headers: { 'Accept-Language': 'es-ES' },

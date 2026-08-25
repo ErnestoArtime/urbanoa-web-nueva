@@ -44,6 +44,19 @@ export type ResendMailType = 'register' | 'recover';
 
 const OPS_APP_VERSION = '4.0.0';
 const OPS_OPERATING_SYSTEM = 1;
+const DEVICE_TOKEN_KEY = 'urbanoa.deviceToken';
+
+function getOrCreateCloudToken(): string {
+  try {
+    const existing = localStorage.getItem(DEVICE_TOKEN_KEY);
+    if (existing) return existing;
+    const token = crypto.randomUUID?.() ?? `device-${Date.now()}`;
+    localStorage.setItem(DEVICE_TOKEN_KEY, token);
+    return token;
+  } catch {
+    return `device-${Date.now()}`;
+  }
+}
 const EMPTY_USER: AuthUser = {
   id: '',
   name: '',
@@ -207,7 +220,7 @@ export class AuthService {
     return {
       userName: email,
       password,
-      cloudToken: '',
+      cloudToken: getOrCreateCloudToken(),
       operatingSystem: OPS_OPERATING_SYSTEM,
       appVersion: OPS_APP_VERSION,
       language: this.opsLanguage(),
