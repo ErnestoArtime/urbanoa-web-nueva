@@ -7,12 +7,18 @@ interface OpsRequestOptions {
   token?: string | null;
   headers?: Record<string, string>;
   timeoutMs?: number;
+  /** Devuelve null en vez de fallar cuando el envelope es exitoso pero `value` es null. */
+  allowEmptyValue?: boolean;
 }
 
 @Injectable({ providedIn: 'root' })
 export class OpsApiClient {
   get<T>(endpoint: string, options: Omit<OpsRequestOptions, 'body'> = {}): Promise<T> {
     return this.request<T>('GET', endpoint, options);
+  }
+
+  getOrNull<T>(endpoint: string, options: Omit<OpsRequestOptions, 'body'> = {}): Promise<T | null> {
+    return this.request<T | null>('GET', endpoint, { ...options, allowEmptyValue: true });
   }
 
   post<T>(endpoint: string, body: unknown, options: Omit<OpsRequestOptions, 'body'> = {}): Promise<T> {
@@ -68,6 +74,7 @@ export class OpsApiClient {
       }
 
       if (payload.value === null) {
+        if (options.allowEmptyValue) return null as T;
         throw new OpsApiError('invalid-response', endpoint, `${endpoint}: respuesta satisfactoria sin datos`, response.status);
       }
 

@@ -8,6 +8,7 @@ import { SplitViewComponent } from '../../../layout/split-view/split-view.compon
 import { AppIconComponent } from '../../../shared/icons/app-icon.component';
 import { VehicleService } from '../../../core/services/vehicle.service';
 import { ParkingSessionService } from '../../../core/services/parking-session.service';
+import { TranslationService } from '../../../core/services/translation.service';
 import type { Vehicle } from '../../../shared/mock-data';
 
 @Component({
@@ -17,8 +18,18 @@ import type { Vehicle } from '../../../shared/mock-data';
     <app-split-view [hideList]="isChildRoute()" [hideDetail]="!isChildRoute()">
       <div splitList class="page has-sticky-actions">
         <h1 class="page-title">{{ 'account.menu.vehicles' | translate }}</h1>
-        @if (source() === 'mock') {
+        @if (source() === 'mock' && !lastError()) {
           <p class="data-notice" role="status">Las matrículas se guardan localmente hasta que haya una sesión conectada.</p>
+        }
+        @if (source() === 'mock' && lastError(); as error) {
+          <div class="data-notice data-notice-error" role="alert">
+            <p>
+              {{ (error.kind === 'backend' ? 'account.vehicles.loadErrorBackend' : 'account.vehicles.loadServerError') | translate }}
+            </p>
+            <button type="button" class="btn btn-secondary btn-sm" (click)="retry()">
+              {{ 'account.vehicles.retry' | translate }}
+            </button>
+          </div>
         }
         @if (vehicles().length > 0) {
           <ul class="list card" style="padding:0;overflow:hidden">
@@ -29,7 +40,11 @@ import type { Vehicle } from '../../../shared/mock-data';
                   <div class="list-item-content">
                     <div class="list-item-title">{{ v.plate }}</div>
                     <div class="list-item-subtitle">
-                      {{ v.isDefault ? ('account.vehicleFavorite' | translate) : (v.label ?? '' | translate) }}
+                      @if (v.isDefault) {
+                        {{ 'account.vehicleFavorite' | translate }}
+                      } @else if (v.label; as label) {
+                        {{ translateLabel(label) }}
+                      }
                     </div>
                     @if (v.isDefault) {
                       <span class="badge badge-primary">{{ 'account.cardPrimary' | translate }}</span>
@@ -53,7 +68,7 @@ import type { Vehicle } from '../../../shared/mock-data';
               </li>
             }
           </ul>
-        } @else {
+        } @else if (source() === 'remote') {
           <div class="card empty-vehicles">
             <p>{{ 'account.vehicles.emptyTitle' | translate }}</p>
             <a routerLink="/app/account/vehicles/add" class="btn btn-primary btn-block">{{ 'account.addVehicle' | translate }}</a>
@@ -111,6 +126,9 @@ import type { Vehicle } from '../../../shared/mock-data';
         background: #fff8e7;
         color: #714b00;
       }
+      .data-notice-error p {
+        margin: 0 0 0.5rem;
+      }
       .vehicle-icon-wrap {
         display: grid;
         place-items: center;
@@ -148,10 +166,11 @@ import type { Vehicle } from '../../../shared/mock-data';
 export class VehiclesLayoutComponent implements OnInit {
   private readonly vehicleService = inject(VehicleService);
   private readonly parkingSessionService = inject(ParkingSessionService);
+  private readonly translation = inject(TranslationService);
   readonly vehicles = this.vehicleService.vehicles;
   readonly source = this.vehicleService.source;
+  readonly lastError = this.vehicleService.lastError;
   readonly togglingId = signal<string | null>(null);
-  readonly remoteParkedPlates = signal<Record<string, boolean>>({});
   private readonly router = inject(Router);
   private readonly url = toSignal(
     this.router.events.pipe(
@@ -167,16 +186,20 @@ export class VehiclesLayoutComponent implements OnInit {
   };
 
   async ngOnInit(): Promise<void> {
+    await this.retry();
+  }
+
+  async retry(): Promise<void> {
     await this.vehicleService.load();
-    await this.refreshRemoteParkingStates();
+    await this.parkingSessionService.loadParkingStatuses(this.vehicles());
   }
 
   isVehicleParked(vehicle: Vehicle): boolean {
-    return (
-      this.parkingSessionService.isVehicleParked(vehicle.id) ||
-      this.parkingSessionService.isVehicleParked(vehicle.plate) ||
-      Boolean(this.remoteParkedPlates()[vehicle.plate])
-    );
+    return this.parkingSessionService.isVehicleParked(vehicle.id) || this.parkingSessionService.isVehicleParked(vehicle.plate);
+  }
+
+  translateLabel(value: string): string {
+    return this.translation.translateLabel(value);
   }
 
   async toggleFavorite(vehicle: Vehicle): Promise<void> {
@@ -184,16 +207,5 @@ export class VehiclesLayoutComponent implements OnInit {
     this.togglingId.set(vehicle.id);
     await this.vehicleService.setDefault(vehicle.id);
     this.togglingId.set(null);
-  }
-
-  private async refreshRemoteParkingStates(): Promise<void> {
-    if (this.source() === 'mock' || this.vehicles().length === 0) return;
-    const entries = await Promise.all(
-      this.vehicles().map(async (vehicle) => {
-        const status = await this.parkingSessionService.queryParkingStatus(vehicle.plate);
-        return [vehicle.plate, status.isParked] as const;
-      }),
-    );
-    this.remoteParkedPlates.set(Object.fromEntries(entries));
   }
 }

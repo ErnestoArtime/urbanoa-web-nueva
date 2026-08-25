@@ -8,6 +8,8 @@ import { OPS_ENDPOINTS } from '../api/ops-endpoints';
 import { OpsApiClient } from '../api/ops-api-client.service';
 import { OpsSessionService } from '../api/ops-session.service';
 import { AppApiClient } from '../api/app-api-client.service';
+import { CitiesService } from './cities.service';
+import { LocationSettingsService } from './location-settings.service';
 
 interface OperationResponseDto {
   contractId?: number;
@@ -94,6 +96,8 @@ export class OperationsService {
   private readonly api = inject(OpsApiClient);
   private readonly session = inject(OpsSessionService);
   private readonly restApi = inject(AppApiClient);
+  private readonly citiesService = inject(CitiesService);
+  private readonly locationSettings = inject(LocationSettingsService);
   private readonly storageKey = 'urbanoa.operations';
   private readonly activeKey = 'urbanoa.operations.active';
   private readonly _operations = signal<Operation[]>(this.readOps());
@@ -149,7 +153,7 @@ export class OperationsService {
     }
   }
 
-  async loadParkingStatuses(vehicles: readonly { id: string; plate: string }[], contractId = 0): Promise<void> {
+  async loadParkingStatuses(vehicles: readonly { id: string; plate: string }[], contractId?: number): Promise<void> {
     const token = this.session.token();
     if (!token) {
       this.activeSource.set('mock');
@@ -163,14 +167,25 @@ export class OperationsService {
     }
 
     const date = this.opsDate(new Date());
+    const contractIds = contractId ? [contractId] : this.contractIdsToCheck();
     const results = await Promise.allSettled(
       vehicles.map(async (vehicle) => {
-        const status = await this.api.post<ParkingStatusResponseDto>(
-          OPS_ENDPOINTS.parking.parkingStatus,
-          { contractId, plate: vehicle.plate, date },
-          { token },
-        );
-        return status.status === 2 ? this.mapParkingStatus(vehicle, contractId, status) : null;
+        let answered = false;
+        for (const id of contractIds) {
+          try {
+            const status = await this.api.post<ParkingStatusResponseDto>(
+              OPS_ENDPOINTS.parking.parkingStatus,
+              { contractId: id, plate: vehicle.plate, date },
+              { token },
+            );
+            answered = true;
+            if (status.status === 2) return this.mapParkingStatus(vehicle, id, status);
+          } catch {
+            // Error de red/backend para este contrato: se prueba el siguiente.
+          }
+        }
+        if (!answered) throw new Error(`${vehicle.plate}: sin respuesta de ningún contrato`);
+        return null;
       }),
     );
 
@@ -190,6 +205,14 @@ export class OperationsService {
       console.warn('[OPS API] Estado de algunos aparcamientos utiliza fallback local');
     }
     this.persistActive();
+  }
+
+  private contractIdsToCheck(): number[] {
+    const all = this.citiesService.knownContractIds();
+    const preferredCityId = this.locationSettings.settings().preferredCityId;
+    if (!preferredCityId) return all;
+    const preferred = this.citiesService.contractIdFor(preferredCityId);
+    return [preferred, ...all.filter((id) => id !== preferred)];
   }
 
   async loadReceipt(id: string): Promise<unknown | null> {

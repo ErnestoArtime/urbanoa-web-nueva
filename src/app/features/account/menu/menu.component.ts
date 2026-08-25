@@ -146,7 +146,11 @@ import { environment } from '../../../../environments/environment';
                           <div class="list-item-content">
                             <div class="list-item-title">{{ v.plate }}</div>
                             <div class="list-item-subtitle">
-                              {{ v.isDefault ? ('account.vehicleFavorite' | translate) : (v.label ?? '' | translate) }}
+                              @if (v.isDefault) {
+                                {{ 'account.vehicleFavorite' | translate }}
+                              } @else if (v.label; as label) {
+                                {{ translateLabel(label) }}
+                              }
                             </div>
                           </div>
                           @if (v.isDefault) {
@@ -415,6 +419,10 @@ export class AccountMenuComponent {
   private readonly router = inject(Router);
   private readonly translationService = inject(TranslationService);
   readonly walletService = inject(WalletService);
+
+  translateLabel(value: string): string {
+    return this.translationService.translateLabel(value);
+  }
   readonly user = MOCK_USER;
   readonly menu = ACCOUNT_MENU;
   readonly vehicles = MOCK_VEHICLES;

@@ -1,6 +1,7 @@
 import { AfterViewInit, Component, ElementRef, OnDestroy, ViewChild, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import * as L from 'leaflet';
+import { LucideStar } from '@lucide/angular';
 import { MOCK_MUNICIPIOS, type Municipio, type Vehicle } from '../../../shared/mock-data';
 import { LoaderComponent } from '../../../shared/components/loader/loader.component';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
@@ -23,7 +24,7 @@ interface MapParkingZone {
 
 @Component({
   selector: 'app-parking-map',
-  imports: [RouterLink, LoaderComponent, TranslatePipe, MapLocationControlComponent],
+  imports: [RouterLink, LoaderComponent, TranslatePipe, MapLocationControlComponent, LucideStar],
   template: `
     <app-loader [visible]="mapLoading()" [message]="'parking.map.loading' | translate" imageSrc="/assets/brand/login-logo.jpg" />
     <section class="parking-map-page">
@@ -75,11 +76,11 @@ interface MapParkingZone {
                     (click)="selectVehicle(v)"
                   >
                     <span>{{ v.plate }}</span>
-                    <span class="vehicle-label">{{ v.label }}</span>
+                    <span class="vehicle-label">{{ translateLabel(v.label) }}</span>
                     @if (isParkedIn(v)) {
                       <span class="badge badge-warning">{{ 'account.vehicle.alreadyParked' | translate }}</span>
                     } @else if (v.isDefault) {
-                      <span class="badge badge-primary">★</span>
+                      <span class="badge badge-primary"><svg lucideStar size="12" strokeWidth="2.5"></svg></span>
                     }
                   </button>
                 }
@@ -552,6 +553,10 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
   readonly vehicles = this.vehicleService.vehicles;
   private readonly parkingSessionService = inject(ParkingSessionService);
   readonly isParkedIn = (vehicle: Vehicle) => this.parkingSessionService.isVehicleParked(vehicle.id);
+
+  translateLabel(value?: string): string {
+    return this.translationService.translateLabel(value);
+  }
   readonly availableVehicles = computed(() => this.vehicles().filter((vehicle) => !this.isParkedIn(vehicle)));
   readonly hasAvailableVehicles = computed(() => this.availableVehicles().length > 0);
   readonly selectedVehicle = signal<Vehicle | null>(

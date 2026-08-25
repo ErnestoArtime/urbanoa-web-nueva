@@ -34,6 +34,12 @@ export class TranslationService {
     return value;
   }
 
+  translateLabel(value?: string | null): string {
+    const trimmed = value?.trim();
+    if (!trimmed) return '';
+    return this.translations()[trimmed] ?? trimmed;
+  }
+
   init(): void {
     const saved = this.getSavedLang();
     const initialLang = saved ?? this.detectBrowserLang() ?? DEFAULT_LANG;

@@ -49,51 +49,71 @@ describe('ParkingSessionService', () => {
     expect(service.activeParkingsCount()).toBe(2);
   });
 
-  it('queries the parking status per contract and maps an active parking', async () => {
+  it('syncs remote parking statuses across contracts and marks the source as remote', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'post']);
-    const fakePost = <T>(endpoint: string, body?: unknown): Promise<T> => {
-      const contractId = (body as { contractId: number }).contractId;
-      return (
-        contractId === 3
-          ? Promise.resolve({ zonename: 'Zona Centro', sectorname: 'S1', dateInitial: '240826 100000', dateEnd: '240826 110000' })
-          : Promise.reject(new Error('no parking'))
-      ) as Promise<T>;
+    const fakePost = <T>(endpoint: string, body?: { contractId?: number }): Promise<T> => {
+      if (endpoint === 'OPSWebServicesAPI/QueryParkingStatusAPI') {
+        return (
+          body?.contractId === 3
+            ? Promise.resolve({
+                status: 2,
+                extension: 0,
+                tariffId: 7,
+                dateInitial: '260825100000',
+                dateEnd: '260825110000',
+                accumulatedTime: 60,
+                zonename: 'Zona Centro',
+                sectorname: 'S1',
+                streetname: 'Nagusia Kalea',
+              })
+            : Promise.reject(new Error('sin aparcamiento'))
+        ) as Promise<T>;
+      }
+      return Promise.reject(new Error(`endpoint inesperado: ${endpoint}`)) as Promise<T>;
     };
     api.post.and.callFake(fakePost);
     const service = serviceWith(api);
     TestBed.inject(OpsSessionService).setToken('token');
 
-    const status = await service.queryParkingStatus('1234 ABC');
+    await service.loadParkingStatuses([{ id: '1', plate: '1234 ABC' }]);
 
-    expect(api.post).toHaveBeenCalledWith(
-      'OPSWebServicesAPI/QueryParkingStatusAPI',
-      jasmine.objectContaining({ contractId: jasmine.any(Number), plate: '1234 ABC' }),
-      { token: 'token' },
-    );
-    expect(status.isParked).toBeTrue();
-    expect(status.zone).toBe('Zona Centro');
-    expect(status.sector).toBe('S1');
+    expect(service.activeSource()).toBe('remote');
+    expect(service.activeParkings().length).toBe(1);
+    expect(service.isVehicleParked('1234 ABC')).toBeTrue();
   });
 
-  it('reports no parking when every contract answers without data', async () => {
+  it('keeps local parkings when every contract query fails', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'post']);
-    api.post.and.resolveTo(null);
+    api.post.and.rejectWith(new Error('backend down'));
     const service = serviceWith(api);
     TestBed.inject(OpsSessionService).setToken('token');
+    service.startParking(START_PARKING);
 
-    const status = await service.queryParkingStatus('1234 ABC');
+    await service.loadParkingStatuses([{ id: 'vehicle-1', plate: '1234 ABC' }]);
 
-    expect(api.post.calls.count()).toBeGreaterThan(0);
-    expect(status.isParked).toBeFalse();
+    expect(service.activeSource()).toBe('mock');
+    expect(service.activeParkings().length).toBe(1);
   });
 
-  it('skips the remote query without a session token', async () => {
+  it('clears active parkings remotely when there are no vehicles to check', async () => {
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'post']);
+    const service = serviceWith(api);
+    TestBed.inject(OpsSessionService).setToken('token');
+    service.startParking(START_PARKING);
+
+    await service.loadParkingStatuses([]);
+
+    expect(api.post).not.toHaveBeenCalled();
+    expect(service.activeParkings().length).toBe(0);
+  });
+
+  it('does not sync without a session token', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'post']);
     const service = serviceWith(api);
 
-    const status = await service.queryParkingStatus('1234 ABC');
+    await service.loadParkingStatuses([{ id: '1', plate: '1234 ABC' }]);
 
     expect(api.post).not.toHaveBeenCalled();
-    expect(status.isParked).toBeFalse();
+    expect(service.activeSource()).toBe('mock');
   });
 });

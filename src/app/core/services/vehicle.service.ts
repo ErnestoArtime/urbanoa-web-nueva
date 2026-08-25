@@ -44,9 +44,12 @@ export class VehicleService {
     }
 
     try {
-      const value = await this.api.get<PlatesApiValue>(OPS_ENDPOINTS.user.plates, { token });
-      if (!Array.isArray(value.plates)) throw new Error('QueryUserPlatesAPI no devolvió plates');
-      this.state.set(value.plates.map((item) => this.fromApi(item)));
+      const value = await this.api.getOrNull<PlatesApiValue>(OPS_ENDPOINTS.user.plates, { token });
+      if (value === null || !Array.isArray(value.plates)) {
+        this.state.set([]);
+      } else {
+        this.state.set(value.plates.map((item) => this.fromApi(item)));
+      }
       this.sourceState.set('remote');
       this.errorState.set(null);
       await this.ensureFavorite();
