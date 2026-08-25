@@ -68,6 +68,24 @@ export interface ActiveParking {
   paymentBreakdown?: Operation['paymentBreakdown'];
   cardId?: string;
   cardLabel?: string;
+  contractId?: number;
+  tariffId?: number;
+}
+
+interface ParkingStatusResponseDto {
+  status: number;
+  extension: number;
+  tariffId: number;
+  dateInitial: string;
+  dateEnd: string;
+  accumulatedTime: number;
+  sector?: string;
+  sectorname?: string;
+  zonename?: string;
+  latitude?: number;
+  longitude?: number;
+  operationDate?: string;
+  streetname?: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -86,6 +104,7 @@ export class OperationsService {
   readonly activeParkingsCount = computed(() => this._activeParkings().length);
   readonly hasActiveParkings = computed(() => this._activeParkings().length > 0);
   readonly source = signal<'remote' | 'mock'>('mock');
+  readonly activeSource = signal<'remote' | 'mock'>('mock');
   readonly loading = signal(false);
 
   async load(
@@ -128,6 +147,49 @@ export class OperationsService {
       this.source.set('mock');
       return this.getOperationById(id);
     }
+  }
+
+  async loadParkingStatuses(vehicles: readonly { id: string; plate: string }[], contractId = 0): Promise<void> {
+    const token = this.session.token();
+    if (!token) {
+      this.activeSource.set('mock');
+      return;
+    }
+    if (vehicles.length === 0) {
+      this._activeParkings.set([]);
+      this.activeSource.set('remote');
+      this.persistActive();
+      return;
+    }
+
+    const date = this.opsDate(new Date());
+    const results = await Promise.allSettled(
+      vehicles.map(async (vehicle) => {
+        const status = await this.api.post<ParkingStatusResponseDto>(
+          OPS_ENDPOINTS.parking.parkingStatus,
+          { contractId, plate: vehicle.plate, date },
+          { token },
+        );
+        return status.status === 2 ? this.mapParkingStatus(vehicle, contractId, status) : null;
+      }),
+    );
+
+    const remote = results
+      .filter((result): result is PromiseFulfilledResult<ActiveParking | null> => result.status === 'fulfilled')
+      .map((result) => result.value)
+      .filter((parking): parking is ActiveParking => parking !== null);
+    const failedPlates = new Set(results.flatMap((result, index) => (result.status === 'rejected' ? [vehicles[index].plate] : [])));
+
+    if (failedPlates.size === 0) {
+      this._activeParkings.set(remote);
+      this.activeSource.set('remote');
+    } else {
+      const fallback = this._activeParkings().filter((parking) => failedPlates.has(parking.plate));
+      this._activeParkings.set([...remote, ...fallback]);
+      this.activeSource.set('mock');
+      console.warn('[OPS API] Estado de algunos aparcamientos utiliza fallback local');
+    }
+    this.persistActive();
   }
 
   async loadReceipt(id: string): Promise<unknown | null> {
@@ -275,7 +337,7 @@ export class OperationsService {
     return true;
   }
 
-  unpark(parkingId: string): boolean {
+  unpark(parkingId: string, refundAmount = 0.4): boolean {
     const active = this._activeParkings().find((p) => p.id === parkingId);
     if (!active) return false;
 
@@ -301,7 +363,7 @@ export class OperationsService {
       type: OperationType.REFUND,
       plate: active.plate,
       date: today,
-      amount: 0.4,
+      amount: refundAmount,
       zone: active.zone,
       relatedOperationId: active.operationId,
       startTime: active.startTime,
@@ -309,7 +371,7 @@ export class OperationsService {
       durationLabel: active.durationLabel,
     };
 
-    this.walletService.credit(0.4, 'Devolución de saldo', 'parking-refund');
+    if (refundAmount > 0) this.walletService.credit(refundAmount, 'Devolución de saldo', 'parking-refund');
     this._operations.update((list) => [finishParking, parkingClosed, ...list]);
     this._activeParkings.update((list) => list.filter((p) => p.id !== parkingId));
     this.persistOps();
@@ -393,6 +455,57 @@ export class OperationsService {
     const month = String(d.getMonth() + 1).padStart(2, '0');
     const year = d.getFullYear();
     return `${day}/${month}/${year}`;
+  }
+
+  private mapParkingStatus(vehicle: { id: string; plate: string }, contractId: number, status: ParkingStatusResponseDto): ActiveParking {
+    const start = this.parseOpsDate(status.dateInitial);
+    const end = this.parseOpsDate(status.dateEnd);
+    const remainingMs = Math.max(0, end.getTime() - Date.now());
+    const remainingSeconds = Math.floor(remainingMs / 1000);
+    const hours = String(Math.floor(remainingSeconds / 3600)).padStart(2, '0');
+    const minutes = String(Math.floor((remainingSeconds % 3600) / 60)).padStart(2, '0');
+    const seconds = String(remainingSeconds % 60).padStart(2, '0');
+    return {
+      id: `remote-${vehicle.plate}`,
+      plate: vehicle.plate,
+      vehicleId: vehicle.id,
+      zone: status.sectorname || status.zonename || status.sector || '',
+      startTime: this.timeLabel(start),
+      durationLabel: `${status.accumulatedTime ?? 0} min`,
+      timeRemaining: `${hours}:${minutes}:${seconds}`,
+      endTime: this.timeLabel(end),
+      latitude: status.latitude,
+      longitude: status.longitude,
+      street: status.streetname,
+      operationId: status.operationDate || status.dateInitial,
+      contractId,
+      tariffId: status.tariffId,
+    };
+  }
+
+  private opsDate(date: Date): string {
+    const two = (value: number): string => String(value).padStart(2, '0');
+    return `${two(date.getHours())}${two(date.getMinutes())}${two(date.getSeconds())}${two(date.getDate())}${two(date.getMonth() + 1)}${two(
+      date.getFullYear() % 100,
+    )}`;
+  }
+
+  private parseOpsDate(value: string): Date {
+    if (/^\d{12}$/.test(value)) {
+      const hours = Number(value.slice(0, 2));
+      const minutes = Number(value.slice(2, 4));
+      const seconds = Number(value.slice(4, 6));
+      const day = Number(value.slice(6, 8));
+      const month = Number(value.slice(8, 10));
+      const year = 2000 + Number(value.slice(10, 12));
+      return new Date(year, month - 1, day, hours, minutes, seconds);
+    }
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
+  }
+
+  private timeLabel(date: Date): string {
+    return date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', hour12: false });
   }
 
   private nextId(): string {

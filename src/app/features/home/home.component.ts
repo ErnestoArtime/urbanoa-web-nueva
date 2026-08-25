@@ -234,9 +234,9 @@ export class HomeComponent {
     this.confirmUnpark.set(true);
   }
 
-  confirmUnparkAction(): void {
+  async confirmUnparkAction(): Promise<void> {
     this.confirmUnpark.set(false);
-    if (this.parkingSessionService.leaveParking(this.pendingUnparkId)) {
+    if (await this.parkingSessionService.leaveParking(this.pendingUnparkId)) {
       this.pendingUnparkId = '';
       this.unparked.set(true);
     }

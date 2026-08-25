@@ -8,7 +8,7 @@ import { generateUuid } from '../utils/generate-uuid';
 
 interface PlateApiItem {
   plate: string;
-  favorite: boolean;
+  favorite: number | boolean;
 }
 
 interface PlatesApiValue {
@@ -151,7 +151,7 @@ export class VehicleService {
   }
 
   private fromApi(item: PlateApiItem): Vehicle {
-    return { id: item.plate, plate: item.plate, isDefault: item.favorite };
+    return { id: item.plate, plate: item.plate, isDefault: item.favorite === true || item.favorite === 1 };
   }
 
   private normalizePlate(plate: string): string {

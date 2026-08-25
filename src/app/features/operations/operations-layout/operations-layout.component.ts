@@ -9,7 +9,6 @@ import { OperationType, OPERATION_TYPE_LABELS } from '../../../shared/models/ope
 import { UnpaidFinesService } from '../../../core/services/unpaid-fines.service';
 import { OperationsService, type ActiveParking } from '../../../core/services/operations.service';
 import { ParkingSessionService } from '../../../core/services/parking-session.service';
-import { ParkingApiService } from '../../../core/services/parking-api.service';
 import { NavigationToCarService } from '../../../core/services/navigation-to-car.service';
 import type { Operation } from '../../../shared/models/operation';
 import { OperationIconComponent } from '../../../shared/components/operation-icon/operation-icon.component';
@@ -404,7 +403,6 @@ export class OperationsLayoutComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly operationsService = inject(OperationsService);
   private readonly parkingSessionService = inject(ParkingSessionService);
-  private readonly parkingApi = inject(ParkingApiService);
   private readonly navigationToCar = inject(NavigationToCarService);
   private readonly operations = this.operationsService.operations;
   private readonly rangeFilter = signal<DateRange>({ from: '', to: '' });
@@ -454,15 +452,7 @@ export class OperationsLayoutComponent implements OnInit {
 
   async confirmUnparkAction(): Promise<void> {
     this.confirmUnpark.set(false);
-    const parking = this.parkingSessionService.activeParkings().find((item) => item.id === this.pendingUnparkId);
-    if (!parking) return;
-    const result = await this.parkingApi.unpark({
-      contractId: 0,
-      plate: parking.plate,
-      groupId: Number(parking.operationId || 0),
-      ticketId: 0,
-    });
-    if (result.success && this.parkingSessionService.leaveParking(this.pendingUnparkId)) {
+    if (await this.parkingSessionService.leaveParking(this.pendingUnparkId)) {
       this.pendingUnparkId = '';
       this.unparked.set(true);
     }

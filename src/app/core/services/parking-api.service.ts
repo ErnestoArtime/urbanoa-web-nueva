@@ -20,6 +20,7 @@ export interface ConfirmParkingInput {
 export interface ParkingApiResult {
   success: boolean;
   source: 'remote' | 'mock';
+  refundAmount?: number;
   error?: unknown;
 }
 
@@ -29,7 +30,7 @@ interface UnparkingResponseDto {
   payAmount: number;
   dateInitial: string;
   dateEnd: string;
-  moneyReturned: number;
+  moneyReturned: boolean;
 }
 
 export interface ParkingTicketOption {
@@ -77,25 +78,31 @@ export class ParkingApiService {
     }
   }
 
-  async unpark(input: { contractId: number; plate: string; groupId: number; ticketId: number }): Promise<ParkingApiResult> {
+  async unpark(input: { contractId: number; plate: string; groupId?: number; ticketId?: number }): Promise<ParkingApiResult> {
     const token = this.session.token();
     if (!token) return { success: true, source: 'mock' };
     try {
-      const quote = await this.api.post<UnparkingResponseDto>(OPS_ENDPOINTS.parking.queryUnparking, input, { token });
+      const date = this.opsDate(new Date());
+      const quote = await this.api.post<UnparkingResponseDto>(
+        OPS_ENDPOINTS.parking.queryUnparking,
+        { ...input, datetime: date },
+        { token },
+      );
       await this.api.post<string>(
         OPS_ENDPOINTS.parking.confirmUnparking,
         {
           contractId: input.contractId,
           plate: input.plate,
-          quantity: quote.moneyReturned,
+          quantity: quote.payAmount,
           groupId: input.groupId,
           ticketId: input.ticketId,
           cloudToken: '',
           operatingSystem: 1,
+          date,
         },
         { token },
       );
-      return { success: true, source: 'remote' };
+      return { success: true, source: 'remote', refundAmount: Math.max(0, quote.payAmount) / 100 };
     } catch (error) {
       console.warn('[OPS API] Desaparcar utiliza fallback mock', error);
       return { success: true, source: 'mock', error };
@@ -127,5 +134,12 @@ export class ParkingApiService {
       console.warn('[OPS API] Tarifas utiliza fallback mock', error);
       return { data: [], source: 'mock' };
     }
+  }
+
+  private opsDate(date: Date): string {
+    const two = (value: number): string => String(value).padStart(2, '0');
+    return `${two(date.getHours())}${two(date.getMinutes())}${two(date.getSeconds())}${two(date.getDate())}${two(date.getMonth() + 1)}${two(
+      date.getFullYear() % 100,
+    )}`;
   }
 }

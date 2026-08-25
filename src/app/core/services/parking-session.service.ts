@@ -5,6 +5,7 @@ import { OperationsService, type ActiveParking } from './operations.service';
 import { OpsApiClient } from '../api/ops-api-client.service';
 import { OPS_ENDPOINTS } from '../api/ops-endpoints';
 import { OpsSessionService } from '../api/ops-session.service';
+import { ParkingApiService } from './parking-api.service';
 
 export type StartParkingInput = ActiveParking & { amount: number };
 
@@ -32,6 +33,7 @@ export class ParkingSessionService {
   private readonly session = inject(OpsSessionService);
   private readonly citiesService = inject(CitiesService);
   private readonly locationSettings = inject(LocationSettingsService);
+  private readonly parkingApi = inject(ParkingApiService);
 
   readonly activeParkings = this.operationsService.activeParkings;
   readonly activeParkingsCount = this.operationsService.activeParkingsCount;
@@ -42,8 +44,15 @@ export class ParkingSessionService {
     return started ? (this.operationsService.getActiveParking(input.id) ?? null) : null;
   }
 
-  leaveParking(parkingId: string): boolean {
-    return this.operationsService.unpark(parkingId);
+  async leaveParking(parkingId: string): Promise<boolean> {
+    const parking = this.operationsService.getActiveParking(parkingId);
+    if (!parking) return false;
+    const result = await this.parkingApi.unpark({
+      contractId: parking.contractId ?? 0,
+      plate: parking.plate,
+      ticketId: parking.tariffId,
+    });
+    return result.success ? this.operationsService.unpark(parkingId, result.refundAmount) : false;
   }
 
   extendParking(parkingId: string, minutes: number): boolean {
