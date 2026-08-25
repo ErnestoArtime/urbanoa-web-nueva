@@ -1,5 +1,6 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
 import { ResultModalComponent } from '../../../shared/components/result-modal/result-modal.component';
@@ -109,20 +110,38 @@ import { ParkingSessionService } from '../../../core/services/parking-session.se
     `,
   ],
 })
-export class VehicleEditComponent {
+export class VehicleEditComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly vehicleService = inject(VehicleService);
   private readonly parkingSessionService = inject(ParkingSessionService);
-  readonly id = this.route.snapshot.paramMap.get('id') ?? '';
-  private readonly vehicle = this.vehicleService.getById(this.id);
-  readonly plate = signal(this.vehicle?.plate ?? '');
-  readonly favorite = signal(this.vehicle?.isDefault ?? false);
+  private readonly paramMap = toSignal(this.route.paramMap, { initialValue: this.route.snapshot.paramMap });
+  readonly id = computed(() => this.paramMap().get('id') ?? '');
+  private readonly vehicle = computed(() => this.vehicleService.getById(this.id()));
+  readonly plate = signal('');
+  readonly favorite = signal(false);
   readonly plateError = signal(false);
   readonly result = signal<'saved' | 'deleted' | null>(null);
   readonly confirmDelete = signal(false);
   readonly blockedDelete = signal(false);
   readonly saving = signal(false);
+
+  constructor() {
+    effect(() => {
+      const vehicle = this.vehicle();
+      this.plate.set(vehicle?.plate ?? '');
+      this.favorite.set(vehicle?.isDefault ?? false);
+      this.plateError.set(false);
+      this.result.set(null);
+      this.confirmDelete.set(false);
+      this.blockedDelete.set(false);
+    });
+  }
+
+  async ngOnInit(): Promise<void> {
+    const vehicle = this.vehicle();
+    if (vehicle) await this.parkingSessionService.loadParkingStatuses([vehicle]);
+  }
 
   setPlate(event: Event): void {
     this.plate.set((event.target as HTMLInputElement).value.toUpperCase());
@@ -140,15 +159,16 @@ export class VehicleEditComponent {
       return;
     }
     this.saving.set(true);
-    const mutation = await this.vehicleService.update(this.id, { plate, isDefault: this.favorite() });
+    const mutation = await this.vehicleService.update(this.id(), { plate, isDefault: this.favorite() });
     this.saving.set(false);
     if (mutation.success) this.result.set('saved');
   }
 
   remove(): void {
+    const current = this.vehicle();
     const isActive =
-      this.parkingSessionService.isVehicleParked(this.id) ||
-      Boolean(this.vehicle?.plate && this.parkingSessionService.isVehicleParked(this.vehicle.plate));
+      this.parkingSessionService.isVehicleParked(this.id()) ||
+      Boolean(current?.plate && this.parkingSessionService.isVehicleParked(current.plate));
     if (isActive) {
       this.blockedDelete.set(true);
       return;
@@ -159,7 +179,7 @@ export class VehicleEditComponent {
   async confirmRemove(): Promise<void> {
     this.confirmDelete.set(false);
     this.saving.set(true);
-    const mutation = await this.vehicleService.remove(this.id);
+    const mutation = await this.vehicleService.remove(this.id());
     this.saving.set(false);
     if (mutation.success) this.result.set('deleted');
   }
