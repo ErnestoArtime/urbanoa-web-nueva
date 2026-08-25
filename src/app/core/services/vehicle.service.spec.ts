@@ -92,6 +92,39 @@ describe('VehicleService', () => {
     expect(service.vehicles().find((v) => v.isDefault)).toBeTruthy();
   });
 
+  it('promotes the first plate to favorite when the remote list arrives without any', async () => {
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'post']);
+    api.get.and.resolveTo({ plates: [{ plate: '1111 AAA' }, { plate: '2222 BBB' }] });
+    api.post.and.resolveTo('OK');
+    const service = serviceWith(api);
+    TestBed.inject(OpsSessionService).setToken('token');
+
+    await service.load();
+
+    expect(api.post).toHaveBeenCalledWith('OPSWebServicesAPI3/UpdateUserPlateAPI', { plate: '1111 AAA', favorite: 1 }, { token: 'token' });
+    expect(service.vehicles().find((v) => v.plate === '1111 AAA')?.isDefault).toBeTrue();
+    expect(service.vehicles().find((v) => v.plate === '2222 BBB')?.isDefault).toBeFalse();
+  });
+
+  it('promotes a newly added plate when the list would be left without any favorite', async () => {
+    localStorage.setItem('urbanoa.vehicles', JSON.stringify([{ id: '7777 KKK', plate: '7777 KKK', isDefault: false }]));
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'post']);
+    api.post.and.resolveTo('OK');
+    const service = serviceWith(api);
+    TestBed.inject(OpsSessionService).setToken('token');
+
+    const result = await service.add({ plate: '9999 XYZ', isDefault: false });
+
+    expect(api.post.calls.argsFor(0)).toEqual(['OPSWebServicesAPI3/AddUserPlateAPI', { plate: '9999 XYZ' }, { token: 'token' }]);
+    expect(api.post.calls.argsFor(1)).toEqual([
+      'OPSWebServicesAPI3/UpdateUserPlateAPI',
+      { plate: '9999 XYZ', favorite: 1 },
+      { token: 'token' },
+    ]);
+    expect(service.vehicles().find((v) => v.plate === '9999 XYZ')?.isDefault).toBeTrue();
+    expect(result.source).toBe('remote');
+  });
+
   it('keeps local mock behavior when login is postponed', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'post']);
     const service = serviceWith(api);

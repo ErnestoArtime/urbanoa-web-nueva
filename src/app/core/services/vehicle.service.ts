@@ -49,10 +49,16 @@ export class VehicleService {
       this.state.set(value.plates.map((item) => this.fromApi(item)));
       this.sourceState.set('remote');
       this.errorState.set(null);
-      this.persist();
+      await this.ensureFavorite();
     } catch (error) {
       this.useMock(error, OPS_ENDPOINTS.user.plates);
     }
+  }
+
+  private async ensureFavorite(): Promise<void> {
+    const vehicles = this.state();
+    if (vehicles.length === 0 || vehicles.some((vehicle) => vehicle.isDefault)) return;
+    await this.setDefault(vehicles[0].id);
   }
 
   getById(id: string): Vehicle | undefined {
@@ -68,7 +74,8 @@ export class VehicleService {
     this.persist();
 
     if (!result.success) return result;
-    return input.isDefault ? this.setDefault(vehicle.id) : result;
+    if (input.isDefault) return this.setDefault(vehicle.id);
+    return this.state().some((item) => item.isDefault) ? result : this.setDefault(vehicle.id);
   }
 
   async update(id: string, changes: Partial<Omit<Vehicle, 'id'>>): Promise<VehicleMutationResult> {

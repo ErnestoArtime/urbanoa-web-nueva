@@ -50,6 +50,10 @@ export class CitiesService {
     return Number.isFinite(numericId) ? numericId : (CONTRACT_IDS[identifier.toLocaleLowerCase('es')] ?? CONTRACT_IDS['zarautz']);
   }
 
+  knownContractIds(): number[] {
+    return [...new Set(Object.values(CONTRACT_IDS))];
+  }
+
   private mockCities(): ParkingMunicipio[] {
     return MOCK_MUNICIPIOS.map((city) => ({ ...city, contractId: this.contractIdFor(city.id) }));
   }
