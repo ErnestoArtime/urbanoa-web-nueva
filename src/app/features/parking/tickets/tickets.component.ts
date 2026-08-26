@@ -40,10 +40,10 @@ import { ParkingApiService, ParkingTicketOption } from '../../../core/services/p
                 ><strong>{{ query.sector || query.street }}</strong></span
               ><span
                 ><small>{{ 'parking.tickets.schedule' | translate }}</small
-                ><strong>{{ 'parking.tickets.scheduleValue' | translate }}</strong></span
+                ><strong>{{ tariff.schedule || '—' }}</strong></span
               ><span
                 ><small>{{ 'parking.tickets.minimum' | translate }}</small
-                ><strong>{{ 'parking.tickets.minimumValue' | translate }}</strong></span
+                ><strong>{{ tariff.minAmount || '—' }}</strong></span
               >
             </div>
             <span class="ticket-action">{{ 'parking.tickets.getTicket' | translate }} <b>›</b></span>
@@ -178,8 +178,8 @@ export class ParkingTicketsComponent implements OnInit {
       const result = await this.parkingApi.tickets({
         contractId: Number(this.query.cityId || 0),
         plate: this.query.plate,
-        zone: Number(this.query.zoneId || 0),
-        streetId: 0,
+        zone: Number(this.query.sectorId || this.query.zoneId || 0),
+        streetId: Number(this.query.streetId || 0),
         date: new Date().toISOString(),
       });
       this.tariffs.set(result.data);

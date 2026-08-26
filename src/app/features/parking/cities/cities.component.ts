@@ -78,7 +78,7 @@ const EMPTY_CITY: ParkingMunicipio = {
           <div class="sticky-actions">
             <a
               routerLink="/app/parking"
-              [queryParams]="{ city: selected().id, vehicleId: vehicleId, plate: vehiclePlate }"
+              [queryParams]="{ city: selected().id, cityId: selected().contractId, cityName: selected().nombre, vehicleId: vehicleId, plate: vehiclePlate }"
               class="btn btn-primary btn-block"
             >{{ 'parking.cities.viewMap' | translate }}</a
             >

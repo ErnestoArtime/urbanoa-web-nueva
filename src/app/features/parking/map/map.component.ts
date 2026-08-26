@@ -18,6 +18,7 @@ import { StreetsService } from '../../../core/services/streets.service';
 
 interface MapParkingZone {
   zoneId: number;
+  streetId?: number;
   sectorId?: number;
   name: string;
   street: string;
@@ -532,7 +533,7 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
   private readonly parkingApi = inject(ParkingApiService);
   private readonly streetsService = inject(StreetsService);
   private readonly streetIdByZone = new Map<number, number>();
-  private readonly query: ParkingFlowQuery = this.store.hasMinimumParkingData() ? this.store.fromStore() : readParkingFlowQuery(this.route);
+  private readonly query: ParkingFlowQuery = readParkingFlowQuery(this.route);
   private map?: L.Map;
   private zoneLayer?: L.FeatureGroup;
   private resizeObserver?: ResizeObserver;
@@ -587,6 +588,7 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
 
   async ngAfterViewInit(): Promise<void> {
     try {
+      await this.vehicleService.load();
       const { data } = await this.citiesService.getCities();
       const requestedContractId = Number(this.query.cityId);
       const preferredId = this.locationSettings.settings().preferredCityId;
@@ -597,6 +599,12 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
         data[0];
       if (!selected) throw new Error('No hay contratos de aparcamiento disponibles');
       this.selectedState.set(selected);
+      await this.parkingSessionService.loadParkingStatuses(this.vehicles(), selected.contractId);
+      this.selectedVehicle.set(
+        this.availableVehicles().find((vehicle) => vehicle.id === this.query.vehicleId || vehicle.plate === this.query.plate) ??
+          this.availableVehicles()[0] ??
+          null,
+      );
     } catch {
       this.mapError.set(true);
       this.mapLoading.set(false);
@@ -665,6 +673,7 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
       plate: vehicle.plate,
       vehicleId: vehicle.id,
       zoneId: String(zone.zoneId),
+      streetId: String(zone.streetId ?? this.streetIdByZone.get(zone.zoneId) ?? 0),
       zoneName: zone.name,
         sectorId: String(zone.sectorId),
       sectorName: zone.name,
@@ -681,6 +690,7 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
         plate: vehicle.plate,
         vehicleId: vehicle.id,
         zoneId: zone.zoneId,
+        streetId: this.streetIdByZone.get(zone.zoneId),
         zone: zone.name,
           sectorId: zone.sectorId,
         sector: zone.name,
@@ -745,6 +755,7 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
           );
           const zone: MapParkingZone = {
             zoneId,
+            streetId: this.streetIdByZone.get(zoneId),
             name: description || this.readableZoneName(name),
             street: this.cleanLocationName(name),
             color,
