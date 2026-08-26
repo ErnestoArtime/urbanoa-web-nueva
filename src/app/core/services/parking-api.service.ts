@@ -161,8 +161,9 @@ export class ParkingApiService {
     };
   }
 
-  async mapStretches(contractId: number, version = ''): Promise<{ version: string; data: string }> {
-    return this.api.post(OPS_ENDPOINTS.parking.mapStretches, { contractId, version });
+  async mapStretches(contractId: number, version = '0'): Promise<{ version: string; data: string }> {
+    const requestedVersion = version.trim() || '0';
+    return this.api.post(OPS_ENDPOINTS.parking.mapStretches, { contractId, version: requestedVersion });
   }
 
   async sectors(input: { contractId: number; streetId?: number; latitude: number; longitude: number }): Promise<ParkingSectorOption[]> {

@@ -25,6 +25,10 @@ export class OpsApiClient {
     return this.request<T>('POST', endpoint, { ...options, body });
   }
 
+  postOrNull<T>(endpoint: string, body: unknown, options: Omit<OpsRequestOptions, 'body'> = {}): Promise<T | null> {
+    return this.request<T | null>('POST', endpoint, { ...options, body, allowEmptyValue: true });
+  }
+
   private async request<T>(method: 'GET' | 'POST', endpoint: string, options: OpsRequestOptions): Promise<T> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), options.timeoutMs ?? 15_000);

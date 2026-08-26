@@ -23,7 +23,7 @@ describe('ParkingSessionService', () => {
   });
 
   it('syncs remote parking statuses across contracts and marks the source as remote', async () => {
-    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'post']);
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'post', 'postOrNull']);
     const fakePost = <T>(endpoint: string, body?: { contractId?: number }): Promise<T> => {
       if (endpoint === 'OPSWebServicesAPI/QueryParkingStatusAPI') {
         return (
@@ -44,7 +44,7 @@ describe('ParkingSessionService', () => {
       }
       return Promise.reject(new Error(`endpoint inesperado: ${endpoint}`)) as Promise<T>;
     };
-    api.post.and.callFake(fakePost);
+    api.postOrNull.and.callFake(fakePost);
     const service = serviceWith(api);
     TestBed.inject(OpsSessionService).setToken('token');
 

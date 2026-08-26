@@ -158,13 +158,13 @@ export class OperationsService {
         let answered = false;
         for (const id of contractIds) {
           try {
-            const status = await this.api.post<ParkingStatusResponseDto>(
+            const status = await this.api.postOrNull<ParkingStatusResponseDto>(
               OPS_ENDPOINTS.parking.parkingStatus,
               { contractId: id, plate: vehicle.plate, date },
               { token },
             );
             answered = true;
-            if (status.status === 2) return this.mapParkingStatus(vehicle, id, status);
+            if (status?.status === 2) return this.mapParkingStatus(vehicle, id, status);
           } catch {
             // Error de red/backend para este contrato: se prueba el siguiente.
           }
@@ -185,7 +185,8 @@ export class OperationsService {
   }
 
   private contractIdsToCheck(): number[] {
-    const all = this.citiesService.knownContractIds();
+    const loaded = this.citiesService.cities().map((city) => city.contractId).filter((id) => id > 0);
+    const all = loaded.length > 0 ? [...new Set(loaded)] : this.citiesService.knownContractIds();
     const preferredCityId = this.locationSettings.settings().preferredCityId;
     if (!preferredCityId) return all;
     const preferred = this.citiesService.contractIdFor(preferredCityId);
