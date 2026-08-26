@@ -32,6 +32,7 @@ server {
   }
 
   location /ops-api/ {
+    rewrite ^/ops-api/OPSWebServicesLegacyAPI/(.*)$ /OPSWebServicesAPI/$1 break;
     rewrite ^/ops-api/OPSWebServicesAPI/(.*)$ /OPSWebServicesAPI3/$1 break;
     proxy_pass __OPS_BACKEND_URL__;
     proxy_set_header Host $proxy_host;
