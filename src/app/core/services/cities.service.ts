@@ -7,7 +7,15 @@ import { OPS_ENDPOINTS } from '../api/ops-endpoints';
 
 interface ContractApiItem {
   contractId: number;
+  description1: string;
   description2: string;
+  address: string;
+  email: string;
+  imagePath: string;
+  longitude: number;
+  latitude: number;
+  phone: string;
+  radius: string;
 }
 
 interface ContractsApiValue {
@@ -17,6 +25,14 @@ interface ContractsApiValue {
 
 export interface ParkingMunicipio extends Municipio {
   contractId: number;
+  description1: string;
+  address: string;
+  email: string;
+  imagePath: string;
+  longitude: number;
+  latitude: number;
+  phone: string;
+  radius: string;
 }
 
 const CONTRACT_IDS: Record<string, number> = {
@@ -55,7 +71,18 @@ export class CitiesService {
   }
 
   private mockCities(): ParkingMunicipio[] {
-    return MOCK_MUNICIPIOS.map((city) => ({ ...city, contractId: this.contractIdFor(city.id) }));
+    return MOCK_MUNICIPIOS.map((city) => ({
+      ...city,
+      contractId: this.contractIdFor(city.id),
+      description1: '',
+      address: '',
+      email: '',
+      imagePath: '',
+      longitude: 0,
+      latitude: 0,
+      phone: '',
+      radius: '',
+    }));
   }
 
   private toMunicipio(item: ContractApiItem): ParkingMunicipio {
@@ -67,6 +94,14 @@ export class CitiesService {
       zonas: known?.zonas ?? 0,
       imagen: known?.imagen ?? '',
       contractId: item.contractId,
+      description1: item.description1 ?? '',
+      address: item.address ?? '',
+      email: item.email ?? '',
+      imagePath: item.imagePath ? `https://arinpark.gerteksa.eus/Arinpark/images/${item.imagePath}` : '',
+      longitude: item.longitude ?? 0,
+      latitude: item.latitude ?? 0,
+      phone: item.phone ?? '',
+      radius: item.radius ?? '',
     };
   }
 
