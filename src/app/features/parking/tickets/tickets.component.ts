@@ -175,7 +175,8 @@ export class ParkingTicketsComponent implements OnInit {
       contractId: Number(this.query.cityId || 0),
       plate: this.query.plate,
       zone: Number(this.query.zoneId || 0),
-      date: new Date().toISOString(),
+      street: Number(this.query.streetId || 0),
+      date: this.parkingApi.opsDate(new Date()),
     });
     if (result.data.length) this.tariffs.set(result.data);
     this.source.set(result.source);

@@ -235,7 +235,7 @@ export class ParkingConfirmComponent {
       sector: Number(this.query.sectorId || 0),
       quantity: Math.round(amount * 100),
       tariffType: Number(this.query.tariffId || 0),
-      date: new Date().toISOString(),
+      date: this.parkingApi.opsDate(new Date()),
       time: Number(this.query.minutes || 0),
       latitude: Number(this.query.latitude || 0),
       longitude: Number(this.query.longitude || 0),
