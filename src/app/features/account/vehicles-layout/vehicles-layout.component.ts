@@ -9,7 +9,7 @@ import { AppIconComponent } from '../../../shared/icons/app-icon.component';
 import { VehicleService } from '../../../core/services/vehicle.service';
 import { ParkingSessionService } from '../../../core/services/parking-session.service';
 import { TranslationService } from '../../../core/services/translation.service';
-import type { Vehicle } from '../../../shared/mock-data';
+import type { Vehicle } from '../../../shared/models/vehicle';
 
 @Component({
   selector: 'app-vehicles-layout',
@@ -18,10 +18,7 @@ import type { Vehicle } from '../../../shared/mock-data';
     <app-split-view [hideList]="isChildRoute()" [hideDetail]="!isChildRoute()">
       <div splitList class="page has-sticky-actions">
         <h1 class="page-title">{{ 'account.menu.vehicles' | translate }}</h1>
-        @if (source() === 'mock' && !lastError()) {
-          <p class="data-notice" role="status">Las matrículas se guardan localmente hasta que haya una sesión conectada.</p>
-        }
-        @if (source() === 'mock' && lastError(); as error) {
+        @if (source() === 'error' && lastError(); as error) {
           <div class="data-notice data-notice-error" role="alert">
             <p>
               {{ (error.kind === 'backend' ? 'account.vehicles.loadErrorBackend' : 'account.vehicles.loadServerError') | translate }}

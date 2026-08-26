@@ -26,12 +26,6 @@ export class OpsApiClient {
   }
 
   private async request<T>(method: 'GET' | 'POST', endpoint: string, options: OpsRequestOptions): Promise<T> {
-    // Las sesiones mock son válidas para mantener navegable la maqueta, pero
-    // nunca deben viajar al backend real como si fueran credenciales válidas.
-    if (options.token?.startsWith('mock-')) {
-      throw new OpsApiError('transport', endpoint, `${endpoint}: sesión mock; se usa el fallback local`);
-    }
-
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), options.timeoutMs ?? 15_000);
     const headers: Record<string, string> = {

@@ -74,7 +74,7 @@ describe('UserService', () => {
     );
   });
 
-  it('keeps local data when there is no session token', async () => {
+  it('clears provisional data when there is no session token', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'post']);
     const service = serviceWith(api);
     service.updateLocal(baseUser());
@@ -82,8 +82,8 @@ describe('UserService', () => {
     await service.load();
 
     expect(api.get).not.toHaveBeenCalled();
-    expect(service.source()).toBe('mock');
-    expect(service.user().name).toBe('Ane');
+    expect(service.source()).toBe('error');
+    expect(service.user().name).toBe('');
   });
 
   it('saves profile changes through UpdateUserAPI with the documented field names', async () => {

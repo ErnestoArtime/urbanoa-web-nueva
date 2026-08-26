@@ -32,8 +32,8 @@ interface PaymentMethodsDto {
 
 interface RechargeUserCreditResponseDto {
   payMethodId: number;
-  amountRecharged: number | null;
-  newBalance: number | null;
+  amountRecharged: number | string | null;
+  newBalance: number | string | null;
   challengeUrl: string | null;
 }
 
@@ -44,7 +44,7 @@ interface BalanceRefundResponseDto {
 
 export interface WalletActionResult {
   success: boolean;
-  source: 'remote' | 'mock';
+  source: 'remote' | 'error';
   amount?: number;
   challengeUrl?: string;
   error?: OpsApiError;
@@ -68,7 +68,7 @@ type WalletMovementInput = Omit<WalletMovement, 'id' | 'amount' | 'date'>;
 const LEGACY_DESCRIPTION_KEYS: Record<string, string> = {
   'Recarga de saldo': 'wallet.movement.topUp',
   Estacionamiento: 'wallet.movement.parkingPayment',
-  'Pago de denuncia': 'wallet.movement.finePayment',
+  'Pago de sanción': 'wallet.movement.finePayment',
   'Devolución de saldo': 'wallet.movement.balanceRefund',
 };
 
@@ -79,54 +79,44 @@ export class WalletService {
   private readonly cardsStorageKey = 'urbanoa.payment-cards';
   private readonly defaultCardStorageKey = 'urbanoa.default-payment-card';
 
-  readonly source = signal<'remote' | 'mock'>('mock');
+  readonly source = signal<'idle' | 'remote' | 'error'>('idle');
   readonly loading = signal(false);
   readonly lastError = signal<string | null>(null);
 
-  readonly balance = signal(this.readBalance());
-  readonly movements = signal<WalletMovement[]>(this.readMovements());
-
-  private readonly fallbackCards: MainCard[] = [
-    {
-      id: 'visa-1234',
-      brand: 'Visa',
-      last4: '1234',
-      expiryDate: '12/28',
-      cardholderName: 'Juan García',
-    },
-    {
-      id: 'mastercard-5678',
-      brand: 'Mastercard',
-      last4: '5678',
-      expiryDate: '09/29',
-      cardholderName: 'Juan García',
-    },
-  ];
-
-  readonly cards = signal<MainCard[]>(this.readCards());
-  readonly defaultCardId = signal(this.readDefaultCardId());
+  readonly balance = signal(0);
+  readonly movements = signal<WalletMovement[]>([]);
+  readonly cards = signal<MainCard[]>([]);
+  readonly defaultCardId = signal('');
   readonly defaultCard = computed(() => this.cards().find((card) => card.id === this.defaultCardId()) ?? this.cards()[0]);
 
   private readonly api = inject(OpsApiClient);
   private readonly session = inject(OpsSessionService);
 
   get mainCard(): MainCard {
-    return this.defaultCard() ?? this.fallbackCards[0];
+    return this.defaultCard() ?? { id: '', brand: '', last4: '', expiryDate: '', cardholderName: '' };
   }
 
-  addCard(card: Omit<MainCard, 'id'>): MainCard {
-    const created = { ...card, id: generateUuid() };
-    this.cards.update((cards) => [...cards, created]);
-    if (!this.defaultCardId()) this.defaultCardId.set(created.id);
-    this.persistCards();
-    return created;
+  async loadPaymentMethodForm(): Promise<string | null> {
+    const token = this.session.token();
+    if (!token) return null;
+    try {
+      const html = await this.api.get<string>(OPS_ENDPOINTS.wallet.loadPaymentForm, { token });
+      this.source.set('remote');
+      this.lastError.set(null);
+      return html;
+    } catch (error) {
+      this.useError(error);
+      return null;
+    }
   }
 
   async load(): Promise<void> {
     const token = this.session?.token();
-    if (!token || !this.api) {
-      this.source.set('mock');
-      this.lastError.set(null);
+    if (!token) {
+      this.balance.set(0);
+      this.cards.set([]);
+      this.source.set('error');
+      this.lastError.set('Se requiere una sesión válida');
       return;
     }
 
@@ -146,7 +136,9 @@ export class WalletService {
       this.persistWallet();
       this.persistCards();
     } catch (error) {
-      this.useMock(error);
+      this.balance.set(0);
+      this.cards.set([]);
+      this.useError(error);
     } finally {
       this.loading.set(false);
     }
@@ -162,10 +154,12 @@ export class WalletService {
         this.source.set('remote');
         this.lastError.set(null);
       } catch (error) {
-        this.useMock(error);
+        this.useError(error);
+        return false;
       }
     } else {
-      this.source.set('mock');
+      this.source.set('error');
+      return false;
     }
     this.setDefaultCardLocal(id);
     return true;
@@ -181,10 +175,12 @@ export class WalletService {
         this.source.set('remote');
         this.lastError.set(null);
       } catch (error) {
-        this.useMock(error);
+        this.useError(error);
+        return false;
       }
     } else {
-      this.source.set('mock');
+      this.source.set('error');
+      return false;
     }
     this.removeCardLocal(id);
     return true;
@@ -194,7 +190,7 @@ export class WalletService {
     const value = Math.abs(amount);
     const token = this.session?.token();
     const payMethodId = this.remoteId(cardId);
-    if (!token || !this.api || payMethodId === null) return this.mockRecharge(value);
+    if (!token || payMethodId === null) return { success: false, source: 'error' };
 
     try {
       const response = await this.api.post<RechargeUserCreditResponseDto>(
@@ -206,23 +202,23 @@ export class WalletService {
       this.lastError.set(null);
       if (response.challengeUrl) return { success: true, source: 'remote', challengeUrl: response.challengeUrl };
 
-      const recharged = this.fromCents(response.amountRecharged ?? this.toCents(value));
+      const recharged = this.fromCents(Number(response.amountRecharged ?? this.toCents(value)) || 0);
       if (response.newBalance !== null) {
-        this.balance.set(this.fromCents(response.newBalance));
+        this.balance.set(this.fromCents(Number(response.newBalance) || 0));
         this.pushMovement(recharged, { type: 'top-up', descriptionKey: 'wallet.movement.topUp' });
       } else {
         this.credit(recharged, { type: 'top-up', descriptionKey: 'wallet.movement.topUp' });
       }
       return { success: true, source: 'remote', amount: recharged };
     } catch (error) {
-      return this.mockRecharge(value, error);
+      return { success: false, source: 'error', error: this.useError(error) };
     }
   }
 
   async refund(amount: number, cloudToken = ''): Promise<WalletActionResult> {
     const value = Math.min(Math.abs(amount), this.balance());
     const token = this.session?.token();
-    if (!token || !this.api) return this.mockRefund(value);
+    if (!token) return { success: false, source: 'error' };
 
     try {
       const response = await this.api.post<BalanceRefundResponseDto>(
@@ -236,7 +232,7 @@ export class WalletService {
       this.lastError.set(null);
       return { success: true, source: 'remote', amount: refunded };
     } catch (error) {
-      return this.mockRefund(value, error);
+      return { success: false, source: 'error', error: this.useError(error) };
     }
   }
 
@@ -292,43 +288,6 @@ export class WalletService {
     };
   }
 
-  private readBalance(): number {
-    try {
-      const raw = localStorage.getItem(this.balanceStorageKey);
-      if (raw === null) return 12.5;
-      const stored = Number(raw);
-      return Number.isFinite(stored) ? stored : 12.5;
-    } catch {
-      return 12.5;
-    }
-  }
-
-  private readMovements(): WalletMovement[] {
-    try {
-      const parsed = JSON.parse(localStorage.getItem(this.movementsStorageKey) ?? 'null') as WalletMovement[] | null;
-      return Array.isArray(parsed) ? parsed : [];
-    } catch {
-      return [];
-    }
-  }
-
-  private readCards(): MainCard[] {
-    try {
-      const parsed = JSON.parse(localStorage.getItem(this.cardsStorageKey) ?? 'null') as MainCard[] | null;
-      return Array.isArray(parsed) ? parsed : this.fallbackCards.map((card) => ({ ...card }));
-    } catch {
-      return this.fallbackCards.map((card) => ({ ...card }));
-    }
-  }
-
-  private readDefaultCardId(): string {
-    try {
-      return localStorage.getItem(this.defaultCardStorageKey) ?? this.readCards()[0]?.id ?? '';
-    } catch {
-      return this.fallbackCards[0].id;
-    }
-  }
-
   private persistWallet(): void {
     this.writeStorage(this.balanceStorageKey, String(this.balance()));
     this.writeStorage(this.movementsStorageKey, JSON.stringify(this.movements()));
@@ -369,33 +328,18 @@ export class WalletService {
     this.persistCards();
   }
 
-  private mockRecharge(amount: number, error?: unknown): WalletActionResult {
-    const apiError = error === undefined ? undefined : this.useMock(error);
-    this.source.set('mock');
-    this.credit(amount, { type: 'top-up', descriptionKey: 'wallet.movement.topUp' });
-    return { success: true, source: 'mock', amount, error: apiError };
-  }
-
-  private mockRefund(amount: number, error?: unknown): WalletActionResult {
-    const apiError = error === undefined ? undefined : this.useMock(error);
-    this.source.set('mock');
-    this.recordRefund(amount);
-    return { success: true, source: 'mock', amount, error: apiError };
-  }
-
   private recordRefund(amount: number): void {
     const value = Math.min(Math.abs(amount), this.balance());
     this.balance.update((balance) => Math.max(0, balance - value));
     this.pushMovement(-value, { type: 'balance-refund', descriptionKey: 'wallet.movement.balanceRefund' });
   }
 
-  private useMock(error: unknown): OpsApiError {
+  private useError(error: unknown): OpsApiError {
     const apiError =
       error instanceof OpsApiError
         ? error
         : new OpsApiError('transport', 'wallet', error instanceof Error ? error.message : 'Error desconocido');
-    console.warn('[OPS API] La billetera utiliza fallback mock', apiError);
-    this.source.set('mock');
+    this.source.set('error');
     this.lastError.set(apiError.message);
     return apiError;
   }

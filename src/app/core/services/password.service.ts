@@ -9,7 +9,7 @@ export class PasswordService {
   private readonly authService = inject(AuthService);
   private readonly opsApi = inject(OpsApiClient);
   private readonly opsSession = inject(OpsSessionService);
-  readonly source = signal<'remote' | 'mock'>('mock');
+  readonly source = signal<'idle' | 'remote' | 'error'>('idle');
 
   async requestCode(email: string): Promise<void> {
     await this.authService.requestPasswordReset(email);
@@ -26,7 +26,7 @@ export class PasswordService {
       await this.opsApi.post(OPS_ENDPOINTS.user.updatePassword, { password: newPassword }, { token: this.opsSession.token() });
       this.source.set('remote');
     } catch (error) {
-      this.source.set('mock');
+      this.source.set('error');
       throw error;
     }
   }

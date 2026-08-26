@@ -1,10 +1,8 @@
 import { inject, Injectable, signal } from '@angular/core';
-import { MOCK_USER } from '../../shared/mock-data';
 import { OpsApiClient } from '../api/ops-api-client.service';
-import { OpsApiError, type DataSource } from '../api/ops-api.types';
+import { OpsApiError } from '../api/ops-api.types';
 import { OPS_ENDPOINTS } from '../api/ops-endpoints';
 import { OpsSessionService } from '../api/ops-session.service';
-import { readStorage, writeStorage } from '../storage/signal-storage';
 
 export interface UserAddress {
   street: string;
@@ -31,7 +29,7 @@ export interface UserData {
 
 export interface UserMutationResult {
   success: boolean;
-  source: DataSource;
+  source: 'remote' | 'error';
 }
 
 interface UserApiPayload {
@@ -75,19 +73,18 @@ export class UserService {
   private readonly api = inject(OpsApiClient);
   private readonly session = inject(OpsSessionService);
 
-  private readonly storageKey = 'urbanoa.user-profile';
-  private readonly fallbackUser: UserData = {
-    name: MOCK_USER.name,
-    surname: MOCK_USER.surname,
+  private readonly emptyUser: UserData = {
+    name: '',
+    surname: '',
     secondSurname: '',
-    email: MOCK_USER.email,
-    nif: MOCK_USER.nif,
-    phone: MOCK_USER.phone,
+    email: '',
+    nif: '',
+    phone: '',
     address: emptyAddress(),
   };
 
-  private readonly state = signal<UserData>(readStorage(this.storageKey, this.fallbackUser));
-  private readonly sourceState = signal<DataSource>('mock');
+  private readonly state = signal<UserData>(this.emptyUser);
+  private readonly sourceState = signal<'idle' | 'remote' | 'error'>('idle');
   private readonly errorState = signal<OpsApiError | null>(null);
   private remoteProfile: UserApiPayload | null = null;
 
@@ -98,7 +95,8 @@ export class UserService {
   async load(): Promise<UserData> {
     const token = this.session.token();
     if (!token) {
-      this.sourceState.set('mock');
+      this.state.set(this.emptyUser);
+      this.sourceState.set('error');
       return this.state();
     }
 
@@ -108,13 +106,12 @@ export class UserService {
       this.state.set(this.fromApi(value, this.state()));
       this.sourceState.set('remote');
       this.errorState.set(null);
-      this.persist();
       return this.state();
     } catch (error) {
       const apiError = error instanceof OpsApiError ? error : new OpsApiError('invalid-response', OPS_ENDPOINTS.user.query, String(error));
-      this.sourceState.set('mock');
+      this.state.set(this.emptyUser);
+      this.sourceState.set('error');
       this.errorState.set(apiError);
-      console.warn('[OPS API] Se conservan los datos locales del perfil', apiError);
       return this.state();
     }
   }
@@ -130,7 +127,6 @@ export class UserService {
     const result = await this.remoteUpdate(next);
     if (result.success) {
       this.state.set(next);
-      this.persist();
     }
     return result;
   }
@@ -142,14 +138,13 @@ export class UserService {
       ...changes,
       address: { ...current.address, ...(changes.address ?? {}) },
     });
-    this.persist();
   }
 
   private async remoteUpdate(user: UserData): Promise<UserMutationResult> {
     const token = this.session.token();
     if (!token) {
-      this.sourceState.set('mock');
-      return { success: true, source: 'mock' };
+      this.sourceState.set('error');
+      return { success: false, source: 'error' };
     }
 
     try {
@@ -162,19 +157,18 @@ export class UserService {
         error instanceof OpsApiError
           ? error
           : new OpsApiError('invalid-response', OPS_ENDPOINTS.user.update, error instanceof Error ? error.message : 'Error desconocido');
-      this.sourceState.set('mock');
+      this.sourceState.set('error');
       this.errorState.set(apiError);
-      console.warn('[OPS API] Actualización de perfil aplicada solo localmente', apiError);
-      return { success: false, source: 'mock' };
+      return { success: false, source: 'error' };
     }
   }
 
-  private fromApi(value: UserApiPayload, fallback: UserData): UserData {
+  private fromApi(value: UserApiPayload, base: UserData): UserData {
     return {
-      name: readString(value.names) || fallback.name,
-      surname: readString(value.firstSurname) || fallback.surname,
+      name: readString(value.names) || base.name,
+      surname: readString(value.firstSurname) || base.surname,
       secondSurname: readString(value.secondSurname),
-      email: readString(value.email) || fallback.email,
+      email: readString(value.email) || base.email,
       nif: readString(value.nif),
       phone: readString(value.mainMobilePhone),
       address: {
@@ -187,7 +181,7 @@ export class UserService {
         city: readString(value.addressCity),
         province: readString(value.addressProvince),
         postalCode: readString(value.addressPostalCode),
-        country: readString(value.addressCountry) || fallback.address.country,
+        country: readString(value.addressCountry) || base.address.country,
       },
     };
   }
@@ -222,7 +216,4 @@ export class UserService {
     };
   }
 
-  private persist(): void {
-    writeStorage(this.storageKey, this.state());
-  }
 }

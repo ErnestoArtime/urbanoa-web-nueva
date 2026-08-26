@@ -95,9 +95,10 @@ export class AuthService {
   readonly token = computed(() => this.session()?.token ?? '');
   readonly user = computed(() => this.session()?.user ?? EMPTY_USER);
   readonly isAuthenticated = computed(() => Boolean(this.token()));
-  readonly source = signal<'remote' | 'mock'>(this.token().startsWith('mock-') ? 'mock' : this.token() ? 'remote' : 'mock');
+  readonly source = signal<'idle' | 'remote' | 'error'>(this.token() ? 'remote' : 'idle');
 
   constructor() {
+    if (this.token().startsWith('mock-')) this.clearSession();
     this.syncOpsSession(this.token());
   }
 
@@ -119,7 +120,7 @@ export class AuthService {
       this.storeSession({ token: response.token, refreshToken: '', user });
       return user;
     } catch (error) {
-      this.source.set('mock');
+      this.source.set('error');
       throw error;
     }
   }
@@ -137,7 +138,7 @@ export class AuthService {
       await this.opsApi.post(OPS_ENDPOINTS.auth.register, body, { headers: this.languageHeaders() });
       this.source.set('remote');
     } catch (error) {
-      this.source.set('mock');
+      this.source.set('error');
       throw error;
     }
   }
@@ -150,7 +151,7 @@ export class AuthService {
       await this.opsApi.post(OPS_ENDPOINTS.auth.resendMail, body, { headers: this.languageHeaders() });
       this.source.set('remote');
     } catch (error) {
-      this.source.set('mock');
+      this.source.set('error');
       throw error;
     }
   }
@@ -168,7 +169,7 @@ export class AuthService {
       );
       this.source.set('remote');
     } catch (error) {
-      this.source.set('mock');
+      this.source.set('error');
       throw error;
     }
   }
@@ -183,7 +184,7 @@ export class AuthService {
       );
       this.source.set('remote');
     } catch (error) {
-      this.source.set('mock');
+      this.source.set('error');
       throw error;
     }
   }
@@ -197,7 +198,7 @@ export class AuthService {
       );
       this.source.set('remote');
     } catch (error) {
-      this.source.set('mock');
+      this.source.set('error');
       throw error;
     }
   }
@@ -286,7 +287,7 @@ export class AuthService {
       phone: session.user.phone,
       address: session.user.address,
     });
-    this.source.set(session.token.startsWith('mock-') ? 'mock' : 'remote');
+    this.source.set('remote');
   }
 
   private clearSession(): void {
@@ -298,7 +299,7 @@ export class AuthService {
       // Storage may be unavailable in private or restricted contexts.
     }
     this.syncOpsSession('');
-    this.source.set('mock');
+    this.source.set('idle');
   }
 
   private syncOpsSession(token: string): void {

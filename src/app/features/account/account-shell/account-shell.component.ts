@@ -3,7 +3,7 @@ import { DecimalPipe } from '@angular/common';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { filter, map, startWith } from 'rxjs/operators';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { ACCOUNT_MENU } from '../../../shared/mock-data';
+import { ACCOUNT_MENU } from '../../../shared/constants/navigation';
 import { AppIconComponent } from '../../../shared/icons/app-icon.component';
 import { SplitViewComponent } from '../../../layout/split-view/split-view.component';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';

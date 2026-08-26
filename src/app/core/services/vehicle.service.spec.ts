@@ -27,9 +27,12 @@ describe('VehicleService', () => {
 
   it('marks a newly added plate favorite and clears the previous favorite remotely', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'getOrNull', 'post']);
+    api.getOrNull.and.resolveTo({ plates: [{ plate: '1234 ABC', favorite: true }, { plate: '5678 XYZ', favorite: false }] });
     api.post.and.resolveTo('OK');
     const service = serviceWith(api);
     TestBed.inject(OpsSessionService).setToken('token');
+    await service.load();
+    api.post.calls.reset();
 
     const result = await service.add({ plate: ' 9999 xyz ', isDefault: true });
 
@@ -51,8 +54,10 @@ describe('VehicleService', () => {
 
   it('setDefault is a no-op when the vehicle is already the favorite', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'getOrNull', 'post']);
+    api.getOrNull.and.resolveTo({ plates: [{ plate: '1234 ABC', favorite: true }] });
     const service = serviceWith(api);
     TestBed.inject(OpsSessionService).setToken('token');
+    await service.load();
     const current = service.vehicles().find((v) => v.isDefault);
 
     const result = await service.setDefault(current!.id);
@@ -63,9 +68,12 @@ describe('VehicleService', () => {
 
   it('promotes and remotely favorites a new default when the favorite plate is removed', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'getOrNull', 'post']);
+    api.getOrNull.and.resolveTo({ plates: [{ plate: '1234 ABC', favorite: true }, { plate: '5678 XYZ', favorite: false }] });
     api.post.and.resolveTo('OK');
     const service = serviceWith(api);
     TestBed.inject(OpsSessionService).setToken('token');
+    await service.load();
+    api.post.calls.reset();
     const favorite = service.vehicles().find((v) => v.isDefault)!;
     const other = service.vehicles().find((v) => v.id !== favorite.id)!;
 
@@ -80,9 +88,12 @@ describe('VehicleService', () => {
 
   it('does not promote a new default when the removed plate was not the favorite', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'getOrNull', 'post']);
+    api.getOrNull.and.resolveTo({ plates: [{ plate: '1234 ABC', favorite: true }, { plate: '5678 XYZ', favorite: false }] });
     api.post.and.resolveTo('OK');
     const service = serviceWith(api);
     TestBed.inject(OpsSessionService).setToken('token');
+    await service.load();
+    api.post.calls.reset();
     const nonFavorite = service.vehicles().find((v) => !v.isDefault)!;
 
     await service.remove(nonFavorite.id);
@@ -119,7 +130,7 @@ describe('VehicleService', () => {
     expect(service.vehicles()).toEqual([]);
   });
 
-  it('keeps the mock fallback and records the failure when the plates request fails', async () => {
+  it('clears plates and records the failure when the plates request fails', async () => {
     localStorage.setItem('urbanoa.vehicles', JSON.stringify([{ id: '7777 KKK', plate: '7777 KKK', isDefault: false }]));
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'getOrNull', 'post']);
     api.getOrNull.and.rejectWith(new Error('HTTP 500 - {"Message":"Error."}'));
@@ -128,9 +139,9 @@ describe('VehicleService', () => {
 
     await service.load();
 
-    expect(service.source()).toBe('mock');
+    expect(service.source()).toBe('error');
     expect(service.lastError()).toBeTruthy();
-    expect(service.vehicles().some((v) => v.plate === '7777 KKK')).toBeTrue();
+    expect(service.vehicles()).toEqual([]);
   });
 
   it('promotes a newly added plate when the list would be left without any favorite', async () => {
@@ -152,14 +163,14 @@ describe('VehicleService', () => {
     expect(result.source).toBe('remote');
   });
 
-  it('keeps local mock behavior when login is postponed', async () => {
+  it('rejects a local-only plate when login is postponed', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'getOrNull', 'post']);
     const service = serviceWith(api);
 
     const result = await service.add({ plate: '9999 XYZ', isDefault: false });
 
     expect(api.post).not.toHaveBeenCalled();
-    expect(result.source).toBe('mock');
-    expect(service.vehicles().some((vehicle) => vehicle.plate === '9999 XYZ')).toBeTrue();
+    expect(result.source).toBe('error');
+    expect(service.vehicles()).toEqual([]);
   });
 });

@@ -1,7 +1,7 @@
 import { Component, computed, input } from '@angular/core';
 import { TranslatePipe } from '../../pipes/translate.pipe';
 import { AppIconComponent } from '../../icons/app-icon.component';
-import type { Wallet } from '../../mock-data';
+import type { Wallet } from '../../models/wallet';
 
 export type PaymentMethod = 'none' | 'balance' | 'card' | 'mixed';
 

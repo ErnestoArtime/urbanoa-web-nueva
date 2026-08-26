@@ -1,24 +1,34 @@
 import { Injectable, inject } from '@angular/core';
 import { OperationsService, type ActiveParking } from './operations.service';
-
-export type StartParkingInput = ActiveParking & { amount: number };
+import { ParkingApiService } from './parking-api.service';
+import { WalletService } from './wallet.service';
 
 @Injectable({ providedIn: 'root' })
 export class ParkingSessionService {
   private readonly operationsService = inject(OperationsService);
+  private readonly parkingApi = inject(ParkingApiService);
+  private readonly walletService = inject(WalletService);
 
   readonly activeParkings = this.operationsService.activeParkings;
   readonly activeParkingsCount = this.operationsService.activeParkingsCount;
   readonly hasActiveParkings = this.operationsService.hasActiveParkings;
   readonly activeSource = this.operationsService.activeSource;
 
-  startParking(input: StartParkingInput): ActiveParking | null {
-    const started = this.operationsService.startParking(input);
-    return started ? (this.operationsService.getActiveParking(input.id) ?? null) : null;
-  }
-
-  leaveParking(parkingId: string): boolean {
-    return this.operationsService.unpark(parkingId);
+  async leaveParking(parkingId: string): Promise<boolean> {
+    const parking = this.operationsService.getActiveParking(parkingId);
+    if (!parking?.contractId) return false;
+    const result = await this.parkingApi.unpark({
+      contractId: parking.contractId,
+      plate: parking.plate,
+      ticketId: parking.tariffId,
+    });
+    if (!result.success) return false;
+    await Promise.all([
+      this.operationsService.load(),
+      this.walletService.load(),
+      this.operationsService.loadParkingStatuses([{ id: parking.vehicleId, plate: parking.plate }], parking.contractId),
+    ]);
+    return true;
   }
 
   extendParking(parkingId: string, minutes: number): boolean {

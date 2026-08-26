@@ -150,7 +150,7 @@ describe('AuthService', () => {
     await expectAsync(service.login('user@example.com', 'secret')).toBeRejectedWithError('backend unavailable');
 
     expect(service.token()).toBe('');
-    expect(service.source()).toBe('mock');
+    expect(service.source()).toBe('error');
     expect(opsApi.get).not.toHaveBeenCalled();
   });
 });

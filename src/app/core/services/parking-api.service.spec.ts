@@ -35,7 +35,7 @@ describe('ParkingApiService', () => {
       jasmine.objectContaining({
         contractId: 3,
         plate: '1234ABC',
-        sector: 4,
+        sector: '4',
         quantity: 125,
         tariffType: 2,
         cloudToken: '',
@@ -47,7 +47,7 @@ describe('ParkingApiService', () => {
     expect(result.source).toBe('remote');
   });
 
-  it('keeps the parking flow local while login is postponed', async () => {
+  it('rejects confirmation when there is no authenticated session', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
     const service = serviceWith(api);
 
@@ -66,7 +66,7 @@ describe('ParkingApiService', () => {
     });
 
     expect(api.post).not.toHaveBeenCalled();
-    expect(result.source).toBe('mock');
+    expect(result).toEqual(jasmine.objectContaining({ success: false, source: 'remote' }));
   });
 
   it('queries and confirms unparking with the Swagger date and refund contracts', async () => {

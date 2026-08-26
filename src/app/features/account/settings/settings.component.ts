@@ -4,7 +4,8 @@ import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/
 import { LocationSettingsService, type LocationPermissionState } from '../../../core/services/location-settings.service';
 import { SecuritySettingsService, type BiometricMode } from '../../../core/services/security-settings.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
-import { MOCK_MUNICIPIOS } from '../../../shared/mock-data';
+import { CitiesService } from '../../../core/services/cities.service';
+import type { Municipio } from '../../../shared/models/municipio';
 
 interface LocationMessage {
   key: string;
@@ -168,7 +169,7 @@ interface LocationMessage {
             <h3>{{ 'account.settings.location.cityPickerTitle' | translate }}</h3>
             <p>{{ 'account.settings.location.cityPickerDesc' | translate }}</p>
             <div class="city-list">
-              @for (city of municipios; track city.id) {
+              @for (city of municipios(); track city.id) {
                 <button
                   type="button"
                   class="city-option"
@@ -476,11 +477,18 @@ interface LocationMessage {
 export class AccountSettingsComponent {
   readonly locationService = inject(LocationSettingsService);
   readonly security = inject(SecuritySettingsService);
-  readonly municipios = MOCK_MUNICIPIOS;
+  readonly municipios = signal<Municipio[]>([]);
   readonly pendingBiometric = signal<BiometricMode | null>(null);
   readonly showClearConfirm = signal(false);
   readonly showCityPicker = signal(false);
   readonly locationMessage = signal<LocationMessage | null>(null);
+
+  constructor() {
+    void inject(CitiesService)
+      .getCities()
+      .then((result) => this.municipios.set(result.data))
+      .catch(() => this.municipios.set([]));
+  }
 
   permissionLabelKey(): string {
     const map: Record<LocationPermissionState, string> = {

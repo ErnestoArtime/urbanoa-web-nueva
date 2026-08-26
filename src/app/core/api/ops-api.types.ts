@@ -13,7 +13,7 @@ export interface OpsApiEnvelope<T> {
   error: OpsApiErrorPayload | null;
 }
 
-export type DataSource = 'remote' | 'mock';
+export type DataSource = 'remote' | 'error';
 
 export interface DataResult<T> {
   data: T;

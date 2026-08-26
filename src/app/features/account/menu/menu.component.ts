@@ -1,8 +1,10 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { NavigationEnd, Router, RouterLink } from '@angular/router';
-import { ACCOUNT_MENU, MOCK_USER, MOCK_VEHICLES } from '../../../shared/mock-data';
+import { ACCOUNT_MENU } from '../../../shared/constants/navigation';
 import { WalletService } from '../../../core/services/wallet.service';
+import { UserService } from '../../../core/services/user.service';
+import { VehicleService } from '../../../core/services/vehicle.service';
 import { AccountProfileComponent } from '../profile/profile.component';
 import { AccountSettingsComponent } from '../settings/settings.component';
 import { AccountNotificationsComponent } from '../notifications/notifications.component';
@@ -49,10 +51,10 @@ import { environment } from '../../../../environments/environment';
       <section class="account-master">
         <h1 class="page-title">{{ 'account.title' | translate }}</h1>
         <div class="account-profile">
-          <span class="account-avatar">{{ user.name.charAt(0) }}</span>
+          <span class="account-avatar">{{ user().name.charAt(0) }}</span>
           <div>
-            <strong>{{ user.name }} {{ user.surname }}</strong
-            ><span>{{ user.email }}</span
+            <strong>{{ user().name }} {{ user().surname }}</strong
+            ><span>{{ user().email }}</span
             ><span>{{ walletService.balance() | number: '1.2-2' }} €</span>
           </div>
         </div>
@@ -141,7 +143,7 @@ import { environment } from '../../../../environments/environment';
                 } @else {
                   <div class="page">
                     <ul class="list card" style="padding:0;overflow:hidden">
-                      @for (v of vehicles; track v.id) {
+                      @for (v of vehicles(); track v.id) {
                         <a class="list-item" (click)="vehiclesSub.set('edit'); $event.preventDefault()">
                           <div class="list-item-content">
                             <div class="list-item-title">{{ v.plate }}</div>
@@ -176,7 +178,7 @@ import { environment } from '../../../../environments/environment';
                   <div class="page">
                     <div class="wallet-card mb-2">
                       <p style="opacity:0.9">{{ 'account.wallet' | translate }} {{ brand.name }}</p>
-                      <p class="wallet-balance">{{ user.balance | number: '1.2-2' }} €</p>
+                      <p class="wallet-balance">{{ walletService.balance() | number: '1.2-2' }} €</p>
                     </div>
                     <p class="section-title">{{ 'account.cards' | translate }}</p>
                     <div class="card">
@@ -423,9 +425,9 @@ export class AccountMenuComponent {
   translateLabel(value: string): string {
     return this.translationService.translateLabel(value);
   }
-  readonly user = MOCK_USER;
+  readonly user = inject(UserService).user;
   readonly menu = ACCOUNT_MENU;
-  readonly vehicles = MOCK_VEHICLES;
+  readonly vehicles = inject(VehicleService).vehicles;
   readonly selected = signal<string | null>(null);
   readonly vehiclesSub = signal<string | null>(null);
   readonly paymentSub = signal<string | null>(null);

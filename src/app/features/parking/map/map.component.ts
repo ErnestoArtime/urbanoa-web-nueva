@@ -2,7 +2,7 @@ import { AfterViewInit, Component, ElementRef, OnDestroy, ViewChild, computed, i
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import * as L from 'leaflet';
 import { LucideStar } from '@lucide/angular';
-import { MOCK_MUNICIPIOS, type Municipio, type Vehicle } from '../../../shared/mock-data';
+import type { Vehicle } from '../../../shared/models/vehicle';
 import { LoaderComponent } from '../../../shared/components/loader/loader.component';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { ParkingFlowStore } from '../parking-flow.store';
@@ -12,9 +12,12 @@ import { LocationSettingsService } from '../../../core/services/location-setting
 import { ParkingSessionService } from '../../../core/services/parking-session.service';
 import { TranslationService } from '../../../core/services/translation.service';
 import { MapLocationControlComponent, type MapLocationState } from './map-location-control.component';
+import { CitiesService, type ParkingMunicipio } from '../../../core/services/cities.service';
+import { ParkingApiService } from '../../../core/services/parking-api.service';
 
 interface MapParkingZone {
   zoneId: number;
+  sectorId?: number;
   name: string;
   street: string;
   color: string;
@@ -524,6 +527,8 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
   private readonly vehicleService = inject(VehicleService);
   private readonly locationSettings = inject(LocationSettingsService);
   private readonly translationService = inject(TranslationService);
+  private readonly citiesService = inject(CitiesService);
+  private readonly parkingApi = inject(ParkingApiService);
   private readonly query: ParkingFlowQuery = this.store.hasMinimumParkingData() ? this.store.fromStore() : readParkingFlowQuery(this.route);
   private map?: L.Map;
   private zoneLayer?: L.FeatureGroup;
@@ -532,18 +537,8 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
   private locationMarker?: L.CircleMarker;
   private readonly zones: MapParkingZone[] = [];
   private highlightedZone?: MapParkingZone;
-  readonly selected: Municipio = this.resolveMunicipio();
-
-  private resolveMunicipio(): Municipio {
-    const fromQuery = MOCK_MUNICIPIOS.find((m) => m.id === this.query.city);
-    if (fromQuery) return fromQuery;
-    const preferredId = this.locationSettings.settings().preferredCityId;
-    if (preferredId) {
-      const match = MOCK_MUNICIPIOS.find((m) => m.id === preferredId);
-      if (match) return match;
-    }
-    return MOCK_MUNICIPIOS[1];
-  }
+  private readonly selectedState = signal<ParkingMunicipio>(EMPTY_CITY);
+  get selected(): ParkingMunicipio { return this.selectedState(); }
   readonly mapLoading = signal(true);
   readonly flowError = signal(this.route.snapshot.queryParamMap.get('flowError') === 'missingData');
   readonly mapError = signal(false);
@@ -564,9 +559,11 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
       this.availableVehicles()[0] ??
       null,
   );
-  readonly canStartParking = computed(() =>
-    Boolean(this.selectedZone() && this.selectedVehicle() && !this.isParkedIn(this.selectedVehicle()!)),
-  );
+  readonly canStartParking = computed(() => {
+    const zone = this.selectedZone();
+    const vehicle = this.selectedVehicle();
+    return Boolean(zone?.sectorId && vehicle && !this.isParkedIn(vehicle));
+  });
   readonly showVehicleSelector = signal(false);
 
   toggleVehicleSelector(): void {
@@ -585,7 +582,23 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
     return vehicle ? { vehicleId: vehicle.id, plate: vehicle.plate } : {};
   }
 
-  ngAfterViewInit(): void {
+  async ngAfterViewInit(): Promise<void> {
+    try {
+      const { data } = await this.citiesService.getCities();
+      const requestedContractId = Number(this.query.cityId);
+      const preferredId = this.locationSettings.settings().preferredCityId;
+      const selected =
+        data.find((city) => city.contractId === requestedContractId) ??
+        data.find((city) => city.id === this.query.city) ??
+        data.find((city) => city.id === preferredId) ??
+        data[0];
+      if (!selected) throw new Error('No hay contratos de aparcamiento disponibles');
+      this.selectedState.set(selected);
+    } catch {
+      this.mapError.set(true);
+      this.mapLoading.set(false);
+      return;
+    }
     const vehicle = this.selectedVehicle();
     if (vehicle) this.store.update({ vehicleId: vehicle.id, plate: vehicle.plate });
     this.map = L.map(this.mapContainer.nativeElement, { zoomControl: false }).setView(this.cityCenter(), 15);
@@ -644,12 +657,14 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
     if (!zone || !center || !vehicle || !this.canStartParking()) return;
     this.store.update({
       city: this.selected.id,
-      cityId: String(this.contractId()),
+      cityId: String(this.selected.contractId),
       cityName: this.selected.nombre,
       plate: vehicle.plate,
       vehicleId: vehicle.id,
       zoneId: String(zone.zoneId),
       zoneName: zone.name,
+        sectorId: String(zone.sectorId),
+      sectorName: zone.name,
       street: zone.street,
       sectorColor: zone.color,
       latitude: center.lat.toFixed(7),
@@ -659,11 +674,13 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
       queryParams: {
         city: this.selected.id,
         cityName: this.selected.nombre,
-        cityId: this.contractId(),
+        cityId: this.selected.contractId,
         plate: vehicle.plate,
         vehicleId: vehicle.id,
         zoneId: zone.zoneId,
         zone: zone.name,
+          sectorId: zone.sectorId,
+        sector: zone.name,
         street: zone.street,
         sectorColor: zone.color,
         latitude: center.lat.toFixed(7),
@@ -683,14 +700,15 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
       deba: [43.29448, -2.35403],
       mutriku: [43.3060587, -2.3872368],
     };
-    return centers[this.selected.id] ?? centers['zarautz'];
+    if (this.selected.latitude && this.selected.longitude) return [this.selected.latitude, this.selected.longitude];
+    return centers[this.selected.id] ?? [43.283891, -2.168643];
   }
 
   private async loadRealZones(): Promise<void> {
     try {
-      const response = await fetch(`assets/municipios/kml/${this.selected.id}.kml`);
-      if (!response.ok) throw new Error(`KML ${response.status}`);
-      const xml = new DOMParser().parseFromString(await response.text(), 'application/xml');
+      const response = await this.parkingApi.mapStretches(this.selected.contractId);
+      if (!response.data?.trim()) throw new Error('QueryMapStretchesAPI no devolvió KML');
+      const xml = new DOMParser().parseFromString(response.data, 'application/xml');
       const layers: L.Polygon[] = [];
       for (const placemark of Array.from(xml.getElementsByTagName('Placemark'))) {
         const name = placemark.getElementsByTagName('name')[0]?.textContent?.trim() || 'Zona';
@@ -764,6 +782,29 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
       this.highlightedZone = undefined;
     }
     this.selectedZone.set(zone);
+    if (zone && this.map) void this.resolveSector(zone, this.map.getCenter());
+  }
+
+  private async resolveSector(zone: MapParkingZone, point: L.LatLng): Promise<void> {
+    try {
+      const sectors = await this.parkingApi.sectors({
+        contractId: this.selected.contractId,
+        latitude: point.lat,
+        longitude: point.lng,
+      });
+      const match = sectors.find((sector) => sector.zoneId === zone.zoneId) ?? sectors[0];
+      if (!match || this.selectedZone() !== zone) return;
+      const resolved = {
+        ...zone,
+        zoneId: match.zoneId || zone.zoneId,
+        sectorId: match.sectorId,
+        name: match.sector || match.zone || zone.name,
+        color: (match.sectorColor || match.zoneColor || zone.color).replace('#', ''),
+      };
+      this.selectedZone.set(resolved);
+    } catch {
+      this.mapError.set(true);
+    }
   }
 
   private containsPoint(point: L.LatLng, polygon: L.LatLngTuple[]): boolean {
@@ -792,11 +833,9 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
       .trim();
   }
 
-  private contractId(): number {
-    return (
-      ({ durango: 1, zarautz: 3, tolosa: 5, bergara: 23, arrasate: 61, soria: 73, deba: 79, mutriku: 81 } as Record<string, number>)[
-        this.selected.id
-      ] ?? 3
-    );
-  }
 }
+
+const EMPTY_CITY: ParkingMunicipio = {
+  id: '', nombre: '', provincia: '', zonas: 0, imagen: '', contractId: 0, description1: '', address: '', email: '', imagePath: '',
+  longitude: 0, latitude: 0, phone: '', radius: '',
+};

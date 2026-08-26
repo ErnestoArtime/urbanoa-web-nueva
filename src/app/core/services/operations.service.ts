@@ -1,13 +1,9 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { MOCK_OPERATIONS, MOCK_TICKET_ACTIVE } from '../../shared/mock-data';
 import { OperationType } from '../../shared/models/operation-type';
-import { WalletService } from './wallet.service';
 import type { Operation } from '../../shared/models/operation';
-import { generateUuid } from '../utils/generate-uuid';
 import { OPS_ENDPOINTS } from '../api/ops-endpoints';
 import { OpsApiClient } from '../api/ops-api-client.service';
 import { OpsSessionService } from '../api/ops-session.service';
-import { AppApiClient } from '../api/app-api-client.service';
 import { CitiesService } from './cities.service';
 import { LocationSettingsService } from './location-settings.service';
 
@@ -92,77 +88,66 @@ interface ParkingStatusResponseDto {
 
 @Injectable({ providedIn: 'root' })
 export class OperationsService {
-  private readonly walletService = inject(WalletService);
   private readonly api = inject(OpsApiClient);
   private readonly session = inject(OpsSessionService);
-  private readonly restApi = inject(AppApiClient);
   private readonly citiesService = inject(CitiesService);
   private readonly locationSettings = inject(LocationSettingsService);
-  private readonly storageKey = 'urbanoa.operations';
-  private readonly activeKey = 'urbanoa.operations.active';
-  private readonly _operations = signal<Operation[]>(this.readOps());
-  private readonly _activeParkings = signal<ActiveParking[]>(this.readActive());
+  private readonly _operations = signal<Operation[]>([]);
+  private readonly _activeParkings = signal<ActiveParking[]>([]);
 
   readonly operations = this._operations.asReadonly();
   readonly activeParkings = this._activeParkings.asReadonly();
   readonly activeParkingsCount = computed(() => this._activeParkings().length);
   readonly hasActiveParkings = computed(() => this._activeParkings().length > 0);
-  readonly source = signal<'remote' | 'mock'>('mock');
-  readonly activeSource = signal<'remote' | 'mock'>('mock');
+  readonly source = signal<'idle' | 'remote' | 'error'>('idle');
+  readonly activeSource = signal<'idle' | 'remote' | 'error'>('idle');
   readonly loading = signal(false);
 
   async load(
     dateStart = '2000-01-01',
     dateEnd = '2100-12-31',
-    operationTypeList = Object.values(OperationType).filter(Number.isInteger),
+    operationTypeList = [1, 2, 3, 4, 5, 7, 101, 102, 103, 104],
   ): Promise<void> {
     const token = this.session.token();
     if (!token) {
-      this.source.set('mock');
+      this._operations.set([]);
+      this.source.set('error');
       return;
     }
     this.loading.set(true);
     try {
       const response = await this.api.post<OperationResponseDto[]>(
         OPS_ENDPOINTS.user.operations,
-        { contractId: 0, dateStart, dateEnd, operationTypeList },
+        { contractId: 0, dateStart: this.queryDate(dateStart, false), dateEnd: this.queryDate(dateEnd, true), operationTypeList },
         { token },
       );
       this._operations.set(response.map((item) => this.mapRemoteOperation(item)));
       this.source.set('remote');
-      this.persistOps();
     } catch (error) {
-      console.warn('[OPS API] Operaciones utiliza fallback mock', error);
-      this.source.set('mock');
+      this._operations.set([]);
+      this.source.set('error');
     } finally {
       this.loading.set(false);
     }
   }
 
   async loadDetail(id: string): Promise<Operation | undefined> {
-    try {
-      const response = await this.restApi.get<OperationResponseDto>(`/operations/${encodeURIComponent(id)}`);
-      const operation = this.mapRemoteOperation(response);
-      this._operations.update((items) => [operation, ...items.filter((item) => item.id !== operation.id)]);
-      this.source.set('remote');
-      return operation;
-    } catch (error) {
-      console.warn('[API] Detalle de operación usa fallback local', error);
-      this.source.set('mock');
-      return this.getOperationById(id);
-    }
+    const cached = this.getOperationById(id);
+    if (cached) return cached;
+    await this.load();
+    return this.getOperationById(id);
   }
 
   async loadParkingStatuses(vehicles: readonly { id: string; plate: string }[], contractId?: number): Promise<void> {
     const token = this.session.token();
     if (!token) {
-      this.activeSource.set('mock');
+      this._activeParkings.set([]);
+      this.activeSource.set('error');
       return;
     }
     if (vehicles.length === 0) {
       this._activeParkings.set([]);
       this.activeSource.set('remote');
-      this.persistActive();
       return;
     }
 
@@ -195,16 +180,8 @@ export class OperationsService {
       .filter((parking): parking is ActiveParking => parking !== null);
     const failedPlates = new Set(results.flatMap((result, index) => (result.status === 'rejected' ? [vehicles[index].plate] : [])));
 
-    if (failedPlates.size === 0) {
-      this._activeParkings.set(remote);
-      this.activeSource.set('remote');
-    } else {
-      const fallback = this._activeParkings().filter((parking) => failedPlates.has(parking.plate));
-      this._activeParkings.set([...remote, ...fallback]);
-      this.activeSource.set('mock');
-      console.warn('[OPS API] Estado de algunos aparcamientos utiliza fallback local');
-    }
-    this.persistActive();
+    this._activeParkings.set(remote);
+    this.activeSource.set(failedPlates.size === 0 ? 'remote' : 'error');
   }
 
   private contractIdsToCheck(): number[] {
@@ -216,14 +193,8 @@ export class OperationsService {
   }
 
   async loadReceipt(id: string): Promise<unknown | null> {
-    try {
-      this.source.set('remote');
-      return await this.restApi.get(`/operations/${encodeURIComponent(id)}/receipt`);
-    } catch (error) {
-      console.warn('[API] Recibo usa fallback local', error);
-      this.source.set('mock');
-      return null;
-    }
+    const operation = await this.loadDetail(id);
+    return operation ?? null;
   }
 
   isVehicleParked(vehicleId: string): boolean {
@@ -240,236 +211,6 @@ export class OperationsService {
 
   getOperationById(id: string): Operation | undefined {
     return this._operations().find((op) => op.id === id);
-  }
-
-  removeOperation(id: string): void {
-    this._operations.update((operations) => operations.filter((operation) => operation.id !== id));
-    this.persistOps();
-  }
-
-  registerFinePayment(input: {
-    plate: string;
-    location: string;
-    amount: number;
-    paymentBreakdown?: Operation['paymentBreakdown'];
-    fineNumber?: string;
-    fineArticle?: string;
-    zoneName?: string;
-    sectorName?: string;
-    cityName?: string;
-    latitude?: number;
-    longitude?: number;
-  }): void {
-    const amount = Math.abs(input.amount);
-    const operation: Operation = {
-      id: this.nextId(),
-      type: OperationType.FINE_PAYMENT,
-      plate: input.plate,
-      date: this.todayDateString(),
-      amount: -amount,
-      zone: input.location,
-      paymentBreakdown: input.paymentBreakdown,
-      fineNumber: input.fineNumber,
-      fineArticle: input.fineArticle,
-      zoneName: input.zoneName,
-      sectorName: input.sectorName,
-      cityName: input.cityName,
-      latitude: input.latitude,
-      longitude: input.longitude,
-      startTime: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
-    };
-    this._operations.update((list) => [operation, ...list]);
-    this.persistOps();
-  }
-
-  registerTopUp(amount: number): void {
-    this._operations.update((list) => [
-      {
-        id: this.nextId(),
-        type: OperationType.TOP_UP,
-        plate: null,
-        date: this.todayDateString(),
-        amount: Math.abs(amount),
-        zone: null,
-      },
-      ...list,
-    ]);
-    this.persistOps();
-  }
-
-  registerBalanceRefund(amount: number, destination: string, cardId?: string, cardLabel?: string): void {
-    this._operations.update((list) => [
-      {
-        id: this.nextId(),
-        type: OperationType.BALANCE_REFUND,
-        plate: null,
-        date: this.todayDateString(),
-        amount: -Math.abs(amount),
-        zone: destination,
-        cardId,
-        cardLabel,
-      },
-      ...list,
-    ]);
-    this.persistOps();
-  }
-
-  startParking(input: ActiveParking & { amount: number }): boolean {
-    if (this.isVehicleParked(input.vehicleId)) return false;
-
-    const operationId = this.nextId();
-    const parking: ActiveParking = {
-      id: input.id || generateUuid(),
-      plate: input.plate,
-      vehicleId: input.vehicleId,
-      zone: input.zone,
-      startTime: input.startTime,
-      durationLabel: input.durationLabel,
-      timeRemaining: input.timeRemaining,
-      endTime: input.endTime,
-      latitude: input.latitude,
-      longitude: input.longitude,
-      street: input.street,
-      operationId,
-      paymentBreakdown: input.paymentBreakdown,
-      cardId: input.cardId,
-      cardLabel: input.cardLabel,
-    };
-
-    this._activeParkings.update((list) => [parking, ...list]);
-
-    this._operations.update((list) => [
-      {
-        id: operationId,
-        type: OperationType.PARKING,
-        plate: input.plate,
-        date: this.todayDateString(),
-        amount: -Math.abs(input.amount),
-        zone: input.zone,
-        startTime: input.startTime,
-        endTime: input.endTime,
-        durationLabel: input.durationLabel,
-        paymentBreakdown: input.paymentBreakdown,
-        cardId: input.cardId,
-        cardLabel: input.cardLabel,
-      },
-      ...list,
-    ]);
-    this.persistOps();
-    this.persistActive();
-    return true;
-  }
-
-  unpark(parkingId: string, refundAmount = 0.4): boolean {
-    const active = this._activeParkings().find((p) => p.id === parkingId);
-    if (!active) return false;
-
-    const today = this.todayDateString();
-    const [parkingClosedId, finishParkingId] = this.nextIds(2);
-    const parkingClosed: Operation = {
-      id: parkingClosedId,
-      type: OperationType.PARKING,
-      plate: active.plate,
-      date: today,
-      amount: -1.01,
-      zone: active.zone,
-      startTime: active.startTime,
-      endTime: active.endTime,
-      durationLabel: active.durationLabel,
-      paymentBreakdown: active.paymentBreakdown,
-      cardId: active.cardId,
-      cardLabel: active.cardLabel,
-    };
-
-    const finishParking: Operation = {
-      id: finishParkingId,
-      type: OperationType.REFUND,
-      plate: active.plate,
-      date: today,
-      amount: refundAmount,
-      zone: active.zone,
-      relatedOperationId: active.operationId,
-      startTime: active.startTime,
-      endTime: active.endTime,
-      durationLabel: active.durationLabel,
-    };
-
-    if (refundAmount > 0) this.walletService.credit(refundAmount, 'Devolución de saldo', 'parking-refund');
-    this._operations.update((list) => [finishParking, parkingClosed, ...list]);
-    this._activeParkings.update((list) => list.filter((p) => p.id !== parkingId));
-    this.persistOps();
-    this.persistActive();
-    return true;
-  }
-
-  private readOps(): Operation[] {
-    try {
-      const parsed = JSON.parse(localStorage.getItem(this.storageKey) ?? 'null') as Operation[] | null;
-      if (Array.isArray(parsed) && parsed.length) return this.normalizeOperationIds(parsed);
-    } catch {
-      /* fall through */
-    }
-    return MOCK_OPERATIONS.map((op) => ({ ...op }));
-  }
-
-  private readActive(): ActiveParking[] {
-    try {
-      const parsed = JSON.parse(localStorage.getItem(this.activeKey) ?? 'null');
-      if (Array.isArray(parsed)) {
-        return parsed
-          .filter((p: ActiveParking) => p.id && p.plate)
-          .map((p: ActiveParking) => ({ ...p, operationId: p.operationId || MOCK_TICKET_ACTIVE?.operationId || this.nextId() }));
-      }
-    } catch {
-      /* fall through */
-    }
-    if (MOCK_TICKET_ACTIVE) {
-      const now = new Date();
-      const [h, m] = MOCK_TICKET_ACTIVE.endTime.split(':').map(Number);
-      const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m);
-      const totalSeconds = Math.round((end.getTime() - now.getTime()) / 1000);
-      const hh = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
-      const mm = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
-      const ss = String(totalSeconds % 60).padStart(2, '0');
-      return [
-        {
-          id: 'mock-1',
-          plate: MOCK_TICKET_ACTIVE.plate,
-          vehicleId: '1',
-          zone: MOCK_TICKET_ACTIVE.zone,
-          startTime: MOCK_TICKET_ACTIVE.startTime,
-          durationLabel: MOCK_TICKET_ACTIVE.durationLabel,
-          timeRemaining: totalSeconds > 0 ? `${hh}:${mm}:${ss}` : '00:00:00',
-          endTime: MOCK_TICKET_ACTIVE.endTime,
-          latitude: MOCK_TICKET_ACTIVE.latitude,
-          longitude: MOCK_TICKET_ACTIVE.longitude,
-          street: MOCK_TICKET_ACTIVE.street,
-          operationId: MOCK_TICKET_ACTIVE.operationId,
-        },
-      ];
-    }
-    return [];
-  }
-
-  private persistOps(): void {
-    try {
-      localStorage.setItem(this.storageKey, JSON.stringify(this._operations()));
-    } catch {
-      /* storage unavailable */
-    }
-  }
-
-  private persistActive(): void {
-    try {
-      const val = this._activeParkings();
-      if (val.length > 0) {
-        localStorage.setItem(this.activeKey, JSON.stringify(val));
-      } else {
-        localStorage.removeItem(this.activeKey);
-      }
-    } catch {
-      /* storage unavailable */
-    }
   }
 
   private todayDateString(): string {
@@ -513,6 +254,12 @@ export class OperationsService {
     )}`;
   }
 
+  private queryDate(value: string, endOfDay: boolean): string {
+    if (/^\d{12}$/.test(value)) return value;
+    const parsed = new Date(`${value}T${endOfDay ? '23:59:59' : '00:00:00'}`);
+    return this.opsDate(Number.isNaN(parsed.getTime()) ? (endOfDay ? new Date(2099, 11, 31, 23, 59, 59) : new Date(2000, 0, 1)) : parsed);
+  }
+
   private parseOpsDate(value: string): Date {
     if (/^\d{12}$/.test(value)) {
       const hours = Number(value.slice(0, 2));
@@ -531,47 +278,6 @@ export class OperationsService {
     return date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', hour12: false });
   }
 
-  private nextId(): string {
-    const max = this._operations().reduce((acc, op) => {
-      const n = Number(op.id);
-      return Number.isFinite(n) ? Math.max(acc, n) : acc;
-    }, 0);
-    return String(max + 1);
-  }
-
-  private nextIds(count: number): string[] {
-    const start = Number(this.nextId());
-    return Array.from({ length: count }, (_, index) => String(start + index));
-  }
-
-  private normalizeOperationIds(list: Operation[]): Operation[] {
-    const normalized = list.map((operation) => ({
-      ...operation,
-      type: this.normalizeStoredOperationType(operation.type),
-    }));
-    const used = new Set<string>();
-    let max = normalized.reduce((acc, op) => {
-      const n = Number(op.id);
-      return Number.isFinite(n) ? Math.max(acc, n) : acc;
-    }, 0);
-
-    return normalized.map((op) => {
-      if (op.id && !used.has(op.id)) {
-        used.add(op.id);
-        return op;
-      }
-      max += 1;
-      const id = String(max);
-      used.add(id);
-      return { ...op, id };
-    });
-  }
-
-  private normalizeStoredOperationType(type: number): OperationType {
-    if (type === 6) return OperationType.REFUND;
-    return Object.values(OperationType).includes(type) ? (type as OperationType) : OperationType.PARKING;
-  }
-
   private mapRemoteOperation(item: OperationResponseDto): Operation {
     const remoteAmount =
       item.operationType === OperationType.UNPAID_FINES && !item.paymentAmount ? (item.fineAmount ?? 0) : (item.paymentAmount ?? 0);
@@ -581,7 +287,7 @@ export class OperationsService {
     const duration = item.parkingDuration ?? item.duration;
     const fineStatus = [1, 2, 3].includes(item.fineStatus ?? 0) ? (item.fineStatus as 1 | 2 | 3) : undefined;
     return {
-      id: String(item.operationNumber ?? item.opBaseId),
+      id: String(item.operationNumber ?? item.opBaseId ?? `${item.operationType}-${item.opDate}-${item.plate ?? ''}`),
       type: (Object.values(OperationType).includes(item.operationType) ? item.operationType : OperationType.PARKING) as OperationType,
       plate: item.plate ?? null,
       date: this.datePart(item.opDate),

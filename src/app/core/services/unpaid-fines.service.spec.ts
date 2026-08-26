@@ -3,7 +3,7 @@ import { provideZonelessChangeDetection } from '@angular/core';
 import { AppApiClient } from '../api/app-api-client.service';
 import { OpsApiClient } from '../api/ops-api-client.service';
 import { OpsSessionService } from '../api/ops-session.service';
-import { FineStatus, UnpaidFinesService } from './unpaid-fines.service';
+import { UnpaidFinesService } from './unpaid-fines.service';
 import { WalletService } from './wallet.service';
 
 describe('UnpaidFinesService stored data migration', () => {
@@ -20,7 +20,7 @@ describe('UnpaidFinesService stored data migration', () => {
     });
   });
 
-  it('completes legacy fines that were stored before status and fineNumber existed', () => {
+  it('does not hydrate sanctions from legacy local storage', () => {
     localStorage.setItem(
       'urbanoa.unpaid-fines',
       JSON.stringify([
@@ -29,10 +29,6 @@ describe('UnpaidFinesService stored data migration', () => {
     );
 
     const service = TestBed.inject(UnpaidFinesService);
-    const fine = service.getFine('legacy-fine');
-
-    expect(fine?.status).toBe(FineStatus.PAYABLE);
-    expect(fine?.fineNumber).toBe('legacy-fine');
-    expect(fine?.contractId).toBe(0);
+    expect(service.getFine('legacy-fine')).toBeUndefined();
   });
 });

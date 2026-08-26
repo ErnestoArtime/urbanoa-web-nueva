@@ -1,6 +1,6 @@
 import { Component, inject, input, output } from '@angular/core';
 import { LucideCarFront, LucidePencil } from '@lucide/angular';
-import type { Vehicle } from '../../mock-data';
+import type { Vehicle } from '../../models/vehicle';
 import { TranslatePipe } from '../../pipes/translate.pipe';
 import { TranslationService } from '../../../core/services/translation.service';
 
