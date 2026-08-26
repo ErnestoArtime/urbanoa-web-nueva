@@ -44,7 +44,7 @@ export class ParkingSessionService {
     return this.activeParkings().find((parking) => parking.vehicleId === vehicleIdOrPlate || parking.plate === vehicleIdOrPlate);
   }
 
-  async loadParkingStatuses(vehicles: readonly { id: string; plate: string }[]): Promise<void> {
-    await this.operationsService.loadParkingStatuses(vehicles);
+  async loadParkingStatuses(vehicles: readonly { id: string; plate: string }[], contractId?: number): Promise<void> {
+    await this.operationsService.loadParkingStatuses(vehicles, contractId);
   }
 }

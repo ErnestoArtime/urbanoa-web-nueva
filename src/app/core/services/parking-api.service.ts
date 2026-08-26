@@ -42,6 +42,7 @@ export interface ParkingTicketOption {
   price: string;
   schedule?: string;
   maxTime?: string;
+  minAmount?: string;
   minAmountCents?: number;
   zoneId?: number;
   sectorId?: number;
@@ -137,20 +138,34 @@ export class ParkingApiService {
     if (!token) throw new OpsApiError('transport', OPS_ENDPOINTS.parking.tickets, 'Se requiere una sesión válida');
     const response = await this.api.post<{
       ticketlist: {
-        ticketId: number; ticketDesc: string; minAmount: number | string; schedule: string; ticketBehText: string;
+        ticketId: number; ticketDesc: string; minAmount: number | string; schedule: string; ticketBehText?: string;
         maxTime?: string; zoneId?: number; sectorId?: number; sectorColor?: string;
       }[] | null;
-    }>(OPS_ENDPOINTS.parking.tickets, { ...input, street: input.streetId ?? 0, date: this.opsDate(new Date(input.date)), language: 'ES' }, { token });
+    }>(
+      OPS_ENDPOINTS.parking.tickets,
+      {
+        contractId: input.contractId,
+        plate: input.plate,
+        date: this.formatOpsDate(input.date),
+        zone: input.zone,
+        language: 'ES',
+        street: input.streetId ?? 0,
+      },
+      { token },
+    );
     return {
       data: (response.ticketlist ?? []).map((ticket) => {
-        const minAmountCents = Number(ticket.minAmount) || 0;
+        const minAmountCents = this.amountInCents(ticket.minAmount);
         return {
           id: String(ticket.ticketId),
           name: ticket.ticketDesc,
           desc: ticket.ticketBehText || ticket.schedule,
-          price: `${(minAmountCents / 100).toFixed(2).replace('.', ',')} €`,
+          price: typeof ticket.minAmount === 'string' && ticket.minAmount.trim()
+            ? ticket.minAmount.replace(/<br\s*\/?>/gi, ' · ')
+            : `${(minAmountCents / 100).toFixed(2).replace('.', ',')} €`,
           schedule: ticket.schedule,
           maxTime: ticket.maxTime,
+          minAmount: typeof ticket.minAmount === 'string' ? ticket.minAmount.replace(/<br\s*\/?>/gi, ' · ') : undefined,
           minAmountCents,
           zoneId: ticket.zoneId,
           sectorId: ticket.sectorId,
@@ -179,6 +194,19 @@ export class ParkingApiService {
     return `${two(date.getHours())}${two(date.getMinutes())}${two(date.getSeconds())}${two(date.getDate())}${two(date.getMonth() + 1)}${two(
       date.getFullYear() % 100,
     )}`;
+  }
+
+  private formatOpsDate(value: string | Date): string {
+    if (typeof value === 'string' && /^\d{12}$/.test(value)) return value;
+    const date = value instanceof Date ? value : new Date(value);
+    return this.opsDate(Number.isNaN(date.getTime()) ? new Date() : date);
+  }
+
+  private amountInCents(value: number | string): number {
+    if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+    const match = value.match(/[\d]+(?:[,.][\d]+)?/);
+    if (!match) return 0;
+    return Math.round(Number(match[0].replace(',', '.')) * 100);
   }
 
   private challengeUrl(value: string): string | undefined {
