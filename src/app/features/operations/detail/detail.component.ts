@@ -523,7 +523,7 @@ export class OperationsDetailComponent {
     if (Number.isFinite(operation?.latitude) && Number.isFinite(operation?.longitude)) {
       return { latitude: operation!.latitude!, longitude: operation!.longitude! };
     }
-    return this.service.source() === 'mock' ? { latitude: 43.28441, longitude: -2.16432 } : null;
+    return null;
   });
   readonly detailRows = computed(() => {
     const o = this.op();

@@ -9,8 +9,8 @@ import { NotificationsService } from '../../../core/services/notifications.servi
   template: `
     <div class="page account-static-page">
       <h1 class="page-title">{{ 'account.notifications.title' | translate }}</h1>
-      @if (notifications.source() === 'mock') {
-        <p class="data-notice" role="status">Las preferencias se conservan como demostración local hasta que haya una sesión conectada.</p>
+      @if (notifications.source() === 'error') {
+        <p class="data-notice" role="alert">No se pudieron sincronizar las preferencias con el servicio.</p>
       }
       <div class="card">
         <p class="section-title">{{ 'account.notifications.app' | translate }}</p>
@@ -122,7 +122,7 @@ export class AccountNotificationsComponent implements OnInit {
   async save(): Promise<void> {
     this.saving.set(true);
     const current = this.notifications.preferences();
-    await this.notifications.save({
+    const result = await this.notifications.save({
       ...current,
       unparkingNotifications: Number(this.appNotifications[0].enabled),
       fineNotifications: Number(this.appNotifications[1].enabled),
@@ -133,7 +133,7 @@ export class AccountNotificationsComponent implements OnInit {
       emailRechargeNotifications: Number(this.emailNotifications[3].enabled),
     });
     this.saving.set(false);
-    this.saved.set(true);
+    this.saved.set(result === 'remote');
   }
 
   checked(event: Event): boolean {

@@ -15,10 +15,8 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
   template: `
     <div class="page account-static-page">
       <app-detail-panel-header [title]="'account.recharge.title' | translate" backRoute="/app/account/payment-methods" />
-      @if (walletService.source() === 'mock') {
-        <p class="data-notice" role="status">
-          La recarga se simulará localmente mientras no haya una sesión conectada o falle el servicio.
-        </p>
+      @if (walletService.source() === 'error') {
+        <p class="data-notice" role="alert">No se pudo conectar con el servicio de pagos.</p>
       }
       @if (walletService.cards().length === 0) {
         <div class="card empty-recharge-state">
@@ -198,7 +196,7 @@ export class AccountRechargeComponent {
         return;
       }
       if (!result.success) return;
-      this.operationsService.registerTopUp(result.amount ?? amount);
+      await this.operationsService.load();
       this.done.set(true);
     } finally {
       this.saving.set(false);

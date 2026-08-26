@@ -1,12 +1,12 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { LucideCamera, LucideImage, LucidePaperclip, LucideTrash2 } from '@lucide/angular';
 import { SupportService, type FeedbackSubtype, type FeedbackType, type SupportAttachment } from '../../../core/services/support.service';
 import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
 import { ResultModalComponent } from '../../../shared/components/result-modal/result-modal.component';
-import { MOCK_MUNICIPIOS } from '../../../shared/mock-data';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { CitiesService, type ParkingMunicipio } from '../../../core/services/cities.service';
 
 interface SelectOption<T extends string> {
   value: T;
@@ -81,7 +81,7 @@ const FEEDBACK_SUBTYPES: SelectOption<FeedbackSubtype>[] = [
               <label class="form-label" for="support-city">{{ 'account.support.municipio' | translate }}</label>
               <select id="support-city" class="form-input" formControlName="cityId">
                 <option value="">{{ 'account.support.selectMunicipio' | translate }}</option>
-                @for (city of municipios; track city.id) {
+                @for (city of municipios(); track city.id) {
                   <option [value]="city.id">{{ city.nombre }} · {{ city.provincia }}</option>
                 }
               </select>
@@ -324,16 +324,17 @@ const FEEDBACK_SUBTYPES: SelectOption<FeedbackSubtype>[] = [
     }
   `,
 })
-export class AccountSupportFormComponent {
+export class AccountSupportFormComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly fb = inject(FormBuilder);
   private readonly support = inject(SupportService);
+  private readonly cities = inject(CitiesService);
   private readonly threadId = this.route.snapshot.paramMap.get('id');
 
   readonly types = FEEDBACK_TYPES;
   readonly subtypes = FEEDBACK_SUBTYPES;
-  readonly municipios = MOCK_MUNICIPIOS;
+  readonly municipios = signal<ParkingMunicipio[]>([]);
   readonly replyThread = computed(() => (this.threadId ? this.support.threads().find((thread) => thread.id === this.threadId) : undefined));
   readonly attachment = signal<SupportAttachment | null>(null);
   readonly attachmentError = signal<string | null>(null);
@@ -350,6 +351,14 @@ export class AccountSupportFormComponent {
   readonly isReply = () => Boolean(this.threadId);
   readonly titleKey = () => (this.isReply() ? 'account.support.replyTitle' : 'account.support.newMessage');
   readonly backRoute = () => (this.threadId ? `/app/account/support/${this.threadId}` : '/app/account/support');
+
+  async ngOnInit(): Promise<void> {
+    try {
+      this.municipios.set((await this.cities.getCities()).data);
+    } catch {
+      this.municipios.set([]);
+    }
+  }
 
   selectFile(event: Event): void {
     const input = event.target as HTMLInputElement;
@@ -371,7 +380,7 @@ export class AccountSupportFormComponent {
     reader.readAsDataURL(file);
   }
 
-  submit(): void {
+  async submit(): Promise<void> {
     this.showError.set(false);
     if (this.form.controls.message.invalid || (!this.isReply() && this.form.invalid)) {
       this.form.markAllAsTouched();
@@ -380,11 +389,12 @@ export class AccountSupportFormComponent {
     }
     this.submitting.set(true);
     const values = this.form.getRawValue();
+    let success = false;
     if (this.threadId) {
-      this.support.reply(this.threadId, values.message, this.attachment() ?? undefined);
+      success = await this.support.reply(this.threadId, values.message, this.attachment() ?? undefined);
     } else {
-      const city = this.municipios.find((item) => item.id === values.cityId);
-      this.support.create({
+      const city = this.municipios().find((item) => item.id === values.cityId);
+      success = Boolean(await this.support.create({
         type: values.type as FeedbackType,
         subtype: values.subtype as FeedbackSubtype,
         cityId: values.cityId,
@@ -392,8 +402,10 @@ export class AccountSupportFormComponent {
         plate: values.plate,
         message: values.message,
         attachment: this.attachment() ?? undefined,
-      });
+      }));
     }
-    void this.router.navigate(['/app/account/support-success']);
+    this.submitting.set(false);
+    if (success) void this.router.navigate(['/app/account/support-success']);
+    else this.showError.set(true);
   }
 }

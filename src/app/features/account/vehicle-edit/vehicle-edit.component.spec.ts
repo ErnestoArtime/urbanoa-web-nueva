@@ -5,6 +5,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { BehaviorSubject } from 'rxjs';
 import { TestBed } from '@angular/core/testing';
 import { VehicleEditComponent } from './vehicle-edit.component';
+import { VehicleService } from '../../../core/services/vehicle.service';
 
 describe('VehicleEditComponent', () => {
   let paramMap$: BehaviorSubject<ReturnType<typeof convertToParamMap>>;
@@ -21,19 +22,17 @@ describe('VehicleEditComponent', () => {
 
   beforeEach(() => {
     localStorage.clear();
-    localStorage.setItem(
-      'urbanoa.vehicles',
-      JSON.stringify([
-        { id: '1', plate: '1234 ABC', isDefault: true },
-        { id: '2', plate: '5678 XYZ', isDefault: false },
-      ]),
-    );
+    const vehicles = [
+      { id: '1', plate: '1234 ABC', isDefault: true },
+      { id: '2', plate: '5678 XYZ', isDefault: false },
+    ];
     paramMap$ = new BehaviorSubject(convertToParamMap({ id: '1' }));
     TestBed.configureTestingModule({
       providers: [
         provideZonelessChangeDetection(),
         provideRouter([]),
         provideHttpClient(),
+        { provide: VehicleService, useValue: { getById: (id: string) => vehicles.find((vehicle) => vehicle.id === id) } },
         { provide: ActivatedRoute, useValue: { snapshot: paramMap$.value, paramMap: paramMap$.asObservable() } },
       ],
     });

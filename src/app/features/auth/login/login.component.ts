@@ -3,7 +3,9 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { LucideEye, LucideEyeOff } from '@lucide/angular';
 import { apiErrorKey } from '../../../core/http/api-error-key';
+import { OpsApiError } from '../../../core/api/ops-api.types';
 import { AuthService } from '../../../core/services/auth.service';
+import { TranslationService } from '../../../core/services/translation.service';
 import { APP_BRAND } from '../../../shared/constants/app-brand';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 
@@ -46,8 +48,8 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
             <p class="form-error">{{ 'auth.login.passwordRequired' | translate }}</p>
           }
           <a routerLink="/auth/reset-password" class="recover-link">{{ 'auth.login.forgotPassword' | translate }}</a>
-          @if (errorKey()) {
-            <p class="form-error" role="alert">{{ errorKey() | translate }}</p>
+          @if (errorMessage()) {
+            <p class="form-error login-error" role="alert">{{ errorMessage() }}</p>
           }
           <button type="submit" class="btn btn-primary btn-block login-button" [disabled]="submitting()">
             {{ (submitting() ? 'auth.login.submitting' : 'auth.login.submit') | translate }}
@@ -153,6 +155,16 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
       .login-button {
         min-height: 50px;
       }
+      .login-error {
+        display: flex;
+        align-items: center;
+        min-height: 2.75rem;
+        margin: 1rem 0 1.25rem;
+        padding: 0.65rem 0.8rem;
+        border-radius: var(--radius-md);
+        background: color-mix(in srgb, var(--color-error) 8%, transparent);
+        line-height: 1.35;
+      }
       .register-link {
         text-align: center;
         margin-top: 1.2rem;
@@ -176,11 +188,12 @@ export class LoginComponent {
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
   private readonly formBuilder = inject(FormBuilder);
+  private readonly translationService = inject(TranslationService);
 
   readonly returnUrl = input('');
   readonly showPassword = signal(false);
   readonly submitting = signal(false);
-  readonly errorKey = signal('');
+  readonly errorMessage = signal('');
   readonly brand = APP_BRAND;
 
   readonly form = this.formBuilder.nonNullable.group({
@@ -200,18 +213,32 @@ export class LoginComponent {
     }
 
     this.submitting.set(true);
-    this.errorKey.set('');
+    this.errorMessage.set('');
     const { email, password } = this.form.getRawValue();
 
     try {
       await this.authService.login(email, password);
       await this.router.navigateByUrl(this.returnUrl() || '/app');
     } catch (error) {
-      this.errorKey.set(
-        apiErrorKey(error, { unauthorized: 'auth.login.invalidCredentials', notActivated: 'auth.login.accountNotActivated' }),
+      this.errorMessage.set(
+        this.backendErrorMessage(error) ??
+          this.translationService.translate(
+            apiErrorKey(error, { unauthorized: 'auth.login.invalidCredentials', notActivated: 'auth.login.accountNotActivated' }),
+          ),
       );
     } finally {
       this.submitting.set(false);
     }
+  }
+
+  private backendErrorMessage(error: unknown): string | null {
+    if (!(error instanceof OpsApiError) || !error.backendError) return null;
+    const messages: Record<string, string | undefined> = {
+      es: error.backendError.message_ES,
+      eu: error.backendError.message_EU,
+      fr: error.backendError.message_FR,
+      uk: error.backendError.message_EN,
+    };
+    return messages[this.translationService.currentLang$()] ?? error.backendError.message_ES ?? error.backendError.message_EN ?? null;
   }
 }

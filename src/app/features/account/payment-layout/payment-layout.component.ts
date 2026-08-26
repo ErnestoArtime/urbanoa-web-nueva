@@ -17,8 +17,8 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
     <app-split-view [hideList]="isChildRoute()" [hideDetail]="!isChildRoute()">
       <div splitList class="page">
         <h1 class="page-title">{{ 'account.menu.paymentMethods' | translate }}</h1>
-        @if (walletService.source() === 'mock') {
-          <p class="data-notice" role="status">La billetera y las tarjetas muestran datos locales hasta que el servicio esté disponible.</p>
+        @if (walletService.source() === 'error') {
+          <p class="data-notice" role="alert">No se pudieron cargar la billetera y las tarjetas.</p>
         }
         <div class="wallet-card payment-wallet-card mb-2">
           <div class="wallet-section">

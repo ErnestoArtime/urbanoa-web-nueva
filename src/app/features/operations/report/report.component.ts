@@ -3,8 +3,7 @@ import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { TranslationService } from '../../../core/services/translation.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
-import { OperationType, OPERATION_TYPE_LABELS } from '../../../shared/models/operation-type';
-import { APP_BRAND } from '../../../shared/constants/app-brand';
+import { OperationType } from '../../../shared/models/operation-type';
 import { OperationsService } from '../../../core/services/operations.service';
 import { DateRangeFilterComponent, type DateRange } from '../../../shared/components/date-range-filter/date-range-filter.component';
 import type { Operation } from '../../../shared/models/operation';
@@ -92,14 +91,15 @@ interface ReportRangeItem {
       </div>
 
       <div class="sticky-actions">
-        <button
+      <button
           type="button"
           class="btn btn-primary btn-block report-submit"
           (click)="generateReport()"
           [disabled]="isGenerating() || !!dateRangeError()"
         >
           {{ isGenerating() ? ('ops.report.generating' | translate) : ('ops.report.generateButton' | translate) }}
-        </button>
+      </button>
+      @if (reportError()) { <p class="form-error" role="alert">No se pudo generar el informe PDF.</p> }
       </div>
     </div>
   `,
@@ -291,7 +291,7 @@ export class ReportComponent {
     { key: 'fines', labelKey: 'ops.report.fines', descKey: 'ops.report.finesDesc', type: OperationType.FINE_PAYMENT },
   ];
   readonly isGenerating = signal(false);
-  readonly reportHtml = signal<string | null>(null);
+  readonly reportError = signal(false);
 
   readonly reportOperations = () => this.buildFilteredOperations();
 
@@ -327,51 +327,12 @@ export class ReportComponent {
     }
   }
 
-  private buildReportHtml(operations: Operation[]): string {
-    const rows = operations
-      .map(
-        (op) => `
-      <tr>
-        <td>${this.translationService.translate(OPERATION_TYPE_LABELS[op.type])}</td>
-        <td>${op.plate ?? '—'}</td>
-        <td>${op.date}</td>
-        <td style="text-align:right">${op.amount > 0 ? '+' : ''}${op.amount.toFixed(2)} €</td>
-      </tr>`,
-      )
-      .join('');
-
-    const total = operations.reduce((sum, item) => sum + item.amount, 0);
-    const title = this.translationService.translate('ops.report');
-
-    return `<!DOCTYPE html>
-<html lang="es">
-<head><meta charset="utf-8"><title>${title}</title>
-<style>
-  body { font-family: 'Segoe UI', Arial, sans-serif; margin: 2rem; color: #222; }
-  h1 { font-size: var(--text-2xl); margin-bottom: 0.25rem; }
-  .sub { color: var(--color-text-muted); font-size: var(--text-sm); margin-bottom: 1.5rem; }
-  table { width: 100%; border-collapse: collapse; font-size: var(--text-sm); }
-  th { text-align: left; padding: 0.5rem; background: #f5f5f5; font-weight: var(--font-medium); }
-  td { padding: 0.5rem; border-bottom: 1px solid #eee; }
-  .total { margin-top: 1.5rem; font-weight: var(--font-bold); font-size: var(--text-base); text-align: right; }
-  .footer { margin-top: 2rem; font-size: var(--text-xs); color: #999; text-align: center; }
-</style></head>
-<body>
-  <h1>${title}</h1>
-  <p class="sub">${this.translationService.translate('ops.report.generatedOn')} ${new Date().toLocaleDateString('es-ES')}</p>
-  <table>
-    <thead><tr><th>${this.translationService.translate('ops.report.operation')}</th><th>${this.translationService.translate('ops.report.plate')}</th><th>${this.translationService.translate('ops.report.date')}</th><th style="text-align:right">${this.translationService.translate('ops.report.amount')}</th></tr></thead>
-    <tbody>${rows}</tbody>
-  </table>
-  <p class="total">${this.translationService.translate('ops.report.total')}: ${total > 0 ? '+' : ''}${total.toFixed(2)} €</p>
-  <p class="footer">${APP_BRAND.name} — ${this.translationService.translate('ops.report.generatedFromApp')}</p>
-</body></html>`;
-  }
-
   async generateReport(): Promise<void> {
     if (this.dateRangeError()) return;
     this.isGenerating.set(true);
+    this.reportError.set(false);
     const viewer = globalThis.open('', '_blank');
+    let completed = false;
     try {
       const token = this.session.token();
       if (!token) throw new Error('No hay una sesión OPS activa');
@@ -393,18 +354,14 @@ export class ReportComponent {
       if (viewer) viewer.location.href = url;
       else globalThis.open(url, '_blank');
       setTimeout(() => URL.revokeObjectURL(url), 60_000);
-    } catch (error) {
-      console.warn('[OPS API] Informe PDF utiliza fallback mock', error);
-      const html = this.buildReportHtml(this.buildFilteredOperations());
-      this.reportHtml.set(html);
-      const url = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
-      if (viewer) viewer.location.href = url;
-      else globalThis.open(url, '_blank');
-      setTimeout(() => URL.revokeObjectURL(url), 10_000);
+      completed = true;
+    } catch {
+      viewer?.close();
+      this.reportError.set(true);
     } finally {
       this.isGenerating.set(false);
     }
-    void this.router.navigate(['/app/operations/report-success']);
+    if (completed) void this.router.navigate(['/app/operations/report-success']);
   }
 
   private buildFilteredOperations(): Operation[] {

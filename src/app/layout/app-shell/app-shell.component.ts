@@ -26,7 +26,7 @@ const TITLE_KEYS: Record<string, string> = {
   '/app/parking/confirm': 'parking.confirmStart',
   '/app/parking/success': 'parking.success',
   '/app/operations/detail': 'ops.detail',
-  '/app/operations/unpaid-fines': 'ops.denuncias',
+  '/app/operations/unpaid-fines': 'ops.sanciones',
   '/app/operations/unpaid-fine-detail': 'ops.detail',
   '/app/operations/report': 'ops.report',
   '/app/operations/report-success': 'ops.report',

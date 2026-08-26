@@ -1,10 +1,26 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
-import { MOCK_MUNICIPIOS } from '../../../shared/mock-data';
 import { LocationSettingsService } from '../../../core/services/location-settings.service';
 import { ParkingFlowStore } from '../parking-flow.store';
 import { CitiesService, ParkingMunicipio } from '../../../core/services/cities.service';
+
+const EMPTY_CITY: ParkingMunicipio = {
+  id: '',
+  nombre: '',
+  provincia: '',
+  zonas: 0,
+  imagen: '',
+  contractId: 0,
+  description1: '',
+  address: '',
+  email: '',
+  imagePath: '',
+  longitude: 0,
+  latitude: 0,
+  phone: '',
+  radius: '',
+};
 
 @Component({
   selector: 'app-parking-cities',
@@ -12,9 +28,8 @@ import { CitiesService, ParkingMunicipio } from '../../../core/services/cities.s
   template: `
     <div class="page has-sticky-actions">
       <h1 class="page-title">{{ 'parking.selectMunicipio' | translate }}</h1>
-      @if (dataSource() === 'mock') {
-        <p class="data-notice" role="status">El servicio de municipios no está disponible. Se muestran datos de
-          demostración.</p>
+      @if (dataSource() === 'error') {
+        <p class="data-notice" role="alert">No se pudieron cargar los municipios.</p>
       }
       <label class="municipio-search">
         <span aria-hidden="true">⌕</span>
@@ -302,28 +317,20 @@ export class ParkingCitiesComponent implements OnInit {
   readonly route = inject(ActivatedRoute);
   readonly vehicleId = this.route.snapshot.queryParamMap.get('vehicleId') ?? this.flowStore.vm().vehicleId ?? '';
   readonly vehiclePlate = this.route.snapshot.queryParamMap.get('plate') ?? this.flowStore.vm().plate ?? '';
-  readonly municipios = signal<ParkingMunicipio[]>(
-    MOCK_MUNICIPIOS.map((city) => ({
-      ...city,
-      contractId: this.citiesService.contractIdFor(city.id),
-      description1: '',
-      address: '',
-      email: '',
-      imagePath: '',
-      longitude: 0,
-      latitude: 0,
-      phone: '',
-      radius: '',
-    })),
-  );
+  readonly municipios = signal<ParkingMunicipio[]>([]);
   readonly selected = signal(this.defaultCity());
-  readonly dataSource = signal<'remote' | 'mock' | null>(null);
+  readonly dataSource = signal<'loading' | 'remote' | 'error'>('loading');
 
   async ngOnInit(): Promise<void> {
-    const result = await this.citiesService.getCities();
-    this.municipios.set(result.data);
-    this.dataSource.set(result.source);
-    this.selected.set(this.defaultCity());
+    try {
+      const result = await this.citiesService.getCities();
+      this.municipios.set(result.data);
+      this.dataSource.set('remote');
+      this.selected.set(this.defaultCity());
+    } catch {
+      this.municipios.set([]);
+      this.dataSource.set('error');
+    }
   }
 
   private defaultCity(): ParkingMunicipio {
@@ -332,7 +339,7 @@ export class ParkingCitiesComponent implements OnInit {
       const match = this.municipios().find((m) => m.id === preferredId);
       if (match) return match;
     }
-    return this.municipios().find((city) => city.id === 'zarautz') ?? this.municipios()[0];
+    return this.municipios().find((city) => city.id === 'zarautz') ?? this.municipios()[0] ?? EMPTY_CITY;
   }
 
   readonly search = signal('');
