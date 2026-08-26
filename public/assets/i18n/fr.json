@@ -119,6 +119,7 @@
   "parking.cities.empty": "fr_No se encontraron municipios.",
   "parking.cities.selected": "fr_Municipio seleccionado",
   "parking.cities.zonesLabel": "fr_{{count}} zonas reguladas",
+  "parking.cities.noZones": "Aucune zone disponible",
   "parking.cities.streetsTitle": "fr_Calles y zonas",
   "parking.cities.centro": "fr_Centro",
   "parking.cities.zonaAzul": "fr_Zona azul",

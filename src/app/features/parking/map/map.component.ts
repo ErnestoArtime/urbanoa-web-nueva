@@ -14,6 +14,7 @@ import { TranslationService } from '../../../core/services/translation.service';
 import { MapLocationControlComponent, type MapLocationState } from './map-location-control.component';
 import { CitiesService, type ParkingMunicipio } from '../../../core/services/cities.service';
 import { ParkingApiService } from '../../../core/services/parking-api.service';
+import { StreetsService } from '../../../core/services/streets.service';
 
 interface MapParkingZone {
   zoneId: number;
@@ -529,6 +530,8 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
   private readonly translationService = inject(TranslationService);
   private readonly citiesService = inject(CitiesService);
   private readonly parkingApi = inject(ParkingApiService);
+  private readonly streetsService = inject(StreetsService);
+  private readonly streetIdByZone = new Map<number, number>();
   private readonly query: ParkingFlowQuery = this.store.hasMinimumParkingData() ? this.store.fromStore() : readParkingFlowQuery(this.route);
   private map?: L.Map;
   private zoneLayer?: L.FeatureGroup;
@@ -706,6 +709,15 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
 
   private async loadRealZones(): Promise<void> {
     try {
+      try {
+        const streets = await this.streetsService.getStreets(this.selected.contractId);
+        this.streetIdByZone.clear();
+        for (const street of streets.data) {
+          if (street.zoneId > 0 && !this.streetIdByZone.has(street.zoneId)) this.streetIdByZone.set(street.zoneId, street.id);
+        }
+      } catch {
+        this.streetIdByZone.clear();
+      }
       const response = await this.parkingApi.mapStretches(this.selected.contractId);
       if (!response.data?.trim()) throw new Error('QueryMapStretchesAPI no devolvió KML');
       const xml = new DOMParser().parseFromString(response.data, 'application/xml');
@@ -787,8 +799,11 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
 
   private async resolveSector(zone: MapParkingZone, point: L.LatLng): Promise<void> {
     try {
+      const streetId = this.streetIdByZone.get(zone.zoneId);
+      if (!streetId) return;
       const sectors = await this.parkingApi.sectors({
         contractId: this.selected.contractId,
+        streetId,
         latitude: point.lat,
         longitude: point.lng,
       });
@@ -837,5 +852,5 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
 
 const EMPTY_CITY: ParkingMunicipio = {
   id: '', nombre: '', provincia: '', zonas: 0, imagen: '', contractId: 0, description1: '', address: '', email: '', imagePath: '',
-  longitude: 0, latitude: 0, phone: '', radius: '',
+  longitude: 0, latitude: 0, phone: '', radius: '', zones: [],
 };

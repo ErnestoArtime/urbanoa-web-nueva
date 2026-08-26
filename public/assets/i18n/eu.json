@@ -119,6 +119,7 @@
   "parking.cities.empty": "eu_No se encontraron municipios.",
   "parking.cities.selected": "eu_Municipio seleccionado",
   "parking.cities.zonesLabel": "eu_{{count}} zonas reguladas",
+  "parking.cities.noZones": "Ez dago gunerik erabilgarri",
   "parking.cities.streetsTitle": "eu_Calles y zonas",
   "parking.cities.centro": "eu_Centro",
   "parking.cities.zonaAzul": "eu_Zona azul",

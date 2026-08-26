@@ -119,6 +119,7 @@
   "parking.cities.empty": "uk_No se encontraron municipios.",
   "parking.cities.selected": "uk_Municipio seleccionado",
   "parking.cities.zonesLabel": "uk_{{count}} zonas reguladas",
+  "parking.cities.noZones": "No hi ha zones disponibles",
   "parking.cities.streetsTitle": "uk_Calles y zonas",
   "parking.cities.centro": "uk_Centro",
   "parking.cities.zonaAzul": "uk_Zona azul",

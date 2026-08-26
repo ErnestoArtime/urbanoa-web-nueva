@@ -20,6 +20,7 @@ const EMPTY_CITY: ParkingMunicipio = {
   latitude: 0,
   phone: '',
   radius: '',
+  zones: [],
 };
 
 @Component({
@@ -68,18 +69,11 @@ const EMPTY_CITY: ParkingMunicipio = {
           <p>{{ 'parking.cities.zonesLabel' | translate: { count: '' + selected().zonas } }}</p>
           <h3>{{ 'parking.cities.streetsTitle' | translate }}</h3>
           <ul>
-            <li>
-              <span>{{ 'parking.cities.centro' | translate }}</span
-              ><strong>{{ 'parking.cities.zonaAzul' | translate }}</strong>
-            </li>
-            <li>
-              <span>{{ 'parking.cities.cascoHistorico' | translate }}</span
-              ><strong>{{ 'parking.cities.rotacion' | translate }}</strong>
-            </li>
-            <li>
-              <span>{{ 'parking.cities.areaResidencial' | translate }}</span
-              ><strong>{{ 'parking.cities.residentes' | translate }}</strong>
-            </li>
+            @for (zone of selected().zones; track zone.id) {
+              <li><span>{{ zone.name }}</span><strong>{{ 'parking.zones' | translate }}</strong></li>
+            } @empty {
+              <li><span>{{ 'parking.cities.noZones' | translate }}</span></li>
+            }
           </ul>
           <div class="sticky-actions">
             <a
