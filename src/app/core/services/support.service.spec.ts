@@ -8,6 +8,35 @@ import { SupportService } from './support.service';
 import { UserService } from './user.service';
 
 describe('SupportService', () => {
+  it('loads support conversations from QueryUserFeedbackAPI', async () => {
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
+    api.post.and.resolveTo({
+      feedbackList: [
+        { id: 12, contractId: 1, date: '120000260826', type: 1, subtype: 1, message: 'test', plate: '1234567', status: 1, read: 0 },
+      ],
+    });
+    TestBed.configureTestingModule({
+      providers: [
+        provideZonelessChangeDetection(),
+        { provide: OpsApiClient, useValue: api },
+        { provide: OpsSessionService, useValue: { token: () => 'token' } },
+        { provide: CitiesService, useValue: { contractIdFor: () => 1 } },
+        { provide: UserService, useValue: { user: signal({ email: 'user@example.com' }), load: jasmine.createSpy() } },
+      ],
+    });
+
+    const service = TestBed.inject(SupportService);
+    const loaded = await service.load();
+
+    expect(loaded).toBeTrue();
+    expect(api.post).toHaveBeenCalledOnceWith(
+      OPS_ENDPOINTS.support.query,
+      { contractId: 0, dateStart: '2000-01-01', dateEnd: '2100-12-31' },
+      { token: 'token' },
+    );
+    expect(service.threads()[0]).toEqual(jasmine.objectContaining({ id: '12', plate: '1234567', unread: true }));
+  });
+
   it('sends feedback using the contract expected by the APK', async () => {
     jasmine.clock().install();
     jasmine.clock().mockDate(new Date(2026, 7, 27, 2, 27, 47));
@@ -118,10 +147,6 @@ describe('SupportService', () => {
       message: 'test',
     });
 
-    expect(api.post).toHaveBeenCalledWith(
-      OPS_ENDPOINTS.support.add,
-      jasmine.objectContaining({ subtype: 1 }),
-      { token: 'token' },
-    );
+    expect(api.post).toHaveBeenCalledWith(OPS_ENDPOINTS.support.add, jasmine.objectContaining({ subtype: 1 }), { token: 'token' });
   });
 });
