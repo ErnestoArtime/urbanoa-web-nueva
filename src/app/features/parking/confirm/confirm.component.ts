@@ -70,7 +70,7 @@ import { ParkingApiService } from '../../../core/services/parking-api.service';
       <app-payment-summary [wallet]="wallet()" [totalAmount]="totalAmount()" />
 
       <div class="sticky-actions">
-        <app-swipe-to-pay (complete)="onSwipeComplete()" />
+        <app-swipe-to-pay [disabled]="requiresCard() && !walletService.cards().length" (complete)="onSwipeComplete()" />
       </div>
 
       <a routerLink="/app/account/payment-methods" class="change-payment">{{ 'parking.confirm.changePayment' | translate }}</a>
@@ -226,7 +226,12 @@ export class ParkingConfirmComponent {
   async onSwipeComplete(): Promise<void> {
     if (this.loading()) return;
     const amount = this.totalAmount();
-    if (this.requiresCard() && !this.walletService.cards().some((card) => card.id === this.selectedCardId())) return;
+    const cards = this.walletService.cards();
+    if (this.requiresCard()) {
+      const selected = cards.find((card) => card.id === this.selectedCardId()) ?? cards[0];
+      if (!selected) return;
+      this.selectedCardId.set(selected.id);
+    }
     const walletAmount = Math.min(amount, this.walletService.balance());
     this.loading.set(true);
     const result = await this.parkingApi.confirmParking({
@@ -259,6 +264,7 @@ export class ParkingConfirmComponent {
       paymentCardLabel: this.requiresCard() ? `${this.selectedCard().brand} •••• ${this.selectedCard().last4}` : '',
     };
 
-    void this.router.navigate(['/app/parking/success'], { queryParams: paymentQuery });
+    this.loading.set(false);
+    await this.router.navigate(['/app/parking/success'], { queryParams: paymentQuery });
   }
 }

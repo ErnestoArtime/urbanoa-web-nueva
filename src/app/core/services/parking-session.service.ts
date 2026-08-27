@@ -20,6 +20,7 @@ export class ParkingSessionService {
     const result = await this.parkingApi.unpark({
       contractId: parking.contractId,
       plate: parking.plate,
+      ...(parking.sectorId ? { groupId: parking.sectorId } : {}),
       ticketId: parking.tariffId,
     });
     if (!result.success) return false;

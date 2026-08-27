@@ -67,7 +67,7 @@ export class ParkingApiService {
     const token = this.session.token();
     if (!token) return { success: false, source: 'remote', error: new OpsApiError('transport', OPS_ENDPOINTS.parking.confirmParking, 'Se requiere una sesión válida') };
     try {
-      const response = await this.api.post<string>(
+      const response = await this.api.post<unknown>(
         OPS_ENDPOINTS.parking.confirmParking,
         {
           contractId: input.contractId,
@@ -209,8 +209,8 @@ export class ParkingApiService {
     return Math.round(Number(match[0].replace(',', '.')) * 100);
   }
 
-  private challengeUrl(value: string): string | undefined {
-    const candidate = value?.trim();
+  private challengeUrl(value: unknown): string | undefined {
+    const candidate = typeof value === 'string' ? value.trim() : '';
     return /^https?:\/\//i.test(candidate) ? candidate : undefined;
   }
 }
