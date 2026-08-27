@@ -482,7 +482,7 @@ export class AccountMenuComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    if (this.walletService.source() !== 'remote' && !this.walletService.loading()) void this.walletService.load();
+    if (!this.walletService.loading()) void this.walletService.load();
   }
 
   readonly selectedLabel = () => {

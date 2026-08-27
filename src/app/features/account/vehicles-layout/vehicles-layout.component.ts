@@ -70,8 +70,11 @@ import type { Vehicle } from '../../../shared/models/vehicle';
           </div>
         } @else {
           <div class="card empty-vehicles">
-            <p *ngIf="source() === 'mock'">Las matrículas se guardan localmente hasta que haya una sesión conectada.</p>
-            <p *ngIf="source() === 'remote'">Aún no tiene vehículos guardados.</p>
+            @if (source() === 'remote') {
+              <p>Aún no tiene vehículos guardados.</p>
+            } @else if (source() === 'error') {
+              <p>No se pudieron cargar los vehículos.</p>
+            }
             <a routerLink="/app/account/vehicles/add" class="btn btn-primary btn-block">{{ 'account.addVehicle' | translate }}</a>
           </div>
         }

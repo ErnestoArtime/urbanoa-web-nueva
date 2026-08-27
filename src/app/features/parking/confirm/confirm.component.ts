@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal, ViewChild } from '@angular/core';
+import { Component, computed, inject, OnInit, signal, ViewChild } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { LoaderComponent } from '../../../shared/components/loader/loader.component';
 import { PaymentSummaryComponent } from '../../../shared/components/payment-summary/payment-summary.component';
@@ -195,7 +195,7 @@ import { ParkingApiService } from '../../../core/services/parking-api.service';
     `,
   ],
 })
-export class ParkingConfirmComponent {
+export class ParkingConfirmComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly store = inject(ParkingFlowStore);
@@ -219,6 +219,11 @@ export class ParkingConfirmComponent {
   });
   readonly cardAmount = computed(() => Math.max(0, this.totalAmount() - this.walletService.balance()));
   readonly requiresCard = computed(() => this.cardAmount() > 0);
+
+  async ngOnInit(): Promise<void> {
+    if (!this.walletService.loading()) await this.walletService.load();
+    if (!this.selectedCardId()) this.selectedCardId.set(this.walletService.defaultCardId());
+  }
 
   sectorColor(): string {
     return this.query.sectorColor ? `#${this.query.sectorColor.replace('#', '')}` : 'var(--color-primary)';

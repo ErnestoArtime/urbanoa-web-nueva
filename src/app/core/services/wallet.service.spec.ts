@@ -66,6 +66,19 @@ describe('WalletService', () => {
     expect(service.source()).toBe('remote');
   });
 
+  it('keeps the real balance when payment methods fail', async () => {
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'post']);
+    api.get.and.returnValues(Promise.resolve(29823) as Promise<never>, Promise.reject(new Error('cards unavailable')) as Promise<never>);
+    const service = serviceWith(api);
+    TestBed.inject(OpsSessionService).setToken('token');
+
+    await service.load();
+
+    expect(service.balance()).toBe(298.23);
+    expect(service.cards()).toEqual([]);
+    expect(service.source()).toBe('remote');
+  });
+
   it('recharges in cents using RechargeUserCreditAPI', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'post']);
     api.post.and.resolveTo({ payMethodId: 7, amountRecharged: 250, newBalance: 1500, challengeUrl: null });

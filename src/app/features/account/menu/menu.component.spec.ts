@@ -36,7 +36,7 @@ describe('AccountMenuComponent', () => {
     expect(wallet.load).toHaveBeenCalledTimes(1);
   });
 
-  it('does not reload a wallet that is already available', async () => {
+  it('refreshes the wallet even when another wallet action marked the service as remote', async () => {
     const wallet = {
       balance: signal(298.23),
       source: signal<'idle' | 'remote' | 'error'>('remote'),
@@ -60,6 +60,6 @@ describe('AccountMenuComponent', () => {
     const fixture = TestBed.createComponent(AccountMenuComponent);
     await fixture.whenStable();
 
-    expect(wallet.load).not.toHaveBeenCalled();
+    expect(wallet.load).toHaveBeenCalledTimes(1);
   });
 });

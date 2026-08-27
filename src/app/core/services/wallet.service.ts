@@ -123,21 +123,36 @@ export class WalletService {
     this.loading.set(true);
     this.lastError.set(null);
     try {
-      const [credit, paymentMethods] = await Promise.all([
+      const [creditResult, paymentMethodsResult] = await Promise.allSettled([
         this.api.get<number>(OPS_ENDPOINTS.wallet.credit, { token }),
         this.api.get<PaymentMethodsDto>(OPS_ENDPOINTS.wallet.paymentMethods, { token }),
       ]);
-      this.balance.set(this.fromCents(credit));
-      const methods = paymentMethods.payMethods ?? [];
-      const cards = methods.map((method) => this.mapPaymentMethod(method));
-      this.cards.set(cards);
-      this.defaultCardId.set(String(methods.find((method) => method.favorite === 1)?.id ?? cards[0]?.id ?? ''));
-      this.source.set('remote');
-      this.persistWallet();
-      this.persistCards();
+      if (creditResult.status === 'fulfilled') {
+        this.balance.set(this.fromCents(creditResult.value));
+        this.persistWallet();
+      }
+      if (paymentMethodsResult.status === 'fulfilled') {
+        const methods = paymentMethodsResult.value.payMethods ?? [];
+        const cards = methods.map((method) => this.mapPaymentMethod(method));
+        this.cards.set(cards);
+        this.defaultCardId.set(String(methods.find((method) => method.favorite === 1)?.id ?? cards[0]?.id ?? ''));
+        this.persistCards();
+      }
+      const failure =
+        creditResult.status === 'rejected'
+          ? creditResult.reason
+          : paymentMethodsResult.status === 'rejected'
+            ? paymentMethodsResult.reason
+            : null;
+      if (creditResult.status === 'rejected' && paymentMethodsResult.status === 'rejected') {
+        this.balance.set(0);
+        this.cards.set([]);
+        this.useError(failure);
+      } else {
+        this.source.set('remote');
+        this.lastError.set(failure instanceof Error ? failure.message : null);
+      }
     } catch (error) {
-      this.balance.set(0);
-      this.cards.set([]);
       this.useError(error);
     } finally {
       this.loading.set(false);
