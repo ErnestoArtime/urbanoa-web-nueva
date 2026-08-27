@@ -67,6 +67,9 @@ export class OpsApiClient {
       }
 
       if (!payload.isSuccess) {
+        if (payload.error?.code === -23 && !endpoint.endsWith('LoginUserAPI')) {
+          window.dispatchEvent(new CustomEvent('urbanoa:session-expired'));
+        }
         const message = payload.error?.message_ES ?? payload.error?.message_EN ?? `${endpoint}: error del servicio`;
         throw new OpsApiError('backend', endpoint, message, response.status, payload.error);
       }

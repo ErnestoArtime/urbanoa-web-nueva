@@ -100,7 +100,14 @@ export class AuthService {
   constructor() {
     if (this.token().startsWith('mock-')) this.clearSession();
     this.syncOpsSession(this.token());
+    window.addEventListener('urbanoa:session-expired', this.handleSessionExpired);
   }
+
+  private readonly handleSessionExpired = (): void => {
+    if (!this.isAuthenticated()) return;
+    this.clearSession();
+    void this.router.navigate(['/auth/login'], { queryParams: { sessionExpired: '1' } });
+  };
 
   async login(input: LoginInput): Promise<AuthUser>;
   async login(email: string, password: string): Promise<AuthUser>;
