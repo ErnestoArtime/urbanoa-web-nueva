@@ -68,6 +68,7 @@ export interface ActiveParking {
   cardLabel?: string;
   contractId?: number;
   tariffId?: number;
+  sectorId?: number;
 }
 
 interface ParkingStatusResponseDto {
@@ -103,22 +104,26 @@ export class OperationsService {
   readonly activeSource = signal<'idle' | 'remote' | 'error'>('idle');
   readonly loading = signal(false);
 
-  async load(
-    dateStart = '2000-01-01',
-    dateEnd = '2100-12-31',
-    operationTypeList = [1, 2, 3, 4, 5, 7, 101, 102, 103, 104],
-  ): Promise<void> {
+  async load(dateStart?: string, dateEnd?: string, operationTypeList = [1, 2, 3, 4, 5, 7, 101, 102, 103, 104]): Promise<void> {
     const token = this.session.token();
     if (!token) {
       this._operations.set([]);
       this.source.set('error');
       return;
     }
+    const year = new Date().getFullYear();
+    const effectiveStart = dateStart ?? `${year}-01-01`;
+    const effectiveEnd = dateEnd ?? `${year}-12-31`;
     this.loading.set(true);
     try {
       const response = await this.api.post<OperationResponseDto[]>(
         OPS_ENDPOINTS.user.operations,
-        { contractId: 0, dateStart: this.queryDate(dateStart, false), dateEnd: this.queryDate(dateEnd, true), operationTypeList },
+        {
+          contractId: 0,
+          dateStart: this.queryDate(effectiveStart, false),
+          dateEnd: this.queryDate(effectiveEnd, true),
+          operationTypeList,
+        },
         { token },
       );
       this._operations.set(response.map((item) => this.mapRemoteOperation(item)));
@@ -139,6 +144,25 @@ export class OperationsService {
   }
 
   async loadParkingStatuses(vehicles: readonly { id: string; plate: string }[], contractId?: number): Promise<void> {
+    await this.loadParkingStatusesFromContracts(vehicles, () => (contractId ? [contractId] : this.contractIdsToCheck()));
+  }
+
+  async loadDashboardParkingStatuses(vehicles: readonly { id: string; plate: string }[]): Promise<void> {
+    const preferredCityId = this.locationSettings.settings().preferredCityId;
+    const preferredContractId = preferredCityId ? this.citiesService.contractIdFor(preferredCityId) : 0;
+    await this.loadParkingStatusesFromContracts(vehicles, (vehicle) => {
+      const recentContractId = this.latestParkingContractId(vehicle.plate);
+      if (recentContractId) return [recentContractId];
+      if (this.source() !== 'remote') return this.contractIdsToCheck();
+      if (preferredContractId > 0) return [preferredContractId];
+      return [];
+    });
+  }
+
+  private async loadParkingStatusesFromContracts(
+    vehicles: readonly { id: string; plate: string }[],
+    contractsFor: (vehicle: { id: string; plate: string }) => readonly number[],
+  ): Promise<void> {
     const token = this.session.token();
     if (!token) {
       this._activeParkings.set([]);
@@ -152,10 +176,10 @@ export class OperationsService {
     }
 
     const date = this.opsDate(new Date());
-    const contractIds = contractId ? [contractId] : this.contractIdsToCheck();
     const results = await Promise.allSettled(
       vehicles.map(async (vehicle) => {
-        let answered = false;
+        const contractIds = [...new Set(contractsFor(vehicle).filter((id) => id > 0))];
+        let answered = contractIds.length === 0;
         for (const id of contractIds) {
           try {
             const status = await this.api.postOrNull<ParkingStatusResponseDto>(
@@ -184,8 +208,32 @@ export class OperationsService {
     this.activeSource.set(failedPlates.size === 0 ? 'remote' : 'error');
   }
 
+  private latestParkingContractId(plate: string): number | undefined {
+    const normalizedPlate = plate.replace(/\s+/g, '').toLocaleUpperCase('es');
+    const parkingTypes = new Set([OperationType.PARKING, OperationType.PARKING_EXTENSION, OperationType.REFUND]);
+    return this._operations()
+      .filter(
+        (operation) =>
+          parkingTypes.has(operation.type) &&
+          operation.contractId != null &&
+          operation.contractId > 0 &&
+          operation.plate?.replace(/\s+/g, '').toLocaleUpperCase('es') === normalizedPlate,
+      )
+      .sort((a, b) => this.operationTimestamp(b) - this.operationTimestamp(a))[0]?.contractId;
+  }
+
+  private operationTimestamp(operation: Operation): number {
+    const [day, month, year] = operation.date.split('/').map(Number);
+    const [hours = 0, minutes = 0] = (operation.startTime ?? operation.endTime ?? '').split(':').map(Number);
+    const timestamp = new Date(year, month - 1, day, hours, minutes).getTime();
+    return Number.isNaN(timestamp) ? 0 : timestamp;
+  }
+
   private contractIdsToCheck(): number[] {
-    const loaded = this.citiesService.cities().map((city) => city.contractId).filter((id) => id > 0);
+    const loaded = this.citiesService
+      .cities()
+      .map((city) => city.contractId)
+      .filter((id) => id > 0);
     const all = loaded.length > 0 ? [...new Set(loaded)] : this.citiesService.knownContractIds();
     const preferredCityId = this.locationSettings.settings().preferredCityId;
     if (!preferredCityId) return all;
@@ -245,6 +293,7 @@ export class OperationsService {
       operationId: status.operationDate || status.dateInitial,
       contractId,
       tariffId: status.tariffId,
+      sectorId: Number(status.sector ?? 0) || undefined,
     };
   }
 
