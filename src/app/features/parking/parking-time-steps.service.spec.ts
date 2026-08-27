@@ -7,7 +7,16 @@ import { ParkingTimeStepsService } from './parking-time-steps.service';
 describe('ParkingTimeStepsService', () => {
   it('uses the complete Swagger contract and maps amounts from cents', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
-    api.post.and.resolveTo({ dateInitial: '120000270826', steps: [{ time: 60, quantity: 150, datetime: '130000270826' }] });
+    api.post.and.resolveTo({
+      dateInitial: '120000270826',
+      dateEnd: '130000270826',
+      ticketId: 4,
+      ticketDesc: 'Rotación',
+      groupId: 22002,
+      operationBase: 99,
+      timeBalanceUsed: 0,
+      steps: [{ time: 60, quantity: 150, datetime: '130000270826' }],
+    });
     TestBed.configureTestingModule({
       providers: [provideZonelessChangeDetection(), { provide: OpsApiClient, useValue: api }],
     });

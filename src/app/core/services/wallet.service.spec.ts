@@ -81,7 +81,7 @@ describe('WalletService', () => {
 
   it('recharges in cents using RechargeUserCreditAPI', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'post']);
-    api.post.and.resolveTo({ payMethodId: 7, amountRecharged: 250, newBalance: 1500, challengeUrl: null });
+    api.post.and.resolveTo({ payMethodId: 7, amountRecharged: 250, newBalance: 1500, order: 'order-123', challengeUrl: null });
     const service = serviceWith(api);
     TestBed.inject(OpsSessionService).setToken('token');
 
@@ -92,7 +92,7 @@ describe('WalletService', () => {
       { contractId: 0, amount: 250, payMethodId: 7 },
       { token: 'token' },
     );
-    expect(result).toEqual({ success: true, source: 'remote', amount: 2.5 });
+    expect(result).toEqual({ success: true, source: 'remote', amount: 2.5, order: 'order-123' });
     expect(service.balance()).toBe(15);
   });
 
