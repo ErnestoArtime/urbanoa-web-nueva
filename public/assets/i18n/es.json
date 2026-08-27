@@ -36,6 +36,7 @@
   "parking.wizard.currentSelection": "Selección actual",
   "parking.wizard.municipio": "Municipio",
   "parking.wizard.vehicle": "Vehículo",
+  "parking.wizard.changeVehicle": "Cambiar vehículo",
   "parking.wizard.duration": "Duración",
   "parking.wizard.step": "Paso {{current}} de {{total}}",
   "parking.wizard.step1.label": "Ubicación y vehículo",

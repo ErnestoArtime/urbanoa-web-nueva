@@ -1,7 +1,7 @@
-import { AfterViewInit, Component, ElementRef, OnDestroy, ViewChild, computed, inject, signal } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, OnDestroy, ViewChild, computed, effect, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import * as L from 'leaflet';
-import { LucideStar } from '@lucide/angular';
+import { LucideCarFront, LucideStar } from '@lucide/angular';
 import type { Vehicle } from '../../../shared/models/vehicle';
 import { LoaderComponent } from '../../../shared/components/loader/loader.component';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
@@ -29,7 +29,7 @@ interface MapParkingZone {
 
 @Component({
   selector: 'app-parking-map',
-  imports: [RouterLink, LoaderComponent, TranslatePipe, MapLocationControlComponent, LucideStar],
+  imports: [RouterLink, LoaderComponent, TranslatePipe, MapLocationControlComponent, LucideCarFront, LucideStar],
   template: `
     <app-loader [visible]="mapLoading()" [message]="'parking.map.loading' | translate" imageSrc="/assets/brand/login-logo.jpg" />
     <section class="parking-map-page">
@@ -61,12 +61,12 @@ interface MapParkingZone {
 
           <div class="vehicle-control-wrapper" [class.selector-open]="showVehicleSelector()">
             <button type="button" class="vehicle-control" [disabled]="!hasAvailableVehicles()" (click)="toggleVehicleSelector()">
-              <span>▣</span>
+              <span class="vehicle-control-icon"><svg lucideCarFront size="20" strokeWidth="2.2"></svg></span>
               <span
                 ><small>{{ 'parking.map.vehicle' | translate }}</small
                 ><strong>{{ selectedVehicle()?.plate ?? ('parking.map.noVehicles' | translate) }}</strong></span
               >
-              <b>▼</b>
+              <b class="vehicle-control-chevron" aria-hidden="true"></b>
             </button>
 
             @if (hasAvailableVehicles()) {
@@ -226,10 +226,18 @@ interface MapParkingZone {
         text-align: left;
       }
       .vehicle-control b {
+        display: inline-block;
+        width: 0.45rem;
+        height: 0.45rem;
+        margin: -0.2rem 0 0 0.15rem;
+        border-right: 2px solid var(--color-primary);
+        border-bottom: 2px solid var(--color-primary);
+        transform: rotate(45deg);
         transition: transform 180ms ease;
       }
       .vehicle-control-wrapper.selector-open .vehicle-control b {
-        transform: rotate(180deg);
+        margin-top: 0.2rem;
+        transform: rotate(225deg);
       }
       .search-control > span:nth-child(2),
       .vehicle-control > span:nth-child(2) {
@@ -237,6 +245,14 @@ interface MapParkingZone {
         flex: 1;
         flex-direction: column;
         min-width: 0;
+      }
+      .vehicle-control > span:first-child {
+        display: inline-grid;
+        width: 1.25rem;
+        height: 1.25rem;
+        flex: 0 0 1.25rem;
+        place-items: center;
+        line-height: 1;
       }
       .search-control small,
       .vehicle-control small {
@@ -542,7 +558,9 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
   private readonly zones: MapParkingZone[] = [];
   private highlightedZone?: MapParkingZone;
   private readonly selectedState = signal<ParkingMunicipio>(EMPTY_CITY);
-  get selected(): ParkingMunicipio { return this.selectedState(); }
+  get selected(): ParkingMunicipio {
+    return this.selectedState();
+  }
   readonly mapLoading = signal(true);
   readonly flowError = signal(this.route.snapshot.queryParamMap.get('flowError') === 'missingData');
   readonly mapError = signal(false);
@@ -569,6 +587,11 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
     return Boolean(zone?.sectorId && vehicle && !this.isParkedIn(vehicle));
   });
   readonly showVehicleSelector = signal(false);
+  private readonly syncSelectedVehicle = effect(() => {
+    const vehicleId = this.store.vm().vehicleId;
+    const vehicle = this.availableVehicles().find((item) => item.id === vehicleId);
+    if (vehicle && this.selectedVehicle()?.id !== vehicle.id) this.selectedVehicle.set(vehicle);
+  });
 
   toggleVehicleSelector(): void {
     if (!this.hasAvailableVehicles()) return;
@@ -675,7 +698,7 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
       zoneId: String(zone.zoneId),
       streetId: String(zone.streetId ?? this.streetIdByZone.get(zone.zoneId) ?? 0),
       zoneName: zone.name,
-        sectorId: String(zone.sectorId),
+      sectorId: String(zone.sectorId),
       sectorName: zone.name,
       street: zone.street,
       sectorColor: zone.color,
@@ -692,7 +715,7 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
         zoneId: zone.zoneId,
         streetId: this.streetIdByZone.get(zone.zoneId),
         zone: zone.name,
-          sectorId: zone.sectorId,
+        sectorId: zone.sectorId,
         sector: zone.name,
         street: zone.street,
         sectorColor: zone.color,
@@ -858,10 +881,22 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
       .replace(/\s*#[0-9a-f]{6}\s*$/i, '')
       .trim();
   }
-
 }
 
 const EMPTY_CITY: ParkingMunicipio = {
-  id: '', nombre: '', provincia: '', zonas: 0, imagen: '', contractId: 0, description1: '', address: '', email: '', imagePath: '',
-  longitude: 0, latitude: 0, phone: '', radius: '', zones: [],
+  id: '',
+  nombre: '',
+  provincia: '',
+  zonas: 0,
+  imagen: '',
+  contractId: 0,
+  description1: '',
+  address: '',
+  email: '',
+  imagePath: '',
+  longitude: 0,
+  latitude: 0,
+  phone: '',
+  radius: '',
+  zones: [],
 };

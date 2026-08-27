@@ -14,6 +14,10 @@ import { CitiesService } from '../../../core/services/cities.service';
         'parking.streets.back' | translate
       }}</a>
       <h1 class="page-title">{{ 'parking.selectStreet' | translate }}</h1>
+      <div class="selected-city card" aria-live="polite">
+        <small>{{ 'parking.cities.selected' | translate }}</small>
+        <strong>{{ selectedCityName }}</strong>
+      </div>
       @if (dataSource() === 'error') {
         <p class="data-notice" role="alert">No se pudieron cargar las calles.</p>
       }
@@ -47,6 +51,21 @@ import { CitiesService } from '../../../core/services/cities.service';
       .back-link {
         display: inline-block;
         margin-bottom: 1rem;
+      }
+      .selected-city {
+        display: flex;
+        flex-direction: column;
+        gap: 0.15rem;
+        margin: 0.75rem 0 1rem;
+        border-left: 4px solid var(--color-primary);
+      }
+      .selected-city small {
+        color: var(--color-text-muted);
+        font-size: var(--text-xs);
+      }
+      .selected-city strong {
+        color: var(--color-primary-dark);
+        font-size: var(--text-lg);
       }
       .street-icon {
         position: relative;
@@ -103,6 +122,7 @@ export class ParkingStreetsComponent implements OnInit {
   readonly dataSource = signal<'loading' | 'remote' | 'error'>('loading');
   readonly cityId = this.route.snapshot.queryParamMap.get('city') ?? this.route.snapshot.queryParamMap.get('municipio') ?? '';
   readonly cityName = this.route.snapshot.queryParamMap.get('cityName') ?? '';
+  readonly selectedCityName = this.cityName || this.cityLabel(this.cityId);
   readonly plate = this.route.snapshot.queryParamMap.get('plate') ?? this.flowStore.vm().plate ?? '';
   readonly vehicleId = this.route.snapshot.queryParamMap.get('vehicleId') ?? this.flowStore.vm().vehicleId ?? '';
   readonly filteredStreets = computed(() => {
@@ -150,5 +170,27 @@ export class ParkingStreetsComponent implements OnInit {
       latitude: this.route.snapshot.queryParamMap.get('latitude') ?? '',
       longitude: this.route.snapshot.queryParamMap.get('longitude') ?? '',
     };
+  }
+
+  private cityLabel(identifier: string): string {
+    const labels: Record<string, string> = {
+      '1': 'Durango',
+      '3': 'Zarautz',
+      '5': 'Tolosa',
+      '23': 'Bergara',
+      '61': 'Arrasate',
+      '73': 'Soria',
+      '79': 'Deba',
+      '81': 'Mutriku',
+      arrasate: 'Arrasate',
+      bergara: 'Bergara',
+      deba: 'Deba',
+      durango: 'Durango',
+      mutriku: 'Mutriku',
+      soria: 'Soria',
+      tolosa: 'Tolosa',
+      zarautz: 'Zarautz',
+    };
+    return labels[identifier.toLocaleLowerCase('es')] ?? identifier;
   }
 }
