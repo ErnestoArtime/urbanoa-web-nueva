@@ -18,7 +18,7 @@ import { TranslatePipe } from '../../shared/pipes/translate.pipe';
           <router-outlet />
         } @else {
           <div class="split-view-detail-empty">
-            <p>{{ 'layout.splitView.empty' | translate }}</p>
+            <p>{{ emptyMessageKey() | translate }}</p>
           </div>
         }
       </div>
@@ -36,4 +36,5 @@ export class SplitViewComponent {
   hideList = input(false);
   hideDetail = input(false);
   showOutlet = input(true);
+  emptyMessageKey = input('layout.splitView.empty');
 }

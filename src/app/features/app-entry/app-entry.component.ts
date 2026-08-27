@@ -4,7 +4,11 @@ import { ParkingSessionService } from '../../core/services/parking-session.servi
 
 @Component({
   selector: 'app-entry',
-  template: '',
+  template: `<div class="entry-loading" role="status" aria-live="polite">Cargando…</div>`,
+  styles: `
+    :host { display: grid; min-height: 100%; place-items: center; }
+    .entry-loading { color: var(--color-text-muted); font-size: var(--text-base); }
+  `,
 })
 export class AppEntryComponent implements OnInit {
   private readonly router = inject(Router);

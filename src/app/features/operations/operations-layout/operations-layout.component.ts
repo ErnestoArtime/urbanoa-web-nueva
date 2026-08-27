@@ -1,8 +1,9 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { RouterLink, RouterLinkActive, NavigationEnd, Router } from '@angular/router';
 import { filter, map, startWith } from 'rxjs/operators';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { DateRangeFilterComponent, type DateRange } from '../../../shared/components/date-range-filter/date-range-filter.component';
 import { OperationType, OPERATION_TYPE_LABELS } from '../../../shared/models/operation-type';
@@ -30,113 +31,131 @@ import { ParkingTicketCardComponent } from '../../../shared/components/parking-t
     ResultModalComponent,
   ],
   template: `
-    <app-split-view [hideList]="isDetailRoute()" [hideDetail]="!isDetailRoute()">
+    <app-split-view [hideList]="isDetailRoute()" [hideDetail]="!isDetailRoute()" [showOutlet]="isDetailRoute()" emptyMessageKey="ops.empty">
       <div splitList class="page">
         <h1 class="page-title">{{ 'ops.title' | translate }}</h1>
-
-        @if (unpaidFinesCount() > 0) {
-          <section class="sanctions-alert">
-            <a
-              routerLink="/app/operations/unpaid-fines"
-              [class.active]="isUnpaidFinesRoute()"
-              [attr.aria-current]="isUnpaidFinesRoute() ? 'page' : null"
-              class="sanctions-alert-link"
-            >
-              <div class="sanctions-alert-copy">
-                <strong>{{ 'ops.unpaidFines.bannerTitle' | translate }}</strong>
-                <span>{{ 'ops.unpaidFines.bannerCount' | translate: { count: unpaidFinesCount() } }} &gt;</span>
-              </div>
-              <app-operation-icon [type]="OperationType.UNPAID_FINES" />
-            </a>
-          </section>
+        @if (initialLoading()) {
+          <div class="operations-skeleton" role="status" aria-live="polite" [attr.aria-label]="'common.loading' | translate">
+            <span class="sr-only">{{ 'common.loading' | translate }}</span>
+            <div class="skeleton-line skeleton-label"></div>
+            <div class="skeleton-card skeleton-card-current"></div>
+            <div class="skeleton-card skeleton-card-action"></div>
+            <div class="skeleton-panel">
+              <div class="skeleton-line skeleton-heading"></div>
+              <div class="skeleton-chips"><span></span><span></span><span></span></div>
+              <div class="skeleton-filter"></div>
+            </div>
+            <div class="skeleton-list-row"></div>
+            <div class="skeleton-list-row"></div>
+            <div class="skeleton-list-row"></div>
+          </div>
         }
 
-        <section class="current-section">
-          <p class="section-label">
-            {{ 'ops.inProgress' | translate }}
-            @if (activeParkingsCount() > 1) {
-              <span class="active-parkings-count">{{ activeParkingsCount() }}</span>
+        <div [class.operations-content-hidden]="initialLoading()">
+          @if (unpaidFinesCount() > 0) {
+            <section class="sanctions-alert">
+              <a
+                routerLink="/app/operations/unpaid-fines"
+                [class.active]="isUnpaidFinesRoute()"
+                [attr.aria-current]="isUnpaidFinesRoute() ? 'page' : null"
+                class="sanctions-alert-link"
+              >
+                <div class="sanctions-alert-copy">
+                  <strong>{{ 'ops.unpaidFines.bannerTitle' | translate }}</strong>
+                  <span>{{ 'ops.unpaidFines.bannerCount' | translate: { count: unpaidFinesCount() } }} &gt;</span>
+                </div>
+                <app-operation-icon [type]="OperationType.UNPAID_FINES" />
+              </a>
+            </section>
+          }
+
+          <section class="current-section">
+            <p class="section-label">
+              {{ 'ops.inProgress' | translate }}
+              @if (activeParkingsCount() > 1) {
+                <span class="active-parkings-count">{{ activeParkingsCount() }}</span>
+              }
+            </p>
+            @if (activeParkings().length > 0) {
+              @for (parking of activeParkings(); track parking.id) {
+                <app-parking-ticket-card
+                  [parking]="parking"
+                  variant="operations-current"
+                  (leaveParking)="onUnpark($event.id)"
+                  (extendTime)="onExtend()"
+                  (goToCar)="onGoToCar($event)"
+                />
+                @if (!$last) {
+                  <div class="parking-separator"></div>
+                }
+              }
+            } @else {
+              <article class="active-operation empty-active-operation">
+                <p>{{ 'ops.noActive' | translate }}</p>
+              </article>
             }
-          </p>
-          @if (activeParkings().length > 0) {
-            @for (parking of activeParkings(); track parking.id) {
-              <app-parking-ticket-card
-                [parking]="parking"
-                variant="operations-current"
-                (leaveParking)="onUnpark($event.id)"
-                (extendTime)="onExtend()"
-                (goToCar)="onGoToCar($event)"
-              />
-              @if (!$last) {
-                <div class="parking-separator"></div>
+          </section>
+
+          <section class="actions-section">
+            <a
+              routerLink="/app/operations/report"
+              routerLinkActive="active"
+              [routerLinkActiveOptions]="{ exact: false }"
+              ariaCurrentWhenActive="page"
+              class="list-item action-item"
+            >
+              <div class="list-item-content">
+                <div class="list-item-title">{{ 'ops.report' | translate }}</div>
+              </div>
+              <span class="list-item-chevron">›</span>
+            </a>
+          </section>
+
+          <section class="history-filter-panel">
+            <p class="section-label history-label">{{ 'dashboard.recentOps' | translate }}</p>
+            <app-date-range-filter (rangeChange)="onRangeChange($event)" />
+          </section>
+
+          <ul class="list history-list">
+            @for (group of groupedHistory(); track group.label) {
+              <li class="history-group-label">{{ group.label | translate }}</li>
+              @for (op of group.items; track op.id) {
+                <a
+                  [routerLink]="['/app/operations/detail', op.id]"
+                  class="list-item"
+                  routerLinkActive="active"
+                  [routerLinkActiveOptions]="{ exact: true }"
+                >
+                  <app-operation-icon [type]="op.type" />
+                  <div class="list-item-content">
+                    <div class="list-item-title" [class.finish-op-title]="isFinishParking(op)">
+                      {{ OPERATION_TYPE_LABELS[op.type] | translate }}
+                    </div>
+                    <div class="list-item-subtitle">
+                      {{ op.date }}{{ operationTime(op) ? ' · ' + operationTime(op) : '' }}{{ op.zone ? ' — ' + op.zone : '' }}
+                    </div>
+                    @if (op.plate) {
+                      <div class="operation-meta">
+                        {{ op.plate }}
+                        @if (isParking(op) && op.durationLabel) {
+                          <span> · {{ op.durationLabel }}</span>
+                        }
+                      </div>
+                    }
+                  </div>
+                  <span [class]="op.amount > 0 ? 'operation-amount operation-amount-credit' : 'operation-amount operation-amount-debit'">
+                    {{ op.amount > 0 ? '+' : '' }}{{ op.amount | number: '1.2-2' }} €
+                  </span>
+                </a>
               }
             }
-          } @else {
-            <article class="active-operation empty-active-operation">
-              <p>{{ 'ops.noActive' | translate }}</p>
-            </article>
-          }
-        </section>
-
-        <section class="actions-section">
-          <a
-            routerLink="/app/operations/report"
-            routerLinkActive="active"
-            [routerLinkActiveOptions]="{ exact: false }"
-            ariaCurrentWhenActive="page"
-            class="list-item action-item"
-          >
-            <div class="list-item-content">
-              <div class="list-item-title">{{ 'ops.report' | translate }}</div>
-            </div>
-            <span class="list-item-chevron">›</span>
-          </a>
-        </section>
-
-        <section class="history-filter-panel">
-          <p class="section-label history-label">{{ 'dashboard.recentOps' | translate }}</p>
-          <app-date-range-filter (rangeChange)="onRangeChange($event)" />
-        </section>
-
-        <ul class="list history-list">
-          @for (group of groupedHistory(); track group.label) {
-            <li class="history-group-label">{{ group.label | translate }}</li>
-            @for (op of group.items; track op.id) {
-              <a
-                [routerLink]="['/app/operations/detail', op.id]"
-                class="list-item"
-                routerLinkActive="active"
-                [routerLinkActiveOptions]="{ exact: true }"
-              >
-                <app-operation-icon [type]="op.type" />
-                <div class="list-item-content">
-                  <div class="list-item-title" [class.finish-op-title]="isFinishParking(op)">
-                    {{ OPERATION_TYPE_LABELS[op.type] | translate }}
-                  </div>
-                  <div class="list-item-subtitle">
-                    {{ op.date }}{{ operationTime(op) ? ' · ' + operationTime(op) : '' }}{{ op.zone ? ' — ' + op.zone : '' }}
-                  </div>
-                  @if (op.plate) {
-                    <div class="operation-meta">
-                      {{ op.plate }}
-                      @if (isParking(op) && op.durationLabel) {
-                        <span> · {{ op.durationLabel }}</span>
-                      }
-                    </div>
-                  }
-                </div>
-                <span [class]="op.amount > 0 ? 'operation-amount operation-amount-credit' : 'operation-amount operation-amount-debit'">
-                  {{ op.amount > 0 ? '+' : '' }}{{ op.amount | number: '1.2-2' }} €
-                </span>
-              </a>
+            @if (groupedHistory().length === 0) {
+              <li class="list-item" style="justify-content:center;color:var(--color-muted)">
+                {{ 'ops.empty' | translate }}
+              </li>
             }
-          }
-          @if (groupedHistory().length === 0) {
-            <li class="list-item" style="justify-content:center;color:var(--color-muted)">
-              {{ 'ops.empty' | translate }}
-            </li>
-          }
-        </ul>
+          </ul>
+        </div>
       </div>
     </app-split-view>
     @if (unparked()) {
@@ -166,6 +185,87 @@ import { ParkingTicketCardComponent } from '../../../shared/components/parking-t
         background: rgba(93, 154, 150, 0.16);
         color: var(--color-primary-dark);
         box-shadow: inset 4px 0 0 var(--color-primary);
+      }
+      .operations-content-hidden {
+        display: none;
+      }
+      .operations-skeleton {
+        display: grid;
+        gap: 0.75rem;
+        padding-top: 0.75rem;
+      }
+      .operations-skeleton > div,
+      .skeleton-chips span {
+        position: relative;
+        overflow: hidden;
+        border-radius: var(--radius-md);
+        background: #e7ebe2;
+      }
+      .operations-skeleton > div::after,
+      .skeleton-chips span::after {
+        position: absolute;
+        inset: 0;
+        content: '';
+        transform: translateX(-100%);
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.72), transparent);
+        animation: operations-shimmer 1.25s ease-in-out infinite;
+      }
+      .skeleton-line {
+        height: 0.75rem;
+      }
+      .skeleton-label {
+        width: 30%;
+      }
+      .skeleton-heading {
+        width: 42%;
+      }
+      .skeleton-card-current {
+        height: 5.5rem;
+      }
+      .skeleton-card-action {
+        height: 4.25rem;
+        margin-top: 0.25rem;
+      }
+      .skeleton-panel {
+        display: grid;
+        gap: 0.7rem;
+        padding: 0.8rem;
+        background: transparent !important;
+        border: 1px solid var(--color-border);
+      }
+      .skeleton-panel::after {
+        display: none;
+      }
+      .skeleton-chips {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.45rem;
+      }
+      .skeleton-chips span {
+        height: 1.9rem;
+        border-radius: var(--radius-pill);
+      }
+      .skeleton-filter {
+        height: 2.6rem;
+      }
+      .skeleton-list-row {
+        height: 4.4rem;
+      }
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+      @keyframes operations-shimmer {
+        to {
+          transform: translateX(100%);
+        }
       }
       .op-icon {
         font-size: var(--text-base);
@@ -401,7 +501,8 @@ import { ParkingTicketCardComponent } from '../../../shared/components/parking-t
 })
 export class OperationsLayoutComponent implements OnInit {
   private readonly router = inject(Router);
-  private readonly operationsService = inject(OperationsService);
+  private readonly destroyRef = inject(DestroyRef);
+  readonly operationsService = inject(OperationsService);
   private readonly parkingSessionService = inject(ParkingSessionService);
   private readonly navigationToCar = inject(NavigationToCarService);
   private readonly operations = this.operationsService.operations;
@@ -417,6 +518,9 @@ export class OperationsLayoutComponent implements OnInit {
   private pendingUnparkId = '';
   readonly filteredOps = computed(() => this.applyFilter(this.operations()));
   readonly groupedHistory = computed(() => this.groupByPeriod(this.filteredOps()));
+  readonly initialLoading = computed(
+    () => this.operationsService.source() === 'idle' || (this.operationsService.loading() && this.operations().length === 0),
+  );
 
   private readonly url = toSignal(
     this.router.events.pipe(
@@ -429,6 +533,16 @@ export class OperationsLayoutComponent implements OnInit {
 
   ngOnInit(): void {
     void this.operationsService.load();
+    this.router.events
+      .pipe(
+        filter((event): event is NavigationEnd => event instanceof NavigationEnd),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((event) => {
+        if (event.urlAfterRedirects.split('?')[0].replace(/\/$/, '') === '/app/operations') {
+          void this.operationsService.load();
+        }
+      });
   }
 
   isDetailRoute = () => {
