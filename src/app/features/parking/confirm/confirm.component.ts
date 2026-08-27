@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal, ViewChild } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { LoaderComponent } from '../../../shared/components/loader/loader.component';
 import { PaymentSummaryComponent } from '../../../shared/components/payment-summary/payment-summary.component';
@@ -70,7 +70,7 @@ import { ParkingApiService } from '../../../core/services/parking-api.service';
       <app-payment-summary [wallet]="wallet()" [totalAmount]="totalAmount()" />
 
       <div class="sticky-actions">
-        <app-swipe-to-pay [disabled]="requiresCard() && !walletService.cards().length" (complete)="onSwipeComplete()" />
+        <app-swipe-to-pay #swipePay [disabled]="requiresCard() && !walletService.cards().length" (complete)="onSwipeComplete()" />
       </div>
 
       <a routerLink="/app/account/payment-methods" class="change-payment">{{ 'parking.confirm.changePayment' | translate }}</a>
@@ -201,6 +201,7 @@ export class ParkingConfirmComponent {
   private readonly store = inject(ParkingFlowStore);
   readonly walletService = inject(WalletService);
   private readonly parkingApi = inject(ParkingApiService);
+  @ViewChild(SwipeToPayComponent) swipePay!: SwipeToPayComponent;
   readonly query: ParkingFlowQuery = this.store.hasMinimumParkingData() ? this.store.fromStore() : readParkingFlowQuery(this.route);
   readonly selectedCardId = signal(this.walletService.defaultCardId());
   readonly selectedCard = computed(
@@ -249,6 +250,7 @@ export class ParkingConfirmComponent {
     });
     if (!result.success) {
       this.loading.set(false);
+      this.swipePay.reset();
       return;
     }
     if (result.challengeUrl) {

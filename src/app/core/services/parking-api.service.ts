@@ -77,7 +77,7 @@ export class ParkingApiService {
           tariffType: input.tariffType,
           cloudToken: '',
           operatingSystem: 1,
-          date: this.opsDate(new Date(input.date)),
+          date: input.date,
           time: input.time,
           latitude: input.latitude,
           longitude: input.longitude,
