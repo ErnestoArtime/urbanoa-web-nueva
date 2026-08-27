@@ -5,6 +5,7 @@ import { SecuritySettingsService } from './security-settings.service';
 import { SupportService } from './support.service';
 import { OpsApiClient } from '../api/ops-api-client.service';
 import { OpsSessionService } from '../api/ops-session.service';
+import { UserService } from './user.service';
 
 function configureTestBed(): void {
   TestBed.configureTestingModule({ providers: [provideZonelessChangeDetection(), provideHttpClient()] });
@@ -20,6 +21,7 @@ describe('APK v2 feature services', () => {
     const api = TestBed.inject(OpsApiClient);
     spyOn(api, 'post').and.resolveTo('1048');
     TestBed.inject(OpsSessionService).setToken('token');
+    TestBed.inject(UserService).updateLocal({ email: 'user@example.com' });
     const service = TestBed.inject(SupportService);
     const thread = await service.create({
       type: 'incident',

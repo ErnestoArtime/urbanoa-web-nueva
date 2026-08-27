@@ -4,6 +4,7 @@ import { OpsApiError } from '../api/ops-api.types';
 import { OPS_ENDPOINTS } from '../api/ops-endpoints';
 import { OpsSessionService } from '../api/ops-session.service';
 import { CitiesService } from './cities.service';
+import { UserService } from './user.service';
 
 export type FeedbackType = 'incident' | 'suggestion' | 'inquiry' | 'service-complaint' | 'compliment';
 export type FeedbackSubtype =
@@ -86,6 +87,7 @@ export class SupportService {
   private readonly api = inject(OpsApiClient);
   private readonly session = inject(OpsSessionService);
   private readonly cities = inject(CitiesService);
+  private readonly userService = inject(UserService);
 
   readonly threads = this.state.asReadonly();
   readonly openThreads = computed(() => this.state().filter((thread) => thread.status !== 'closed'));
@@ -192,6 +194,18 @@ export class SupportService {
       this.fail(new OpsApiError('transport', OPS_ENDPOINTS.support.add, 'Se requiere una sesión válida'));
       return null;
     }
+    let userEmail = this.userService.user().email.trim();
+    if (!userEmail) userEmail = (await this.userService.load()).email.trim();
+    if (!userEmail) {
+      this.fail(new OpsApiError('invalid-response', OPS_ENDPOINTS.support.add, 'No se pudo obtener el correo del usuario autenticado'));
+      return null;
+    }
+    const contractId = this.cities.contractIdFor(input.cityId);
+    const plate = input.plate.trim().toUpperCase();
+    if (contractId <= 0 || !plate) {
+      this.fail(new OpsApiError('invalid-response', OPS_ENDPOINTS.support.add, 'El municipio y la matrícula son obligatorios'));
+      return null;
+    }
     const files: FeedbackFileRequestDto[] = input.attachment
       ? [{ filename: input.attachment.name, title: input.attachment.name, payload: input.attachment.dataUrl.split(',').pop() ?? '' }]
       : [];
@@ -201,14 +215,14 @@ export class SupportService {
         {
           baseId: Number.isInteger(baseId) ? baseId : null,
           userId: null,
-          userEmail: '',
+          userEmail,
           channel: 0,
-          contractId: this.cities.contractIdFor(input.cityId),
-          date: new Date().toISOString(),
+          contractId,
+          date: this.backendDate(new Date()),
           type: this.feedbackType(input.type),
           subtype: this.feedbackSubtype(input.subtype),
           message: input.message.trim(),
-          plate: input.plate.trim().toUpperCase(),
+          plate,
           numFiles: files.length,
           files,
         },
@@ -263,7 +277,13 @@ export class SupportService {
     return ['incident', 'suggestion', 'inquiry', 'service-complaint', 'compliment'].indexOf(type) + 1;
   }
 
+  private backendDate(value: Date): string {
+    const part = (item: number): string => String(item).padStart(2, '0');
+    return `${part(value.getHours())}${part(value.getMinutes())}${part(value.getSeconds())}${part(value.getDate())}${part(value.getMonth() + 1)}${String(value.getFullYear()).slice(-2)}`;
+  }
+
   private feedbackSubtype(subtype: FeedbackSubtype): number {
+    if (subtype === 'web') return 1;
     return ['app', 'citizen-services', 'information', 'regulations', 'areas-hours', 'parking-meters', 'fines', 'surveillance', 'web'].indexOf(subtype) + 1;
   }
 

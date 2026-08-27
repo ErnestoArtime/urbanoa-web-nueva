@@ -7,6 +7,7 @@ import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/
 import { ResultModalComponent } from '../../../shared/components/result-modal/result-modal.component';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { CitiesService, type ParkingMunicipio } from '../../../core/services/cities.service';
+import { VehicleService } from '../../../core/services/vehicle.service';
 
 interface SelectOption<T extends string> {
   value: T;
@@ -88,7 +89,12 @@ const FEEDBACK_SUBTYPES: SelectOption<FeedbackSubtype>[] = [
             </div>
             <div class="form-group">
               <label class="form-label" for="support-plate">{{ 'account.support.plate' | translate }}</label>
-              <input id="support-plate" class="form-input plate-input" formControlName="plate" autocomplete="off" />
+              <select id="support-plate" class="form-input plate-input" formControlName="plate">
+                <option value="">{{ 'account.vehicles.empty' | translate }}</option>
+                @for (vehicle of vehicles(); track vehicle.id) {
+                  <option [value]="vehicle.plate">{{ vehicle.plate }}</option>
+                }
+              </select>
               @if (form.controls.plate.invalid && form.controls.plate.touched) {
                 <p class="form-error">{{ 'validation.plate' | translate }}</p>
               }
@@ -330,11 +336,13 @@ export class AccountSupportFormComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly support = inject(SupportService);
   private readonly cities = inject(CitiesService);
+  private readonly vehicleService = inject(VehicleService);
   private readonly threadId = this.route.snapshot.paramMap.get('id');
 
   readonly types = FEEDBACK_TYPES;
   readonly subtypes = FEEDBACK_SUBTYPES;
   readonly municipios = signal<ParkingMunicipio[]>([]);
+  readonly vehicles = this.vehicleService.vehicles;
   readonly replyThread = computed(() => (this.threadId ? this.support.threads().find((thread) => thread.id === this.threadId) : undefined));
   readonly attachment = signal<SupportAttachment | null>(null);
   readonly attachmentError = signal<string | null>(null);
@@ -344,7 +352,7 @@ export class AccountSupportFormComponent implements OnInit {
     type: ['' as FeedbackType | '', Validators.required],
     subtype: ['' as FeedbackSubtype | '', Validators.required],
     cityId: ['', Validators.required],
-    plate: ['', Validators.pattern(/^[0-9]{4}\s?[A-Z]{3}$|^[A-Z]{1,3}\s?[0-9]{1,4}\s?[A-Z]{1,3}$/i)],
+    plate: ['', Validators.required],
     message: ['', [Validators.required, Validators.maxLength(500)]],
   });
 
@@ -354,7 +362,11 @@ export class AccountSupportFormComponent implements OnInit {
 
   async ngOnInit(): Promise<void> {
     try {
-      this.municipios.set((await this.cities.getCities()).data);
+      const citiesRequest = this.cities.getCities();
+      if (!this.vehicleService.vehicles().length) await this.vehicleService.load();
+      this.municipios.set((await citiesRequest).data);
+      const mainVehicle = this.vehicleService.mainVehicle();
+      if (mainVehicle && !this.form.controls.plate.value) this.form.controls.plate.setValue(mainVehicle.plate);
     } catch {
       this.municipios.set([]);
     }
