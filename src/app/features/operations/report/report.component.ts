@@ -11,6 +11,7 @@ import { OpsApiClient } from '../../../core/api/ops-api-client.service';
 import { OpsSessionService } from '../../../core/api/ops-session.service';
 import { OPS_ENDPOINTS } from '../../../core/api/ops-endpoints';
 import { UserService } from '../../../core/services/user.service';
+import { AuthService } from '../../../core/services/auth.service';
 
 type ReportRange = 'last7' | 'last14' | 'last30' | 'last6m' | 'last12m' | 'last5y';
 type ReportFilterKey = 'parks' | 'extends' | 'refunds' | 'recharges' | 'balanceRefunds' | 'fines';
@@ -254,6 +255,7 @@ export class ReportComponent {
   private readonly api = inject(OpsApiClient);
   private readonly session = inject(OpsSessionService);
   private readonly userService = inject(UserService);
+  private readonly authService = inject(AuthService);
 
   readonly form = this.fb.nonNullable.group({
     customDates: [false],
@@ -337,6 +339,8 @@ export class ReportComponent {
       const token = this.session.token();
       if (!token) throw new Error('No hay una sesión OPS activa');
       const range = this.resolveRange();
+      const email = this.authService.user().email.trim() || (await this.userService.load()).email.trim();
+      if (!email) throw new Error('El correo del usuario está vacío');
       const content = await this.api.post<string>(
         OPS_ENDPOINTS.user.report,
         {
@@ -344,7 +348,7 @@ export class ReportComponent {
           dateStart: this.toBackendDate(range.start),
           dateEnd: this.toBackendDate(range.end),
           operationTypeList: this.filters.filter((filter) => this.isFilterEnabled(filter.key)).map((filter) => filter.type),
-          mail: this.userService.user().email,
+          mail: email,
           reportFormat: 1,
         },
         { token },
