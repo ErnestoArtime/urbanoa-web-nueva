@@ -1,5 +1,5 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
-import { MOCK_VEHICLES, type Vehicle } from '../../shared/mock-data';
+import type { Vehicle } from '../../shared/models/vehicle';
 import { OpsApiClient } from '../api/ops-api-client.service';
 import { OpsApiError } from '../api/ops-api.types';
 import { OPS_ENDPOINTS } from '../api/ops-endpoints';
@@ -17,15 +17,15 @@ interface PlatesApiValue {
 
 export interface VehicleMutationResult {
   success: boolean;
-  source: 'remote' | 'mock';
+  source: 'remote' | 'error';
   error?: OpsApiError;
 }
 
 @Injectable({ providedIn: 'root' })
 export class VehicleService {
   private readonly storageKey = 'urbanoa.vehicles';
-  private readonly state = signal<Vehicle[]>(this.readVehicles());
-  private readonly sourceState = signal<'remote' | 'mock'>('mock');
+  private readonly state = signal<Vehicle[]>([]);
+  private readonly sourceState = signal<'idle' | 'remote' | 'error'>('idle');
   private readonly errorState = signal<OpsApiError | null>(null);
 
   readonly vehicles = this.state.asReadonly();
@@ -39,7 +39,8 @@ export class VehicleService {
   async load(): Promise<void> {
     const token = this.session.token();
     if (!token) {
-      this.sourceState.set('mock');
+      this.state.set([]);
+      this.sourceState.set('error');
       return;
     }
 
@@ -54,7 +55,8 @@ export class VehicleService {
       this.errorState.set(null);
       await this.ensureFavorite();
     } catch (error) {
-      this.useMock(error, OPS_ENDPOINTS.user.plates);
+      this.state.set([]);
+      this.useError(error, OPS_ENDPOINTS.user.plates);
     }
   }
 
@@ -71,26 +73,27 @@ export class VehicleService {
   async add(input: Omit<Vehicle, 'id'>): Promise<VehicleMutationResult> {
     const plate = this.normalizePlate(input.plate);
     const result = await this.remoteMutation(OPS_ENDPOINTS.user.addPlate, { plate });
+    if (!result.success) return result;
 
     const vehicle: Vehicle = { ...input, plate, isDefault: false, id: generateUuid() };
     this.state.update((vehicles) => [...vehicles, vehicle]);
     this.persist();
 
-    if (!result.success) return result;
     if (input.isDefault) return this.setDefault(vehicle.id);
     return this.state().some((item) => item.isDefault) ? result : this.setDefault(vehicle.id);
   }
 
   async update(id: string, changes: Partial<Omit<Vehicle, 'id'>>): Promise<VehicleMutationResult> {
     const current = this.getById(id);
-    if (!current) return { success: false, source: this.sourceState() };
+    if (!current) return { success: false, source: 'error' };
 
     const nextPlate = this.normalizePlate(changes.plate ?? current.plate);
-    let result: VehicleMutationResult = { success: true, source: this.session.hasSession() ? 'remote' : 'mock' };
+    let result: VehicleMutationResult = { success: true, source: 'remote' };
 
     if (nextPlate !== current.plate) {
       result = await this.remoteMutation(OPS_ENDPOINTS.user.removePlate, { plate: current.plate });
       if (result.success) result = await this.remoteMutation(OPS_ENDPOINTS.user.addPlate, { plate: nextPlate });
+      if (!result.success) return result;
     }
 
     this.state.update((vehicles) =>
@@ -104,8 +107,8 @@ export class VehicleService {
 
   async setDefault(id: string): Promise<VehicleMutationResult> {
     const current = this.getById(id);
-    if (!current) return { success: false, source: this.sourceState() };
-    if (current.isDefault) return { success: true, source: this.sourceState() };
+    if (!current) return { success: false, source: 'error' };
+    if (current.isDefault) return { success: true, source: 'remote' };
 
     const previousDefault = this.state().find((vehicle) => vehicle.isDefault && vehicle.id !== id);
 
@@ -113,6 +116,7 @@ export class VehicleService {
     if (result.success && previousDefault) {
       result = await this.remoteMutation(OPS_ENDPOINTS.user.updatePlate, { plate: previousDefault.plate, favorite: 0 });
     }
+    if (!result.success) return result;
 
     this.state.update((vehicles) => vehicles.map((vehicle) => ({ ...vehicle, isDefault: vehicle.id === id })));
     this.persist();
@@ -121,8 +125,9 @@ export class VehicleService {
 
   async remove(id: string): Promise<VehicleMutationResult> {
     const current = this.getById(id);
-    if (!current) return { success: false, source: this.sourceState() };
+    if (!current) return { success: false, source: 'error' };
     const result = await this.remoteMutation(OPS_ENDPOINTS.user.removePlate, { plate: current.plate });
+    if (!result.success) return result;
 
     const remaining = this.state().filter((vehicle) => vehicle.id !== id);
     this.state.set(remaining);
@@ -135,8 +140,8 @@ export class VehicleService {
   private async remoteMutation(endpoint: string, body: { plate: string; favorite?: number }): Promise<VehicleMutationResult> {
     const token = this.session.token();
     if (!token) {
-      this.sourceState.set('mock');
-      return { success: true, source: 'mock' };
+      this.sourceState.set('error');
+      return { success: false, source: 'error' };
     }
 
     try {
@@ -146,10 +151,9 @@ export class VehicleService {
       return { success: true, source: 'remote' };
     } catch (error) {
       const apiError = this.toApiError(error, endpoint);
-      this.sourceState.set('mock');
+      this.sourceState.set('error');
       this.errorState.set(apiError);
-      console.warn('[OPS API] Mutación de matrícula aplicada solo localmente', apiError);
-      return { success: true, source: 'mock', error: apiError };
+      return { success: false, source: 'error', error: apiError };
     }
   }
 
@@ -161,26 +165,16 @@ export class VehicleService {
     return plate.trim().toUpperCase();
   }
 
-  private useMock(error: unknown, endpoint: string): void {
+  private useError(error: unknown, endpoint: string): void {
     const apiError = this.toApiError(error, endpoint);
-    this.sourceState.set('mock');
+    this.sourceState.set('error');
     this.errorState.set(apiError);
-    console.warn('[OPS API] Se conservan las matrículas locales', apiError);
   }
 
   private toApiError(error: unknown, endpoint: string): OpsApiError {
     return error instanceof OpsApiError
       ? error
       : new OpsApiError('invalid-response', endpoint, error instanceof Error ? error.message : 'Error desconocido');
-  }
-
-  private readVehicles(): Vehicle[] {
-    try {
-      const parsed = JSON.parse(localStorage.getItem(this.storageKey) ?? 'null') as Vehicle[] | null;
-      return Array.isArray(parsed) && parsed.length ? parsed : MOCK_VEHICLES.map((vehicle) => ({ ...vehicle }));
-    } catch {
-      return MOCK_VEHICLES.map((vehicle) => ({ ...vehicle }));
-    }
   }
 
   private persist(): void {

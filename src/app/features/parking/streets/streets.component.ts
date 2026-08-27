@@ -14,8 +14,8 @@ import { CitiesService } from '../../../core/services/cities.service';
         'parking.streets.back' | translate
       }}</a>
       <h1 class="page-title">{{ 'parking.selectStreet' | translate }}</h1>
-      @if (dataSource() === 'mock') {
-        <p class="data-notice" role="status">El servicio de calles no está disponible. Se muestran datos de demostración.</p>
+      @if (dataSource() === 'error') {
+        <p class="data-notice" role="alert">No se pudieron cargar las calles.</p>
       }
       <div class="form-group">
         <input
@@ -100,10 +100,10 @@ export class ParkingStreetsComponent implements OnInit {
   readonly streets = signal<ParkingStreet[]>([]);
   readonly search = signal('');
   readonly loading = signal(true);
-  readonly dataSource = signal<'remote' | 'mock' | null>(null);
-  readonly cityId = this.route.snapshot.queryParamMap.get('city') ?? this.route.snapshot.queryParamMap.get('municipio') ?? 'zarautz';
-  readonly cityName = this.route.snapshot.queryParamMap.get('cityName') ?? 'Zarautz';
-  readonly plate = this.route.snapshot.queryParamMap.get('plate') ?? this.flowStore.vm().plate ?? '1234 ABC';
+  readonly dataSource = signal<'loading' | 'remote' | 'error'>('loading');
+  readonly cityId = this.route.snapshot.queryParamMap.get('city') ?? this.route.snapshot.queryParamMap.get('municipio') ?? '';
+  readonly cityName = this.route.snapshot.queryParamMap.get('cityName') ?? '';
+  readonly plate = this.route.snapshot.queryParamMap.get('plate') ?? this.flowStore.vm().plate ?? '';
   readonly vehicleId = this.route.snapshot.queryParamMap.get('vehicleId') ?? this.flowStore.vm().vehicleId ?? '';
   readonly filteredStreets = computed(() => {
     const term = this.search().trim().toLocaleLowerCase('es');
@@ -116,10 +116,16 @@ export class ParkingStreetsComponent implements OnInit {
 
   async ngOnInit(): Promise<void> {
     const contractId = this.citiesService.contractIdFor(this.cityId);
-    const result = await this.streetsService.getStreets(contractId);
-    this.streets.set(result.data);
-    this.dataSource.set(result.source);
-    this.loading.set(false);
+    try {
+      const result = await this.streetsService.getStreets(contractId);
+      this.streets.set(result.data);
+      this.dataSource.set('remote');
+    } catch {
+      this.streets.set([]);
+      this.dataSource.set('error');
+    } finally {
+      this.loading.set(false);
+    }
   }
 
   updateSearch(event: Event): void {
@@ -138,11 +144,11 @@ export class ParkingStreetsComponent implements OnInit {
       street: street.name,
       streetId: String(street.id),
       sector: street.zoneDescription,
-      sectorColor: '3f51b5',
-      sectorId: '1',
-      ticketId: '1',
-      latitude: '0',
-      longitude: '0',
+      sectorColor: '',
+      sectorId: String(street.zoneId),
+      ticketId: '',
+      latitude: this.route.snapshot.queryParamMap.get('latitude') ?? '',
+      longitude: this.route.snapshot.queryParamMap.get('longitude') ?? '',
     };
   }
 }

@@ -246,9 +246,8 @@ export class ParkingConfirmComponent {
       this.loading.set(false);
       return;
     }
-    const paid = walletAmount <= 0 || this.walletService.debit(walletAmount, 'Estacionamiento', 'parking-payment');
-    if (!paid) {
-      this.loading.set(false);
+    if (result.challengeUrl) {
+      window.location.assign(result.challengeUrl);
       return;
     }
 

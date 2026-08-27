@@ -14,7 +14,7 @@ describe('PasswordService', () => {
     resendMail: jasmine.Spy;
     verifyResetCode: jasmine.Spy;
     changeResetPassword: jasmine.Spy;
-    source: () => 'remote' | 'mock';
+    source: () => 'idle' | 'remote' | 'error';
   };
 
   beforeEach(() => {
@@ -61,7 +61,7 @@ describe('PasswordService', () => {
 
     await expectAsync(service.updatePassword('new-secret')).toBeRejectedWithError('backend unavailable');
 
-    expect(service.source()).toBe('mock');
+    expect(service.source()).toBe('error');
   });
 
   it('sends the recovery code only to ChangePasswordAPI', async () => {

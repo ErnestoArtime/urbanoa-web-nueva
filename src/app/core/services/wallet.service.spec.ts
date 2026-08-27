@@ -20,7 +20,7 @@ describe('WalletService', () => {
 
     service.credit(10, { type: 'top-up', descriptionKey: 'wallet.movement.topUp' });
 
-    expect(service.balance()).toBe(22.5);
+    expect(service.balance()).toBe(10);
     expect(service.movements()[0].type).toBe('top-up');
     expect(service.movements()[0].amount).toBe(10);
   });
@@ -31,7 +31,7 @@ describe('WalletService', () => {
     const paid = service.debit(99, { type: 'fine-payment', descriptionKey: 'wallet.movement.finePayment' });
 
     expect(paid).toBeFalse();
-    expect(service.balance()).toBe(12.5);
+    expect(service.balance()).toBe(0);
     expect(service.movements().length).toBe(0);
   });
 
@@ -58,7 +58,6 @@ describe('WalletService', () => {
     );
     const service = serviceWith(api);
     TestBed.inject(OpsSessionService).setToken('token');
-
     await service.load();
 
     expect(service.balance()).toBe(12.5);
@@ -89,6 +88,7 @@ describe('WalletService', () => {
     api.post.and.resolveTo({ result: 1, refundAmount: 500 });
     const service = serviceWith(api);
     TestBed.inject(OpsSessionService).setToken('token');
+    service.credit(12.5, { type: 'top-up', descriptionKey: 'wallet.movement.topUp' });
 
     const result = await service.refund(5, 'cloud-token');
 
@@ -101,14 +101,14 @@ describe('WalletService', () => {
     expect(service.balance()).toBe(7.5);
   });
 
-  it('uses an explicit local mock when login is postponed', async () => {
+  it('rejects recharge when login is postponed', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'post']);
     const service = serviceWith(api);
 
     const result = await service.recharge(2, 'visa-1234');
 
     expect(api.post).not.toHaveBeenCalled();
-    expect(result.source).toBe('mock');
-    expect(service.balance()).toBe(14.5);
+    expect(result.source).toBe('error');
+    expect(service.balance()).toBe(0);
   });
 });

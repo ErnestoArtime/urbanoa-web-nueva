@@ -1,6 +1,5 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { MOCK_TARIFFS } from '../../../shared/mock-data';
 import { LoaderComponent } from '../../../shared/components/loader/loader.component';
 import { ParkingFlowStore } from '../parking-flow.store';
 import { ParkingFlowQuery, readParkingFlowQuery } from '../parking-flow.model';
@@ -41,14 +40,17 @@ import { ParkingApiService, ParkingTicketOption } from '../../../core/services/p
                 ><strong>{{ query.sector || query.street }}</strong></span
               ><span
                 ><small>{{ 'parking.tickets.schedule' | translate }}</small
-                ><strong>{{ 'parking.tickets.scheduleValue' | translate }}</strong></span
+                ><strong>{{ tariff.schedule || '—' }}</strong></span
               ><span
                 ><small>{{ 'parking.tickets.minimum' | translate }}</small
-                ><strong>{{ 'parking.tickets.minimumValue' | translate }}</strong></span
+                ><strong>{{ tariff.minAmount || '—' }}</strong></span
               >
             </div>
             <span class="ticket-action">{{ 'parking.tickets.getTicket' | translate }} <b>›</b></span>
           </a>
+        }
+        @if (!loading() && !tariffs().length) {
+          <p class="card" role="status">{{ error() ? 'No se pudieron cargar las tarifas.' : 'No hay tarifas disponibles.' }}</p>
         }
       </div>
     </div>
@@ -166,26 +168,34 @@ export class ParkingTicketsComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly store = inject(ParkingFlowStore);
   private readonly parkingApi = inject(ParkingApiService);
-  readonly tariffs = signal<ParkingTicketOption[]>(MOCK_TARIFFS.map((tariff) => ({ ...tariff })));
-  readonly source = signal<'remote' | 'mock'>('mock');
+  readonly tariffs = signal<ParkingTicketOption[]>([]);
+  readonly source = signal<'idle' | 'remote' | 'error'>('idle');
+  readonly error = signal(false);
   readonly query: ParkingFlowQuery = this.store.hasMinimumParkingData() ? this.store.fromStore() : readParkingFlowQuery(this.route);
   readonly loading = signal(true);
   async ngOnInit(): Promise<void> {
-    const result = await this.parkingApi.tickets({
-      contractId: Number(this.query.cityId || 0),
-      plate: this.query.plate,
-      zone: Number(this.query.zoneId || 0),
-      street: Number(this.query.streetId || 0),
-      date: this.parkingApi.opsDate(new Date()),
-    });
-    if (result.data.length) this.tariffs.set(result.data);
-    this.source.set(result.source);
-    this.loading.set(false);
+    try {
+      const result = await this.parkingApi.tickets({
+        contractId: Number(this.query.cityId || 0),
+        plate: this.query.plate,
+        zone: Number(this.query.sectorId || this.query.zoneId || 0),
+        street: Number(this.query.streetId || 0),
+        date: this.parkingApi.opsDate(new Date()),
+      });
+      this.tariffs.set(result.data);
+      this.source.set('remote');
+    } catch {
+      this.tariffs.set([]);
+      this.source.set('error');
+      this.error.set(true);
+    } finally {
+      this.loading.set(false);
+    }
   }
   withTariff(tariff: ParkingTicketOption): Record<string, string> {
-    return { ...this.query, tariffId: tariff.id, tariff: tariff.name, tariffPrice: tariff.price };
+    return { ...this.query, ticketId: tariff.id, tariffId: tariff.id, tariff: tariff.name, tariffPrice: tariff.price };
   }
   onSelectTariff(tariff: ParkingTicketOption): void {
-    this.store.update({ tariffId: tariff.id, tariffName: tariff.name, tariffPrice: tariff.price });
+    this.store.update({ ticketId: tariff.id, ticketName: tariff.name, tariffId: tariff.id, tariffName: tariff.name, tariffPrice: tariff.price });
   }
 }

@@ -322,8 +322,12 @@ export class UnpaidFineDetailComponent {
     if (!this.fine) return;
     const walletAmt = this.walletAmount();
     const cardAmt = this.cardAmount();
-    const ok = await this.unpaidFinesService.payFine(this.fineId, this.selectedCardId());
-    if (ok) {
+    const result = await this.unpaidFinesService.payFine(this.fineId, this.selectedCardId());
+    if (result.challengeUrl) {
+      window.location.assign(result.challengeUrl);
+      return;
+    }
+    if (result.success) {
       this.capturedWalletAmount.set(walletAmt);
       this.capturedCardAmount.set(cardAmt);
       this.paid.set(true);

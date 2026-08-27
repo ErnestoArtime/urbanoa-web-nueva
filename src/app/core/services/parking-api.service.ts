@@ -2,6 +2,7 @@ import { inject, Injectable } from '@angular/core';
 import { OPS_ENDPOINTS } from '../api/ops-endpoints';
 import { OpsApiClient } from '../api/ops-api-client.service';
 import { OpsSessionService } from '../api/ops-session.service';
+import { OpsApiError } from '../api/ops-api.types';
 
 export interface ConfirmParkingInput {
   contractId: number;
@@ -19,8 +20,9 @@ export interface ConfirmParkingInput {
 
 export interface ParkingApiResult {
   success: boolean;
-  source: 'remote' | 'mock';
+  source: 'remote';
   refundAmount?: number;
+  challengeUrl?: string;
   error?: unknown;
 }
 
@@ -38,6 +40,22 @@ export interface ParkingTicketOption {
   name: string;
   desc: string;
   price: string;
+  schedule?: string;
+  maxTime?: string;
+  minAmount?: string;
+  minAmountCents?: number;
+  zoneId?: number;
+  sectorId?: number;
+  sectorColor?: string;
+}
+
+export interface ParkingSectorOption {
+  zoneId: number;
+  zone: string;
+  zoneColor: string;
+  sectorId: number;
+  sector: string;
+  sectorColor: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -47,19 +65,19 @@ export class ParkingApiService {
 
   async confirmParking(input: ConfirmParkingInput): Promise<ParkingApiResult> {
     const token = this.session.token();
-    if (!token) return { success: true, source: 'mock' };
+    if (!token) return { success: false, source: 'remote', error: new OpsApiError('transport', OPS_ENDPOINTS.parking.confirmParking, 'Se requiere una sesión válida') };
     try {
-      await this.api.post<string>(
+      const response = await this.api.post<string>(
         OPS_ENDPOINTS.parking.confirmParking,
         {
           contractId: input.contractId,
           plate: input.plate,
-          sector: input.sector,
+          sector: String(input.sector),
           quantity: input.quantity,
           tariffType: input.tariffType,
           cloudToken: '',
           operatingSystem: 1,
-          date: input.date,
+          date: this.opsDate(new Date(input.date)),
           time: input.time,
           latitude: input.latitude,
           longitude: input.longitude,
@@ -67,20 +85,21 @@ export class ParkingApiService {
           spaceId: '',
           streetname: input.street,
           streetno: '',
+          groupId: input.sector,
+          tariffId: input.tariffType,
           payMethodId: input.payMethodId,
         },
         { token },
       );
-      return { success: true, source: 'remote' };
+      return { success: true, source: 'remote', challengeUrl: this.challengeUrl(response) };
     } catch (error) {
-      console.warn('[OPS API] Confirmación de aparcamiento utiliza fallback mock', error);
-      return { success: true, source: 'mock', error };
+      return { success: false, source: 'remote', error };
     }
   }
 
   async unpark(input: { contractId: number; plate: string; groupId?: number; ticketId?: number }): Promise<ParkingApiResult> {
     const token = this.session.token();
-    if (!token) return { success: true, source: 'mock' };
+    if (!token) return { success: false, source: 'remote', error: new OpsApiError('transport', OPS_ENDPOINTS.parking.queryUnparking, 'Se requiere una sesión válida') };
     try {
       const date = this.opsDate(new Date());
       const quote = await this.api.post<UnparkingResponseDto>(
@@ -104,8 +123,7 @@ export class ParkingApiService {
       );
       return { success: true, source: 'remote', refundAmount: Math.max(0, quote.payAmount) / 100 };
     } catch (error) {
-      console.warn('[OPS API] Desaparcar utiliza fallback mock', error);
-      return { success: true, source: 'mock', error };
+      return { success: false, source: 'remote', error };
     }
   }
 
@@ -115,26 +133,61 @@ export class ParkingApiService {
     zone: number;
     street: number;
     date: string;
-  }): Promise<{ data: ParkingTicketOption[]; source: 'remote' | 'mock' }> {
+    streetId?: number;
+  }): Promise<{ data: ParkingTicketOption[]; source: 'remote' }> {
     const token = this.session.token();
-    if (!token) return { data: [], source: 'mock' };
-    try {
-      const response = await this.api.post<{
-        ticketlist: { ticketId: number; ticketDesc: string; minAmount: number; schedule: string; ticketBehText: string }[] | null;
-      }>(OPS_ENDPOINTS.parking.tickets, { ...input, language: 'ES' }, { token });
-      return {
-        data: (response.ticketlist ?? []).map((ticket) => ({
+    if (!token) throw new OpsApiError('transport', OPS_ENDPOINTS.parking.tickets, 'Se requiere una sesión válida');
+    const response = await this.api.post<{
+      ticketlist: {
+        ticketId: number; ticketDesc: string; minAmount: number | string; schedule: string; ticketBehText?: string;
+        maxTime?: string; zoneId?: number; sectorId?: number; sectorColor?: string;
+      }[] | null;
+    }>(
+      OPS_ENDPOINTS.parking.tickets,
+      {
+        contractId: input.contractId,
+        plate: input.plate,
+        date: this.formatOpsDate(input.date),
+        zone: input.zone,
+        language: 'ES',
+        street: input.streetId ?? 0,
+      },
+      { token },
+    );
+    return {
+      data: (response.ticketlist ?? []).map((ticket) => {
+        const minAmountCents = this.amountInCents(ticket.minAmount);
+        return {
           id: String(ticket.ticketId),
           name: ticket.ticketDesc,
           desc: ticket.ticketBehText || ticket.schedule,
-          price: `${(ticket.minAmount / 100).toFixed(2).replace('.', ',')} €`,
-        })),
-        source: 'remote',
-      };
-    } catch (error) {
-      console.warn('[OPS API] Tarifas utiliza fallback mock', error);
-      return { data: [], source: 'mock' };
-    }
+          price: typeof ticket.minAmount === 'string' && ticket.minAmount.trim()
+            ? ticket.minAmount.replace(/<br\s*\/?>/gi, ' · ')
+            : `${(minAmountCents / 100).toFixed(2).replace('.', ',')} €`,
+          schedule: ticket.schedule,
+          maxTime: ticket.maxTime,
+          minAmount: typeof ticket.minAmount === 'string' ? ticket.minAmount.replace(/<br\s*\/?>/gi, ' · ') : undefined,
+          minAmountCents,
+          zoneId: ticket.zoneId,
+          sectorId: ticket.sectorId,
+          sectorColor: ticket.sectorColor,
+        };
+      }),
+      source: 'remote',
+    };
+  }
+
+  async mapStretches(contractId: number, version = '0'): Promise<{ version: string; data: string }> {
+    const requestedVersion = version.trim() || '0';
+    return this.api.post(OPS_ENDPOINTS.parking.mapStretches, { contractId, version: requestedVersion });
+  }
+
+  async sectors(input: { contractId: number; streetId?: number; latitude: number; longitude: number }): Promise<ParkingSectorOption[]> {
+    const response = await this.api.post<{ sectorlist: ParkingSectorOption[] | null }>(
+      OPS_ENDPOINTS.parking.sectors,
+      { contractId: input.contractId, streetId: input.streetId ?? 0, latitude: input.latitude, longitude: input.longitude },
+    );
+    return response.sectorlist ?? [];
   }
 
   opsDate(date: Date): string {
@@ -142,5 +195,23 @@ export class ParkingApiService {
     return `${two(date.getHours())}${two(date.getMinutes())}${two(date.getSeconds())}${two(date.getDate())}${two(date.getMonth() + 1)}${two(
       date.getFullYear() % 100,
     )}`;
+  }
+
+  private formatOpsDate(value: string | Date): string {
+    if (typeof value === 'string' && /^\d{12}$/.test(value)) return value;
+    const date = value instanceof Date ? value : new Date(value);
+    return this.opsDate(Number.isNaN(date.getTime()) ? new Date() : date);
+  }
+
+  private amountInCents(value: number | string): number {
+    if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+    const match = value.match(/[\d]+(?:[,.][\d]+)?/);
+    if (!match) return 0;
+    return Math.round(Number(match[0].replace(',', '.')) * 100);
+  }
+
+  private challengeUrl(value: string): string | undefined {
+    const candidate = value?.trim();
+    return /^https?:\/\//i.test(candidate) ? candidate : undefined;
   }
 }

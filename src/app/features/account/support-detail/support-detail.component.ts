@@ -236,7 +236,12 @@ export class AccountSupportDetailComponent {
   readonly thread = computed(() => this.support.threads().find((item) => item.id === this.threadId));
 
   constructor() {
-    this.support.markAsRead(this.threadId);
+    void this.initialize();
+  }
+
+  private async initialize(): Promise<void> {
+    if (!this.support.getById(this.threadId)) await this.support.load();
+    await this.support.markAsRead(this.threadId);
   }
 
   typeKey(): string {

@@ -32,15 +32,13 @@ Two package scripts are broken as written — do not rely on them:
 
 Angular 20 standalone SPA, **zoneless** (`provideZonelessChangeDetection`), signals-only state, router configured `withComponentInputBinding()`. No `NgModule`, no NgRx, no `HttpClient` — network calls use raw `fetch`.
 
-### Data layer: local-first, mostly mocked
+### Data layer: backend-first
 
-Almost all "backend" state lives in `@Injectable({providedIn:'root'})` signal services under `src/app/core/services/`. Each owns private `signal`s, exposes `.asReadonly()`/`computed()` views, persists to `localStorage` under `urbanoa.*` keys, and seeds from `src/app/shared/mock-data.ts` when storage is empty. Reads and writes are wrapped in `try/catch` with a silent fallback (see `core/storage/signal-storage.ts`), so a feature keeps working with mock data if storage or the network fails.
+Backend state lives in `@Injectable({providedIn:'root'})` signal services under `src/app/core/services/`. OPS calls go through `OpsApiClient`, which validates the standard response envelope and propagates transport/backend errors. Services may persist confirmed data such as language, preferences, cards or vehicles in `localStorage`, but never seed API state or replace failed requests with mock responses.
 
-Only two things talk to a real server, both via base URLs in `src/environments/environment*.ts` and proxied in dev by `proxy.conf.json`:
-- `opsApiBaseUrl` → `/ops-api` (`StreetsService` POSTs to `OPSWebServicesAPI`; falls back to `MOCK_STREETS_ZARAUTZ` on any error, and tolerates several response envelope shapes).
-- `externalContentBaseUrl` → `/external-content` (legal/FAQ pages embedded by `WebContentComponent`, wired through route `data` in `account.routes.ts`).
+The OPS API is exposed through `opsApiBaseUrl` → `/ops-api` and proxied in development by `proxy.conf.json`/`proxy.conf.js`. Most endpoints target `OPSWebServicesAPI3`; feedback and the Paycomet form target the legacy `OPSWebServicesAPI` through the explicit `OPSWebServicesLegacyAPI` proxy prefix. Legal/FAQ content uses `externalContentBaseUrl` → `/external-content`.
 
-Adding a real endpoint means adding a `fetch`-based service plus a proxy entry — there is no interceptor or HTTP client stack to hook into.
+When backend data is unavailable, screens show an empty/error state and allow retry. A legacy `mock-` token is discarded during session startup; it is not accepted as a credential and never triggers a local API response.
 
 ### Routing
 

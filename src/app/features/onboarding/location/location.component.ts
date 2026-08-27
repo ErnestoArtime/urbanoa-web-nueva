@@ -1,8 +1,9 @@
 import { Component, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { APP_BRAND } from '../../../shared/constants/app-brand';
-import { MOCK_MUNICIPIOS } from '../../../shared/mock-data';
 import { LocationSettingsService } from '../../../core/services/location-settings.service';
+import { CitiesService } from '../../../core/services/cities.service';
+import type { Municipio } from '../../../shared/models/municipio';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 
 @Component({
@@ -38,7 +39,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
             <h3>{{ 'onboarding.location.cityPickerTitle' | translate }}</h3>
             <p class="city-picker-desc">{{ 'onboarding.location.cityPickerDesc' | translate }}</p>
             <div class="city-list">
-              @for (city of municipios; track city.id) {
+              @for (city of municipios(); track city.id) {
                 <button type="button" class="city-option" (click)="selectCity(city.id, city.nombre)">
                   {{ city.nombre }}
                   <small>{{ city.provincia }}</small>
@@ -114,9 +115,16 @@ export class OnboardingLocationComponent {
   private readonly router = inject(Router);
   private readonly locationService = inject(LocationSettingsService);
   readonly brand = APP_BRAND;
-  readonly municipios = MOCK_MUNICIPIOS;
+  readonly municipios = signal<Municipio[]>([]);
   readonly showCityPicker = signal(false);
   readonly message = signal('');
+
+  constructor() {
+    void inject(CitiesService)
+      .getCities()
+      .then((result) => this.municipios.set(result.data))
+      .catch(() => this.municipios.set([]));
+  }
 
   async grantPermission(): Promise<void> {
     this.message.set('');

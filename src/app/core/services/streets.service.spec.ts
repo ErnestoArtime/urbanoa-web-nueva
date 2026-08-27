@@ -24,25 +24,19 @@ describe('StreetsService', () => {
     expect(result.data).toEqual([{ id: 7, name: 'AITZA KALEA', zoneId: 2, zoneDescription: 'Z2 AZUL' }]);
   });
 
-  it('uses the Zarautz fallback and marks it as mock', async () => {
+  it('propagates backend errors instead of returning demo streets', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
     api.post.and.rejectWith(new Error('offline'));
     const service = serviceWith(api);
 
-    const result = await service.getStreets(3);
-
-    expect(result.source).toBe('mock');
-    expect(result.data.length).toBeGreaterThan(0);
+    await expectAsync(service.getStreets(3)).toBeRejectedWithError('offline');
   });
 
-  it('does not show Zarautz streets for another municipality', async () => {
+  it('does not substitute another municipality when its request fails', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
     api.post.and.rejectWith(new Error('offline'));
     const service = serviceWith(api);
 
-    const result = await service.getStreets(5);
-
-    expect(result.source).toBe('mock');
-    expect(result.data).toEqual([]);
+    await expectAsync(service.getStreets(5)).toBeRejectedWithError('offline');
   });
 });

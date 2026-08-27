@@ -9,7 +9,8 @@ export class OpsSessionService {
       const stored = JSON.parse(localStorage.getItem('urbanoa.auth.user') ?? 'null') as { token?: string } | null;
       if (stored?.token) this.authToken.set(stored.token);
     } catch {
-      // La sesión de demo sigue funcionando en memoria.
+      // Una sesión corrupta no debe impedir que la aplicación arranque.
+      this.authToken.set(null);
     }
   }
 

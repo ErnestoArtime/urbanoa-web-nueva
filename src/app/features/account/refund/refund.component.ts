@@ -13,10 +13,8 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
   template: `
     <div class="page account-static-page">
       <app-detail-panel-header [title]="'account.refund.title' | translate" backRoute="/app/account/payment-methods" />
-      @if (walletService.source() === 'mock') {
-        <p class="data-notice" role="status">
-          La devolución se simulará localmente mientras no haya una sesión conectada o falle el servicio.
-        </p>
+      @if (walletService.source() === 'error') {
+        <p class="data-notice" role="alert">No se pudo conectar con el servicio de pagos.</p>
       }
       <div class="card refund-summary">
         <p class="text-muted">{{ 'account.refund.availableBalance' | translate }}</p>
@@ -142,8 +140,7 @@ export class AccountRefundComponent {
     this.requesting.set(false);
     if (!result.success) return;
     const refunded = result.amount ?? amount;
-    const cardLabel = `${card.brand} •••• ${card.last4}`;
-    this.operationsService.registerBalanceRefund(refunded, cardLabel, card.id, cardLabel);
+    await this.operationsService.load();
     this.refundedAmount.set(refunded);
     this.refundQuote.set(null);
     this.done.set(true);

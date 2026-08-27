@@ -6,8 +6,9 @@ import { AppIconComponent } from '../../../shared/icons/app-icon.component';
 import { OperationIconComponent } from '../../../shared/components/operation-icon/operation-icon.component';
 import { OperationType } from '../../../shared/models/operation-type';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
-import { ParkingSessionService } from '../../../core/services/parking-session.service';
-import { generateUuid } from '../../../core/utils/generate-uuid';
+import { OperationsService } from '../../../core/services/operations.service';
+import { VehicleService } from '../../../core/services/vehicle.service';
+import { WalletService } from '../../../core/services/wallet.service';
 
 @Component({
   selector: 'app-parking-success',
@@ -227,39 +228,18 @@ import { generateUuid } from '../../../core/utils/generate-uuid';
 export class ParkingSuccessComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly store = inject(ParkingFlowStore);
-  private readonly parkingSessionService = inject(ParkingSessionService);
+  private readonly operations = inject(OperationsService);
+  private readonly vehicles = inject(VehicleService);
+  private readonly wallet = inject(WalletService);
   readonly query: ParkingFlowQuery =
     this.route.snapshot.queryParamMap.has('paymentWalletAmount') || !this.store.hasMinimumParkingData()
       ? readParkingFlowQuery(this.route)
       : this.store.fromStore();
   readonly parkingType = OperationType.PARKING;
 
-  ngOnInit(): void {
-    const parsedAmount = parseFloat(this.query.amount.replace('€', '').replace(',', '.').trim()) || 0;
-    const minutes = Number(this.query.minutes || 0);
-    const hoursPart = String(Math.floor(minutes / 60)).padStart(2, '0');
-    const minutesPart = String(minutes % 60).padStart(2, '0');
-    this.parkingSessionService.startParking({
-      id: generateUuid(),
-      plate: this.query.plate,
-      vehicleId: this.query.vehicleId || '',
-      zone: `${this.query.zone} — ${this.query.cityName}`,
-      startTime: this.startTime(),
-      durationLabel: this.query.duration,
-      timeRemaining: `${hoursPart}:${minutesPart}:00`,
-      endTime: this.query.endTime,
-      amount: parsedAmount,
-      paymentBreakdown: {
-        walletAmount: Number(this.query.paymentWalletAmount || parsedAmount) || 0,
-        cardAmount: Number(this.query.paymentCardAmount || 0) || 0,
-        cardLabel: this.query.paymentCardLabel,
-      },
-      cardId: this.query.paymentCardId,
-      cardLabel: this.query.paymentCardLabel,
-      latitude: Number(this.query.latitude) || undefined,
-      longitude: Number(this.query.longitude) || undefined,
-      street: this.query.street,
-    });
+  async ngOnInit(): Promise<void> {
+    await Promise.all([this.operations.load(), this.wallet.load()]);
+    await this.operations.loadParkingStatuses(this.vehicles.vehicles(), Number(this.query.cityId) || undefined);
   }
 
   startTime(): string {

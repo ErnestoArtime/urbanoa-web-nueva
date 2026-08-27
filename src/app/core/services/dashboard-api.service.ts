@@ -3,6 +3,7 @@ import { OperationsService } from './operations.service';
 import { VehicleService } from './vehicle.service';
 import { WalletService } from './wallet.service';
 import { UserService } from './user.service';
+import { CitiesService } from './cities.service';
 
 @Injectable({ providedIn: 'root' })
 export class DashboardApiService {
@@ -10,7 +11,8 @@ export class DashboardApiService {
   private readonly vehiclesService = inject(VehicleService);
   private readonly wallet = inject(WalletService);
   private readonly userService = inject(UserService);
-  readonly source = signal<'remote' | 'mock'>('mock');
+  private readonly cities = inject(CitiesService);
+  readonly source = signal<'idle' | 'remote' | 'error'>('idle');
   readonly activeParkings = this.operations.activeParkings;
   readonly recentOperations = this.operations.operations;
   readonly vehicles = this.vehiclesService.vehicles;
@@ -31,7 +33,13 @@ export class DashboardApiService {
   });
 
   async load(): Promise<void> {
-    await Promise.all([this.operations.load(), this.vehiclesService.load(), this.wallet.load(), this.userService.load()]);
+    await Promise.allSettled([
+      this.operations.load(),
+      this.vehiclesService.load(),
+      this.wallet.load(),
+      this.userService.load(),
+      this.cities.getCities(),
+    ]);
     await this.operations.loadParkingStatuses(this.vehiclesService.vehicles());
     const allRemote =
       this.operations.source() === 'remote' &&
@@ -39,6 +47,6 @@ export class DashboardApiService {
       this.vehiclesService.source() === 'remote' &&
       this.wallet.source() === 'remote' &&
       this.userService.source() === 'remote';
-    this.source.set(allRemote ? 'remote' : 'mock');
+    this.source.set(allRemote ? 'remote' : 'error');
   }
 }

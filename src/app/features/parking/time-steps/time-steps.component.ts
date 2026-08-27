@@ -86,6 +86,9 @@ import { LucideCarFront } from '@lucide/angular';
           }
         </div>
       }
+      @if (!loading() && error()) {
+        <p class="card" role="alert">No se pudieron obtener los tramos de tiempo para esta tarifa.</p>
+      }
 
       @if (steps().length > 0) {
         <div class="price-card card">
@@ -366,25 +369,32 @@ export class ParkingTimeStepsComponent implements OnInit {
   });
   readonly selectedIndex = computed(() => this.steps().findIndex((s) => s.time === this.selectedStep().time));
   readonly loading = signal(true);
+  readonly error = signal(false);
   private readonly startedAt = new Date();
 
   async ngOnInit(): Promise<void> {
     const hourlyPrice = this.parsePrice(this.query.tariffPrice);
-    const generatedSteps = await this.timeStepsService.queryTimeSteps({
-      tariffId: this.query.tariffId || '1',
-      tariffPrice: hourlyPrice,
-      contractId: Number(this.query.cityId || 0),
-      sectorId: Number(this.query.sectorId || 0),
-      ticketId: Number(this.query.ticketId || 0),
-      plate: this.query.plate,
-      startDate: this.startedAt,
-      stepMinutes: this.isZarautz() ? 3 : 5,
-    });
-    this.steps.set(generatedSteps);
-    const oneHourIndex = generatedSteps.findIndex((step) => step.time === 60);
-    const defaultIndex = oneHourIndex >= 0 ? oneHourIndex : 0;
-    this.selectedStep.set(generatedSteps[defaultIndex]);
-    this.loading.set(false);
+    try {
+      const generatedSteps = await this.timeStepsService.queryTimeSteps({
+        tariffId: this.query.tariffId || '1',
+        tariffPrice: hourlyPrice,
+        contractId: Number(this.query.cityId || 0),
+        sectorId: Number(this.query.sectorId || 0),
+        ticketId: Number(this.query.ticketId || 0),
+        plate: this.query.plate,
+        startDate: this.startedAt,
+        stepMinutes: this.isZarautz() ? 3 : 5,
+      });
+      this.steps.set(generatedSteps);
+      const oneHourIndex = generatedSteps.findIndex((step) => step.time === 60);
+      const defaultIndex = oneHourIndex >= 0 ? oneHourIndex : 0;
+      if (generatedSteps[defaultIndex]) this.selectedStep.set(generatedSteps[defaultIndex]);
+    } catch {
+      this.steps.set([]);
+      this.error.set(true);
+    } finally {
+      this.loading.set(false);
+    }
   }
 
   selectStep(step: ParkingTimeStep): void {

@@ -67,10 +67,6 @@ export const ACCOUNT_ROUTES: Routes = [
         loadComponent: () => import('./payment-layout/payment-layout.component').then((m) => m.PaymentLayoutComponent),
         children: [
           {
-            path: 'challenge',
-            loadComponent: () => import('./payment-challenge/payment-challenge.component').then((m) => m.PaymentChallengeComponent),
-          },
-          {
             path: 'add',
             loadComponent: () => import('./payment-add/payment-add.component').then((m) => m.PaymentAddComponent),
           },

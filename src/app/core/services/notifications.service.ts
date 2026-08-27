@@ -38,39 +38,42 @@ const DEFAULTS: NotificationPreferences = {
 @Injectable({ providedIn: 'root' })
 export class NotificationsService {
   readonly preferences = signal<NotificationPreferences>({ ...DEFAULTS });
-  readonly source = signal<'remote' | 'mock'>('mock');
+  readonly source = signal<'idle' | 'remote' | 'error'>('idle');
 
   private readonly api = inject(OpsApiClient);
   private readonly session = inject(OpsSessionService);
 
   async load(): Promise<NotificationPreferences> {
     const token = this.session.token();
-    if (!token) return this.preferences();
+    if (!token) {
+      this.source.set('error');
+      return this.preferences();
+    }
     try {
       const response = await this.api.get<{ notifications: NotificationPreferences }>(OPS_ENDPOINTS.user.notifications, { token });
       this.preferences.set({ ...DEFAULTS, ...response.notifications });
       this.source.set('remote');
     } catch (error) {
-      console.warn('[OPS API] Notificaciones utiliza fallback mock', error);
-      this.source.set('mock');
+      console.warn('[OPS API] No se pudieron cargar las notificaciones', error);
+      this.source.set('error');
     }
     return this.preferences();
   }
 
-  async save(preferences: NotificationPreferences): Promise<'remote' | 'mock'> {
-    this.preferences.set(preferences);
+  async save(preferences: NotificationPreferences): Promise<'remote' | 'error'> {
     const token = this.session.token();
     if (!token) {
-      this.source.set('mock');
-      return 'mock';
+      this.source.set('error');
+      return 'error';
     }
     try {
       await this.api.post<string>(OPS_ENDPOINTS.user.updateNotifications, { contractId: 0, notifications: preferences }, { token });
+      this.preferences.set(preferences);
       this.source.set('remote');
     } catch (error) {
-      console.warn('[OPS API] Guardado de notificaciones utiliza fallback mock', error);
-      this.source.set('mock');
+      console.warn('[OPS API] No se pudieron guardar las notificaciones', error);
+      this.source.set('error');
     }
-    return this.source();
+    return this.source() === 'remote' ? 'remote' : 'error';
   }
 }

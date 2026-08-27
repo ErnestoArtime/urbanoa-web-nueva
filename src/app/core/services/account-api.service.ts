@@ -7,15 +7,15 @@ import { OpsSessionService } from '../api/ops-session.service';
 export class AccountApiService {
   private readonly api = inject(OpsApiClient);
   private readonly session = inject(OpsSessionService);
-  readonly source = signal<'remote' | 'mock'>('mock');
+  readonly source = signal<'idle' | 'remote' | 'error'>('idle');
 
   async changePassword(currentPassword: string, newPassword: string): Promise<void> {
     try {
       await this.api.post(OPS_ENDPOINTS.user.updatePassword, { password: newPassword }, { token: this.session.token() });
       this.source.set('remote');
     } catch (error) {
-      console.warn('[OPS API] Cambio de contraseña usa fallback mock', error);
-      this.source.set('mock');
+      this.source.set('error');
+      throw error;
     }
   }
   async cancelAccount(): Promise<void> {
@@ -24,20 +24,8 @@ export class AccountApiService {
       this.source.set('remote');
     } catch (error) {
       console.warn('[OPS API] Baja de cuenta rechazada por la API', error);
-      this.source.set('mock');
+      this.source.set('error');
       throw error;
     }
-  }
-  async complete3ds(payload: unknown): Promise<void> {
-    /*try {
-      await this.api.post('/payments/3ds-complete', payload);
-      this.source.set('remote');
-    } catch (e) {
-      console.warn('[API] 3DS usa fallback mock', this.api.errorMessage(e));
-      this.source.set('mock');
-    }*/
-    void payload;
-    console.info('[OPS API] 3DS no tiene endpoint propio en Swagger; se mantiene el flujo WebView/local.');
-    this.source.set('mock');
   }
 }

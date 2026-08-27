@@ -61,7 +61,7 @@ export class ParkingFlowStore {
 
   canConfirm(): boolean {
     const s = this.state();
-    return !!s.cityId && !!s.plate && !!s.zoneId && !!s.tariffId && !!s.minutes && !!s.amount;
+    return !!s.cityId && !!s.plate && !!s.zoneId && !!s.sectorId && !!s.tariffId && !!s.minutes && !!s.amount;
   }
 
   hasMinimumParkingData(): boolean {
