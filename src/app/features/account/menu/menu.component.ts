@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { NavigationEnd, Router, RouterLink } from '@angular/router';
 import { ACCOUNT_MENU } from '../../../shared/constants/navigation';
@@ -417,7 +417,7 @@ import { environment } from '../../../../environments/environment';
     `,
   ],
 })
-export class AccountMenuComponent {
+export class AccountMenuComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly translationService = inject(TranslationService);
   readonly walletService = inject(WalletService);
@@ -479,6 +479,10 @@ export class AccountMenuComponent {
     this.router.events.subscribe((event) => {
       if (event instanceof NavigationEnd) this.syncFromUrl(event.urlAfterRedirects);
     });
+  }
+
+  ngOnInit(): void {
+    if (this.walletService.source() !== 'remote' && !this.walletService.loading()) void this.walletService.load();
   }
 
   readonly selectedLabel = () => {
