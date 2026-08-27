@@ -9,6 +9,7 @@ import { DateRangeFilterComponent, type DateRange } from '../../../shared/compon
 import { OperationType, OPERATION_TYPE_LABELS } from '../../../shared/models/operation-type';
 import { UnpaidFinesService } from '../../../core/services/unpaid-fines.service';
 import { OperationsService, type ActiveParking } from '../../../core/services/operations.service';
+import { VehicleService } from '../../../core/services/vehicle.service';
 import { ParkingSessionService } from '../../../core/services/parking-session.service';
 import { NavigationToCarService } from '../../../core/services/navigation-to-car.service';
 import type { Operation } from '../../../shared/models/operation';
@@ -505,6 +506,7 @@ export class OperationsLayoutComponent implements OnInit {
   readonly operationsService = inject(OperationsService);
   private readonly parkingSessionService = inject(ParkingSessionService);
   private readonly navigationToCar = inject(NavigationToCarService);
+  private readonly vehicleService = inject(VehicleService);
   private readonly operations = this.operationsService.operations;
   private readonly rangeFilter = signal<DateRange>({ from: '', to: '' });
   private readonly unpaidFinesService = inject(UnpaidFinesService);
@@ -532,7 +534,7 @@ export class OperationsLayoutComponent implements OnInit {
   );
 
   ngOnInit(): void {
-    void this.operationsService.load();
+    void this.reload();
     this.router.events
       .pipe(
         filter((event): event is NavigationEnd => event instanceof NavigationEnd),
@@ -540,9 +542,14 @@ export class OperationsLayoutComponent implements OnInit {
       )
       .subscribe((event) => {
         if (event.urlAfterRedirects.split('?')[0].replace(/\/$/, '') === '/app/operations') {
-          void this.operationsService.load();
+          this.reload();
         }
       });
+  }
+
+  private async reload(): Promise<void> {
+    await Promise.all([this.operationsService.load(), this.vehicleService.load()]);
+    this.parkingSessionService.loadParkingStatuses(this.vehicleService.vehicles());
   }
 
   isDetailRoute = () => {
