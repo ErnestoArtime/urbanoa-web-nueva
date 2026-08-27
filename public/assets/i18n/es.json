@@ -323,6 +323,7 @@
   "account.support.selectMunicipio": "Seleccionar municipio",
   "account.support.generic": "Genérico",
   "account.support.plate": "Matrícula",
+  "account.support.noPlate": "Sin matrícula (opcional)",
   "account.support.message": "Mensaje",
   "account.support.messagePlaceholder": "Describe tu consulta…",
   "account.support.send": "Enviar mensaje",

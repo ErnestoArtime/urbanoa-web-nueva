@@ -31,10 +31,45 @@ describe('SupportService', () => {
     expect(loaded).toBeTrue();
     expect(api.post).toHaveBeenCalledOnceWith(
       OPS_ENDPOINTS.support.query,
-      { contractId: 0, dateStart: '2000-01-01', dateEnd: '2100-12-31' },
+      { contractId: 0, startDate: '000000010100', endDate: jasmine.stringMatching(/^\d{12}$/) },
       { token: 'token' },
     );
+    expect(OPS_ENDPOINTS.support.query).toBe('OPSWebServicesAPI/QueryUserFeedbackAPI');
     expect(service.threads()[0]).toEqual(jasmine.objectContaining({ id: '12', plate: '1234567', unread: true }));
+  });
+
+  it('allows feedback without a plate because only contractId is required by Swagger', async () => {
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
+    api.post.and.resolveTo('123');
+    TestBed.configureTestingModule({
+      providers: [
+        provideZonelessChangeDetection(),
+        { provide: OpsApiClient, useValue: api },
+        { provide: OpsSessionService, useValue: { token: () => 'token' } },
+        { provide: CitiesService, useValue: { contractIdFor: () => 1 } },
+        {
+          provide: UserService,
+          useValue: { user: signal({ email: '' }), load: jasmine.createSpy().and.rejectWith(new Error('profile unavailable')) },
+        },
+      ],
+    });
+
+    const service = TestBed.inject(SupportService);
+    const created = await service.create({
+      type: 'incident',
+      subtype: 'web',
+      cityId: 'durango',
+      cityName: 'Durango',
+      plate: '',
+      message: 'test',
+    });
+
+    expect(created?.id).toBe('123');
+    expect(api.post).toHaveBeenCalledWith(
+      'OPSWebServicesAPI/AddUserFeedbackAPI',
+      jasmine.objectContaining({ contractId: 1, plate: '', userEmail: null }),
+      { token: 'token' },
+    );
   });
 
   it('sends feedback using the contract expected by the APK', async () => {
