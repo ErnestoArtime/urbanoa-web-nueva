@@ -1,8 +1,6 @@
 const API_PREFIX = 'OPSWebServicesAPI/';
-const LEGACY_API_PREFIX = 'OPSWebServicesLegacyAPI/';
 
 const endpoint = (name: string): string => `${API_PREFIX}${name}`;
-const legacyEndpoint = (name: string): string => `${LEGACY_API_PREFIX}${name}`;
 
 export const OPS_ENDPOINTS = {
   auth: {
@@ -32,6 +30,7 @@ export const OPS_ENDPOINTS = {
   },
   fines: {
     confirmPayment: endpoint('ConfirmFinePaymentAPI'),
+    updateStatus: endpoint('UpdateFineStatusAPI'),
   },
   user: {
     query: endpoint('QueryUserAPI'),
@@ -55,11 +54,12 @@ export const OPS_ENDPOINTS = {
     paymentMethods: endpoint('QueryUserPaymentMethodsAPI'),
     removePaymentMethod: endpoint('RemoveUserPaymentMethodAPI'),
     updatePaymentMethod: endpoint('UpdateUserPaymentMethodAPI'),
-    loadPaymentForm: legacyEndpoint('LoadPaymentMethodFormAPI'),
+    loadPaymentForm: endpoint('LoadPaymentMethodFormAPI'),
+    addPaymentMethod: endpoint('AddUserPaymentMethodAPI'),
   },
   support: {
-    add: legacyEndpoint('AddUserFeedbackAPI'),
-    query: legacyEndpoint('QueryUserFeedbackAPI'),
-    update: legacyEndpoint('UpdateUserFeedbackAPI'),
+    add: endpoint('AddUserFeedbackAPI'),
+    query: endpoint('QueryUserFeedbackAPI'),
+    update: endpoint('UpdateUserFeedbackAPI'),
   },
 } as const;

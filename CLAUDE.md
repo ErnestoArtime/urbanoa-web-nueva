@@ -36,7 +36,7 @@ Angular 20 standalone SPA, **zoneless** (`provideZonelessChangeDetection`), sign
 
 Backend state lives in `@Injectable({providedIn:'root'})` signal services under `src/app/core/services/`. OPS calls go through `OpsApiClient`, which validates the standard response envelope and propagates transport/backend errors. Services may persist confirmed data such as language, preferences, cards or vehicles in `localStorage`, but never seed API state or replace failed requests with mock responses.
 
-The OPS API is exposed through `opsApiBaseUrl` → `/ops-api` and proxied in development by `proxy.conf.json`/`proxy.conf.js`. Most endpoints target `OPSWebServicesAPI3`; feedback and the Paycomet form target the legacy `OPSWebServicesAPI` through the explicit `OPSWebServicesLegacyAPI` proxy prefix. Legal/FAQ content uses `externalContentBaseUrl` → `/external-content`.
+The OPS API is exposed through `opsApiBaseUrl` → `/ops-api` and proxied in development by `proxy.conf.json`/`proxy.conf.js`. All endpoints target the unified `OPSWebServicesAPI`; the proxy still accepts the former `OPSWebServicesLegacyAPI` prefix for cached clients. Legal/FAQ content uses `externalContentBaseUrl` → `/external-content`.
 
 When backend data is unavailable, screens show an empty/error state and allow retry. A legacy `mock-` token is discarded during session startup; it is not accepted as a credential and never triggers a local API response.
 
