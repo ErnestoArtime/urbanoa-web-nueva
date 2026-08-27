@@ -131,6 +131,7 @@ export class ParkingApiService {
     contractId: number;
     plate: string;
     zone: number;
+    street: number;
     date: string;
     streetId?: number;
   }): Promise<{ data: ParkingTicketOption[]; source: 'remote' }> {
@@ -189,7 +190,7 @@ export class ParkingApiService {
     return response.sectorlist ?? [];
   }
 
-  private opsDate(date: Date): string {
+  opsDate(date: Date): string {
     const two = (value: number): string => String(value).padStart(2, '0');
     return `${two(date.getHours())}${two(date.getMinutes())}${two(date.getSeconds())}${two(date.getDate())}${two(date.getMonth() + 1)}${two(
       date.getFullYear() % 100,
