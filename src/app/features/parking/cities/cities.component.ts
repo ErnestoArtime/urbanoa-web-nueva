@@ -47,8 +47,8 @@ const EMPTY_CITY: ParkingMunicipio = {
             <button type="button" class="municipio-card" [class.active]="selected().id === m.id"
                     (click)="selected.set(m)">
               <div class="municipio-img">
-                @if (m.imagen) {
-                  <img [src]="'assets/municipios/' + m.imagen"
+                @if (m.imagePath || m.imagen) {
+                  <img [src]="m.imagePath || 'assets/municipios/' + m.imagen"
                        [alt]="'parking.cities.viewOf' | translate: { name: m.nombre }" />
                 }
                 <span class="municipio-map-label">{{ m.nombre }}</span>

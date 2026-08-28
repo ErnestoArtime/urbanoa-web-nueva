@@ -593,6 +593,15 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
     if (vehicle && this.selectedVehicle()?.id !== vehicle.id) this.selectedVehicle.set(vehicle);
   });
 
+  // Clear selected vehicle and selector when the vehicle is removed from the list
+  private readonly clearSelectedVehicleOnRemoval = effect(() => {
+    const vehicle = this.selectedVehicle();
+    if (vehicle && !this.vehicles().some((v) => v.id === vehicle.id)) {
+      this.selectedVehicle.set(null);
+      this.showVehicleSelector.set(false);
+    }
+  });
+
   toggleVehicleSelector(): void {
     if (!this.hasAvailableVehicles()) return;
     this.showVehicleSelector.update((value) => !value);
