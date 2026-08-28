@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, ElementRef, OnDestroy, ViewChild, computed, inject, signal } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, OnDestroy, ViewChild, computed, effect, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import * as L from 'leaflet';
 import { MOCK_MUNICIPIOS, type Municipio, type Vehicle } from '../../../shared/mock-data';
@@ -553,6 +553,15 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
   );
   readonly canStartParking = computed(() => Boolean(this.selectedZone() && this.selectedVehicle() && !this.isParkedIn(this.selectedVehicle()!)));
   readonly showVehicleSelector = signal(false);
+
+  // Clear selected vehicle and selector when the vehicle is removed from the list
+  private readonly clearSelectedVehicleOnRemoval = effect(() => {
+    const vehicle = this.selectedVehicle();
+    if (vehicle && !this.vehicles().some((v) => v.id === vehicle.id)) {
+      this.selectedVehicle.set(null);
+      this.showVehicleSelector.set(false);
+    }
+  });
 
   toggleVehicleSelector(): void {
     if (!this.hasAvailableVehicles()) return;
