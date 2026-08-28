@@ -1,4 +1,4 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, effect, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { LoaderComponent } from '../../../shared/components/loader/loader.component';
 import { ParkingFlowStore } from '../parking-flow.store';
@@ -15,7 +15,7 @@ import { LucideCarFront } from '@lucide/angular';
   template: `
     <app-loader [visible]="loading()" [message]="'parking.timeSteps.loading' | translate" imageSrc="/assets/brand/login-logo.jpg" />
     <div class="page flow-page has-sticky-actions">
-      <a routerLink="/app/parking/tickets" [queryParams]="query" class="back-link">{{ 'parking.timeSteps.back' | translate }}</a>
+      <a routerLink="/app/parking/tickets" [queryParams]="query()" class="back-link">{{ 'parking.timeSteps.back' | translate }}</a>
       <h1 class="page-title">{{ 'parking.timeSteps.title' | translate }}</h1>
       <p class="page-subtitle">{{ 'parking.timeSteps.subtitle' | translate }}</p>
 
@@ -85,6 +85,9 @@ import { LucideCarFront } from '@lucide/angular';
             </button>
           }
         </div>
+      }
+      @if (!loading() && error()) {
+        <p class="card" role="alert">No se pudieron obtener los tramos de tiempo para esta tarifa.</p>
       }
 
       @if (steps().length > 0) {
@@ -336,20 +339,26 @@ export class ParkingTimeStepsComponent implements OnInit {
   private readonly store = inject(ParkingFlowStore);
   private readonly timeStepsService = inject(ParkingTimeStepsService);
   private readonly parkingSessionService = inject(ParkingSessionService);
-  readonly query: ParkingFlowQuery = this.store.hasMinimumParkingData() ? this.store.fromStore() : readParkingFlowQuery(this.route);
-  readonly hasFlowData = computed(() => !!this.query.plate);
+  private readonly initialQuery: ParkingFlowQuery = readParkingFlowQuery(this.route);
+  readonly query = computed(() =>
+    this.store.hasMinimumParkingData()
+      ? ({ ...this.initialQuery, ...this.store.fromStore() } as ParkingFlowQuery)
+      : (this.initialQuery as ParkingFlowQuery),
+  );
+  readonly hasFlowData = computed(() => !!this.query().plate);
   readonly context = computed(() => {
-    if (this.hasFlowData()) return this.query;
+    const q = this.query();
+    if (this.hasFlowData()) return q;
     const parkings = this.parkingSessionService.activeParkings();
     const first = parkings[0];
-    if (!first) return this.query;
+    if (!first) return q;
     return {
-      ...this.query,
-      zone: this.query.zone || first.zone,
-      street: this.query.street || first.street || '',
-      plate: this.query.plate || first.plate,
-      cityName: this.query.cityName || '',
-      tariff: this.query.tariff || '',
+      ...q,
+      zone: q.zone || first.zone,
+      street: q.street || first.street || '',
+      plate: q.plate || first.plate,
+      cityName: q.cityName || '',
+      tariff: q.tariff || '',
     } as ParkingFlowQuery;
   });
 
@@ -366,21 +375,50 @@ export class ParkingTimeStepsComponent implements OnInit {
   });
   readonly selectedIndex = computed(() => this.steps().findIndex((s) => s.time === this.selectedStep().time));
   readonly loading = signal(true);
+  readonly error = signal(false);
   private readonly startedAt = new Date();
 
-  ngOnInit(): void {
-    const hourlyPrice = this.parsePrice(this.query.tariffPrice);
-    const generatedSteps = this.timeStepsService.generateSteps({
-      tariffId: this.query.tariffId || '1',
-      tariffPrice: hourlyPrice,
-      startDate: this.startedAt,
-      stepMinutes: this.isZarautz() ? 3 : 5,
-    });
-    this.steps.set(generatedSteps);
-    const oneHourIndex = generatedSteps.findIndex((step) => step.time === 60);
-    const defaultIndex = oneHourIndex >= 0 ? oneHourIndex : 0;
-    this.selectedStep.set(generatedSteps[defaultIndex]);
-    setTimeout(() => this.loading.set(false), 700);
+  private currentlyLoadedPlate = '';
+
+  async ngOnInit(): Promise<void> {
+    this.currentlyLoadedPlate = this.query().plate;
+    await this.loadSteps();
+  }
+
+  private readonly reloadOnVehicleChange = effect(() => {
+    const plate = this.query().plate;
+    if (this.currentlyLoadedPlate && plate && plate !== this.currentlyLoadedPlate) {
+      this.currentlyLoadedPlate = plate;
+      void this.loadSteps();
+    }
+  });
+
+  private async loadSteps(): Promise<void> {
+    const q = this.query();
+    this.loading.set(true);
+    this.error.set(false);
+    const hourlyPrice = this.parsePrice(q.tariffPrice);
+    try {
+      const generatedSteps = await this.timeStepsService.queryTimeSteps({
+        tariffId: q.tariffId || '1',
+        tariffPrice: hourlyPrice,
+        contractId: Number(q.cityId || 0),
+        sectorId: Number(q.sectorId || 0),
+        ticketId: Number(q.ticketId || 0),
+        plate: q.plate,
+        startDate: this.startedAt,
+        stepMinutes: this.isZarautz() ? 3 : 5,
+      });
+      this.steps.set(generatedSteps);
+      const oneHourIndex = generatedSteps.findIndex((step) => step.time === 60);
+      const defaultIndex = oneHourIndex >= 0 ? oneHourIndex : 0;
+      if (generatedSteps[defaultIndex]) this.selectedStep.set(generatedSteps[defaultIndex]);
+    } catch {
+      this.steps.set([]);
+      this.error.set(true);
+    } finally {
+      this.loading.set(false);
+    }
   }
 
   selectStep(step: ParkingTimeStep): void {
@@ -402,7 +440,7 @@ export class ParkingTimeStepsComponent implements OnInit {
     return `${this.selectedStep().amount.toFixed(2).replace('.', ',')} €`;
   }
   sectorColor(): string {
-    return this.query.sectorColor ? `#${this.query.sectorColor.replace('#', '')}` : 'var(--color-primary)';
+    return this.query().sectorColor ? `#${this.query().sectorColor.replace('#', '')}` : 'var(--color-primary)';
   }
   wheelBackground(): string {
     const progress = ((this.selectedIndex() + 1) / this.steps().length) * 360;
@@ -411,7 +449,7 @@ export class ParkingTimeStepsComponent implements OnInit {
   confirmationParams(): Record<string, string> {
     const step = this.selectedStep();
     return {
-      ...this.query,
+      ...this.query(),
       duration: step.timeFormatted,
       minutes: String(step.time),
       amount: this.amountFormatted(),
@@ -434,7 +472,7 @@ export class ParkingTimeStepsComponent implements OnInit {
     return Number.isFinite(parsed) && parsed > 0 ? parsed : 0.6;
   }
   private isZarautz(): boolean {
-    return [this.query.city, this.query.cityName].some((value) => value?.trim().toLocaleLowerCase('es') === 'zarautz');
+    return [this.query().city, this.query().cityName].some((value) => value?.trim().toLocaleLowerCase('es') === 'zarautz');
   }
   private formatTime(date: Date): string {
     return date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });

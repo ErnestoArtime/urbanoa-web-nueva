@@ -24,7 +24,7 @@ function passwordsMatch(control: AbstractControl): ValidationErrors | null {
           <a routerLink="/auth/login" [attr.aria-label]="'common.back' | translate">←</a>
           <div>
             <h1>{{ 'auth.register.title' | translate }}</h1>
-            <p>{{ 'auth.register.subtitle' | translate: { name: brand.name } }}</p>
+            <p>{{ 'auth.register.subtitle' | translate: { brand: brand.name } }}</p>
           </div>
         </header>
         <form class="form-grid" [formGroup]="form" (ngSubmit)="onSubmit()">
@@ -277,7 +277,7 @@ export class RegisterComponent {
     const { email, password, plate } = this.form.getRawValue();
 
     try {
-      await this.authService.register({ email, password, plate });
+      await this.authService.register({ email, password, plates: [plate] });
       await this.router.navigate(['/auth/register-confirm'], { queryParams: { email } });
     } catch (error) {
       this.errorKey.set(apiErrorKey(error, { conflict: 'auth.register.emailTaken' }));

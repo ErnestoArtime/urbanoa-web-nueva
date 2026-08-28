@@ -1,0 +1,37 @@
+{
+  "cataloguesDir": "src/assets/i18n",
+  "sourceDir": "src",
+  "referenceLanguage": "es",
+  "requiredLanguages": ["es", "en", "fr"],
+  "catalogueStructure": "nested",
+  "template": null,
+  "output": "docs/traducciones.xlsx",
+  "auditOutput": "docs/i18n-audit.json",
+  "literalsOutput": "docs/i18n-direct-literals.md",
+  "summarySheet": "Resumen",
+  "indexSheet": "Índice",
+  "generalSheet": "General",
+  "keyHeader": "Clave",
+  "featureHeader": "Funcionalidad",
+  "countHeader": "Claves",
+  "keyColumnWidth": 38,
+  "languageColumnWidth": 24,
+  "featureColumnWidth": 24,
+  "missingTranslationPattern": "{language}_{reference}",
+  "supportedExtensions": [".html", ".ts"],
+  "excludedFileSuffixes": [".spec.ts", ".test.ts"],
+  "dynamicPrefixes": ["status.", "roles."],
+  "ignoredKeyPrefixes": [],
+  "translationKeyPrefixes": [],
+  "ignoredDirectLiterals": [],
+  "sheetRules": [
+    {
+      "sheet": "Autenticación",
+      "prefixes": ["auth."]
+    },
+    {
+      "sheet": "Cuenta",
+      "prefixes": ["account.", "profile."]
+    }
+  ]
+}

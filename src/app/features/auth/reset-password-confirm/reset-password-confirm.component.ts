@@ -1,7 +1,7 @@
 import { Component, inject, input, signal } from '@angular/core';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { LucideEye, LucideEyeOff } from '@lucide/angular';
+import { LucideEye, LucideEyeOff, LucideKeyRound } from '@lucide/angular';
 import { apiErrorKey } from '../../../core/http/api-error-key';
 import { PasswordService } from '../../../core/services/password.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
@@ -14,10 +14,11 @@ function passwordsMatch(control: AbstractControl): ValidationErrors | null {
 
 @Component({
   selector: 'app-reset-password-confirm',
-  imports: [ReactiveFormsModule, RouterLink, LucideEye, LucideEyeOff, TranslatePipe],
+  imports: [ReactiveFormsModule, RouterLink, LucideEye, LucideEyeOff, LucideKeyRound, TranslatePipe],
   template: `
     <div class="auth-page">
       <div class="auth-form">
+        <div class="auth-icon" aria-hidden="true"><svg lucideKeyRound size="28"></svg></div>
         <h1 class="page-title">{{ 'auth.newPassword.title' | translate }}</h1>
         <p class="page-subtitle">{{ 'auth.newPassword.subtitle' | translate }}</p>
         @if (email()) {
@@ -83,6 +84,20 @@ function passwordsMatch(control: AbstractControl): ValidationErrors | null {
       </div>
     </div>
   `,
+  styles: [
+    `
+      .auth-icon {
+        display: grid;
+        place-items: center;
+        width: 52px;
+        height: 52px;
+        margin: 0 auto 1rem;
+        border-radius: 18px;
+        color: var(--color-primary);
+        background: var(--color-active);
+      }
+    `,
+  ],
 })
 export class ResetPasswordConfirmComponent {
   private readonly passwordService = inject(PasswordService);
@@ -124,8 +139,8 @@ export class ResetPasswordConfirmComponent {
     const { code, password } = this.form.getRawValue();
 
     try {
-      await this.passwordService.updatePassword(this.email(), code, password);
-      await this.router.navigateByUrl('/auth/login');
+      await this.passwordService.confirmPasswordReset(this.email(), code, password);
+      await this.router.navigateByUrl('/auth/reset-password-success');
     } catch (error) {
       this.errorKey.set(apiErrorKey(error, { invalidCode: 'auth.newPassword.invalidCode' }));
     } finally {

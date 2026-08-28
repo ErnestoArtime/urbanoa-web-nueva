@@ -1,7 +1,4 @@
 import { Routes } from '@angular/router';
-import { environment } from '../../../environments/environment';
-
-const externalContent = environment.externalContentBaseUrl;
 
 export const ACCOUNT_ROUTES: Routes = [
   {
@@ -23,28 +20,40 @@ export const ACCOUNT_ROUTES: Routes = [
       {
         path: 'help',
         loadComponent: () => import('./web-content/web-content.component').then((m) => m.WebContentComponent),
-        data: { title: 'Ayuda', url: `${externalContent}/Arinpark/ArinparkFAQ-ESP.html`, backLink: '/app/account' },
+        data: { title: 'account.menu.help', contentType: 'help', backLink: '/app/account' },
       },
       {
         path: 'terms-and-conditions',
         loadComponent: () => import('./web-content/web-content.component').then((m) => m.WebContentComponent),
-        data: { title: 'Términos y condiciones', url: `${externalContent}/arinpark/CU_es.html`, backLink: '/app/account' },
+        data: { title: 'account.menu.terms', contentType: 'terms', backLink: '/app/account' },
       },
       {
         path: 'privacy-policy',
         loadComponent: () => import('./web-content/web-content.component').then((m) => m.WebContentComponent),
-        data: { title: 'Política de privacidad', url: `${externalContent}/arinpark/es.html`, backLink: '/app/account' },
+        data: { title: 'account.menu.privacy', contentType: 'privacy', backLink: '/app/account' },
       },
       {
         path: 'delete-account',
         loadComponent: () => import('./delete-account/delete-account.component').then((m) => m.AccountDeleteAccountComponent),
       },
       { path: 'about', loadComponent: () => import('./about/about.component').then((m) => m.AccountAboutComponent) },
-      { path: 'support', loadComponent: () => import('./support/support.component').then((m) => m.AccountSupportComponent) },
       {
         path: 'support-success',
         loadComponent: () => import('./support-success/support-success.component').then((m) => m.AccountSupportSuccessComponent),
       },
+      {
+        path: 'support/new',
+        loadComponent: () => import('./support-form/support-form.component').then((m) => m.AccountSupportFormComponent),
+      },
+      {
+        path: 'support/:id/reply',
+        loadComponent: () => import('./support-form/support-form.component').then((m) => m.AccountSupportFormComponent),
+      },
+      {
+        path: 'support/:id',
+        loadComponent: () => import('./support-detail/support-detail.component').then((m) => m.AccountSupportDetailComponent),
+      },
+      { path: 'support', loadComponent: () => import('./support/support.component').then((m) => m.AccountSupportComponent) },
       {
         path: 'vehicles',
         loadComponent: () => import('./vehicles-layout/vehicles-layout.component').then((m) => m.VehiclesLayoutComponent),

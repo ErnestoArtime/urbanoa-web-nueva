@@ -15,6 +15,7 @@ export interface ParkingFlowState {
   sectorName: string;
   sectorColor: string;
   street: string;
+  streetId: string;
   ticketId: string;
   ticketName: string;
   latitude: string;
@@ -60,7 +61,7 @@ export class ParkingFlowStore {
 
   canConfirm(): boolean {
     const s = this.state();
-    return !!s.cityId && !!s.plate && !!s.zoneId && !!s.tariffId && !!s.minutes && !!s.amount;
+    return !!s.cityId && !!s.plate && !!s.zoneId && !!s.sectorId && !!s.tariffId && !!s.minutes && !!s.amount;
   }
 
   hasMinimumParkingData(): boolean {
@@ -78,6 +79,7 @@ export class ParkingFlowStore {
       zoneId: s.zoneId ?? '',
       zone: s.zoneName ?? '',
       street: s.street ?? '',
+      streetId: s.streetId ?? '',
       sector: s.sectorName ?? s.street ?? '',
       sectorColor: s.sectorColor ?? '',
       sectorId: s.sectorId ?? s.zoneId ?? '',
@@ -112,6 +114,7 @@ export class ParkingFlowStore {
       zoneName: params['zone'] ?? '',
       sectorColor: params['sectorColor'] ?? '',
       street: params['street'] ?? '',
+      streetId: params['streetId'] ?? '',
       sectorId: params['sectorId'] ?? '',
       sectorName: params['sector'] ?? '',
       ticketId: params['ticketId'] ?? '',
@@ -140,6 +143,7 @@ export class ParkingFlowStore {
     if (s.zoneName) result['zone'] = s.zoneName;
     if (s.sectorColor) result['sectorColor'] = s.sectorColor;
     if (s.street) result['street'] = s.street;
+    if (s.streetId) result['streetId'] = s.streetId;
     if (s.sectorId) result['sectorId'] = s.sectorId;
     if (s.sectorName) result['sector'] = s.sectorName;
     if (s.ticketId) result['ticketId'] = s.ticketId;

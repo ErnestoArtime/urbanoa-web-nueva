@@ -33,7 +33,9 @@ import { APP_BRAND } from '../../../shared/constants/app-brand';
         }
       </div>
       <div class="row mt-2 wallet-actions" style="gap:0.5rem;flex-wrap:wrap">
-        <button type="button" class="btn btn-secondary btn-sm" [disabled]="!hasCards()" (click)="recharge.emit()">{{ 'dashboard.recharge' | translate }}</button>
+        <button type="button" class="btn btn-secondary btn-sm" [disabled]="!hasCards()" (click)="recharge.emit()">
+          {{ 'dashboard.recharge' | translate }}
+        </button>
         <a routerLink="/app/account/payment-methods" class="btn btn-primary btn-sm">{{ 'dashboard.manageCards' | translate }}</a>
       </div>
     </div>

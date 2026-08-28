@@ -23,7 +23,9 @@ import type { Operation } from '../../../shared/models/operation';
               } @else {
                 <div class="list-item-title">{{ OPERATION_TYPE_LABELS[op.type] | translate }}</div>
               }
-              <div class="list-item-subtitle">{{ op.date }}{{ operationTime(op) ? ' · ' + operationTime(op) : '' }}{{ op.zone ? ' — ' + op.zone : '' }}</div>
+              <div class="list-item-subtitle">
+                {{ op.date }}{{ operationTime(op) ? ' · ' + operationTime(op) : '' }}{{ op.zone ? ' — ' + op.zone : '' }}
+              </div>
               @if (op.plate) {
                 <div class="operation-meta">
                   {{ op.plate }}
@@ -93,7 +95,7 @@ export class RecentOperationsCardComponent {
   readonly OPERATION_TYPE_LABELS = OPERATION_TYPE_LABELS;
 
   isFinishParking(op: { type: OperationType; plate: string | null }): boolean {
-    return (op.type === OperationType.PARKING_END || op.type === OperationType.BALANCE_REFUND) && !!op.plate;
+    return op.type === OperationType.REFUND && !!op.plate;
   }
 
   isParking(op: Operation): boolean {

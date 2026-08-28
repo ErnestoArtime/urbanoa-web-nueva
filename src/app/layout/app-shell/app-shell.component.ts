@@ -11,6 +11,8 @@ import { LoaderComponent } from '../../shared/components/loader/loader.component
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 import { BreadcrumbService } from '../../core/services/breadcrumb.service';
 import { TranslationService } from '../../core/services/translation.service';
+import { OperationsService } from '../../core/services/operations.service';
+import { OperationType } from '../../shared/models/operation-type';
 
 const MAIN_TAB_PATHS = ['/app/home', '/app/parking', '/app/operations', '/app/account'];
 
@@ -24,7 +26,7 @@ const TITLE_KEYS: Record<string, string> = {
   '/app/parking/confirm': 'parking.confirmStart',
   '/app/parking/success': 'parking.success',
   '/app/operations/detail': 'ops.detail',
-  '/app/operations/unpaid-fines': 'ops.denuncias',
+  '/app/operations/unpaid-fines': 'ops.sanciones',
   '/app/operations/unpaid-fine-detail': 'ops.detail',
   '/app/operations/report': 'ops.report',
   '/app/operations/report-success': 'ops.report',
@@ -171,6 +173,7 @@ export class AppShellComponent {
   private readonly router = inject(Router);
   private readonly breadcrumbService = inject(BreadcrumbService);
   private readonly translationService = inject(TranslationService);
+  private readonly operationsService = inject(OperationsService);
   readonly routeTransitionLoading = signal(false);
   private readonly routeTransitionMinMs = 1000;
   private routeTransitionStartedAt = 0;
@@ -233,6 +236,13 @@ export class AppShellComponent {
 
   headerTitle = () => {
     const u = this.url();
+    const operationDetailMatch = u.match(/^\/app\/operations\/detail\/([^/?#]+)/);
+    if (operationDetailMatch) {
+      const operation = this.operationsService.getOperationById(decodeURIComponent(operationDetailMatch[1]));
+      if (operation?.type === OperationType.FINE_PAYMENT) {
+        return this.translationService.translate('ops.detail.finePayment');
+      }
+    }
     for (const [path, key] of Object.entries(TITLE_KEYS)) {
       if (u.startsWith(path)) return this.translationService.translate(key);
     }

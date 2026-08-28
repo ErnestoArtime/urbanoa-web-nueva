@@ -1,0 +1,56 @@
+server {
+  listen       10213;
+  server_name  _;
+  root         /usr/share/nginx/html;
+  index        index.html;
+  client_max_body_size 20M;
+  resolver_timeout 5s;
+
+  client_body_timeout 30s;
+  client_header_timeout 30s;
+  send_timeout 30s;
+  keepalive_timeout 65;
+  keepalive_requests 100;
+
+  add_header Access-Control-Allow-Origin * always;
+  add_header Strict-Transport-Security "max-age=63072000; includeSubDomains; preload";
+  add_header X-Frame-Options DENY;
+  add_header X-Content-Type-Options nosniff;
+  add_header X-XSS-Protection "1; mode=block";
+
+  location = /healthz {
+    return 200 'ok';
+    add_header Content-Type text/plain;
+  }
+
+  location /external-content/ {
+    proxy_pass https://arinpark.gerteksa.eus/;
+    proxy_set_header Host arinpark.gerteksa.eus;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+  }
+
+  location /ops-api/ {
+    rewrite ^/ops-api/OPSWebServicesLegacyAPI/(.*)$ /OPSWebServicesAPI/$1 break;
+    rewrite ^/ops-api/OPSWebServicesAPI/(.*)$ /OPSWebServicesAPI3/$1 break;
+    proxy_pass __OPS_BACKEND_URL__;
+    proxy_set_header Host $proxy_host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+  }
+
+  location / {
+    rewrite ^/ui(.*)$ /$1 break;
+    try_files $uri $uri/ /index.html;
+    proxy_buffering on;
+    proxy_buffers 16 16k;
+    proxy_buffer_size 16k;
+  }
+
+  location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2)$ {
+    expires 1y;
+    add_header Cache-Control "public, immutable";
+  }
+}

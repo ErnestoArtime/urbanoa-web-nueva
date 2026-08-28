@@ -1,11 +1,12 @@
-import { Component, computed, inject } from '@angular/core';
-import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
+import { Component, computed, inject, signal } from '@angular/core';
+import { ActivatedRoute, NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { filter, map, startWith } from 'rxjs/operators';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { ParkingFlowStore } from '../parking-flow.store';
 import { VehicleService } from '../../../core/services/vehicle.service';
 import { ParkingSessionService } from '../../../core/services/parking-session.service';
+import type { Vehicle } from '../../../shared/models/vehicle';
 
 interface WizardStep {
   labelKey: string;
@@ -65,10 +66,38 @@ interface WizardStep {
               </p>
             }
             @if (query()['plate']) {
-              <p>
+              <div class="vehicle-picker">
                 <small>{{ 'parking.wizard.vehicle' | translate }}</small
-                ><strong>{{ query()['plate'] }}</strong>
-              </p>
+                ><button
+                  type="button"
+                  class="vehicle-picker-trigger"
+                  [attr.aria-expanded]="vehiclePickerOpen()"
+                  [attr.aria-label]="'parking.wizard.changeVehicle' | translate"
+                  (click)="toggleVehiclePicker()"
+                >
+                  <strong>{{ query()['plate'] }}</strong
+                  ><span class="vehicle-picker-chevron" aria-hidden="true"></span>
+                </button>
+                @if (vehiclePickerOpen()) {
+                  <div class="vehicle-picker-menu" role="listbox">
+                    @for (vehicle of availableVehicles(); track vehicle.id) {
+                      <button
+                        type="button"
+                        role="option"
+                        class="vehicle-picker-option"
+                        [class.selected]="vehicle.id === query()['vehicleId']"
+                        [attr.aria-selected]="vehicle.id === query()['vehicleId']"
+                        (click)="selectVehicle(vehicle)"
+                      >
+                        <strong>{{ vehicle.plate }}</strong>
+                        @if (vehicle.label) {
+                          <small>{{ vehicle.label }}</small>
+                        }
+                      </button>
+                    }
+                  </div>
+                }
+              </div>
             }
             @if (query()['duration']) {
               <p>
@@ -85,6 +114,33 @@ interface WizardStep {
           <span>{{ 'parking.wizard.step' | translate: { current: '' + (currentStep() + 1), total: '' + steps.length } }}</span>
           <strong>{{ steps[currentStep()].labelKey | translate }}</strong>
           <div class="mobile-progress"><i [style.width.%]="((currentStep() + 1) / steps.length) * 100"></i></div>
+          @if (query()['plate']) {
+            <div class="mobile-vehicle-picker">
+              <small>{{ 'parking.wizard.vehicle' | translate }}</small>
+              <button type="button" (click)="toggleVehiclePicker()" [attr.aria-expanded]="vehiclePickerOpen()">
+                {{ query()['plate'] }} <span class="vehicle-picker-chevron" aria-hidden="true"></span>
+              </button>
+              @if (vehiclePickerOpen()) {
+                <div class="vehicle-picker-menu" role="listbox">
+                  @for (vehicle of availableVehicles(); track vehicle.id) {
+                    <button
+                      type="button"
+                      role="option"
+                      class="vehicle-picker-option"
+                      [class.selected]="vehicle.id === query()['vehicleId']"
+                      [attr.aria-selected]="vehicle.id === query()['vehicleId']"
+                      (click)="selectVehicle(vehicle)"
+                    >
+                      <strong>{{ vehicle.plate }}</strong>
+                      @if (vehicle.label) {
+                        <small>{{ vehicle.label }}</small>
+                      }
+                    </button>
+                  }
+                </div>
+              }
+            </div>
+          }
         </header>
         <router-outlet />
       </section>
@@ -190,6 +246,42 @@ interface WizardStep {
         border-radius: inherit;
         background: var(--color-primary);
         transition: width 0.25s ease;
+      }
+      .mobile-vehicle-picker {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        color: var(--color-text-muted);
+        font-size: var(--text-xs);
+      }
+      .mobile-vehicle-picker button {
+        padding: 0;
+        border: 0;
+        background: transparent;
+        color: var(--color-primary);
+        cursor: pointer;
+        font-weight: var(--font-bold);
+      }
+      .mobile-vehicle-picker .vehicle-picker-chevron {
+        display: inline-block;
+        width: 0.4rem;
+        height: 0.4rem;
+        margin: -0.15rem 0 0 0.15rem;
+        border-right: 2px solid var(--color-primary);
+        border-bottom: 2px solid var(--color-primary);
+        transform: rotate(45deg);
+        transition: transform 180ms ease;
+      }
+      .mobile-vehicle-picker button[aria-expanded='true'] .vehicle-picker-chevron {
+        margin-top: 0.15rem;
+        transform: rotate(225deg);
+      }
+      .mobile-vehicle-picker .vehicle-picker-menu {
+        top: calc(100% + 0.4rem);
+        right: auto;
+        bottom: auto;
+        left: 0;
       }
       .wizard-mobile-head.map-step {
         display: none;
@@ -305,6 +397,76 @@ interface WizardStep {
           text-overflow: ellipsis;
           white-space: nowrap;
         }
+        .vehicle-picker {
+          position: relative;
+          display: flex;
+          min-width: 0;
+          flex-direction: column;
+          align-items: flex-end;
+        }
+        .vehicle-picker-trigger {
+          display: flex;
+          max-width: 150px;
+          align-items: center;
+          gap: 0.35rem;
+          padding: 0;
+          border: 0;
+          background: transparent;
+          color: var(--color-text);
+          cursor: pointer;
+          font: inherit;
+        }
+        .vehicle-picker-trigger strong {
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .vehicle-picker-trigger span {
+          display: inline-block;
+          width: 0.45rem;
+          height: 0.45rem;
+          margin: -0.2rem 0 0 0.15rem;
+          border-right: 2px solid var(--color-primary);
+          border-bottom: 2px solid var(--color-primary);
+          transform: rotate(45deg);
+          transition: transform 180ms ease;
+        }
+        .vehicle-picker-trigger[aria-expanded='true'] .vehicle-picker-chevron {
+          margin-top: 0.2rem;
+          transform: rotate(225deg);
+        }
+        .vehicle-picker-menu {
+          position: absolute;
+          z-index: 5;
+          top: auto;
+          right: 0;
+          bottom: calc(100% + 0.35rem);
+          display: grid;
+          min-width: 190px;
+          padding: 0.3rem;
+          border: 1px solid var(--color-border);
+          border-radius: 10px;
+          background: var(--color-surface);
+          box-shadow: var(--shadow-md);
+        }
+        .vehicle-picker-option {
+          display: flex;
+          flex-direction: column;
+          align-items: flex-start;
+          padding: 0.55rem 0.65rem;
+          border: 0;
+          border-radius: 7px;
+          background: transparent;
+          color: var(--color-text);
+          cursor: pointer;
+          text-align: left;
+        }
+        .vehicle-picker-option:hover,
+        .vehicle-picker-option.selected {
+          background: var(--color-active);
+        }
+        .vehicle-picker-option small {
+          color: var(--color-text-muted);
+        }
         .wizard-detail {
           height: calc(100% - 1.1rem);
           margin: 0.55rem;
@@ -325,6 +487,7 @@ interface WizardStep {
   ],
 })
 export class ParkingWizardLayoutComponent {
+  private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly store = inject(ParkingFlowStore);
   private readonly vehicleService = inject(VehicleService);
@@ -332,6 +495,10 @@ export class ParkingWizardLayoutComponent {
   readonly hasAvailableVehicles = computed(() =>
     this.vehicleService.vehicles().some((vehicle) => !this.parkingSessionService.isVehicleParked(vehicle.id)),
   );
+  readonly availableVehicles = computed(() =>
+    this.vehicleService.vehicles().filter((vehicle) => !this.parkingSessionService.isVehicleParked(vehicle.id)),
+  );
+  readonly vehiclePickerOpen = signal(false);
   readonly steps: WizardStep[] = [
     { labelKey: 'parking.wizard.step1.label', hintKey: 'parking.wizard.step1.hint', path: '/app/parking' },
     { labelKey: 'parking.wizard.step2.label', hintKey: 'parking.wizard.step2.hint', path: '/app/parking/tickets' },
@@ -356,8 +523,22 @@ export class ParkingWizardLayoutComponent {
       ...(s.zoneName ? { zone: s.zoneName } : {}),
       ...(s.plate ? { plate: s.plate } : {}),
       ...(s.duration ? { duration: s.duration } : {}),
+      ...(s.vehicleId ? { vehicleId: s.vehicleId } : {}),
     };
   });
+
+  toggleVehiclePicker(): void {
+    if (this.availableVehicles().length > 1) this.vehiclePickerOpen.update((open) => !open);
+  }
+
+  selectVehicle(vehicle: Vehicle): void {
+    this.store.update({ vehicleId: vehicle.id, plate: vehicle.plate });
+    this.vehiclePickerOpen.set(false);
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { ...this.query(), vehicleId: vehicle.id, plate: vehicle.plate },
+    });
+  }
   readonly currentStep = computed(() => {
     const path = this.url().split('?')[0].replace(/\/+$/, '');
     const segment = path.split('/').at(-1) ?? '';

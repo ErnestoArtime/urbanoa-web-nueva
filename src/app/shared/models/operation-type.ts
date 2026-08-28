@@ -4,18 +4,16 @@ export enum OperationType {
   REFUND = 3,
   FINE_PAYMENT = 4,
   TOP_UP = 5,
-  PARKING_END = 6,
-  BALANCE_REFUND = 8,
+  BALANCE_REFUND = 7,
   UNPAID_FINES = 104,
 }
 
 export const OPERATION_TYPE_LABELS: Record<OperationType, string> = {
   [OperationType.PARKING]: 'ops.type.parking',
   [OperationType.PARKING_EXTENSION]: 'ops.type.extension',
-  [OperationType.REFUND]: 'ops.type.refund',
-  [OperationType.FINE_PAYMENT]: 'ops.type.denuncia',
+  [OperationType.REFUND]: 'ops.type.parkingEndRefund',
+  [OperationType.FINE_PAYMENT]: 'ops.type.sancion',
   [OperationType.TOP_UP]: 'ops.type.topUp',
-  [OperationType.PARKING_END]: 'ops.type.parkingEndRefund',
   [OperationType.BALANCE_REFUND]: 'ops.type.balanceRefund',
-  [OperationType.UNPAID_FINES]: 'ops.type.denuncias',
+  [OperationType.UNPAID_FINES]: 'ops.type.sanciones',
 };

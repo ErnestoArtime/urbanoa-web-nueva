@@ -1,62 +1,73 @@
+import { provideZonelessChangeDetection } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiError } from '../http/api-client';
+import { OpsApiClient } from '../api/ops-api-client.service';
+import { OPS_ENDPOINTS } from '../api/ops-endpoints';
+import { OpsSessionService } from '../api/ops-session.service';
 import { AuthService } from './auth.service';
 import { PasswordService } from './password.service';
 
-function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
-}
-
-function lastRequest(spy: jasmine.Spy): { url: string; body: unknown; headers: Headers } {
-  const [url, init] = spy.calls.mostRecent().args as [string, RequestInit];
-  return { url, body: JSON.parse(String(init.body)), headers: new Headers(init.headers) };
-}
-
 describe('PasswordService', () => {
+  let service: PasswordService;
+  let opsApi: jasmine.SpyObj<OpsApiClient>;
+  let authService: {
+    requestPasswordReset: jasmine.Spy;
+    resendMail: jasmine.Spy;
+    verifyResetCode: jasmine.Spy;
+    changeResetPassword: jasmine.Spy;
+    source: () => 'idle' | 'remote' | 'error';
+  };
+
   beforeEach(() => {
-    localStorage.clear();
-    TestBed.configureTestingModule({});
+    opsApi = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
+    authService = {
+      requestPasswordReset: jasmine.createSpy().and.resolveTo(),
+      resendMail: jasmine.createSpy().and.resolveTo(),
+      verifyResetCode: jasmine.createSpy().and.resolveTo(),
+      changeResetPassword: jasmine.createSpy().and.resolveTo(),
+      source: () => 'remote',
+    };
+
+    TestBed.configureTestingModule({
+      providers: [
+        provideZonelessChangeDetection(),
+        PasswordService,
+        { provide: AuthService, useValue: authService },
+        { provide: OpsApiClient, useValue: opsApi },
+        { provide: OpsSessionService, useValue: { token: () => 'session-token' } },
+      ],
+    });
+    service = TestBed.inject(PasswordService);
   });
 
-  it('requests a recovery code with the email only', async () => {
-    const fetchSpy = spyOn(window, 'fetch').and.resolveTo(jsonResponse({ ok: true }));
-    const service = TestBed.inject(PasswordService);
+  it('delegates recovery and resend calls to the reconciled auth contract', async () => {
+    await service.requestCode('user@example.com');
+    await service.resendMail('user@example.com', 'recover');
 
-    await service.requestCode('ane@example.com');
-
-    const request = lastRequest(fetchSpy);
-    expect(request.url).toContain('/OPSWebServicesAPI/RecoverPasswordAPI');
-    expect(request.body).toEqual({ email: 'ane@example.com' });
+    expect(authService.requestPasswordReset).toHaveBeenCalledOnceWith('user@example.com');
+    expect(authService.resendMail).toHaveBeenCalledOnceWith('user@example.com', 'recover');
   });
 
-  it('sends the code when validating it', async () => {
-    const fetchSpy = spyOn(window, 'fetch').and.resolveTo(jsonResponse({ ok: true }));
-    const service = TestBed.inject(PasswordService);
+  it('updates an authenticated password with the OPS token', async () => {
+    opsApi.post.and.resolveTo('ok');
 
-    await service.verifyCode('ane@example.com', '123456');
+    await service.updatePassword('new-secret');
 
-    expect(lastRequest(fetchSpy).body).toEqual({ email: 'ane@example.com', code: '123456' });
+    expect(opsApi.post).toHaveBeenCalledOnceWith(OPS_ENDPOINTS.user.updatePassword, { password: 'new-secret' }, { token: 'session-token' });
+    expect(service.source()).toBe('remote');
   });
 
-  it('sends the session token when changing the password', async () => {
-    const fetchSpy = spyOn(window, 'fetch').and.resolveTo(jsonResponse({ token: 'abc123', user: { email: 'ane@example.com' } }));
-    const authService = TestBed.inject(AuthService);
-    const service = TestBed.inject(PasswordService);
+  it('preserves auth-service errors when the authenticated password update fails', async () => {
+    opsApi.post.and.rejectWith(new Error('backend unavailable'));
 
-    await authService.login('ane@example.com', 'secret');
-    await service.changePassword('secret', 'newsecret');
+    await expectAsync(service.updatePassword('new-secret')).toBeRejectedWithError('backend unavailable');
 
-    const request = lastRequest(fetchSpy);
-    expect(request.url).toContain('/OPSWebServicesAPI/ChangePasswordAPI');
-    expect(request.headers.get('Authorization')).toBe('Bearer abc123');
+    expect(service.source()).toBe('error');
   });
 
-  it('propagates an invalid code as an ApiError', async () => {
-    spyOn(window, 'fetch').and.resolveTo(jsonResponse({ message: 'invalid code' }, 400));
-    const service = TestBed.inject(PasswordService);
+  it('sends the recovery code only to ChangePasswordAPI', async () => {
+    await service.confirmPasswordReset('user@example.com', '123456', 'new-secret');
 
-    await expectAsync(service.updatePassword('ane@example.com', '000000', 'newsecret')).toBeRejectedWith(
-      jasmine.objectContaining({ code: 'invalidCode' } as Partial<ApiError>),
-    );
+    expect(authService.verifyResetCode).not.toHaveBeenCalled();
+    expect(authService.changeResetPassword).toHaveBeenCalledOnceWith('user@example.com', '123456', 'new-secret');
   });
 });

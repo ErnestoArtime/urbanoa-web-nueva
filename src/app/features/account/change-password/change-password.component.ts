@@ -14,22 +14,6 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
       <app-detail-panel-header [title]="'account.changePassword.title' | translate" backRoute="/app/account" />
       <div class="card">
         <div class="form-group">
-          <label>{{ 'account.changePassword.current' | translate }} <span class="text-error">*</span></label>
-          <div class="password-field">
-            <input class="form-input" [type]="showCurrent() ? 'text' : 'password'" (input)="current.set(valueOf($event))" /><button
-              type="button"
-              (click)="toggleVisibility('current')"
-              [attr.aria-label]="'account.changePassword.togglePassword' | translate"
-            >
-              @if (showCurrent()) {
-                <svg lucideEyeOff size="21"></svg>
-              } @else {
-                <svg lucideEye size="21"></svg>
-              }
-            </button>
-          </div>
-        </div>
-        <div class="form-group">
           <label>{{ 'account.changePassword.new' | translate }} <span class="text-error">*</span></label>
           <div class="password-field">
             <input class="form-input" [type]="showNext() ? 'text' : 'password'" (input)="next.set(valueOf($event))" /><button
@@ -122,10 +106,8 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
 export class AccountChangePasswordComponent {
   private readonly passwordService = inject(PasswordService);
 
-  readonly current = signal('');
   readonly next = signal('');
   readonly confirmation = signal('');
-  readonly showCurrent = signal(false);
   readonly showNext = signal(false);
   readonly showConfirmation = signal(false);
   readonly result = signal<'success' | 'error' | null>(null);
@@ -136,15 +118,15 @@ export class AccountChangePasswordComponent {
     return (event.target as HTMLInputElement).value;
   }
 
-  toggleVisibility(field: 'current' | 'next' | 'confirmation'): void {
-    const visibility = field === 'current' ? this.showCurrent : field === 'next' ? this.showNext : this.showConfirmation;
+  toggleVisibility(field: 'next' | 'confirmation'): void {
+    const visibility = field === 'next' ? this.showNext : this.showConfirmation;
     visibility.update((value) => !value);
   }
 
   async save(): Promise<void> {
     if (this.saving()) return;
 
-    if (!this.current() || this.next().length < 8 || this.next() !== this.confirmation()) {
+    if (this.next().length < 8 || this.next() !== this.confirmation()) {
       this.errorKey.set(this.next() !== this.confirmation() ? 'account.changePassword.mismatch' : 'account.changePassword.invalid');
       this.result.set('error');
       return;
@@ -153,10 +135,10 @@ export class AccountChangePasswordComponent {
     this.saving.set(true);
 
     try {
-      await this.passwordService.changePassword(this.current(), this.next());
+      await this.passwordService.updatePassword(this.next());
       this.result.set('success');
     } catch (error) {
-      this.errorKey.set(apiErrorKey(error, { unauthorized: 'account.changePassword.wrongCurrent' }));
+      this.errorKey.set(apiErrorKey(error));
       this.result.set('error');
     } finally {
       this.saving.set(false);

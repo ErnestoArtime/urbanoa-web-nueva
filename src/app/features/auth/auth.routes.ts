@@ -29,5 +29,9 @@ export const AUTH_ROUTES: Routes = [
     path: 'reset-password-confirm',
     loadComponent: () => import('./reset-password-confirm/reset-password-confirm.component').then((m) => m.ResetPasswordConfirmComponent),
   },
+  {
+    path: 'reset-password-success',
+    loadComponent: () => import('./reset-password-success/reset-password-success.component').then((m) => m.ResetPasswordSuccessComponent),
+  },
   { path: 'web/:type', loadComponent: () => import('./web/web.component').then((m) => m.WebComponent) },
 ];

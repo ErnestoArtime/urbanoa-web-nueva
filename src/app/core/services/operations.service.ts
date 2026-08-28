@@ -1,9 +1,54 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { MOCK_OPERATIONS, MOCK_TICKET_ACTIVE } from '../../shared/mock-data';
 import { OperationType } from '../../shared/models/operation-type';
-import { WalletService } from './wallet.service';
 import type { Operation } from '../../shared/models/operation';
-import { generateUuid } from '../utils/generate-uuid';
+import { OPS_ENDPOINTS } from '../api/ops-endpoints';
+import { OpsApiClient } from '../api/ops-api-client.service';
+import { OpsSessionService } from '../api/ops-session.service';
+import { CitiesService } from './cities.service';
+import { LocationSettingsService } from './location-settings.service';
+
+interface OperationResponseDto {
+  contractId?: number;
+  contractName?: string | null;
+  operationNumber?: number | string | null;
+  operationType: number;
+  paymentAmount?: number | null;
+  opDate: string;
+  plate?: string | null;
+  zoneDesc?: string | null;
+  sectorDesc?: string | null;
+  parkingStartDate?: string | null;
+  parkingEndDate?: string | null;
+  duration?: number;
+  parkingDuration?: number;
+  opBaseId?: number | string | null;
+  idPaymentMethod1?: number;
+  descPaymentMethod1?: string;
+  amountPaymentMethod1?: number;
+  idPaymentMethod2?: number | null;
+  descPaymentMethod2?: string | null;
+  amountPaymentMethod2?: number | null;
+  zoneId?: number;
+  sectorId?: number;
+  sectorColor?: string | null;
+  cityId?: number;
+  cityName?: string | null;
+  fineNumber?: string | null;
+  fineProcessingDate?: string | null;
+  farticle?: string | null;
+  fineArticle?: string | null;
+  fcolor?: string | null;
+  fmake?: string | null;
+  fineStatus?: number | null;
+  fstreet?: string | null;
+  fineStreet?: string | null;
+  fstrnum?: string | null;
+  fineStreetNumber?: string | null;
+  fineValidDate?: string | null;
+  fineAmount?: number | null;
+  latitude?: number | null;
+  longitude?: number | null;
+}
 
 export interface ActiveParking {
   id: string;
@@ -21,20 +66,185 @@ export interface ActiveParking {
   paymentBreakdown?: Operation['paymentBreakdown'];
   cardId?: string;
   cardLabel?: string;
+  contractId?: number;
+  tariffId?: number;
+  sectorId?: number;
+}
+
+interface ParkingStatusResponseDto {
+  status: number;
+  extension: number;
+  tariffId: number;
+  dateInitial: string;
+  dateEnd: string;
+  accumulatedTime: number;
+  sector?: string;
+  sectorname?: string;
+  zonename?: string;
+  latitude?: number;
+  longitude?: number;
+  operationDate?: string;
+  streetname?: string;
 }
 
 @Injectable({ providedIn: 'root' })
 export class OperationsService {
-  private readonly walletService = inject(WalletService);
-  private readonly storageKey = 'urbanoa.operations';
-  private readonly activeKey = 'urbanoa.operations.active';
-  private readonly _operations = signal<Operation[]>(this.readOps());
-  private readonly _activeParkings = signal<ActiveParking[]>(this.readActive());
+  private readonly api = inject(OpsApiClient);
+  private readonly session = inject(OpsSessionService);
+  private readonly citiesService = inject(CitiesService);
+  private readonly locationSettings = inject(LocationSettingsService);
+  private readonly _operations = signal<Operation[]>([]);
+  private readonly _activeParkings = signal<ActiveParking[]>([]);
 
   readonly operations = this._operations.asReadonly();
   readonly activeParkings = this._activeParkings.asReadonly();
   readonly activeParkingsCount = computed(() => this._activeParkings().length);
   readonly hasActiveParkings = computed(() => this._activeParkings().length > 0);
+  readonly source = signal<'idle' | 'remote' | 'error'>('idle');
+  readonly activeSource = signal<'idle' | 'remote' | 'error'>('idle');
+  readonly loading = signal(false);
+
+  async load(dateStart?: string, dateEnd?: string, operationTypeList = [1, 2, 3, 4, 5, 7, 101, 102, 103, 104]): Promise<void> {
+    const token = this.session.token();
+    if (!token) {
+      this._operations.set([]);
+      this.source.set('error');
+      return;
+    }
+    const year = new Date().getFullYear();
+    const effectiveStart = dateStart ?? `${year}-01-01`;
+    const effectiveEnd = dateEnd ?? `${year}-12-31`;
+    this.loading.set(true);
+    try {
+      const response = await this.api.post<OperationResponseDto[]>(
+        OPS_ENDPOINTS.user.operations,
+        {
+          contractId: 0,
+          dateStart: this.queryDate(effectiveStart, false),
+          dateEnd: this.queryDate(effectiveEnd, true),
+          operationTypeList,
+        },
+        { token },
+      );
+      this._operations.set(response.map((item) => this.mapRemoteOperation(item)));
+      this.source.set('remote');
+    } catch (error) {
+      this._operations.set([]);
+      this.source.set('error');
+    } finally {
+      this.loading.set(false);
+    }
+  }
+
+  async loadDetail(id: string): Promise<Operation | undefined> {
+    const cached = this.getOperationById(id);
+    if (cached) return cached;
+    await this.load();
+    return this.getOperationById(id);
+  }
+
+  async loadParkingStatuses(vehicles: readonly { id: string; plate: string }[], contractId?: number): Promise<void> {
+    await this.loadParkingStatusesFromContracts(vehicles, () => (contractId ? [contractId] : this.contractIdsToCheck()));
+  }
+
+  async loadDashboardParkingStatuses(vehicles: readonly { id: string; plate: string }[]): Promise<void> {
+    const preferredCityId = this.locationSettings.settings().preferredCityId;
+    const preferredContractId = preferredCityId ? this.citiesService.contractIdFor(preferredCityId) : 0;
+    await this.loadParkingStatusesFromContracts(vehicles, (vehicle) => {
+      const recentContractId = this.latestParkingContractId(vehicle.plate);
+      if (recentContractId) return [recentContractId];
+      if (this.source() !== 'remote') return this.contractIdsToCheck();
+      if (preferredContractId > 0) return [preferredContractId];
+      return [];
+    });
+  }
+
+  private async loadParkingStatusesFromContracts(
+    vehicles: readonly { id: string; plate: string }[],
+    contractsFor: (vehicle: { id: string; plate: string }) => readonly number[],
+  ): Promise<void> {
+    const token = this.session.token();
+    if (!token) {
+      this._activeParkings.set([]);
+      this.activeSource.set('error');
+      return;
+    }
+    if (vehicles.length === 0) {
+      this._activeParkings.set([]);
+      this.activeSource.set('remote');
+      return;
+    }
+
+    const date = this.opsDate(new Date());
+    const results = await Promise.allSettled(
+      vehicles.map(async (vehicle) => {
+        const contractIds = [...new Set(contractsFor(vehicle).filter((id) => id > 0))];
+        let answered = contractIds.length === 0;
+        for (const id of contractIds) {
+          try {
+            const status = await this.api.postOrNull<ParkingStatusResponseDto>(
+              OPS_ENDPOINTS.parking.parkingStatus,
+              { contractId: id, plate: vehicle.plate, date },
+              { token },
+            );
+            answered = true;
+            if (status?.status === 2) return this.mapParkingStatus(vehicle, id, status);
+          } catch {
+            // Error de red/backend para este contrato: se prueba el siguiente.
+          }
+        }
+        if (!answered) throw new Error(`${vehicle.plate}: sin respuesta de ningún contrato`);
+        return null;
+      }),
+    );
+
+    const remote = results
+      .filter((result): result is PromiseFulfilledResult<ActiveParking | null> => result.status === 'fulfilled')
+      .map((result) => result.value)
+      .filter((parking): parking is ActiveParking => parking !== null);
+    const failedPlates = new Set(results.flatMap((result, index) => (result.status === 'rejected' ? [vehicles[index].plate] : [])));
+
+    this._activeParkings.set(remote);
+    this.activeSource.set(failedPlates.size === 0 ? 'remote' : 'error');
+  }
+
+  private latestParkingContractId(plate: string): number | undefined {
+    const normalizedPlate = plate.replace(/\s+/g, '').toLocaleUpperCase('es');
+    const parkingTypes = new Set([OperationType.PARKING, OperationType.PARKING_EXTENSION, OperationType.REFUND]);
+    return this._operations()
+      .filter(
+        (operation) =>
+          parkingTypes.has(operation.type) &&
+          operation.contractId != null &&
+          operation.contractId > 0 &&
+          operation.plate?.replace(/\s+/g, '').toLocaleUpperCase('es') === normalizedPlate,
+      )
+      .sort((a, b) => this.operationTimestamp(b) - this.operationTimestamp(a))[0]?.contractId;
+  }
+
+  private operationTimestamp(operation: Operation): number {
+    const [day, month, year] = operation.date.split('/').map(Number);
+    const [hours = 0, minutes = 0] = (operation.startTime ?? operation.endTime ?? '').split(':').map(Number);
+    const timestamp = new Date(year, month - 1, day, hours, minutes).getTime();
+    return Number.isNaN(timestamp) ? 0 : timestamp;
+  }
+
+  private contractIdsToCheck(): number[] {
+    const loaded = this.citiesService
+      .cities()
+      .map((city) => city.contractId)
+      .filter((id) => id > 0);
+    const all = loaded.length > 0 ? [...new Set(loaded)] : this.citiesService.knownContractIds();
+    const preferredCityId = this.locationSettings.settings().preferredCityId;
+    if (!preferredCityId) return all;
+    const preferred = this.citiesService.contractIdFor(preferredCityId);
+    return [preferred, ...all.filter((id) => id !== preferred)];
+  }
+
+  async loadReceipt(id: string): Promise<unknown | null> {
+    const operation = await this.loadDetail(id);
+    return operation ?? null;
+  }
 
   isVehicleParked(vehicleId: string): boolean {
     return this._activeParkings().some((p) => p.vehicleId === vehicleId);
@@ -52,211 +262,6 @@ export class OperationsService {
     return this._operations().find((op) => op.id === id);
   }
 
-  registerFinePayment(input: { plate: string; location: string; amount: number; paymentBreakdown?: Operation['paymentBreakdown'] }): void {
-    const amount = Math.abs(input.amount);
-    const operation: Operation = {
-      id: this.nextId(),
-      type: OperationType.FINE_PAYMENT,
-      plate: input.plate,
-      date: this.todayDateString(),
-      amount: -amount,
-      zone: input.location,
-      paymentBreakdown: input.paymentBreakdown,
-    };
-    this._operations.update((list) => [operation, ...list]);
-    this.persistOps();
-  }
-
-  registerTopUp(amount: number): void {
-    this._operations.update((list) => [
-      {
-        id: this.nextId(),
-        type: OperationType.TOP_UP,
-        plate: null,
-        date: this.todayDateString(),
-        amount: Math.abs(amount),
-        zone: null,
-      },
-      ...list,
-    ]);
-    this.persistOps();
-  }
-
-  registerBalanceRefund(amount: number, destination: string, cardId?: string, cardLabel?: string): void {
-    this._operations.update((list) => [
-      {
-        id: this.nextId(),
-        type: OperationType.BALANCE_REFUND,
-        plate: null,
-        date: this.todayDateString(),
-        amount: -Math.abs(amount),
-        zone: destination,
-        cardId,
-        cardLabel,
-      },
-      ...list,
-    ]);
-    this.persistOps();
-  }
-
-  startParking(input: ActiveParking & { amount: number }): boolean {
-    if (this.isVehicleParked(input.vehicleId)) return false;
-
-    const operationId = this.nextId();
-    const parking: ActiveParking = {
-      id: input.id || generateUuid(),
-      plate: input.plate,
-      vehicleId: input.vehicleId,
-      zone: input.zone,
-      startTime: input.startTime,
-      durationLabel: input.durationLabel,
-      timeRemaining: input.timeRemaining,
-      endTime: input.endTime,
-      latitude: input.latitude,
-      longitude: input.longitude,
-      street: input.street,
-      operationId,
-      paymentBreakdown: input.paymentBreakdown,
-      cardId: input.cardId,
-      cardLabel: input.cardLabel,
-    };
-
-    this._activeParkings.update((list) => [parking, ...list]);
-
-    this._operations.update((list) => [
-      {
-        id: operationId,
-        type: OperationType.PARKING,
-        plate: input.plate,
-        date: this.todayDateString(),
-        amount: -Math.abs(input.amount),
-        zone: input.zone,
-        startTime: input.startTime,
-        endTime: input.endTime,
-        durationLabel: input.durationLabel,
-        paymentBreakdown: input.paymentBreakdown,
-        cardId: input.cardId,
-        cardLabel: input.cardLabel,
-      },
-      ...list,
-    ]);
-    this.persistOps();
-    this.persistActive();
-    return true;
-  }
-
-  unpark(parkingId: string): boolean {
-    const active = this._activeParkings().find((p) => p.id === parkingId);
-    if (!active) return false;
-
-    const today = this.todayDateString();
-    const [parkingClosedId, finishParkingId] = this.nextIds(2);
-    const parkingClosed: Operation = {
-      id: parkingClosedId,
-      type: OperationType.PARKING,
-      plate: active.plate,
-      date: today,
-      amount: -1.01,
-      zone: active.zone,
-      startTime: active.startTime,
-      endTime: active.endTime,
-      durationLabel: active.durationLabel,
-      paymentBreakdown: active.paymentBreakdown,
-      cardId: active.cardId,
-      cardLabel: active.cardLabel,
-    };
-
-    const finishParking: Operation = {
-      id: finishParkingId,
-      type: OperationType.PARKING_END,
-      plate: active.plate,
-      date: today,
-      amount: 0.4,
-      zone: active.zone,
-      relatedOperationId: active.operationId,
-      startTime: active.startTime,
-      endTime: active.endTime,
-      durationLabel: active.durationLabel,
-    };
-
-    this.walletService.credit(0.4, 'Devolución de saldo', 'parking-refund');
-    this._operations.update((list) => [finishParking, parkingClosed, ...list]);
-    this._activeParkings.update((list) => list.filter((p) => p.id !== parkingId));
-    this.persistOps();
-    this.persistActive();
-    return true;
-  }
-
-  private readOps(): Operation[] {
-    try {
-      const parsed = JSON.parse(localStorage.getItem(this.storageKey) ?? 'null') as Operation[] | null;
-      if (Array.isArray(parsed) && parsed.length) return this.normalizeOperationIds(parsed);
-    } catch {
-      /* fall through */
-    }
-    return MOCK_OPERATIONS.map((op) => ({ ...op }));
-  }
-
-  private readActive(): ActiveParking[] {
-    try {
-      const parsed = JSON.parse(localStorage.getItem(this.activeKey) ?? 'null');
-      if (Array.isArray(parsed)) {
-        return parsed
-          .filter((p: ActiveParking) => p.id && p.plate)
-          .map((p: ActiveParking) => ({ ...p, operationId: p.operationId || MOCK_TICKET_ACTIVE?.operationId || this.nextId() }));
-      }
-    } catch {
-      /* fall through */
-    }
-    if (MOCK_TICKET_ACTIVE) {
-      const now = new Date();
-      const [h, m] = MOCK_TICKET_ACTIVE.endTime.split(':').map(Number);
-      const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m);
-      const totalSeconds = Math.round((end.getTime() - now.getTime()) / 1000);
-      const hh = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
-      const mm = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
-      const ss = String(totalSeconds % 60).padStart(2, '0');
-      return [
-        {
-          id: 'mock-1',
-          plate: MOCK_TICKET_ACTIVE.plate,
-          vehicleId: '1',
-          zone: MOCK_TICKET_ACTIVE.zone,
-          startTime: MOCK_TICKET_ACTIVE.startTime,
-          durationLabel: MOCK_TICKET_ACTIVE.durationLabel,
-          timeRemaining: totalSeconds > 0 ? `${hh}:${mm}:${ss}` : '00:00:00',
-          endTime: MOCK_TICKET_ACTIVE.endTime,
-          latitude: MOCK_TICKET_ACTIVE.latitude,
-          longitude: MOCK_TICKET_ACTIVE.longitude,
-          street: MOCK_TICKET_ACTIVE.street,
-          operationId: MOCK_TICKET_ACTIVE.operationId,
-        },
-      ];
-    }
-    return [];
-  }
-
-  private persistOps(): void {
-    try {
-      localStorage.setItem(this.storageKey, JSON.stringify(this._operations()));
-    } catch {
-      /* storage unavailable */
-    }
-  }
-
-  private persistActive(): void {
-    try {
-      const val = this._activeParkings();
-      if (val.length > 0) {
-        localStorage.setItem(this.activeKey, JSON.stringify(val));
-      } else {
-        localStorage.removeItem(this.activeKey);
-      }
-    } catch {
-      /* storage unavailable */
-    }
-  }
-
   private todayDateString(): string {
     const d = new Date();
     const day = String(d.getDate()).padStart(2, '0');
@@ -265,35 +270,148 @@ export class OperationsService {
     return `${day}/${month}/${year}`;
   }
 
-  private nextId(): string {
-    const max = this._operations().reduce((acc, op) => {
-      const n = Number(op.id);
-      return Number.isFinite(n) ? Math.max(acc, n) : acc;
-    }, 0);
-    return String(max + 1);
+  private mapParkingStatus(vehicle: { id: string; plate: string }, contractId: number, status: ParkingStatusResponseDto): ActiveParking {
+    const start = this.parseOpsDate(status.dateInitial);
+    const end = this.parseOpsDate(status.dateEnd);
+    const remainingMs = Math.max(0, end.getTime() - Date.now());
+    const remainingSeconds = Math.floor(remainingMs / 1000);
+    const hours = String(Math.floor(remainingSeconds / 3600)).padStart(2, '0');
+    const minutes = String(Math.floor((remainingSeconds % 3600) / 60)).padStart(2, '0');
+    const seconds = String(remainingSeconds % 60).padStart(2, '0');
+    return {
+      id: `remote-${vehicle.plate}`,
+      plate: vehicle.plate,
+      vehicleId: vehicle.id,
+      zone: status.sectorname || status.zonename || status.sector || '',
+      startTime: this.timeLabel(start),
+      durationLabel: `${status.accumulatedTime ?? 0} min`,
+      timeRemaining: `${hours}:${minutes}:${seconds}`,
+      endTime: this.timeLabel(end),
+      latitude: status.latitude,
+      longitude: status.longitude,
+      street: status.streetname,
+      operationId: status.operationDate || status.dateInitial,
+      contractId,
+      tariffId: status.tariffId,
+      sectorId: Number(status.sector ?? 0) || undefined,
+    };
   }
 
-  private nextIds(count: number): string[] {
-    const start = Number(this.nextId());
-    return Array.from({ length: count }, (_, index) => String(start + index));
+  private opsDate(date: Date): string {
+    const two = (value: number): string => String(value).padStart(2, '0');
+    return `${two(date.getHours())}${two(date.getMinutes())}${two(date.getSeconds())}${two(date.getDate())}${two(date.getMonth() + 1)}${two(
+      date.getFullYear() % 100,
+    )}`;
   }
 
-  private normalizeOperationIds(list: Operation[]): Operation[] {
-    const used = new Set<string>();
-    let max = list.reduce((acc, op) => {
-      const n = Number(op.id);
-      return Number.isFinite(n) ? Math.max(acc, n) : acc;
-    }, 0);
+  private queryDate(value: string, endOfDay: boolean): string {
+    if (/^\d{12}$/.test(value)) return value;
+    const parsed = new Date(`${value}T${endOfDay ? '23:59:59' : '00:00:00'}`);
+    return this.opsDate(Number.isNaN(parsed.getTime()) ? (endOfDay ? new Date(2099, 11, 31, 23, 59, 59) : new Date(2000, 0, 1)) : parsed);
+  }
 
-    return list.map((op) => {
-      if (op.id && !used.has(op.id)) {
-        used.add(op.id);
-        return op;
-      }
-      max += 1;
-      const id = String(max);
-      used.add(id);
-      return { ...op, id };
-    });
+  private parseOpsDate(value: string): Date {
+    if (/^\d{12}$/.test(value)) {
+      const hours = Number(value.slice(0, 2));
+      const minutes = Number(value.slice(2, 4));
+      const seconds = Number(value.slice(4, 6));
+      const day = Number(value.slice(6, 8));
+      const month = Number(value.slice(8, 10));
+      const year = 2000 + Number(value.slice(10, 12));
+      return new Date(year, month - 1, day, hours, minutes, seconds);
+    }
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
+  }
+
+  private timeLabel(date: Date): string {
+    return date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', hour12: false });
+  }
+
+  private mapRemoteOperation(item: OperationResponseDto): Operation {
+    const remoteAmount =
+      item.operationType === OperationType.UNPAID_FINES && !item.paymentAmount ? (item.fineAmount ?? 0) : (item.paymentAmount ?? 0);
+    const amount = remoteAmount / 100;
+    const start = this.dateTimePart(item.parkingStartDate);
+    const end = this.dateTimePart(item.parkingEndDate);
+    const duration = item.parkingDuration ?? item.duration;
+    const fineStatus = [1, 2, 3].includes(item.fineStatus ?? 0) ? (item.fineStatus as 1 | 2 | 3) : undefined;
+    return {
+      id: String(item.operationNumber ?? item.opBaseId ?? `${item.operationType}-${item.opDate}-${item.plate ?? ''}`),
+      type: (Object.values(OperationType).includes(item.operationType) ? item.operationType : OperationType.PARKING) as OperationType,
+      plate: item.plate ?? null,
+      date: this.datePart(item.opDate),
+      amount: [OperationType.TOP_UP, OperationType.REFUND].includes(item.operationType) ? amount : -Math.abs(amount),
+      zone: item.sectorDesc ?? item.zoneDesc ?? null,
+      startTime: start ?? this.dateTimePart(item.opDate),
+      endTime: end,
+      durationLabel: duration ? `${duration} min` : undefined,
+      relatedOperationId: item.opBaseId ? String(item.opBaseId) : undefined,
+      cardId: item.idPaymentMethod2 ? String(item.idPaymentMethod2) : undefined,
+      cardLabel: item.descPaymentMethod2 ?? undefined,
+      paymentBreakdown: {
+        walletAmount: Math.abs(item.amountPaymentMethod1 ?? 0) / 100,
+        cardAmount: Math.abs(item.amountPaymentMethod2 ?? 0) / 100,
+        cardLabel: item.descPaymentMethod2 ?? undefined,
+      },
+      contractId: item.contractId,
+      contractName: item.contractName ?? undefined,
+      fineNumber: item.fineNumber ?? undefined,
+      fineProcessingDate: this.dateTimeLabel(item.fineProcessingDate),
+      fineArticle: item.fineArticle ?? item.farticle ?? undefined,
+      fineVehicleColor: item.fcolor ?? undefined,
+      fineVehicleMake: item.fmake ?? undefined,
+      fineStatus,
+      fineStreet: item.fineStreet ?? item.fstreet ?? undefined,
+      fineStreetNumber: item.fineStreetNumber ?? item.fstrnum ?? undefined,
+      fineValidDate: this.datePartOptional(item.fineValidDate),
+      fineAmount: item.fineAmount == null ? undefined : Math.abs(item.fineAmount) / 100,
+      cityId: item.cityId,
+      cityName: item.cityName ?? undefined,
+      zoneId: item.zoneId,
+      zoneName: item.zoneDesc ?? undefined,
+      sectorId: item.sectorId,
+      sectorName: item.sectorDesc ?? undefined,
+      latitude: item.latitude ?? undefined,
+      longitude: item.longitude ?? undefined,
+    };
+  }
+
+  private datePartOptional(value: string | null | undefined): string | undefined {
+    return value ? this.datePart(value) : undefined;
+  }
+
+  private dateTimeLabel(value: string | null | undefined): string | undefined {
+    if (!value) return undefined;
+    const date = this.datePart(value);
+    const time = this.dateTimePart(value);
+    return time ? `${date} | ${time}` : date;
+  }
+
+  private datePart(value: string | null | undefined): string {
+    if (!value) return this.todayDateString();
+    const parsed = this.parseBackendDate(value);
+    return Number.isNaN(parsed.getTime()) ? value.slice(0, 10) : parsed.toLocaleDateString('es-ES');
+  }
+
+  private dateTimePart(value: string | null | undefined): string | undefined {
+    if (!value) return undefined;
+    const parsed = this.parseBackendDate(value);
+    return Number.isNaN(parsed.getTime())
+      ? value.slice(11, 16)
+      : parsed.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  private parseBackendDate(value: string): Date {
+    if (/^\d{12}$/.test(value)) {
+      const hour = Number(value.slice(0, 2));
+      const minute = Number(value.slice(2, 4));
+      const second = Number(value.slice(4, 6));
+      const day = Number(value.slice(6, 8));
+      const month = Number(value.slice(8, 10)) - 1;
+      const year = 2000 + Number(value.slice(10, 12));
+      return new Date(year, month, day, hour, minute, second);
+    }
+    return new Date(value);
   }
 }

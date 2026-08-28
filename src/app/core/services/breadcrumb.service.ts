@@ -52,7 +52,7 @@ export class BreadcrumbService {
       success: 'breadcrumb.success',
       operations: 'nav.operations',
       detail: 'breadcrumb.detail',
-      'unpaid-fines': 'ops.denuncias',
+      'unpaid-fines': 'ops.sanciones',
       'unpaid-fine-detail': 'ops.fineDetail.title',
       report: 'ops.report',
       'report-success': 'ops.report.success',
