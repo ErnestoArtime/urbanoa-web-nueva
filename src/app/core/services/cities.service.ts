@@ -96,12 +96,13 @@ export class CitiesService {
 
   private toMunicipio(item: ContractApiItem): ParkingMunicipio {
     const name = item.description1 || item.description2;
+    const id = this.slug(name);
     return {
-      id: this.slug(name),
+      id,
       nombre: name,
       provincia: '',
       zonas: 0,
-      imagen: '',
+      imagen: `${id}.jpg`,
       contractId: item.contractId,
       description1: item.description1 ?? '',
       address: item.address ?? '',

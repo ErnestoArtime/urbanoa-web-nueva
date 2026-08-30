@@ -13,6 +13,8 @@ interface OpsRequestOptions {
 
 @Injectable({ providedIn: 'root' })
 export class OpsApiClient {
+  private serverOffsetMs = 0;
+
   get<T>(endpoint: string, options: Omit<OpsRequestOptions, 'body'> = {}): Promise<T> {
     return this.request<T>('GET', endpoint, options);
   }
@@ -27,6 +29,10 @@ export class OpsApiClient {
 
   postOrNull<T>(endpoint: string, body: unknown, options: Omit<OpsRequestOptions, 'body'> = {}): Promise<T | null> {
     return this.request<T | null>('POST', endpoint, { ...options, body, allowEmptyValue: true });
+  }
+
+  serverNow(): Date {
+    return new Date(Date.now() + this.serverOffsetMs);
   }
 
   private async request<T>(method: 'GET' | 'POST', endpoint: string, options: OpsRequestOptions): Promise<T> {
@@ -53,6 +59,12 @@ export class OpsApiClient {
         const responseBody = await response.text().catch(() => '');
         const detail = responseBody.trim().replace(/\s+/g, ' ').slice(0, 500);
         throw new OpsApiError('http', endpoint, `${endpoint}: HTTP ${response.status}${detail ? ` - ${detail}` : ''}`, response.status);
+      }
+
+      const serverDate = response.headers.get('date');
+      if (serverDate) {
+        const parsedServerDate = Date.parse(serverDate);
+        if (!Number.isNaN(parsedServerDate)) this.serverOffsetMs = parsedServerDate - Date.now();
       }
 
       let payload: unknown;

@@ -609,7 +609,7 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
 
   selectVehicle(vehicle: Vehicle): void {
     this.selectedVehicle.set(vehicle);
-    this.store.update({ vehicleId: vehicle.id, plate: vehicle.plate });
+    this.store.selectVehicle(vehicle.id, vehicle.plate);
     this.showVehicleSelector.set(false);
   }
 
@@ -643,7 +643,7 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
       return;
     }
     const vehicle = this.selectedVehicle();
-    if (vehicle) this.store.update({ vehicleId: vehicle.id, plate: vehicle.plate });
+    if (vehicle) this.store.selectVehicle(vehicle.id, vehicle.plate);
     this.map = L.map(this.mapContainer.nativeElement, { zoomControl: false }).setView(this.cityCenter(), 15);
     L.control.zoom({ position: 'topright' }).addTo(this.map);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {

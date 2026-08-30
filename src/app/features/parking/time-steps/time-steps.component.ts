@@ -8,6 +8,7 @@ import type { ParkingTimeStep } from '../models/parking-time-step.model';
 import { ParkingSessionService } from '../../../core/services/parking-session.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { LucideCarFront } from '@lucide/angular';
+import { OpsApiClient } from '../../../core/api/ops-api-client.service';
 
 @Component({
   selector: 'app-parking-time-steps',
@@ -339,6 +340,7 @@ export class ParkingTimeStepsComponent implements OnInit {
   private readonly store = inject(ParkingFlowStore);
   private readonly timeStepsService = inject(ParkingTimeStepsService);
   private readonly parkingSessionService = inject(ParkingSessionService);
+  private readonly api = inject(OpsApiClient);
   private readonly initialQuery: ParkingFlowQuery = readParkingFlowQuery(this.route);
   readonly query = computed(() =>
     this.store.hasMinimumParkingData()
@@ -365,6 +367,7 @@ export class ParkingTimeStepsComponent implements OnInit {
   readonly steps = signal<ParkingTimeStep[]>([]);
   readonly milestoneSteps = computed(() => this.steps().filter((s) => s.time % 30 === 0));
   readonly selectedStep = signal<ParkingTimeStep>({
+    tariffType: 0,
     time: 60,
     quantity: 1,
     timeFormatted: '1 h',
@@ -376,7 +379,7 @@ export class ParkingTimeStepsComponent implements OnInit {
   readonly selectedIndex = computed(() => this.steps().findIndex((s) => s.time === this.selectedStep().time));
   readonly loading = signal(true);
   readonly error = signal(false);
-  private readonly startedAt = new Date();
+  private readonly startedAt = this.api.serverNow();
 
   private currentlyLoadedPlate = '';
 
@@ -387,7 +390,7 @@ export class ParkingTimeStepsComponent implements OnInit {
 
   private readonly reloadOnVehicleChange = effect(() => {
     const plate = this.query().plate;
-    if (this.currentlyLoadedPlate && plate && plate !== this.currentlyLoadedPlate) {
+    if (this.store.hasTicketData() && this.currentlyLoadedPlate && plate && plate !== this.currentlyLoadedPlate) {
       this.currentlyLoadedPlate = plate;
       void this.loadSteps();
     }
@@ -454,6 +457,7 @@ export class ParkingTimeStepsComponent implements OnInit {
       minutes: String(step.time),
       amount: this.amountFormatted(),
       endTime: this.endTime(),
+      tariffType: String(step.tariffType),
     };
   }
 
@@ -464,6 +468,7 @@ export class ParkingTimeStepsComponent implements OnInit {
       minutes: String(step.time),
       amount: this.amountFormatted(),
       endTime: this.endTime(),
+      tariffType: String(step.tariffType),
     });
   }
 

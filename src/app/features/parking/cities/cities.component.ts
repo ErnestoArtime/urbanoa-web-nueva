@@ -44,12 +44,10 @@ const EMPTY_CITY: ParkingMunicipio = {
       <div class="municipios-layout mt-2">
         <div class="municipios-grid">
           @for (m of filteredMunicipios(); track m.id) {
-            <button type="button" class="municipio-card" [class.active]="selected().id === m.id"
-                    (click)="selected.set(m)">
+            <button type="button" class="municipio-card" [class.active]="selected().id === m.id" (click)="selected.set(m)">
               <div class="municipio-img">
                 @if (m.imagePath || m.imagen) {
-                  <img [src]="m.imagePath || 'assets/municipios/' + m.imagen"
-                       [alt]="'parking.cities.viewOf' | translate: { name: m.nombre }" />
+                  <img [src]="'assets/municipios/' + m.imagen" [alt]="'parking.cities.viewOf' | translate: { name: m.nombre }" />
                 }
                 <span class="municipio-map-label">{{ m.nombre }}</span>
               </div>
@@ -70,23 +68,34 @@ const EMPTY_CITY: ParkingMunicipio = {
           <h3>{{ 'parking.cities.streetsTitle' | translate }}</h3>
           <ul>
             @for (zone of selected().zones; track zone.id) {
-              <li><span>{{ zone.name }}</span><strong>{{ 'parking.zones' | translate }}</strong></li>
+              <li>
+                <span>{{ zone.name }}</span
+                ><strong>{{ 'parking.zones' | translate }}</strong>
+              </li>
             } @empty {
-              <li><span>{{ 'parking.cities.noZones' | translate }}</span></li>
+              <li>
+                <span>{{ 'parking.cities.noZones' | translate }}</span>
+              </li>
             }
           </ul>
           <div class="sticky-actions">
             <a
               routerLink="/app/parking"
-              [queryParams]="{ city: selected().id, cityId: selected().contractId, cityName: selected().nombre, vehicleId: vehicleId, plate: vehiclePlate }"
+              [queryParams]="{
+                city: selected().id,
+                cityId: selected().contractId,
+                cityName: selected().nombre,
+                vehicleId: vehicleId,
+                plate: vehiclePlate,
+              }"
               class="btn btn-primary btn-block"
-            >{{ 'parking.cities.viewMap' | translate }}</a
+              >{{ 'parking.cities.viewMap' | translate }}</a
             >
             <a
               routerLink="/app/parking/streets"
               [queryParams]="{ municipio: selected().id, vehicleId: vehicleId, plate: vehiclePlate }"
               class="btn btn-secondary btn-block"
-            >{{ 'parking.cities.viewStreets' | translate }}</a
+              >{{ 'parking.cities.viewStreets' | translate }}</a
             >
           </div>
         </aside>

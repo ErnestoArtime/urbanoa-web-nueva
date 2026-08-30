@@ -54,13 +54,14 @@ export class ParkingTimeStepsService {
           sector: input.sectorId,
           ticket: input.ticketId,
           plate: input.plate,
-          datetime: this.opsDate(input.startDate ?? new Date()),
+          datetime: this.opsDate(input.startDate ?? (this.api.serverNow ? this.api.serverNow() : new Date())),
           groupId: input.sectorId,
           ticketId: input.ticketId,
         },
         { token },
       );
       const mapped = (response.steps ?? []).map((step) => ({
+        tariffType: response.tariffType ?? 0,
         time: step.time,
         quantity: step.quantity,
         timeFormatted: this.durationLabel(step.time),

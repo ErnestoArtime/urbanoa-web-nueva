@@ -63,16 +63,25 @@ export class ParkingApiService {
   private readonly api = inject(OpsApiClient);
   private readonly session = inject(OpsSessionService);
 
+  serverNow(): Date {
+    return this.api.serverNow();
+  }
+
   async confirmParking(input: ConfirmParkingInput): Promise<ParkingApiResult> {
     const token = this.session.token();
-    if (!token) return { success: false, source: 'remote', error: new OpsApiError('transport', OPS_ENDPOINTS.parking.confirmParking, 'Se requiere una sesión válida') };
+    if (!token)
+      return {
+        success: false,
+        source: 'remote',
+        error: new OpsApiError('transport', OPS_ENDPOINTS.parking.confirmParking, 'Se requiere una sesión válida'),
+      };
     try {
       const response = await this.api.post<unknown>(
         OPS_ENDPOINTS.parking.confirmParking,
         {
           contractId: input.contractId,
           plate: input.plate,
-          sector: String(input.sector),
+          sector: input.sector,
           quantity: input.quantity,
           tariffType: input.tariffType,
           cloudToken: '',
@@ -85,8 +94,6 @@ export class ParkingApiService {
           spaceId: '',
           streetname: input.street,
           streetno: '',
-          groupId: input.sector,
-          tariffId: input.tariffType,
           payMethodId: input.payMethodId,
         },
         { token },
@@ -99,9 +106,14 @@ export class ParkingApiService {
 
   async unpark(input: { contractId: number; plate: string; groupId?: number; ticketId?: number }): Promise<ParkingApiResult> {
     const token = this.session.token();
-    if (!token) return { success: false, source: 'remote', error: new OpsApiError('transport', OPS_ENDPOINTS.parking.queryUnparking, 'Se requiere una sesión válida') };
+    if (!token)
+      return {
+        success: false,
+        source: 'remote',
+        error: new OpsApiError('transport', OPS_ENDPOINTS.parking.queryUnparking, 'Se requiere una sesión válida'),
+      };
     try {
-      const date = this.opsDate(new Date());
+      const date = this.opsDate(this.api.serverNow ? this.api.serverNow() : new Date());
       const quote = await this.api.post<UnparkingResponseDto>(
         OPS_ENDPOINTS.parking.queryUnparking,
         { ...input, datetime: date },
@@ -138,10 +150,19 @@ export class ParkingApiService {
     const token = this.session.token();
     if (!token) throw new OpsApiError('transport', OPS_ENDPOINTS.parking.tickets, 'Se requiere una sesión válida');
     const response = await this.api.post<{
-      ticketlist: {
-        ticketId: number; ticketDesc: string; minAmount: number | string; schedule: string; ticketBehText?: string;
-        maxTime?: string; zoneId?: number; sectorId?: number; sectorColor?: string;
-      }[] | null;
+      ticketlist:
+        | {
+            ticketId: number;
+            ticketDesc: string;
+            minAmount: number | string;
+            schedule: string;
+            ticketBehText?: string;
+            maxTime?: string;
+            zoneId?: number;
+            sectorId?: number;
+            sectorColor?: string;
+          }[]
+        | null;
     }>(
       OPS_ENDPOINTS.parking.tickets,
       {
@@ -161,9 +182,10 @@ export class ParkingApiService {
           id: String(ticket.ticketId),
           name: ticket.ticketDesc,
           desc: ticket.ticketBehText || ticket.schedule,
-          price: typeof ticket.minAmount === 'string' && ticket.minAmount.trim()
-            ? ticket.minAmount.replace(/<br\s*\/?>/gi, ' · ')
-            : `${(minAmountCents / 100).toFixed(2).replace('.', ',')} €`,
+          price:
+            typeof ticket.minAmount === 'string' && ticket.minAmount.trim()
+              ? ticket.minAmount.replace(/<br\s*\/?>/gi, ' · ')
+              : `${(minAmountCents / 100).toFixed(2).replace('.', ',')} €`,
           schedule: ticket.schedule,
           maxTime: ticket.maxTime,
           minAmount: typeof ticket.minAmount === 'string' ? ticket.minAmount.replace(/<br\s*\/?>/gi, ' · ') : undefined,
@@ -183,10 +205,12 @@ export class ParkingApiService {
   }
 
   async sectors(input: { contractId: number; streetId?: number; latitude: number; longitude: number }): Promise<ParkingSectorOption[]> {
-    const response = await this.api.post<{ sectorlist: ParkingSectorOption[] | null }>(
-      OPS_ENDPOINTS.parking.sectors,
-      { contractId: input.contractId, streetId: input.streetId ?? 0, latitude: input.latitude, longitude: input.longitude },
-    );
+    const response = await this.api.post<{ sectorlist: ParkingSectorOption[] | null }>(OPS_ENDPOINTS.parking.sectors, {
+      contractId: input.contractId,
+      streetId: input.streetId ?? 0,
+      latitude: input.latitude,
+      longitude: input.longitude,
+    });
     return response.sectorlist ?? [];
   }
 

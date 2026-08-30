@@ -155,7 +155,7 @@ export class ParkingStreetsComponent implements OnInit {
   streetParams(street: ParkingStreet): Record<string, string> {
     return {
       city: this.cityId,
-      cityName: this.cityName,
+      cityName: this.selectedCityName,
       cityId: String(this.citiesService.contractIdFor(this.cityId)),
       plate: this.plate,
       vehicleId: this.vehicleId,

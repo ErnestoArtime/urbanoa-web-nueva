@@ -27,6 +27,7 @@ export class VehicleService {
   private readonly state = signal<Vehicle[]>([]);
   private readonly sourceState = signal<'idle' | 'remote' | 'error'>('idle');
   private readonly errorState = signal<OpsApiError | null>(null);
+  private loadPromise: Promise<void> | null = null;
 
   readonly vehicles = this.state.asReadonly();
   readonly source = this.sourceState.asReadonly();
@@ -37,6 +38,16 @@ export class VehicleService {
   private readonly session = inject(OpsSessionService);
 
   async load(): Promise<void> {
+    if (this.loadPromise) return this.loadPromise;
+    this.loadPromise = this.loadRemote();
+    try {
+      await this.loadPromise;
+    } finally {
+      this.loadPromise = null;
+    }
+  }
+
+  private async loadRemote(): Promise<void> {
     const token = this.session.token();
     if (!token) {
       this.state.set([]);
