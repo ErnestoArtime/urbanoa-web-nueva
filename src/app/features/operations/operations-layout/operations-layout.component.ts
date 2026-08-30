@@ -549,7 +549,7 @@ export class OperationsLayoutComponent implements OnInit {
 
   private async reload(): Promise<void> {
     await Promise.all([this.operationsService.load(), this.vehicleService.load()]);
-    this.parkingSessionService.loadParkingStatuses(this.vehicleService.vehicles());
+    await this.operationsService.loadDashboardParkingStatuses(this.vehicleService.vehicles());
   }
 
   isDetailRoute = () => {

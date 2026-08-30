@@ -12,6 +12,7 @@ import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 import { BreadcrumbService } from '../../core/services/breadcrumb.service';
 import { TranslationService } from '../../core/services/translation.service';
 import { OperationsService } from '../../core/services/operations.service';
+import { VehicleService } from '../../core/services/vehicle.service';
 import { OperationType } from '../../shared/models/operation-type';
 
 const MAIN_TAB_PATHS = ['/app/home', '/app/parking', '/app/operations', '/app/account'];
@@ -174,6 +175,7 @@ export class AppShellComponent {
   private readonly breadcrumbService = inject(BreadcrumbService);
   private readonly translationService = inject(TranslationService);
   private readonly operationsService = inject(OperationsService);
+  private readonly vehicleService = inject(VehicleService);
   readonly routeTransitionLoading = signal(false);
   private readonly routeTransitionMinMs = 1000;
   private routeTransitionStartedAt = 0;
@@ -189,6 +191,8 @@ export class AppShellComponent {
   );
 
   constructor() {
+    void this.initializeSessionData();
+
     this.router.events
       .pipe(
         filter((e): e is NavigationEnd => e instanceof NavigationEnd),
@@ -220,6 +224,11 @@ export class AppShellComponent {
         }, remaining);
       }
     });
+  }
+
+  private async initializeSessionData(): Promise<void> {
+    await Promise.all([this.operationsService.load(), this.vehicleService.load()]);
+    await this.operationsService.loadDashboardParkingStatuses(this.vehicleService.vehicles());
   }
 
   showBottomNav = () => {

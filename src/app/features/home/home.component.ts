@@ -66,7 +66,15 @@ import { DashboardApiService } from '../../core/services/dashboard-api.service';
 
         <div class="dashboard-grid mt-2">
           <div class="dashboard-col-left">
-            @if (activeParkings().length === 1) {
+            @if (parkingStatusLoading()) {
+              <div
+                class="skeleton-shape skeleton-card skeleton-active-ticket"
+                role="status"
+                [attr.aria-label]="'common.loading' | translate"
+              >
+                <span class="sr-only">{{ 'common.loading' | translate }}</span>
+              </div>
+            } @else if (activeParkings().length === 1) {
               <app-parking-ticket-card
                 [parking]="activeParkings()[0]"
                 (leaveParking)="confirmUnparkFor($event)"
@@ -356,6 +364,7 @@ export class HomeComponent {
     return list.slice(0, 3);
   });
   readonly initialLoading = computed(() => this.dashboardApi.source() === 'idle');
+  readonly parkingStatusLoading = computed(() => this.operationsService.activeSource() === 'idle');
   readonly unparked = signal(false);
   readonly confirmUnpark = signal(false);
   private pendingUnparkId = '';
