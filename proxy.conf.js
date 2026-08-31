@@ -14,7 +14,6 @@ module.exports = {
     secure: false,
     changeOrigin: true,
     pathRewrite: {
-      '^/ops-api/OPSWebServicesLegacyAPI': '/OPSWebServicesAPI',
       '^/ops-api/OPSWebServicesAPI': '/OPSWebServicesAPI',
     },
   },
