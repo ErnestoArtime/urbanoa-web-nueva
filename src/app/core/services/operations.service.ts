@@ -95,6 +95,8 @@ export class OperationsService {
   private readonly locationSettings = inject(LocationSettingsService);
   private readonly _operations = signal<Operation[]>([]);
   private readonly _activeParkings = signal<ActiveParking[]>([]);
+  private readonly operationsLoadsInFlight = new Map<string, Promise<void>>();
+  private dashboardParkingStatusesInFlight: Promise<void> | null = null;
 
   readonly operations = this._operations.asReadonly();
   readonly activeParkings = this._activeParkings.asReadonly();
@@ -104,16 +106,29 @@ export class OperationsService {
   readonly activeSource = signal<'idle' | 'remote' | 'error'>('idle');
   readonly loading = signal(false);
 
-  async load(dateStart?: string, dateEnd?: string, operationTypeList = [1, 2, 3, 4, 5, 7, 101, 102, 103, 104]): Promise<void> {
+  load(dateStart?: string, dateEnd?: string, operationTypeList = [1, 2, 3, 4, 5, 7, 101, 102, 103, 104]): Promise<void> {
+    const year = new Date().getFullYear();
+    const effectiveStart = dateStart ?? `${year}-01-01`;
+    const effectiveEnd = dateEnd ?? `${year}-12-31`;
+    const requestKey = JSON.stringify([effectiveStart, effectiveEnd, operationTypeList]);
+    const inFlight = this.operationsLoadsInFlight.get(requestKey);
+    if (inFlight) return inFlight;
+
+    const request = this.loadRemote(effectiveStart, effectiveEnd, operationTypeList);
+    const tracked = request.finally(() => {
+      if (this.operationsLoadsInFlight.get(requestKey) === tracked) this.operationsLoadsInFlight.delete(requestKey);
+    });
+    this.operationsLoadsInFlight.set(requestKey, tracked);
+    return tracked;
+  }
+
+  private async loadRemote(effectiveStart: string, effectiveEnd: string, operationTypeList: number[]): Promise<void> {
     const token = this.session.token();
     if (!token) {
       this._operations.set([]);
       this.source.set('error');
       return;
     }
-    const year = new Date().getFullYear();
-    const effectiveStart = dateStart ?? `${year}-01-01`;
-    const effectiveEnd = dateEnd ?? `${year}-12-31`;
     this.loading.set(true);
     try {
       const response = await this.api.post<OperationResponseDto[]>(
@@ -147,16 +162,20 @@ export class OperationsService {
     await this.loadParkingStatusesFromContracts(vehicles, () => (contractId ? [contractId] : this.contractIdsToCheck()));
   }
 
-  async loadDashboardParkingStatuses(vehicles: readonly { id: string; plate: string }[]): Promise<void> {
+  loadDashboardParkingStatuses(vehicles: readonly { id: string; plate: string }[]): Promise<void> {
+    if (this.dashboardParkingStatusesInFlight) return this.dashboardParkingStatusesInFlight;
     const preferredCityId = this.locationSettings.settings().preferredCityId;
     const preferredContractId = preferredCityId ? this.citiesService.contractIdFor(preferredCityId) : 0;
-    await this.loadParkingStatusesFromContracts(vehicles, (vehicle) => {
+    const request = this.loadParkingStatusesFromContracts(vehicles, (vehicle) => {
       const recentContractId = this.latestParkingContractId(vehicle.plate);
-      if (recentContractId) return [recentContractId];
-      if (this.source() !== 'remote') return this.contractIdsToCheck();
-      if (preferredContractId > 0) return [preferredContractId];
-      return [];
+      const allContracts = this.contractIdsToCheck();
+      return [recentContractId ?? 0, preferredContractId, ...allContracts].filter((id) => id > 0);
     });
+    const tracked = request.finally(() => {
+      if (this.dashboardParkingStatusesInFlight === tracked) this.dashboardParkingStatusesInFlight = null;
+    });
+    this.dashboardParkingStatusesInFlight = tracked;
+    return tracked;
   }
 
   private async loadParkingStatusesFromContracts(
@@ -175,7 +194,7 @@ export class OperationsService {
       return;
     }
 
-    const date = this.opsDate(new Date());
+    const date = this.opsDate(this.api.serverNow ? this.api.serverNow() : new Date());
     const results = await Promise.allSettled(
       vehicles.map(async (vehicle) => {
         const contractIds = [...new Set(contractsFor(vehicle).filter((id) => id > 0))];
@@ -188,7 +207,12 @@ export class OperationsService {
               { token },
             );
             answered = true;
-            if (status?.status === 2) return this.mapParkingStatus(vehicle, id, status);
+            if (status?.status === 2) {
+              const parking = this.mapParkingStatus(vehicle, id, status);
+              this.upsertActiveParking(parking);
+              this.activeSource.set('remote');
+              return parking;
+            }
           } catch {
             // Error de red/backend para este contrato: se prueba el siguiente.
           }
@@ -198,14 +222,29 @@ export class OperationsService {
       }),
     );
 
-    const remote = results
-      .filter((result): result is PromiseFulfilledResult<ActiveParking | null> => result.status === 'fulfilled')
-      .map((result) => result.value)
-      .filter((parking): parking is ActiveParking => parking !== null);
+    // Un fallo total de red no significa que los aparcamientos hayan terminado.
+    // Conservamos el último estado confirmado para que un refresco no lo borre.
+    if (results.every((result) => result.status === 'rejected')) {
+      this.activeSource.set('error');
+      return;
+    }
+
+    results.forEach((result, index) => {
+      if (result.status === 'fulfilled' && result.value === null) this.removeActiveParking(vehicles[index].plate);
+    });
     const failedPlates = new Set(results.flatMap((result, index) => (result.status === 'rejected' ? [vehicles[index].plate] : [])));
 
-    this._activeParkings.set(remote);
     this.activeSource.set(failedPlates.size === 0 ? 'remote' : 'error');
+  }
+
+  private upsertActiveParking(parking: ActiveParking): void {
+    const plate = this.normalizePlate(parking.plate);
+    this._activeParkings.update((current) => [...current.filter((item) => this.normalizePlate(item.plate) !== plate), parking]);
+  }
+
+  private removeActiveParking(plate: string): void {
+    const normalized = this.normalizePlate(plate);
+    this._activeParkings.update((current) => current.filter((parking) => this.normalizePlate(parking.plate) !== normalized));
   }
 
   private latestParkingContractId(plate: string): number | undefined {
@@ -251,7 +290,8 @@ export class OperationsService {
   }
 
   isPlateParked(plate: string): boolean {
-    return this._activeParkings().some((p) => p.plate === plate);
+    const normalizedPlate = this.normalizePlate(plate);
+    return this._activeParkings().some((p) => this.normalizePlate(p.plate) === normalizedPlate);
   }
 
   getActiveParking(id: string): ActiveParking | undefined {
@@ -263,11 +303,15 @@ export class OperationsService {
   }
 
   private todayDateString(): string {
-    const d = new Date();
+    const d = this.api.serverNow ? this.api.serverNow() : new Date();
     const day = String(d.getDate()).padStart(2, '0');
     const month = String(d.getMonth() + 1).padStart(2, '0');
     const year = d.getFullYear();
     return `${day}/${month}/${year}`;
+  }
+
+  private normalizePlate(plate: string): string {
+    return plate.replace(/\s+/g, '').toLocaleUpperCase('es');
   }
 
   private mapParkingStatus(vehicle: { id: string; plate: string }, contractId: number, status: ParkingStatusResponseDto): ActiveParking {

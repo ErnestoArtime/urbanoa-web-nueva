@@ -25,9 +25,34 @@ describe('VehicleService', () => {
     expect(service.vehicles()).toEqual([{ id: '1234ABC', plate: '1234ABC', isDefault: true }]);
   });
 
+  it('shares an in-flight plate request between the wizard layout and the map', async () => {
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'getOrNull', 'post']);
+    let resolveRequest!: (value: { plates: { plate: string; favorite: boolean }[] }) => void;
+    api.getOrNull.and.returnValue(
+      new Promise((resolve) => {
+        resolveRequest = resolve;
+      }),
+    );
+    const service = serviceWith(api);
+    TestBed.inject(OpsSessionService).setToken('token');
+
+    const layoutRequest = service.load();
+    const mapRequest = service.load();
+    resolveRequest({ plates: [{ plate: '1234ABC', favorite: true }] });
+    await Promise.all([layoutRequest, mapRequest]);
+
+    expect(api.getOrNull).toHaveBeenCalledTimes(1);
+    expect(service.vehicles()).toEqual([{ id: '1234ABC', plate: '1234ABC', isDefault: true }]);
+  });
+
   it('marks a newly added plate favorite and clears the previous favorite remotely', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'getOrNull', 'post']);
-    api.getOrNull.and.resolveTo({ plates: [{ plate: '1234 ABC', favorite: true }, { plate: '5678 XYZ', favorite: false }] });
+    api.getOrNull.and.resolveTo({
+      plates: [
+        { plate: '1234 ABC', favorite: true },
+        { plate: '5678 XYZ', favorite: false },
+      ],
+    });
     api.post.and.resolveTo('OK');
     const service = serviceWith(api);
     TestBed.inject(OpsSessionService).setToken('token');
@@ -68,7 +93,12 @@ describe('VehicleService', () => {
 
   it('promotes and remotely favorites a new default when the favorite plate is removed', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'getOrNull', 'post']);
-    api.getOrNull.and.resolveTo({ plates: [{ plate: '1234 ABC', favorite: true }, { plate: '5678 XYZ', favorite: false }] });
+    api.getOrNull.and.resolveTo({
+      plates: [
+        { plate: '1234 ABC', favorite: true },
+        { plate: '5678 XYZ', favorite: false },
+      ],
+    });
     api.post.and.resolveTo('OK');
     const service = serviceWith(api);
     TestBed.inject(OpsSessionService).setToken('token');
@@ -88,7 +118,12 @@ describe('VehicleService', () => {
 
   it('does not promote a new default when the removed plate was not the favorite', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'getOrNull', 'post']);
-    api.getOrNull.and.resolveTo({ plates: [{ plate: '1234 ABC', favorite: true }, { plate: '5678 XYZ', favorite: false }] });
+    api.getOrNull.and.resolveTo({
+      plates: [
+        { plate: '1234 ABC', favorite: true },
+        { plate: '5678 XYZ', favorite: false },
+      ],
+    });
     api.post.and.resolveTo('OK');
     const service = serviceWith(api);
     TestBed.inject(OpsSessionService).setToken('token');

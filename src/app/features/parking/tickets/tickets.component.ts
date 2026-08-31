@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, effect, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { LoaderComponent } from '../../../shared/components/loader/loader.component';
 import { ParkingFlowStore } from '../parking-flow.store';
@@ -12,23 +12,23 @@ import { ParkingApiService, ParkingTicketOption } from '../../../core/services/p
   template: `
     <app-loader [visible]="loading()" [message]="'parking.tickets.loading' | translate" />
     <div class="page flow-page">
-      <a routerLink="/app/parking" [queryParams]="{ city: query.city }" class="back-link">{{ 'parking.tickets.back' | translate }}</a>
+      <a routerLink="/app/parking" [queryParams]="{ city: query().city }" class="back-link">{{ 'parking.tickets.back' | translate }}</a>
       <h1 class="page-title">{{ 'parking.tickets.title' | translate }}</h1>
       <div class="selection-summary card">
-        <span class="zone-color" [style.background]="'#' + query.sectorColor"></span>
+        <span class="zone-color" [style.background]="'#' + query().sectorColor"></span>
         <div>
-          <strong>{{ query.street }}</strong>
-          <p>{{ query.zone }} · {{ query.cityName }}</p>
-          <small>{{ 'parking.tickets.vehicle' | translate: { plate: query.plate } }}</small>
+          <strong>{{ query().street }}</strong>
+          <p>{{ query().zone }} · {{ query().cityName }}</p>
+          <small>{{ 'parking.tickets.vehicle' | translate: { plate: query().plate } }}</small>
         </div>
       </div>
       <div class="tariff-list">
         @for (tariff of tariffs(); track tariff.id) {
           <a routerLink="/app/parking/time-steps" [queryParams]="withTariff(tariff)" (click)="onSelectTariff(tariff)" class="ticket-option">
-            <span class="ticket-color" [style.background]="'#' + (query.sectorColor || '2b6767')"></span>
+            <span class="ticket-color" [style.background]="'#' + (query().sectorColor || '2b6767')"></span>
             <div class="ticket-option-head">
               <div>
-                <small>{{ query.zone || ('parking.tickets.defaultZone' | translate) }}</small>
+                <small>{{ query().zone || ('parking.tickets.defaultZone' | translate) }}</small>
                 <h2>{{ tariff.name }}</h2>
                 <p>{{ tariff.desc }}</p>
               </div>
@@ -37,7 +37,7 @@ import { ParkingApiService, ParkingTicketOption } from '../../../core/services/p
             <div class="ticket-meta">
               <span
                 ><small>{{ 'parking.tickets.sector' | translate }}</small
-                ><strong>{{ query.sector || query.street }}</strong></span
+                ><strong>{{ query().sector || query().street }}</strong></span
               ><span
                 ><small>{{ 'parking.tickets.schedule' | translate }}</small
                 ><strong>{{ tariff.schedule || '—' }}</strong></span
@@ -171,31 +171,62 @@ export class ParkingTicketsComponent implements OnInit {
   readonly tariffs = signal<ParkingTicketOption[]>([]);
   readonly source = signal<'idle' | 'remote' | 'error'>('idle');
   readonly error = signal(false);
-  readonly query: ParkingFlowQuery = this.store.hasMinimumParkingData() ? this.store.fromStore() : readParkingFlowQuery(this.route);
+  private readonly initialQuery = readParkingFlowQuery(this.route);
+  readonly query = computed(() =>
+    this.store.hasMinimumParkingData() ? ({ ...this.initialQuery, ...this.store.fromStore() } as ParkingFlowQuery) : this.initialQuery,
+  );
   readonly loading = signal(true);
+  private currentlyLoadedPlate = '';
+  private requestSequence = 0;
+
   async ngOnInit(): Promise<void> {
+    this.currentlyLoadedPlate = this.query().plate;
+    await this.loadTariffs();
+  }
+
+  private readonly reloadOnVehicleChange = effect(() => {
+    const plate = this.query().plate;
+    if (this.currentlyLoadedPlate && plate && plate !== this.currentlyLoadedPlate) {
+      this.currentlyLoadedPlate = plate;
+      void this.loadTariffs();
+    }
+  });
+
+  private async loadTariffs(): Promise<void> {
+    const requestId = ++this.requestSequence;
+    const query = this.query();
+    this.loading.set(true);
+    this.error.set(false);
     try {
       const result = await this.parkingApi.tickets({
-        contractId: Number(this.query.cityId || 0),
-        plate: this.query.plate,
-        zone: Number(this.query.sectorId || this.query.zoneId || 0),
-        street: Number(this.query.streetId || 0),
-        date: this.parkingApi.opsDate(new Date()),
+        contractId: Number(query.cityId || 0),
+        plate: query.plate,
+        zone: Number(query.sectorId || query.zoneId || 0),
+        street: Number(query.streetId || 0),
+        date: this.parkingApi.opsDate(this.parkingApi.serverNow()),
       });
+      if (requestId !== this.requestSequence) return;
       this.tariffs.set(result.data);
       this.source.set('remote');
     } catch {
+      if (requestId !== this.requestSequence) return;
       this.tariffs.set([]);
       this.source.set('error');
       this.error.set(true);
     } finally {
-      this.loading.set(false);
+      if (requestId === this.requestSequence) this.loading.set(false);
     }
   }
   withTariff(tariff: ParkingTicketOption): Record<string, string> {
-    return { ...this.query, ticketId: tariff.id, tariffId: tariff.id, tariff: tariff.name, tariffPrice: tariff.price };
+    return { ...this.query(), ticketId: tariff.id, tariffId: tariff.id, tariff: tariff.name, tariffPrice: tariff.price };
   }
   onSelectTariff(tariff: ParkingTicketOption): void {
-    this.store.update({ ticketId: tariff.id, ticketName: tariff.name, tariffId: tariff.id, tariffName: tariff.name, tariffPrice: tariff.price });
+    this.store.update({
+      ticketId: tariff.id,
+      ticketName: tariff.name,
+      tariffId: tariff.id,
+      tariffName: tariff.name,
+      tariffPrice: tariff.price,
+    });
   }
 }

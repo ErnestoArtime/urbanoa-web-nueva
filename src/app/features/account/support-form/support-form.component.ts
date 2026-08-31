@@ -90,14 +90,11 @@ const FEEDBACK_SUBTYPES: SelectOption<FeedbackSubtype>[] = [
             <div class="form-group">
               <label class="form-label" for="support-plate">{{ 'account.support.plate' | translate }}</label>
               <select id="support-plate" class="form-input plate-input" formControlName="plate">
-                <option value="">{{ 'account.vehicles.empty' | translate }}</option>
+                <option value="">{{ 'account.support.noPlate' | translate }}</option>
                 @for (vehicle of vehicles(); track vehicle.id) {
                   <option [value]="vehicle.plate">{{ vehicle.plate }}</option>
                 }
               </select>
-              @if (form.controls.plate.invalid && form.controls.plate.touched) {
-                <p class="form-error">{{ 'validation.plate' | translate }}</p>
-              }
             </div>
           </div>
         }
@@ -352,7 +349,7 @@ export class AccountSupportFormComponent implements OnInit {
     type: ['' as FeedbackType | '', Validators.required],
     subtype: ['' as FeedbackSubtype | '', Validators.required],
     cityId: ['', Validators.required],
-    plate: ['', Validators.required],
+    plate: [''],
     message: ['', [Validators.required, Validators.maxLength(500)]],
   });
 
@@ -406,15 +403,17 @@ export class AccountSupportFormComponent implements OnInit {
       success = await this.support.reply(this.threadId, values.message, this.attachment() ?? undefined);
     } else {
       const city = this.municipios().find((item) => item.id === values.cityId);
-      success = Boolean(await this.support.create({
-        type: values.type as FeedbackType,
-        subtype: values.subtype as FeedbackSubtype,
-        cityId: values.cityId,
-        cityName: city?.nombre ?? '',
-        plate: values.plate,
-        message: values.message,
-        attachment: this.attachment() ?? undefined,
-      }));
+      success = Boolean(
+        await this.support.create({
+          type: values.type as FeedbackType,
+          subtype: values.subtype as FeedbackSubtype,
+          cityId: values.cityId,
+          cityName: city?.nombre ?? '',
+          plate: values.plate,
+          message: values.message,
+          attachment: this.attachment() ?? undefined,
+        }),
+      );
     }
     this.submitting.set(false);
     if (success) void this.router.navigate(['/app/account/support-success']);

@@ -22,7 +22,7 @@ describe('ParkingApiService', () => {
       sector: 4,
       quantity: 125,
       tariffType: 2,
-      date: '2026-08-13T12:00:00.000Z',
+      date: '120000130826',
       time: 60,
       latitude: 43.2,
       longitude: -2.1,
@@ -32,16 +32,24 @@ describe('ParkingApiService', () => {
 
     expect(api.post).toHaveBeenCalledWith(
       'OPSWebServicesAPI/ConfirmParkingOperationAPI',
-      jasmine.objectContaining({
+      {
         contractId: 3,
         plate: '1234ABC',
-        sector: '4',
+        sector: 4,
         quantity: 125,
         tariffType: 2,
         cloudToken: '',
         operatingSystem: 1,
+        date: '120000130826',
+        time: 60,
+        latitude: 43.2,
+        longitude: -2.1,
+        reference: '',
+        spaceId: '',
+        streetname: 'Nagusia Kalea',
+        streetno: '',
         payMethodId: 7,
-      }),
+      },
       { token: 'token' },
     );
     expect(result.source).toBe('remote');

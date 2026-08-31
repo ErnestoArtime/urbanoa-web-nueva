@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { filter, map, startWith } from 'rxjs/operators';
@@ -71,12 +71,15 @@ interface WizardStep {
                 ><button
                   type="button"
                   class="vehicle-picker-trigger"
+                  [disabled]="!canChangeVehicle()"
                   [attr.aria-expanded]="vehiclePickerOpen()"
                   [attr.aria-label]="'parking.wizard.changeVehicle' | translate"
                   (click)="toggleVehiclePicker()"
                 >
-                  <strong>{{ query()['plate'] }}</strong
-                  ><span class="vehicle-picker-chevron" aria-hidden="true"></span>
+                  <strong>{{ query()['plate'] }}</strong>
+                  @if (canChangeVehicle()) {
+                    <span class="vehicle-picker-chevron" aria-hidden="true"></span>
+                  }
                 </button>
                 @if (vehiclePickerOpen()) {
                   <div class="vehicle-picker-menu" role="listbox">
@@ -117,8 +120,16 @@ interface WizardStep {
           @if (query()['plate']) {
             <div class="mobile-vehicle-picker">
               <small>{{ 'parking.wizard.vehicle' | translate }}</small>
-              <button type="button" (click)="toggleVehiclePicker()" [attr.aria-expanded]="vehiclePickerOpen()">
-                {{ query()['plate'] }} <span class="vehicle-picker-chevron" aria-hidden="true"></span>
+              <button
+                type="button"
+                [disabled]="!canChangeVehicle()"
+                (click)="toggleVehiclePicker()"
+                [attr.aria-expanded]="vehiclePickerOpen()"
+              >
+                {{ query()['plate'] }}
+                @if (canChangeVehicle()) {
+                  <span class="vehicle-picker-chevron" aria-hidden="true"></span>
+                }
               </button>
               @if (vehiclePickerOpen()) {
                 <div class="vehicle-picker-menu" role="listbox">
@@ -430,6 +441,10 @@ interface WizardStep {
           transform: rotate(45deg);
           transition: transform 180ms ease;
         }
+        .vehicle-picker-trigger:disabled,
+        .mobile-vehicle-picker button:disabled {
+          cursor: default;
+        }
         .vehicle-picker-trigger[aria-expanded='true'] .vehicle-picker-chevron {
           margin-top: 0.2rem;
           transform: rotate(225deg);
@@ -486,7 +501,7 @@ interface WizardStep {
     `,
   ],
 })
-export class ParkingWizardLayoutComponent {
+export class ParkingWizardLayoutComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly store = inject(ParkingFlowStore);
@@ -517,9 +532,11 @@ export class ParkingWizardLayoutComponent {
   readonly query = computed(() => {
     const urlParams = this.router.parseUrl(this.url()).queryParams as Record<string, string>;
     const s = this.store.vm();
+    const cityIdentifier = urlParams['city'] || urlParams['municipio'] || s.city || '';
+    const cityName = s.cityName || urlParams['cityName'] || this.cityLabel(cityIdentifier);
     return {
       ...urlParams,
-      ...(s.cityName ? { cityName: s.cityName } : {}),
+      ...(cityName ? { cityName } : {}),
       ...(s.zoneName ? { zone: s.zoneName } : {}),
       ...(s.plate ? { plate: s.plate } : {}),
       ...(s.duration ? { duration: s.duration } : {}),
@@ -527,17 +544,49 @@ export class ParkingWizardLayoutComponent {
     };
   });
 
+  async ngOnInit(): Promise<void> {
+    if (this.vehicleService.source() !== 'remote') await this.vehicleService.load();
+  }
+
+  private cityLabel(identifier: string): string {
+    const labels: Record<string, string> = {
+      '1': 'Durango',
+      '3': 'Zarautz',
+      '5': 'Tolosa',
+      '23': 'Bergara',
+      '61': 'Arrasate',
+      '73': 'Soria',
+      '79': 'Deba',
+      '81': 'Mutriku',
+      arrasate: 'Arrasate',
+      bergara: 'Bergara',
+      deba: 'Deba',
+      durango: 'Durango',
+      mutriku: 'Mutriku',
+      soria: 'Soria',
+      tolosa: 'Tolosa',
+      zarautz: 'Zarautz',
+    };
+    return labels[identifier.toLocaleLowerCase('es')] ?? identifier;
+  }
+
   toggleVehiclePicker(): void {
-    if (this.availableVehicles().length > 1) this.vehiclePickerOpen.update((open) => !open);
+    if (this.canChangeVehicle()) this.vehiclePickerOpen.update((open) => !open);
   }
 
   selectVehicle(vehicle: Vehicle): void {
-    this.store.update({ vehicleId: vehicle.id, plate: vehicle.plate });
     this.vehiclePickerOpen.set(false);
-    void this.router.navigate([], {
-      relativeTo: this.route,
-      queryParams: { ...this.query(), vehicleId: vehicle.id, plate: vehicle.plate },
+    if (!this.canChangeVehicle() || !this.store.selectVehicle(vehicle.id, vehicle.plate)) return;
+
+    const returnToTickets = this.currentStep() > 0;
+    void this.router.navigate(returnToTickets ? ['/app/parking/tickets'] : [], {
+      relativeTo: returnToTickets ? undefined : this.route,
+      queryParams: this.store.toQueryParams(),
     });
+  }
+
+  canChangeVehicle(): boolean {
+    return this.currentStep() < 4 && this.availableVehicles().length > 1;
   }
   readonly currentStep = computed(() => {
     const path = this.url().split('?')[0].replace(/\/+$/, '');

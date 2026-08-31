@@ -21,6 +21,7 @@ export interface ParkingFlowState {
   latitude: string;
   longitude: string;
   tariffId: string;
+  tariffType: string;
   tariffName: string;
   tariffPrice: string;
   duration: string;
@@ -38,6 +39,30 @@ export class ParkingFlowStore {
 
   update(partial: Partial<ParkingFlowState>): void {
     this.state.update((s) => ({ ...s, ...partial }));
+  }
+
+  selectVehicle(vehicleId: string, plate: string): boolean {
+    const current = this.state();
+    if (current.vehicleId === vehicleId && current.plate === plate) return false;
+
+    this.state.set({
+      ...current,
+      vehicleId,
+      plate,
+      ticketId: undefined,
+      ticketName: undefined,
+      tariffId: undefined,
+      tariffType: undefined,
+      tariffName: undefined,
+      tariffPrice: undefined,
+      duration: undefined,
+      minutes: undefined,
+      amount: undefined,
+      endTime: undefined,
+      selectedStep: undefined,
+      paymentSummary: undefined,
+    });
+    return true;
   }
 
   reset(): void {
@@ -61,7 +86,7 @@ export class ParkingFlowStore {
 
   canConfirm(): boolean {
     const s = this.state();
-    return !!s.cityId && !!s.plate && !!s.zoneId && !!s.sectorId && !!s.tariffId && !!s.minutes && !!s.amount;
+    return !!s.cityId && !!s.plate && !!s.zoneId && !!s.sectorId && !!s.tariffId && !!s.tariffType && !!s.minutes && !!s.amount;
   }
 
   hasMinimumParkingData(): boolean {
@@ -87,6 +112,7 @@ export class ParkingFlowStore {
       latitude: s.latitude ?? '',
       longitude: s.longitude ?? '',
       tariffId: s.tariffId ?? '',
+      tariffType: s.tariffType ?? '',
       tariff: s.tariffName ?? '',
       tariffPrice: s.tariffPrice ?? '',
       duration: s.duration ?? '',
@@ -122,6 +148,7 @@ export class ParkingFlowStore {
       latitude: params['latitude'] ?? '',
       longitude: params['longitude'] ?? '',
       tariffId: params['tariffId'] ?? '',
+      tariffType: params['tariffType'] ?? '',
       tariffName: params['tariff'] ?? '',
       tariffPrice: params['tariffPrice'] ?? '',
       duration: params['duration'] ?? '',
@@ -151,6 +178,7 @@ export class ParkingFlowStore {
     if (s.latitude) result['latitude'] = s.latitude;
     if (s.longitude) result['longitude'] = s.longitude;
     if (s.tariffId) result['tariffId'] = s.tariffId;
+    if (s.tariffType) result['tariffType'] = s.tariffType;
     if (s.tariffName) result['tariff'] = s.tariffName;
     if (s.tariffPrice) result['tariffPrice'] = s.tariffPrice;
     if (s.duration) result['duration'] = s.duration;

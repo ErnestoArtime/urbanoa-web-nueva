@@ -8,15 +8,7 @@ import { UserService } from './user.service';
 
 export type FeedbackType = 'incident' | 'suggestion' | 'inquiry' | 'service-complaint' | 'compliment';
 export type FeedbackSubtype =
-  | 'app'
-  | 'citizen-services'
-  | 'information'
-  | 'regulations'
-  | 'areas-hours'
-  | 'parking-meters'
-  | 'fines'
-  | 'surveillance'
-  | 'web';
+  'app' | 'citizen-services' | 'information' | 'regulations' | 'areas-hours' | 'parking-meters' | 'fines' | 'surveillance' | 'web';
 export type FeedbackStatus = 'submitted' | 'assigned' | 'in-progress' | 'closed';
 
 export interface SupportAttachment {
@@ -60,6 +52,9 @@ interface FeedbackFileRequestDto {
   filename: string;
   title: string;
   payload: string;
+  path?: string;
+  url?: string;
+  direction?: number;
 }
 
 interface RemoteFeedbackDto {
@@ -104,7 +99,7 @@ export class SupportService {
     try {
       const response = await this.api.post<QueryFeedbackResponseDto | RemoteFeedbackDto[]>(
         OPS_ENDPOINTS.support.query,
-        { contractId: 0, dateStart: '2000-01-01', dateEnd: '2100-12-31' },
+        { contractId: 0, startDate: '000000010100', endDate: this.backendDate(new Date()) },
         { token },
       );
       const items = Array.isArray(response) ? response : (response.feedback ?? response.feedbackList ?? []);
@@ -127,7 +122,13 @@ export class SupportService {
   async create(input: NewSupportThread): Promise<SupportThread | null> {
     const result = await this.send(input);
     if (!result?.trim()) {
-      this.fail(new OpsApiError('invalid-response', OPS_ENDPOINTS.support.add, 'AddUserFeedbackAPI no devolvió el identificador de la conversación'));
+      this.fail(
+        new OpsApiError(
+          'invalid-response',
+          OPS_ENDPOINTS.support.add,
+          'AddUserFeedbackAPI no devolvió el identificador de la conversación',
+        ),
+      );
       return null;
     }
     const created = this.toConfirmedThread(result, input);
@@ -160,10 +161,7 @@ export class SupportService {
               status: item.status === 'closed' ? 'submitted' : item.status,
               unread: false,
               updatedAt: now,
-              messages: [
-                ...item.messages,
-                { id: `${id}-${now}`, author: 'user', body: message.trim(), createdAt: now, attachment },
-              ],
+              messages: [...item.messages, { id: `${id}-${now}`, author: 'user', body: message.trim(), createdAt: now, attachment }],
             }
           : item,
       ),
@@ -178,7 +176,11 @@ export class SupportService {
     const remoteId = Number(id);
     if (!token || !Number.isInteger(remoteId)) return false;
     try {
-      await this.api.post<string>(OPS_ENDPOINTS.support.update, { id: remoteId, contractId: Number(thread.cityId) || 0, read: 1 }, { token });
+      await this.api.post<string>(
+        OPS_ENDPOINTS.support.update,
+        { id: remoteId, contractId: Number(thread.cityId) || 0, read: 1 },
+        { token },
+      );
       this.state.update((threads) => threads.map((item) => (item.id === id ? { ...item, unread: false } : item)));
       this.source.set('remote');
       this.lastError.set(null);
@@ -195,15 +197,17 @@ export class SupportService {
       return null;
     }
     let userEmail = this.userService.user().email.trim();
-    if (!userEmail) userEmail = (await this.userService.load()).email.trim();
     if (!userEmail) {
-      this.fail(new OpsApiError('invalid-response', OPS_ENDPOINTS.support.add, 'No se pudo obtener el correo del usuario autenticado'));
-      return null;
+      try {
+        userEmail = (await this.userService.load()).email.trim();
+      } catch {
+        userEmail = '';
+      }
     }
     const contractId = this.cities.contractIdFor(input.cityId);
     const plate = input.plate.trim().toUpperCase();
-    if (contractId <= 0 || !plate) {
-      this.fail(new OpsApiError('invalid-response', OPS_ENDPOINTS.support.add, 'El municipio y la matrícula son obligatorios'));
+    if (contractId <= 0) {
+      this.fail(new OpsApiError('invalid-response', OPS_ENDPOINTS.support.add, 'El municipio es obligatorio'));
       return null;
     }
     const files: FeedbackFileRequestDto[] = input.attachment
@@ -215,7 +219,7 @@ export class SupportService {
         {
           baseId: Number.isInteger(baseId) ? baseId : null,
           userId: null,
-          userEmail,
+          userEmail: userEmail || null,
           channel: 0,
           contractId,
           date: this.backendDate(new Date()),
@@ -284,7 +288,11 @@ export class SupportService {
 
   private feedbackSubtype(subtype: FeedbackSubtype): number {
     if (subtype === 'web') return 1;
-    return ['app', 'citizen-services', 'information', 'regulations', 'areas-hours', 'parking-meters', 'fines', 'surveillance', 'web'].indexOf(subtype) + 1;
+    return (
+      ['app', 'citizen-services', 'information', 'regulations', 'areas-hours', 'parking-meters', 'fines', 'surveillance', 'web'].indexOf(
+        subtype,
+      ) + 1
+    );
   }
 
   private localType(type: number): FeedbackType {
@@ -292,8 +300,9 @@ export class SupportService {
   }
 
   private localSubtype(subtype: number): FeedbackSubtype {
-    return (['app', 'citizen-services', 'information', 'regulations', 'areas-hours', 'parking-meters', 'fines', 'surveillance', 'web'][subtype - 1] ??
-      'information') as FeedbackSubtype;
+    return (['app', 'citizen-services', 'information', 'regulations', 'areas-hours', 'parking-meters', 'fines', 'surveillance', 'web'][
+      subtype - 1
+    ] ?? 'information') as FeedbackSubtype;
   }
 
   private fail(error: OpsApiError): false {

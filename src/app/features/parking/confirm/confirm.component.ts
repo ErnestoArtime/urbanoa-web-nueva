@@ -15,32 +15,32 @@ import { ParkingApiService } from '../../../core/services/parking-api.service';
   template: `
     <div class="page flow-page confirm-page has-sticky-actions">
       <app-loader [visible]="loading()" [message]="'parking.confirm.loading' | translate" imageSrc="/assets/brand/login-logo.jpg" />
-      <a routerLink="/app/parking/time-steps" [queryParams]="query" class="back-link">{{ 'parking.confirm.back' | translate }}</a>
+      <a routerLink="/app/parking/time-steps" [queryParams]="query()" class="back-link">{{ 'parking.confirm.back' | translate }}</a>
       <h1 class="page-title">{{ 'parking.confirm.title' | translate }}</h1>
 
       <div class="card summary">
         <div class="zone-heading">
           <span [style.background]="sectorColor()"></span>
           <div>
-            <strong>{{ query.zone }}</strong>
-            <p>{{ query.street }} · {{ query.cityName }}</p>
+            <strong>{{ query().zone }}</strong>
+            <p>{{ query().street }} · {{ query().cityName }}</p>
           </div>
         </div>
         <p>
           <span>{{ 'parking.confirm.vehicle' | translate }}</span
-          ><strong>{{ query.plate }}</strong>
+          ><strong>{{ query().plate }}</strong>
         </p>
         <p>
           <span>{{ 'parking.confirm.duration' | translate }}</span
-          ><strong>{{ query.duration }} · hasta {{ query.endTime }}</strong>
+          ><strong>{{ query().duration }} · hasta {{ query().endTime }}</strong>
         </p>
         <p>
           <span>{{ 'parking.confirm.tariff' | translate }}</span
-          ><strong>{{ query.tariff }}</strong>
+          ><strong>{{ query().tariff }}</strong>
         </p>
         <p class="total-row">
           <span>{{ 'parking.confirm.amount' | translate }}</span
-          ><strong>{{ query.amount }}</strong>
+          ><strong>{{ query().amount }}</strong>
         </p>
       </div>
 
@@ -202,7 +202,10 @@ export class ParkingConfirmComponent implements OnInit {
   readonly walletService = inject(WalletService);
   private readonly parkingApi = inject(ParkingApiService);
   @ViewChild(SwipeToPayComponent) swipePay!: SwipeToPayComponent;
-  readonly query: ParkingFlowQuery = this.store.hasMinimumParkingData() ? this.store.fromStore() : readParkingFlowQuery(this.route);
+  private readonly initialQuery = readParkingFlowQuery(this.route);
+  readonly query = computed(() =>
+    this.store.hasMinimumParkingData() ? ({ ...this.initialQuery, ...this.store.fromStore() } as ParkingFlowQuery) : this.initialQuery,
+  );
   readonly selectedCardId = signal(this.walletService.defaultCardId());
   readonly selectedCard = computed(
     () => this.walletService.cards().find((card) => card.id === this.selectedCardId()) ?? this.walletService.mainCard,
@@ -214,7 +217,7 @@ export class ParkingConfirmComponent implements OnInit {
   readonly loading = signal(false);
 
   readonly totalAmount = computed(() => {
-    const raw = this.query.amount?.replace('€', '').replace(',', '.').trim();
+    const raw = this.query().amount?.replace('€', '').replace(',', '.').trim();
     return raw ? parseFloat(raw) : 0;
   });
   readonly cardAmount = computed(() => Math.max(0, this.totalAmount() - this.walletService.balance()));
@@ -226,7 +229,7 @@ export class ParkingConfirmComponent implements OnInit {
   }
 
   sectorColor(): string {
-    return this.query.sectorColor ? `#${this.query.sectorColor.replace('#', '')}` : 'var(--color-primary)';
+    return this.query().sectorColor ? `#${this.query().sectorColor.replace('#', '')}` : 'var(--color-primary)';
   }
 
   async onSwipeComplete(): Promise<void> {
@@ -241,16 +244,16 @@ export class ParkingConfirmComponent implements OnInit {
     const walletAmount = Math.min(amount, this.walletService.balance());
     this.loading.set(true);
     const result = await this.parkingApi.confirmParking({
-      contractId: Number(this.query.cityId || 0),
-      plate: this.query.plate,
-      sector: Number(this.query.sectorId || 0),
+      contractId: Number(this.query().cityId || 0),
+      plate: this.query().plate,
+      sector: Number(this.query().sectorId || 0),
       quantity: Math.round(amount * 100),
-      tariffType: Number(this.query.tariffId || 0),
-      date: this.parkingApi.opsDate(new Date()),
-      time: Number(this.query.minutes || 0),
-      latitude: Number(this.query.latitude || 0),
-      longitude: Number(this.query.longitude || 0),
-      street: this.query.street,
+      tariffType: Number(this.query().tariffType || 0),
+      date: this.parkingApi.opsDate(this.parkingApi.serverNow()),
+      time: Number(this.query().minutes || 0),
+      latitude: Number(this.query().latitude || 0),
+      longitude: Number(this.query().longitude || 0),
+      street: this.query().street,
       payMethodId: Number(this.selectedCardId() || 0),
     });
     if (!result.success) {
@@ -264,7 +267,7 @@ export class ParkingConfirmComponent implements OnInit {
     }
 
     const paymentQuery = {
-      ...this.query,
+      ...this.query(),
       paymentWalletAmount: walletAmount.toFixed(2),
       paymentCardAmount: this.cardAmount().toFixed(2),
       paymentCardId: this.requiresCard() ? this.selectedCardId() : '',

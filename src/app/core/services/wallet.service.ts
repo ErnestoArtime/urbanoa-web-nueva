@@ -34,6 +34,7 @@ interface RechargeUserCreditResponseDto {
   payMethodId: number;
   amountRecharged: number | string | null;
   newBalance: number | string | null;
+  order?: string | null;
   challengeUrl: string | null;
 }
 
@@ -46,6 +47,7 @@ export interface WalletActionResult {
   success: boolean;
   source: 'remote' | 'error';
   amount?: number;
+  order?: string;
   challengeUrl?: string;
   error?: OpsApiError;
 }
@@ -215,7 +217,10 @@ export class WalletService {
       );
       this.source.set('remote');
       this.lastError.set(null);
-      if (response.challengeUrl) return { success: true, source: 'remote', challengeUrl: response.challengeUrl };
+      const order = response.order?.trim() || undefined;
+      if (response.challengeUrl) {
+        return { success: true, source: 'remote', ...(order ? { order } : {}), challengeUrl: response.challengeUrl };
+      }
 
       const recharged = this.fromCents(Number(response.amountRecharged ?? this.toCents(value)) || 0);
       if (response.newBalance !== null) {
@@ -224,7 +229,7 @@ export class WalletService {
       } else {
         this.credit(recharged, { type: 'top-up', descriptionKey: 'wallet.movement.topUp' });
       }
-      return { success: true, source: 'remote', amount: recharged };
+      return { success: true, source: 'remote', amount: recharged, ...(order ? { order } : {}) };
     } catch (error) {
       return { success: false, source: 'error', error: this.useError(error) };
     }

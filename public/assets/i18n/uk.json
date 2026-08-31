@@ -323,6 +323,7 @@
   "account.support.selectMunicipio": "uk_Seleccionar municipio",
   "account.support.generic": "uk_Genérico",
   "account.support.plate": "uk_Matrícula",
+  "account.support.noPlate": "uk_Sin matrícula (opcional)",
   "account.support.message": "uk_Mensaje",
   "account.support.messagePlaceholder": "uk_Describe tu consulta…",
   "account.support.send": "uk_Enviar mensaje",
