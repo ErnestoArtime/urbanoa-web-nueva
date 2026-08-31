@@ -117,6 +117,21 @@ describe('UserService', () => {
     expect(service.user().surname).toBe('Lopez');
   });
 
+  it('updates the preferred contract id through UpdateUserAPI', async () => {
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'post']);
+    api.post.and.resolveTo('194063');
+    const service = serviceWith(api);
+    service.updateLocal(baseUser());
+    TestBed.inject(OpsSessionService).setToken('token');
+
+    const result = await service.updatePreferredContract(3);
+
+    const [endpoint, body] = api.post.calls.argsFor(0);
+    expect(endpoint).toBe('OPSWebServicesAPI/UpdateUserAPI');
+    expect(body).toEqual(jasmine.objectContaining({ contractId: 3, names: 'Ane', email: 'ane@example.com' }));
+    expect(result.success).toBeTrue();
+  });
+
   it('does not merge changes locally when the remote update fails', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'post']);
     api.post.and.rejectWith(new Error('backend down'));

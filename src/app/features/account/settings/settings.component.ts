@@ -5,6 +5,7 @@ import { LocationSettingsService, type LocationPermissionState } from '../../../
 import { SecuritySettingsService, type BiometricMode } from '../../../core/services/security-settings.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { CitiesService } from '../../../core/services/cities.service';
+import { UserService } from '../../../core/services/user.service';
 import type { Municipio } from '../../../shared/models/municipio';
 
 interface LocationMessage {
@@ -477,6 +478,8 @@ interface LocationMessage {
 export class AccountSettingsComponent {
   readonly locationService = inject(LocationSettingsService);
   readonly security = inject(SecuritySettingsService);
+  private readonly citiesService = inject(CitiesService);
+  private readonly userService = inject(UserService);
   readonly municipios = signal<Municipio[]>([]);
   readonly pendingBiometric = signal<BiometricMode | null>(null);
   readonly showClearConfirm = signal(false);
@@ -484,7 +487,7 @@ export class AccountSettingsComponent {
   readonly locationMessage = signal<LocationMessage | null>(null);
 
   constructor() {
-    void inject(CitiesService)
+    void this.citiesService
       .getCities()
       .then((result) => this.municipios.set(result.data))
       .catch(() => this.municipios.set([]));
@@ -526,6 +529,7 @@ export class AccountSettingsComponent {
   }
   selectCity(id: string, name: string): void {
     this.locationService.setPreferredCity(id, name);
+    void this.userService.updatePreferredContract(this.citiesService.contractIdFor(id));
     this.showCityPicker.set(false);
     this.locationMessage.set({ key: 'account.settings.location.citySavedMessage', params: { city: name } });
   }
