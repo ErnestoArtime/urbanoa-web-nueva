@@ -195,7 +195,6 @@ export class UserService {
       operatingSystem: 3,
       contractId: Number(profile.contractId) || 0,
       userName: readString(profile.userName) || user.email,
-      password: readString(profile.password),
       names: user.name,
       firstSurname: user.surname,
       secondSurname: user.secondSurname,
