@@ -162,6 +162,7 @@
   "ops.type.parkingEnd": "uk_Fin de estacionamiento",
   "ops.type.parkingEndRefund": "uk_Fin de estacionamiento (Devolución)",
   "ops.type.balanceRefund": "uk_Devolución de saldo",
+  "ops.loadError": "uk_No se pudieron cargar las operaciones.",
   "ops.type.sanciones": "uk_Sanciones",
   "ops.detail": "uk_Detalle de operación",
   "ops.sanciones": "uk_Sanciones",

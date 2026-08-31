@@ -34,7 +34,7 @@ describe('OperationsService stored data migration', () => {
     expect(service.operations()).toEqual([]);
   });
 
-  it('maps operation type 7 as a web balance withdrawal', async () => {
+  it('maps operation type 7 as a balance refund', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
     api.post.and.resolveTo([{ operationNumber: 17, operationType: 7, paymentAmount: 500, opDate: '120000260826', plate: null }]);
     TestBed.overrideProvider(OpsApiClient, { useValue: api });
@@ -44,6 +44,23 @@ describe('OperationsService stored data migration', () => {
     await service.load();
 
     expect(service.operations()[0]).toEqual(jasmine.objectContaining({ type: OperationType.BALANCE_REFUND, amount: -5 }));
+    expect(api.post.calls.mostRecent().args[1]).toEqual(
+      jasmine.objectContaining({ operationTypeList: jasmine.arrayContaining([7]) }),
+    );
+  });
+
+  it('sends operation dates as twelve OPS digits without timezone fallback', async () => {
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
+    api.post.and.resolveTo([]);
+    TestBed.overrideProvider(OpsApiClient, { useValue: api });
+    TestBed.overrideProvider(OpsSessionService, { useValue: { token: () => 'token' } });
+    const service = TestBed.inject(OperationsService);
+
+    await service.load('2026-01-01', '2026-12-31');
+
+    expect(api.post.calls.mostRecent().args[1]).toEqual(
+      jasmine.objectContaining({ dateStart: '000000010126', dateEnd: '235959311226' }),
+    );
   });
 
   it('shares an identical operations request while it is in progress', async () => {

@@ -161,7 +161,14 @@ import { ParkingTicketCardComponent } from '../../../shared/components/parking-t
             }
             @if (groupedHistory().length === 0) {
               <li class="list-item" style="justify-content:center;color:var(--color-muted)">
-                {{ 'ops.empty' | translate }}
+                @if (operationsSource() === 'error') {
+                  <div class="operations-error">
+                    <span>{{ 'ops.loadError' | translate }}</span>
+                    <button type="button" class="btn btn-secondary" (click)="retryOperations()">{{ 'common.retry' | translate }}</button>
+                  </div>
+                } @else {
+                  {{ 'ops.empty' | translate }}
+                }
               </li>
             }
           </ul>
@@ -529,6 +536,7 @@ export class OperationsLayoutComponent implements OnInit {
   readonly OPERATION_TYPE_LABELS = OPERATION_TYPE_LABELS;
   readonly activeParkings = this.parkingSessionService.activeParkings;
   readonly activeParkingsCount = this.parkingSessionService.activeParkingsCount;
+  readonly operationsSource = this.operationsService.source;
   readonly activeParkingStatusLoading = computed(() => this.operationsService.activeSource() === 'idle');
   readonly unparked = signal(false);
   readonly confirmUnpark = signal(false);
@@ -565,6 +573,10 @@ export class OperationsLayoutComponent implements OnInit {
   private async reload(): Promise<void> {
     await Promise.all([this.operationsService.load(), this.vehicleService.load()]);
     await this.operationsService.loadDashboardParkingStatuses(this.vehicleService.vehicles());
+  }
+
+  retryOperations(): void {
+    void this.operationsService.load();
   }
 
   isDetailRoute = () => {

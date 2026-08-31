@@ -3,6 +3,7 @@ import { OperationType } from '../../shared/models/operation-type';
 import type { Operation } from '../../shared/models/operation';
 import { OPS_ENDPOINTS } from '../api/ops-endpoints';
 import { OpsApiClient } from '../api/ops-api-client.service';
+import { OpsApiError } from '../api/ops-api.types';
 import { OpsSessionService } from '../api/ops-session.service';
 import { CitiesService } from './cities.service';
 import { LocationSettingsService } from './location-settings.service';
@@ -106,6 +107,7 @@ export class OperationsService {
   readonly source = signal<'idle' | 'remote' | 'error'>('idle');
   readonly activeSource = signal<'idle' | 'remote' | 'error'>('idle');
   readonly loading = signal(false);
+  readonly lastError = signal<string | null>(null);
 
   load(dateStart?: string, dateEnd?: string, operationTypeList = [1, 2, 3, 4, 5, 7, 101, 102, 103, 104]): Promise<void> {
     const year = new Date().getFullYear();
@@ -127,25 +129,34 @@ export class OperationsService {
     const token = this.session.token();
     if (!token) {
       this._operations.set([]);
+      this.lastError.set('No hay una sesión OPS activa');
       this.source.set('error');
       return;
     }
+    const requestBody = {
+      contractId: 0,
+      dateStart: this.queryDate(effectiveStart, false),
+      dateEnd: this.queryDate(effectiveEnd, true),
+      operationTypeList,
+    };
     this.loading.set(true);
+    this.lastError.set(null);
     try {
       const response = await this.api.post<OperationResponseDto[]>(
         OPS_ENDPOINTS.user.operations,
-        {
-          contractId: 0,
-          dateStart: this.queryDate(effectiveStart, false),
-          dateEnd: this.queryDate(effectiveEnd, true),
-          operationTypeList,
-        },
+        requestBody,
         { token },
       );
       this._operations.set(response.map((item) => this.mapRemoteOperation(item)));
       this.source.set('remote');
     } catch (error) {
       this._operations.set([]);
+      this.lastError.set(error instanceof Error ? error.message : 'Error desconocido al cargar las operaciones');
+      const errorDetails =
+        error instanceof OpsApiError
+          ? { kind: error.kind, status: error.status, backendError: error.backendError }
+          : { message: error instanceof Error ? error.message : String(error) };
+      console.warn('[OPS API] No se pudieron cargar las operaciones', JSON.stringify({ requestBody, error: errorDetails }));
       this.source.set('error');
     } finally {
       this.loading.set(false);
@@ -352,7 +363,7 @@ export class OperationsService {
 
   private queryDate(value: string, endOfDay: boolean): string {
     if (/^\d{12}$/.test(value)) return value;
-    const parsed = parseOpsDate(`${endOfDay ? '23:59:59' : '00:00:00'}${value.slice(8, 10)}${value.slice(5, 7)}${value.slice(2, 4)}`);
+    const parsed = parseOpsDate(`${endOfDay ? '235959' : '000000'}${value.slice(8, 10)}${value.slice(5, 7)}${value.slice(2, 4)}`);
     return this.opsDate(Number.isNaN(parsed.getTime()) ? (endOfDay ? new Date(2099, 11, 31, 23, 59, 59) : new Date(2000, 0, 1)) : parsed);
   }
 

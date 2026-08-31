@@ -162,6 +162,7 @@
   "ops.type.parkingEnd": "fr_Fin de estacionamiento",
   "ops.type.parkingEndRefund": "fr_Fin de estacionamiento (Devolución)",
   "ops.type.balanceRefund": "fr_Devolución de saldo",
+  "ops.loadError": "fr_No se pudieron cargar las operaciones.",
   "ops.type.sanciones": "fr_Sanciones",
   "ops.detail": "fr_Detalle de operación",
   "ops.sanciones": "fr_Sanciones",
