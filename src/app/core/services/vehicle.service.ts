@@ -56,7 +56,7 @@ export class VehicleService {
     }
 
     try {
-      const value = await this.api.getOrNull<PlatesApiValue>(OPS_ENDPOINTS.user.plates, { token });
+      const value = await this.fetchPlates(token);
       if (value === null || !Array.isArray(value.plates)) {
         this.state.set([]);
       } else {
@@ -68,6 +68,17 @@ export class VehicleService {
     } catch (error) {
       this.state.set([]);
       this.useError(error, OPS_ENDPOINTS.user.plates);
+    }
+  }
+
+  private async fetchPlates(token: string): Promise<PlatesApiValue | null> {
+    try {
+      return await this.api.getOrNull<PlatesApiValue>(OPS_ENDPOINTS.user.plates, { token });
+    } catch {
+      // Any failure loading plates (network, backend error, the confirmed HTTP 500-for-empty-account
+      // quirk, etc.) is treated as "no plates yet" — the list screen always shows either the real
+      // list or a normal empty state with the add-vehicle action, never a load-error banner.
+      return null;
     }
   }
 
