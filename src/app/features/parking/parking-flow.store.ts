@@ -71,7 +71,7 @@ export class ParkingFlowStore {
 
   hasLocationData(): boolean {
     const s = this.state();
-    return !!s.cityId && !!s.zoneId && !!s.street;
+    return !!s.cityId && !!s.zoneId && !!s.sectorId;
   }
 
   hasTicketData(): boolean {
