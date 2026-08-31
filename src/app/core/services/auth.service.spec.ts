@@ -137,11 +137,17 @@ describe('AuthService', () => {
     await service.resendMail(' user@example.com ', 'recover');
 
     expect(opsApi.post.calls.argsFor(0)[1]).toEqual({
+      contractId: 0,
       userName: 'user@example.com',
       email: 'user@example.com',
       type: 'register',
     });
-    expect(opsApi.post.calls.argsFor(1)[1]).toEqual({ email: 'user@example.com', type: 'recover' });
+    expect(opsApi.post.calls.argsFor(1)[1]).toEqual({
+      contractId: 0,
+      userName: 'user@example.com',
+      email: 'user@example.com',
+      type: 'recover',
+    });
   });
 
   it('preserves auth-service error handling when LoginUserAPI fails', async () => {

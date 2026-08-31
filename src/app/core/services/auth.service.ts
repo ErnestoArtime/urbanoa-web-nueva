@@ -152,7 +152,7 @@ export class AuthService {
 
   async resendMail(email: string, type: ResendMailType): Promise<void> {
     const normalizedEmail = email.trim();
-    const body = type === 'register' ? { userName: normalizedEmail, email: normalizedEmail, type } : { email: normalizedEmail, type };
+    const body = { contractId: 0, userName: normalizedEmail, email: normalizedEmail, type };
 
     try {
       await this.opsApi.post(OPS_ENDPOINTS.auth.resendMail, body, { headers: this.languageHeaders() });
