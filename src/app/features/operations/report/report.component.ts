@@ -12,6 +12,7 @@ import { OpsSessionService } from '../../../core/api/ops-session.service';
 import { OPS_ENDPOINTS } from '../../../core/api/ops-endpoints';
 import { UserService } from '../../../core/services/user.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { formatOpsDate } from '../../../core/utils/ops-date';
 
 type ReportRange = 'last7' | 'last14' | 'last30' | 'last6m' | 'last12m' | 'last5y';
 type ReportFilterKey = 'parks' | 'extends' | 'refunds' | 'recharges' | 'balanceRefunds' | 'fines';
@@ -92,15 +93,17 @@ interface ReportRangeItem {
       </div>
 
       <div class="sticky-actions">
-      <button
+        <button
           type="button"
           class="btn btn-primary btn-block report-submit"
           (click)="generateReport()"
           [disabled]="isGenerating() || !!dateRangeError()"
         >
           {{ isGenerating() ? ('ops.report.generating' | translate) : ('ops.report.generateButton' | translate) }}
-      </button>
-      @if (reportError()) { <p class="form-error" role="alert">No se pudo generar el informe PDF.</p> }
+        </button>
+        @if (reportError()) {
+          <p class="form-error" role="alert">No se pudo generar el informe PDF.</p>
+        }
       </div>
     </div>
   `,
@@ -435,8 +438,7 @@ export class ReportComponent {
   }
 
   private toBackendDate(value: Date): string {
-    const part = (number: number) => String(number).padStart(2, '0');
-    return `${part(value.getHours())}${part(value.getMinutes())}${part(value.getSeconds())}${part(value.getDate())}${part(value.getMonth() + 1)}${part(value.getFullYear() % 100)}`;
+    return formatOpsDate(value);
   }
 
   private base64Pdf(content: string): Blob {

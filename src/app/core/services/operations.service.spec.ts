@@ -223,4 +223,30 @@ describe('OperationsService stored data migration', () => {
     finishRequest(null);
     await Promise.all([first, second]);
   });
+
+  it('does not remove an active parking from another contract during a scoped scan', async () => {
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['postOrNull']);
+    api.postOrNull.and.resolveTo({
+      status: 2,
+      extension: 0,
+      tariffId: 4,
+      dateInitial: '175900280826',
+      dateEnd: '185900280826',
+      accumulatedTime: 60,
+      sector: '22002',
+      sectorname: 'Z2 AZUL',
+    });
+    TestBed.overrideProvider(OpsApiClient, { useValue: api });
+    TestBed.overrideProvider(OpsSessionService, { useValue: { token: () => 'token' } });
+    TestBed.overrideProvider(CitiesService, { useValue: { cities: () => [], contractIdFor: () => 0, knownContractIds: () => [1, 3] } });
+    TestBed.overrideProvider(LocationSettingsService, { useValue: { settings: () => ({ preferredCityId: '' }) } });
+    const service = TestBed.inject(OperationsService);
+    const vehicle = { id: 'a', plate: 'AAA111' };
+
+    await service.loadParkingStatuses([vehicle], 3);
+    api.postOrNull.and.resolveTo(null);
+    await service.loadParkingStatuses([vehicle], 1);
+
+    expect(service.activeParkings()).toEqual([jasmine.objectContaining({ plate: 'AAA111', contractId: 3 })]);
+  });
 });

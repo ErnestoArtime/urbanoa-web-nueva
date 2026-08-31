@@ -4,6 +4,7 @@ import { OpsApiClient } from '../../core/api/ops-api-client.service';
 import { OpsSessionService } from '../../core/api/ops-session.service';
 import { OpsApiError } from '../../core/api/ops-api.types';
 import type { ParkingTimeStep, ParkingTimeStepInput } from './models/parking-time-step.model';
+import { formatOpsDate } from '../../core/utils/ops-date';
 
 interface ParkingTimeStepsResponseDto {
   result?: number;
@@ -87,9 +88,6 @@ export class ParkingTimeStepsService {
   }
 
   private opsDate(date: Date): string {
-    const two = (value: number): string => String(value).padStart(2, '0');
-    return `${two(date.getHours())}${two(date.getMinutes())}${two(date.getSeconds())}${two(date.getDate())}${two(date.getMonth() + 1)}${two(
-      date.getFullYear() % 100,
-    )}`;
+    return formatOpsDate(date);
   }
 }

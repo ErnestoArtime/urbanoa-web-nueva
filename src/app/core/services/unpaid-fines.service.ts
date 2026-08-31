@@ -6,6 +6,7 @@ import { OpsApiClient } from '../api/ops-api-client.service';
 import { OpsSessionService } from '../api/ops-session.service';
 import { OperationsService } from './operations.service';
 import { WalletService } from './wallet.service';
+import { formatOpsDate } from '../utils/ops-date';
 
 export enum FineStatus {
   PAYABLE = 1,
@@ -44,7 +45,10 @@ export interface UnpaidFine {
   longitude?: number;
 }
 
-export interface FinePaymentResult { success: boolean; challengeUrl?: string }
+export interface FinePaymentResult {
+  success: boolean;
+  challengeUrl?: string;
+}
 
 @Injectable({ providedIn: 'root' })
 export class UnpaidFinesService {
@@ -53,7 +57,10 @@ export class UnpaidFinesService {
   private readonly api = inject(OpsApiClient);
   private readonly session = inject(OpsSessionService);
   readonly fines = computed(() =>
-    this.operationsService.operations().filter((operation) => operation.type === OperationType.UNPAID_FINES).map((operation) => this.mapOperation(operation)),
+    this.operationsService
+      .operations()
+      .filter((operation) => operation.type === OperationType.UNPAID_FINES)
+      .map((operation) => this.mapOperation(operation)),
   );
   readonly source = this.operationsService.source;
 
@@ -141,9 +148,6 @@ export class UnpaidFinesService {
   }
 
   private opsDate(date: Date): string {
-    const two = (value: number): string => String(value).padStart(2, '0');
-    return `${two(date.getHours())}${two(date.getMinutes())}${two(date.getSeconds())}${two(date.getDate())}${two(date.getMonth() + 1)}${two(
-      date.getFullYear() % 100,
-    )}`;
+    return formatOpsDate(date);
   }
 }

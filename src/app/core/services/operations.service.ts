@@ -6,6 +6,7 @@ import { OpsApiClient } from '../api/ops-api-client.service';
 import { OpsSessionService } from '../api/ops-session.service';
 import { CitiesService } from './cities.service';
 import { LocationSettingsService } from './location-settings.service';
+import { formatOpsCalendarDate, formatOpsDate, formatOpsTime, parseOpsDate } from '../utils/ops-date';
 
 interface OperationResponseDto {
   contractId?: number;
@@ -159,7 +160,7 @@ export class OperationsService {
   }
 
   async loadParkingStatuses(vehicles: readonly { id: string; plate: string }[], contractId?: number): Promise<void> {
-    await this.loadParkingStatusesFromContracts(vehicles, () => (contractId ? [contractId] : this.contractIdsToCheck()));
+    await this.loadParkingStatusesFromContracts(vehicles, () => (contractId ? [contractId] : this.contractIdsToCheck()), contractId);
   }
 
   loadDashboardParkingStatuses(vehicles: readonly { id: string; plate: string }[]): Promise<void> {
@@ -181,6 +182,7 @@ export class OperationsService {
   private async loadParkingStatusesFromContracts(
     vehicles: readonly { id: string; plate: string }[],
     contractsFor: (vehicle: { id: string; plate: string }) => readonly number[],
+    scopedContractId?: number,
   ): Promise<void> {
     const token = this.session.token();
     if (!token) {
@@ -230,7 +232,9 @@ export class OperationsService {
     }
 
     results.forEach((result, index) => {
-      if (result.status === 'fulfilled' && result.value === null) this.removeActiveParking(vehicles[index].plate);
+      if (result.status === 'fulfilled' && result.value === null) {
+        this.removeActiveParking(vehicles[index].plate, scopedContractId);
+      }
     });
     const failedPlates = new Set(results.flatMap((result, index) => (result.status === 'rejected' ? [vehicles[index].plate] : [])));
 
@@ -242,9 +246,13 @@ export class OperationsService {
     this._activeParkings.update((current) => [...current.filter((item) => this.normalizePlate(item.plate) !== plate), parking]);
   }
 
-  private removeActiveParking(plate: string): void {
+  private removeActiveParking(plate: string, contractId?: number): void {
     const normalized = this.normalizePlate(plate);
-    this._activeParkings.update((current) => current.filter((parking) => this.normalizePlate(parking.plate) !== normalized));
+    this._activeParkings.update((current) =>
+      current.filter(
+        (parking) => this.normalizePlate(parking.plate) !== normalized || (contractId !== undefined && parking.contractId !== contractId),
+      ),
+    );
   }
 
   private latestParkingContractId(plate: string): number | undefined {
@@ -304,10 +312,7 @@ export class OperationsService {
 
   private todayDateString(): string {
     const d = this.api.serverNow ? this.api.serverNow() : new Date();
-    const day = String(d.getDate()).padStart(2, '0');
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const year = d.getFullYear();
-    return `${day}/${month}/${year}`;
+    return formatOpsCalendarDate(d);
   }
 
   private normalizePlate(plate: string): string {
@@ -342,34 +347,25 @@ export class OperationsService {
   }
 
   private opsDate(date: Date): string {
-    const two = (value: number): string => String(value).padStart(2, '0');
-    return `${two(date.getHours())}${two(date.getMinutes())}${two(date.getSeconds())}${two(date.getDate())}${two(date.getMonth() + 1)}${two(
-      date.getFullYear() % 100,
-    )}`;
+    return formatOpsDate(date);
   }
 
   private queryDate(value: string, endOfDay: boolean): string {
     if (/^\d{12}$/.test(value)) return value;
-    const parsed = new Date(`${value}T${endOfDay ? '23:59:59' : '00:00:00'}`);
+    const parsed = parseOpsDate(`${endOfDay ? '23:59:59' : '00:00:00'}${value.slice(8, 10)}${value.slice(5, 7)}${value.slice(2, 4)}`);
     return this.opsDate(Number.isNaN(parsed.getTime()) ? (endOfDay ? new Date(2099, 11, 31, 23, 59, 59) : new Date(2000, 0, 1)) : parsed);
   }
 
   private parseOpsDate(value: string): Date {
     if (/^\d{12}$/.test(value)) {
-      const hours = Number(value.slice(0, 2));
-      const minutes = Number(value.slice(2, 4));
-      const seconds = Number(value.slice(4, 6));
-      const day = Number(value.slice(6, 8));
-      const month = Number(value.slice(8, 10));
-      const year = 2000 + Number(value.slice(10, 12));
-      return new Date(year, month - 1, day, hours, minutes, seconds);
+      return parseOpsDate(value);
     }
     const parsed = new Date(value);
     return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
   }
 
   private timeLabel(date: Date): string {
-    return date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', hour12: false });
+    return formatOpsTime(date);
   }
 
   private mapRemoteOperation(item: OperationResponseDto): Operation {
@@ -435,26 +431,18 @@ export class OperationsService {
   private datePart(value: string | null | undefined): string {
     if (!value) return this.todayDateString();
     const parsed = this.parseBackendDate(value);
-    return Number.isNaN(parsed.getTime()) ? value.slice(0, 10) : parsed.toLocaleDateString('es-ES');
+    return Number.isNaN(parsed.getTime()) ? value.slice(0, 10) : formatOpsCalendarDate(parsed);
   }
 
   private dateTimePart(value: string | null | undefined): string | undefined {
     if (!value) return undefined;
     const parsed = this.parseBackendDate(value);
-    return Number.isNaN(parsed.getTime())
-      ? value.slice(11, 16)
-      : parsed.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+    return Number.isNaN(parsed.getTime()) ? value.slice(11, 16) : formatOpsTime(parsed);
   }
 
   private parseBackendDate(value: string): Date {
     if (/^\d{12}$/.test(value)) {
-      const hour = Number(value.slice(0, 2));
-      const minute = Number(value.slice(2, 4));
-      const second = Number(value.slice(4, 6));
-      const day = Number(value.slice(6, 8));
-      const month = Number(value.slice(8, 10)) - 1;
-      const year = 2000 + Number(value.slice(10, 12));
-      return new Date(year, month, day, hour, minute, second);
+      return parseOpsDate(value);
     }
     return new Date(value);
   }

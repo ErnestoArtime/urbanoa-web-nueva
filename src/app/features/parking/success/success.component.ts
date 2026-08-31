@@ -244,8 +244,7 @@ export class ParkingSuccessComponent implements OnInit {
 
   startTime(): string {
     const [hours, minutes] = (this.query().endTime || '00:00').split(':').map(Number);
-    const end = new Date(2026, 0, 1, hours, minutes);
-    end.setMinutes(end.getMinutes() - Number(this.query().minutes || 0));
-    return end.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+    const start = (hours * 60 + minutes - Number(this.query().minutes || 0) + 24 * 60) % (24 * 60);
+    return `${String(Math.floor(start / 60)).padStart(2, '0')}:${String(start % 60).padStart(2, '0')}`;
   }
 }

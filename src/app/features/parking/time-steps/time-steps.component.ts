@@ -9,6 +9,7 @@ import { ParkingSessionService } from '../../../core/services/parking-session.se
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { LucideCarFront } from '@lucide/angular';
 import { OpsApiClient } from '../../../core/api/ops-api-client.service';
+import { formatOpsTime } from '../../../core/utils/ops-date';
 
 @Component({
   selector: 'app-parking-time-steps',
@@ -480,6 +481,6 @@ export class ParkingTimeStepsComponent implements OnInit {
     return [this.query().city, this.query().cityName].some((value) => value?.trim().toLocaleLowerCase('es') === 'zarautz');
   }
   private formatTime(date: Date): string {
-    return date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+    return formatOpsTime(date);
   }
 }
