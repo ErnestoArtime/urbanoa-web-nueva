@@ -3,14 +3,13 @@ import { Router } from '@angular/router';
 import { OperationsService } from '../../core/services/operations.service';
 import { ParkingSessionService } from '../../core/services/parking-session.service';
 import { VehicleService } from '../../core/services/vehicle.service';
+import { LoaderComponent } from '../../shared/components/loader/loader.component';
+import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 
 @Component({
   selector: 'app-entry',
-  template: `<div class="entry-loading" role="status" aria-live="polite">Cargando…</div>`,
-  styles: `
-    :host { display: grid; min-height: 100%; place-items: center; }
-    .entry-loading { color: var(--color-text-muted); font-size: var(--text-base); }
-  `,
+  imports: [LoaderComponent, TranslatePipe],
+  template: `<app-loader [visible]="true" [message]="'common.loading' | translate" imageSrc="/assets/brand/login-logo.jpg" />`,
 })
 export class AppEntryComponent implements OnInit {
   private readonly router = inject(Router);
