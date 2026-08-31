@@ -18,16 +18,6 @@ import type { Vehicle } from '../../../shared/models/vehicle';
     <app-split-view [hideList]="isChildRoute()" [hideDetail]="!isChildRoute()">
       <div splitList class="page has-sticky-actions">
         <h1 class="page-title">{{ 'account.menu.vehicles' | translate }}</h1>
-        @if (source() === 'error' && lastError(); as error) {
-          <div class="data-notice data-notice-error" role="alert">
-            <p>
-              {{ (error.kind === 'backend' ? 'account.vehicles.loadErrorBackend' : 'account.vehicles.loadServerError') | translate }}
-            </p>
-            <button type="button" class="btn btn-secondary btn-sm" (click)="retry()">
-              {{ 'account.vehicles.retry' | translate }}
-            </button>
-          </div>
-        }
         @if (vehicles().length > 0) {
           <ul class="list card" style="padding:0;overflow:hidden">
             @for (v of vehicles(); track v.id) {
@@ -70,11 +60,7 @@ import type { Vehicle } from '../../../shared/models/vehicle';
           </div>
         } @else {
           <div class="card empty-vehicles">
-            @if (source() === 'remote') {
-              <p>Aún no tiene vehículos guardados.</p>
-            } @else if (source() === 'error') {
-              <p>No se pudieron cargar los vehículos.</p>
-            }
+            <p>Aún no tiene vehículos guardados.</p>
             <a routerLink="/app/account/vehicles/add" class="btn btn-primary btn-block">{{ 'account.addVehicle' | translate }}</a>
           </div>
         }
@@ -117,17 +103,6 @@ import type { Vehicle } from '../../../shared/models/vehicle';
         cursor: not-allowed;
         opacity: 0.55;
       }
-      .data-notice {
-        margin: 0 0 1rem;
-        padding: 0.75rem 0.9rem;
-        border: 1px solid #e5b85c;
-        border-radius: var(--radius-md);
-        background: #fff8e7;
-        color: #714b00;
-      }
-      .data-notice-error p {
-        margin: 0 0 0.5rem;
-      }
       .vehicle-icon-wrap {
         display: grid;
         place-items: center;
@@ -167,8 +142,6 @@ export class VehiclesLayoutComponent implements OnInit {
   private readonly parkingSessionService = inject(ParkingSessionService);
   private readonly translation = inject(TranslationService);
   readonly vehicles = this.vehicleService.vehicles;
-  readonly source = this.vehicleService.source;
-  readonly lastError = this.vehicleService.lastError;
   readonly togglingId = signal<string | null>(null);
   private readonly router = inject(Router);
   private readonly url = toSignal(
