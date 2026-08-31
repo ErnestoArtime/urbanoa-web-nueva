@@ -133,10 +133,12 @@ describe('ParkingApiService', () => {
 
     await service.sectors({ contractId: 23, latitude: 43.11599, longitude: -2.41484 });
 
-    expect(api.post).toHaveBeenCalledOnceWith(
-      'OPSWebServicesAPI/QuerySectorsAPI',
-      { contractId: 23, streetId: 0, latitude: 43.11599, longitude: -2.41484 },
-    );
+    expect(api.post).toHaveBeenCalledOnceWith('OPSWebServicesAPI/QuerySectorsAPI', {
+      contractId: 23,
+      streetId: 0,
+      latitude: 43.11599,
+      longitude: -2.41484,
+    });
   });
 
   it('queries and confirms unparking with the Swagger date and refund contracts', async () => {
@@ -158,5 +160,22 @@ describe('ParkingApiService', () => {
       { token: 'token' },
     ]);
     expect(result).toEqual(jasmine.objectContaining({ source: 'remote', refundAmount: 1.25 }));
+  });
+
+  it('does not confirm unparking when the quote rejects the plate', async () => {
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
+    api.post.and.resolveTo({ result: -4, tariffType: 0, tariffTime: 0, payAmount: 0, moneyReturned: false });
+    const service = serviceWith(api);
+    TestBed.inject(OpsSessionService).setToken('token');
+
+    const result = await service.unpark({ contractId: 3, plate: '1234567', groupId: 22002, ticketId: 108 });
+
+    expect(api.post).toHaveBeenCalledOnceWith(
+      'OPSWebServicesAPI/QueryUnParkingOperationAPI',
+      jasmine.objectContaining({ contractId: 3, plate: '1234567', groupId: 22002, ticketId: 108 }),
+      { token: 'token' },
+    );
+    expect(result.success).toBeFalse();
+    expect(result.error instanceof Error ? result.error.message : '').toBe('La matrícula no tiene derechos al desaparcar.');
   });
 });

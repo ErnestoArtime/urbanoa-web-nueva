@@ -599,6 +599,7 @@
   "payment.swipeToPay": "fr_Desliza para pagar",
   "payment.swipeCompleted": "fr_Completado",
   "dashboard.unparkSuccessDetail": "fr_La devolución de saldo se ha añadido al monedero.",
+  "dashboard.unparkError": "fr_No se pudo dejar el aparcamiento",
   "dashboard.unparkConfirmDetail": "fr_Al dejar el aparcamiento recibirás un reembolso de {{amount}}.",
   "auth.resetSuccess.eyebrow": "fr_Seguridad actualizada",
   "auth.resetSuccess.title": "fr_Contraseña restablecida",

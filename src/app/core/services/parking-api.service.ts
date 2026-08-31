@@ -28,6 +28,7 @@ export interface ParkingApiResult {
 }
 
 interface UnparkingResponseDto {
+  result?: number;
   tariffType: number;
   tariffTime: number;
   payAmount: number;
@@ -120,6 +121,14 @@ export class ParkingApiService {
         { ...input, datetime: date },
         { token },
       );
+      if (quote.result !== undefined && quote.result !== 0) {
+        const message = quote.result === -4 ? 'La matrícula no tiene derechos al desaparcar.' : 'No se pudo calcular el desaparcar.';
+        return {
+          success: false,
+          source: 'remote',
+          error: new OpsApiError('backend', OPS_ENDPOINTS.parking.queryUnparking, message),
+        };
+      }
       await this.api.post<string>(
         OPS_ENDPOINTS.parking.confirmUnparking,
         {

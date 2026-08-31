@@ -184,6 +184,15 @@ import { ParkingTicketCardComponent } from '../../../shared/components/parking-t
         (primaryAction)="unparked.set(false)"
       />
     }
+    @if (unparkError(); as error) {
+      <app-result-modal
+        type="error"
+        [title]="'dashboard.unparkError' | translate"
+        [message]="error"
+        [primaryText]="'common.accept' | translate"
+        (primaryAction)="unparkError.set(null)"
+      />
+    }
     @if (confirmUnpark()) {
       <app-result-modal
         type="confirmation"
@@ -535,6 +544,7 @@ export class OperationsLayoutComponent implements OnInit {
   readonly OperationType = OperationType;
   readonly OPERATION_TYPE_LABELS = OPERATION_TYPE_LABELS;
   readonly activeParkings = this.parkingSessionService.activeParkings;
+  readonly unparkError = this.parkingSessionService.unparkError;
   readonly activeParkingsCount = this.parkingSessionService.activeParkingsCount;
   readonly operationsSource = this.operationsService.source;
   readonly activeParkingStatusLoading = computed(() => this.operationsService.activeSource() === 'idle');
