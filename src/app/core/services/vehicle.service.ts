@@ -94,7 +94,7 @@ export class VehicleService {
 
   async add(input: Omit<Vehicle, 'id'>): Promise<VehicleMutationResult> {
     const plate = this.normalizePlate(input.plate);
-    const result = await this.remoteMutation(OPS_ENDPOINTS.user.addPlate, { plate });
+    const result = await this.remoteMutation(OPS_ENDPOINTS.user.addPlate, { plate, favorite: input.isDefault ? 1 : 0 });
     if (!result.success) return result;
 
     const vehicle: Vehicle = { ...input, plate, isDefault: false, id: generateUuid() };
@@ -114,7 +114,9 @@ export class VehicleService {
 
     if (nextPlate !== current.plate) {
       result = await this.remoteMutation(OPS_ENDPOINTS.user.removePlate, { plate: current.plate });
-      if (result.success) result = await this.remoteMutation(OPS_ENDPOINTS.user.addPlate, { plate: nextPlate });
+      if (result.success) {
+        result = await this.remoteMutation(OPS_ENDPOINTS.user.addPlate, { plate: nextPlate, favorite: current.isDefault ? 1 : 0 });
+      }
       if (!result.success) return result;
     }
 
