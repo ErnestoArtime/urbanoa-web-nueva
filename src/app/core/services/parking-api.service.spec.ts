@@ -97,14 +97,12 @@ describe('ParkingApiService', () => {
       contractId: 3,
       plate: '1234567',
       zone: 22002,
-      street: 2601,
-      streetId: 2601,
       date: '183423260826',
     });
 
     expect(api.post).toHaveBeenCalledOnceWith(
       'OPSWebServicesAPI/QueryTicketsAPI',
-      { contractId: 3, plate: '1234567', date: '183423260826', zone: 22002, language: 'ES', street: 2601 },
+      { contractId: 3, plate: '1234567', date: '183423260826', zone: 22002, language: 'ES' },
       { token: 'token' },
     );
     expect(result.data[0]).toEqual(jasmine.objectContaining({ id: '4', minAmount: '0 € - 20,00 €', sectorId: 22002 }));
@@ -126,6 +124,19 @@ describe('ParkingApiService', () => {
       'OPSWebServicesAPI/QuerySectorsAPI',
       { contractId: 3, streetId: 2601, latitude: 43.28, longitude: -2.16 },
     ]);
+  });
+
+  it('uses street 0 when resolving a sector without a street mapping', async () => {
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
+    api.post.and.resolveTo({ sectorlist: [{ zoneId: 50001, sectorId: 60003, sector: '3 - PARKING PUBLICO IBARGARAI' }] });
+    const service = serviceWith(api);
+
+    await service.sectors({ contractId: 23, latitude: 43.11599, longitude: -2.41484 });
+
+    expect(api.post).toHaveBeenCalledOnceWith(
+      'OPSWebServicesAPI/QuerySectorsAPI',
+      { contractId: 23, streetId: 0, latitude: 43.11599, longitude: -2.41484 },
+    );
   });
 
   it('queries and confirms unparking with the Swagger date and refund contracts', async () => {

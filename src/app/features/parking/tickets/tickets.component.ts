@@ -202,7 +202,6 @@ export class ParkingTicketsComponent implements OnInit {
         contractId: Number(query.cityId || 0),
         plate: query.plate,
         zone: Number(query.sectorId || query.zoneId || 0),
-        street: Number(query.streetId || 0),
         date: this.parkingApi.opsDate(this.parkingApi.serverNow()),
       });
       if (requestId !== this.requestSequence) return;

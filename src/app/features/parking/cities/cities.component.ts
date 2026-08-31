@@ -4,6 +4,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { LocationSettingsService } from '../../../core/services/location-settings.service';
 import { ParkingFlowStore } from '../parking-flow.store';
 import { CitiesService, ParkingMunicipio } from '../../../core/services/cities.service';
+import { LoaderComponent } from '../../../shared/components/loader/loader.component';
 
 const EMPTY_CITY: ParkingMunicipio = {
   id: '',
@@ -25,9 +26,14 @@ const EMPTY_CITY: ParkingMunicipio = {
 
 @Component({
   selector: 'app-parking-cities',
-  imports: [RouterLink, TranslatePipe],
+  imports: [RouterLink, TranslatePipe, LoaderComponent],
   template: `
     <div class="page has-sticky-actions">
+      <app-loader
+        [visible]="dataSource() === 'loading'"
+        [message]="'parking.cities.loading' | translate"
+        imageSrc="/assets/brand/login-logo.jpg"
+      />
       <h1 class="page-title">{{ 'parking.selectMunicipio' | translate }}</h1>
       @if (dataSource() === 'error') {
         <p class="data-notice" role="alert">No se pudieron cargar los municipios.</p>
@@ -339,10 +345,10 @@ export class ParkingCitiesComponent implements OnInit {
   private defaultCity(): ParkingMunicipio {
     const preferredId = this.locationSettings.settings().preferredCityId;
     if (preferredId) {
-      const match = this.municipios().find((m) => m.id === preferredId);
+      const match = this.municipios().find((m) => m.id === preferredId || String(m.contractId) === preferredId);
       if (match) return match;
     }
-    return this.municipios().find((city) => city.id === 'zarautz') ?? this.municipios()[0] ?? EMPTY_CITY;
+    return this.municipios().find((city) => city.id === 'durango' || city.contractId === 1) ?? this.municipios()[0] ?? EMPTY_CITY;
   }
 
   readonly search = signal('');

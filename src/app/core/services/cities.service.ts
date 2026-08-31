@@ -26,6 +26,10 @@ interface StreetsApiValue {
   streetsFulllist?: { zone: number; zoneDesc: string }[] | null;
 }
 
+interface MapStretchesApiValue {
+  data?: string | null;
+}
+
 export interface ParkingZoneSummary {
   id: number;
   name: string;
@@ -68,16 +72,28 @@ export class CitiesService {
     const cities = value.contractlist.map((item) => this.toMunicipio(item));
     const enriched = await Promise.all(
       cities.map(async (city) => {
+        const zones = new Map<number, string>();
         try {
           const streets = await this.api.post<StreetsApiValue>(OPS_ENDPOINTS.parking.streets, { contractId: city.contractId });
-          const zones = new Map<number, string>();
           for (const street of streets.streetsFulllist ?? []) {
             if (street.zone > 0) zones.set(street.zone, street.zoneDesc || `Zona ${street.zone}`);
           }
-          return { ...city, zones: [...zones.entries()].map(([id, name]) => ({ id, name })), zonas: zones.size };
         } catch {
-          return city;
+          // QueryMapStretchesAPI se usa como respaldo más abajo.
         }
+
+        if (!zones.size) {
+          try {
+            for (const zone of await this.getZonesFromMap(city.contractId)) {
+              zones.set(zone.id, zone.name);
+            }
+          } catch {
+            // El municipio se mantiene visible aunque su información de zonas falle.
+          }
+        }
+
+        const zoneList = [...zones.entries()].map(([id, name]) => ({ id, name }));
+        return { ...city, zones: zoneList, zonas: zoneList.length };
       }),
     );
     this.state.set(enriched);
@@ -114,6 +130,28 @@ export class CitiesService {
       radius: item.radius ?? '',
       zones: [],
     };
+  }
+
+  private async getZonesFromMap(contractId: number): Promise<ParkingZoneSummary[]> {
+    const response = await this.api.post<MapStretchesApiValue>(OPS_ENDPOINTS.parking.mapStretches, {
+      contractId,
+      version: '0',
+    });
+    const kml = response.data?.trim();
+    if (!kml) return [];
+
+    const xml = new DOMParser().parseFromString(kml, 'application/xml');
+    const zones = new Map<number, string>();
+    for (const placemark of Array.from(xml.getElementsByTagName('Placemark'))) {
+      const zoneId = Number(placemark.querySelector('ExtendedData zoneId')?.textContent?.trim()) || 0;
+      if (zoneId <= 0) continue;
+      const name =
+        placemark.getElementsByTagName('description')[0]?.textContent?.trim() ||
+        placemark.getElementsByTagName('name')[0]?.textContent?.trim() ||
+        `Zona ${zoneId}`;
+      zones.set(zoneId, name);
+    }
+    return [...zones.entries()].map(([id, name]) => ({ id, name }));
   }
 
   private slug(value: string): string {

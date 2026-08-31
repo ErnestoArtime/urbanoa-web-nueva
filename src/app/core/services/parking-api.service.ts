@@ -3,6 +3,7 @@ import { OPS_ENDPOINTS } from '../api/ops-endpoints';
 import { OpsApiClient } from '../api/ops-api-client.service';
 import { OpsSessionService } from '../api/ops-session.service';
 import { OpsApiError } from '../api/ops-api.types';
+import { formatOpsDate } from '../utils/ops-date';
 
 export interface ConfirmParkingInput {
   contractId: number;
@@ -143,9 +144,7 @@ export class ParkingApiService {
     contractId: number;
     plate: string;
     zone: number;
-    street: number;
     date: string;
-    streetId?: number;
   }): Promise<{ data: ParkingTicketOption[]; source: 'remote' }> {
     const token = this.session.token();
     if (!token) throw new OpsApiError('transport', OPS_ENDPOINTS.parking.tickets, 'Se requiere una sesión válida');
@@ -171,7 +170,6 @@ export class ParkingApiService {
         date: this.formatOpsDate(input.date),
         zone: input.zone,
         language: 'ES',
-        street: input.streetId ?? 0,
       },
       { token },
     );
@@ -215,10 +213,7 @@ export class ParkingApiService {
   }
 
   opsDate(date: Date): string {
-    const two = (value: number): string => String(value).padStart(2, '0');
-    return `${two(date.getHours())}${two(date.getMinutes())}${two(date.getSeconds())}${two(date.getDate())}${two(date.getMonth() + 1)}${two(
-      date.getFullYear() % 100,
-    )}`;
+    return formatOpsDate(date);
   }
 
   private formatOpsDate(value: string | Date): string {

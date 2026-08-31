@@ -65,6 +65,12 @@ interface WizardStep {
                 ><strong>{{ query()['zone'] }}</strong>
               </p>
             }
+            @if (query()['street']) {
+              <p>
+                <small>{{ 'parking.wizard.street' | translate }}</small
+                ><strong>{{ query()['street'] }}</strong>
+              </p>
+            }
             @if (query()['plate']) {
               <div class="vehicle-picker">
                 <small>{{ 'parking.wizard.vehicle' | translate }}</small
@@ -538,6 +544,8 @@ export class ParkingWizardLayoutComponent implements OnInit {
       ...urlParams,
       ...(cityName ? { cityName } : {}),
       ...(s.zoneName ? { zone: s.zoneName } : {}),
+      ...(s.street ? { street: s.street } : {}),
+      ...(s.streetId ? { streetId: s.streetId } : {}),
       ...(s.plate ? { plate: s.plate } : {}),
       ...(s.duration ? { duration: s.duration } : {}),
       ...(s.vehicleId ? { vehicleId: s.vehicleId } : {}),
