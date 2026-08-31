@@ -77,7 +77,16 @@ import { ParkingTicketCardComponent } from '../../../shared/components/parking-t
                 <span class="active-parkings-count">{{ activeParkingsCount() }}</span>
               }
             </p>
-            @if (activeParkings().length > 0) {
+            @if (activeParkingStatusLoading()) {
+              <div
+                class="skeleton-card skeleton-card-current active-parking-skeleton"
+                role="status"
+                aria-live="polite"
+                [attr.aria-label]="'common.loading' | translate"
+              >
+                <span class="sr-only">{{ 'common.loading' | translate }}</span>
+              </div>
+            } @else if (activeParkings().length > 0) {
               @for (parking of activeParkings(); track parking.id) {
                 <app-parking-ticket-card
                   [parking]="parking"
@@ -196,6 +205,7 @@ import { ParkingTicketCardComponent } from '../../../shared/components/parking-t
         padding-top: 0.75rem;
       }
       .operations-skeleton > div,
+      .active-parking-skeleton,
       .skeleton-chips span {
         position: relative;
         overflow: hidden;
@@ -203,6 +213,7 @@ import { ParkingTicketCardComponent } from '../../../shared/components/parking-t
         background: #e7ebe2;
       }
       .operations-skeleton > div::after,
+      .active-parking-skeleton::after,
       .skeleton-chips span::after {
         position: absolute;
         inset: 0;
@@ -222,6 +233,9 @@ import { ParkingTicketCardComponent } from '../../../shared/components/parking-t
       }
       .skeleton-card-current {
         height: 5.5rem;
+      }
+      .active-parking-skeleton {
+        margin-bottom: 0.1rem;
       }
       .skeleton-card-action {
         height: 4.25rem;
@@ -515,6 +529,7 @@ export class OperationsLayoutComponent implements OnInit {
   readonly OPERATION_TYPE_LABELS = OPERATION_TYPE_LABELS;
   readonly activeParkings = this.parkingSessionService.activeParkings;
   readonly activeParkingsCount = this.parkingSessionService.activeParkingsCount;
+  readonly activeParkingStatusLoading = computed(() => this.operationsService.activeSource() === 'idle');
   readonly unparked = signal(false);
   readonly confirmUnpark = signal(false);
   private pendingUnparkId = '';
