@@ -599,6 +599,7 @@
   "payment.swipeToPay": "uk_Desliza para pagar",
   "payment.swipeCompleted": "uk_Completado",
   "dashboard.unparkSuccessDetail": "uk_La devolución de saldo se ha añadido al monedero.",
+  "dashboard.unparkError": "uk_No se pudo dejar el aparcamiento",
   "dashboard.unparkConfirmDetail": "uk_Al dejar el aparcamiento recibirás un reembolso de {{amount}}.",
   "auth.resetSuccess.eyebrow": "uk_Seguridad actualizada",
   "auth.resetSuccess.title": "uk_Contraseña restablecida",

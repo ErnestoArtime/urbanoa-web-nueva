@@ -1,28 +1,35 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { OperationsService } from '../../core/services/operations.service';
-import { ParkingSessionService } from '../../core/services/parking-session.service';
 import { VehicleService } from '../../core/services/vehicle.service';
+import { LoaderComponent } from '../../shared/components/loader/loader.component';
+import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 
 @Component({
   selector: 'app-entry',
-  template: `<div class="entry-loading" role="status" aria-live="polite">Cargando…</div>`,
-  styles: `
-    :host { display: grid; min-height: 100%; place-items: center; }
-    .entry-loading { color: var(--color-text-muted); font-size: var(--text-base); }
-  `,
+  imports: [LoaderComponent, TranslatePipe],
+  template: `<app-loader [visible]="true" [message]="'common.loading' | translate" imageSrc="/assets/brand/login-logo.jpg" />`,
 })
 export class AppEntryComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly operationsService = inject(OperationsService);
-  private readonly parkingSessionService = inject(ParkingSessionService);
   private readonly vehicleService = inject(VehicleService);
 
   async ngOnInit(): Promise<void> {
-    await Promise.all([this.operationsService.load(), this.vehicleService.load()]);
-    await this.operationsService.loadDashboardParkingStatuses(this.vehicleService.vehicles());
+    const operationsLoad = this.operationsService.load();
+    await this.vehicleService.load();
+    const vehicles = this.vehicleService.vehicles();
 
-    const target = this.parkingSessionService.hasActiveParkings() ? '/app/home' : '/app/parking';
+    if (vehicles.length === 0) {
+      void operationsLoad.catch(() => undefined);
+      void this.router.navigate(['/app/home'], { replaceUrl: true });
+      return;
+    }
+
+    await operationsLoad;
+    const hasActiveParking = await this.operationsService.findFirstActiveParking(vehicles);
+
+    const target = hasActiveParking ? '/app/home' : '/app/parking';
     void this.router.navigate([target], { replaceUrl: true });
   }
 }

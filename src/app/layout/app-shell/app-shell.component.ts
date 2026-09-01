@@ -228,6 +228,8 @@ export class AppShellComponent {
 
   private async initializeSessionData(): Promise<void> {
     await Promise.all([this.operationsService.load(), this.vehicleService.load()]);
+    const currentPath = this.router.url.split(/[?#]/, 1)[0].replace(/\/+$/, '');
+    if (currentPath === '/app') return;
     await this.operationsService.loadDashboardParkingStatuses(this.vehicleService.vehicles());
   }
 

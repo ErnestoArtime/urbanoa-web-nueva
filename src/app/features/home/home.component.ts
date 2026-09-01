@@ -127,6 +127,15 @@ import { DashboardApiService } from '../../core/services/dashboard-api.service';
           (primaryAction)="unparked.set(false)"
         />
       }
+      @if (unparkError(); as error) {
+        <app-result-modal
+          type="error"
+          [title]="'dashboard.unparkError' | translate"
+          [message]="error"
+          [primaryText]="'common.accept' | translate"
+          (primaryAction)="unparkError.set(null)"
+        />
+      }
       @if (confirmUnpark()) {
         <app-result-modal
           type="confirmation"
@@ -355,6 +364,7 @@ export class HomeComponent {
   readonly user = this.userService.user;
   readonly fullName = computed(() => `${this.user().name} ${this.user().surname}`);
   readonly activeParkings = this.parkingSessionService.activeParkings;
+  readonly unparkError = this.parkingSessionService.unparkError;
   readonly vehicle = this.vehicleService.mainVehicle;
   readonly recentOps = computed(() => {
     const list = this.operationsService

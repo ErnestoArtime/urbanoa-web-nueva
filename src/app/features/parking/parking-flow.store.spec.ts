@@ -1,6 +1,20 @@
 import { ParkingFlowStore } from './parking-flow.store';
 
 describe('ParkingFlowStore', () => {
+  it('accepts a map location without a street when city, zone and sector are resolved', () => {
+    const store = new ParkingFlowStore();
+    store.update({ cityId: '1', zoneId: '60301', sectorId: '60301', street: '' });
+
+    expect(store.hasLocationData()).toBeTrue();
+  });
+
+  it('rejects a map location until its sector has been resolved', () => {
+    const store = new ParkingFlowStore();
+    store.update({ cityId: '1', zoneId: '60301', street: '' });
+
+    expect(store.hasLocationData()).toBeFalse();
+  });
+
   it('keeps the location and clears vehicle-dependent selections when the vehicle changes', () => {
     const store = new ParkingFlowStore();
     store.update({

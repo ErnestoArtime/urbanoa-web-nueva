@@ -99,6 +99,7 @@ export class OperationsService {
   private readonly _activeParkings = signal<ActiveParking[]>([]);
   private readonly operationsLoadsInFlight = new Map<string, Promise<void>>();
   private dashboardParkingStatusesInFlight: Promise<void> | null = null;
+  private firstActiveParkingSearchInFlight: Promise<boolean> | null = null;
 
   readonly operations = this._operations.asReadonly();
   readonly activeParkings = this._activeParkings.asReadonly();
@@ -142,11 +143,7 @@ export class OperationsService {
     this.loading.set(true);
     this.lastError.set(null);
     try {
-      const response = await this.api.post<OperationResponseDto[]>(
-        OPS_ENDPOINTS.user.operations,
-        requestBody,
-        { token },
-      );
+      const response = await this.api.post<OperationResponseDto[]>(OPS_ENDPOINTS.user.operations, requestBody, { token });
       this._operations.set(response.map((item) => this.mapRemoteOperation(item)));
       this.source.set('remote');
     } catch (error) {
@@ -176,18 +173,71 @@ export class OperationsService {
 
   loadDashboardParkingStatuses(vehicles: readonly { id: string; plate: string }[]): Promise<void> {
     if (this.dashboardParkingStatusesInFlight) return this.dashboardParkingStatusesInFlight;
-    const preferredCityId = this.locationSettings.settings().preferredCityId;
-    const preferredContractId = preferredCityId ? this.citiesService.contractIdFor(preferredCityId) : 0;
-    const request = this.loadParkingStatusesFromContracts(vehicles, (vehicle) => {
-      const recentContractId = this.latestParkingContractId(vehicle.plate);
-      const allContracts = this.contractIdsToCheck();
-      return [recentContractId ?? 0, preferredContractId, ...allContracts].filter((id) => id > 0);
-    });
+    const request = this.loadParkingStatusesFromContracts(vehicles, (vehicle) => this.dashboardContractIds(vehicle));
     const tracked = request.finally(() => {
       if (this.dashboardParkingStatusesInFlight === tracked) this.dashboardParkingStatusesInFlight = null;
     });
     this.dashboardParkingStatusesInFlight = tracked;
     return tracked;
+  }
+
+  findFirstActiveParking(vehicles: readonly { id: string; plate: string }[]): Promise<boolean> {
+    if (this.firstActiveParkingSearchInFlight) return this.firstActiveParkingSearchInFlight;
+    const request = this.searchFirstActiveParking(vehicles);
+    const tracked = request.finally(() => {
+      if (this.firstActiveParkingSearchInFlight === tracked) this.firstActiveParkingSearchInFlight = null;
+    });
+    this.firstActiveParkingSearchInFlight = tracked;
+    return tracked;
+  }
+
+  private async searchFirstActiveParking(vehicles: readonly { id: string; plate: string }[]): Promise<boolean> {
+    const token = this.session.token();
+    if (!token) {
+      this._activeParkings.set([]);
+      this.activeSource.set('error');
+      return false;
+    }
+    if (vehicles.length === 0) {
+      this._activeParkings.set([]);
+      this.activeSource.set('remote');
+      return false;
+    }
+
+    const date = this.opsDate(this.api.serverNow ? this.api.serverNow() : new Date());
+    let failedVehicleCount = 0;
+
+    for (const vehicle of vehicles) {
+      const contractIds = this.dashboardContractIds(vehicle);
+      let answered = contractIds.length === 0;
+
+      for (const contractId of contractIds) {
+        try {
+          const status = await this.api.postOrNull<ParkingStatusResponseDto>(
+            OPS_ENDPOINTS.parking.parkingStatus,
+            { contractId, plate: vehicle.plate, date },
+            { token },
+          );
+          answered = true;
+          if (status?.status === 2) {
+            this.upsertActiveParking(this.mapParkingStatus(vehicle, contractId, status));
+            this.activeSource.set('remote');
+            return true;
+          }
+        } catch {
+          // Error de red/backend para este contrato: se prueba el siguiente.
+        }
+      }
+
+      if (answered) {
+        this.removeActiveParking(vehicle.plate);
+      } else {
+        failedVehicleCount += 1;
+      }
+    }
+
+    this.activeSource.set(failedVehicleCount === 0 ? 'remote' : 'error');
+    return false;
   }
 
   private async loadParkingStatusesFromContracts(
@@ -299,6 +349,13 @@ export class OperationsService {
     return [preferred, ...all.filter((id) => id !== preferred)];
   }
 
+  private dashboardContractIds(vehicle: { id: string; plate: string }): number[] {
+    const preferredCityId = this.locationSettings.settings().preferredCityId;
+    const preferredContractId = preferredCityId ? this.citiesService.contractIdFor(preferredCityId) : 0;
+    const recentContractId = this.latestParkingContractId(vehicle.plate);
+    return [...new Set([recentContractId ?? 0, preferredContractId, ...this.contractIdsToCheck()].filter((id) => id > 0))];
+  }
+
   async loadReceipt(id: string): Promise<unknown | null> {
     const operation = await this.loadDetail(id);
     return operation ?? null;
@@ -315,6 +372,10 @@ export class OperationsService {
 
   getActiveParking(id: string): ActiveParking | undefined {
     return this._activeParkings().find((p) => p.id === id);
+  }
+
+  restoreActiveParking(parking: ActiveParking): void {
+    this.upsertActiveParking(parking);
   }
 
   getOperationById(id: string): Operation | undefined {
