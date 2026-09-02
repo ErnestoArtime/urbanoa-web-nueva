@@ -73,6 +73,7 @@ export interface ActiveParking {
   contractId?: number;
   tariffId?: number;
   sectorId?: number;
+  sectorColor?: string;
   operationDate?: string;
   /** Mirrors the APK parking-status `extension` flag. */
   canExtend?: boolean;
@@ -89,6 +90,7 @@ interface ParkingStatusResponseDto {
   accumulatedTime: number;
   sector?: string;
   sectorname?: string;
+  sectorColor?: string;
   zonename?: string;
   latitude?: number;
   longitude?: number;
@@ -263,7 +265,12 @@ export class OperationsService {
 
     results.forEach((result, index) => {
       if (result.status === 'fulfilled' && result.value === null) {
-        this.removeActiveParking(vehicles[index].plate, scopedContractId);
+        const historicalParking = this.historicalActiveParking(vehicles[index], scopedContractId);
+        if (historicalParking) {
+          this.upsertActiveParking(historicalParking);
+        } else {
+          this.removeActiveParking(vehicles[index].plate, scopedContractId);
+        }
       }
     });
     const failedPlates = new Set(results.flatMap((result, index) => (result.status === 'rejected' ? [vehicles[index].plate] : [])));
@@ -283,6 +290,42 @@ export class OperationsService {
         (parking) => this.normalizePlate(parking.plate) !== normalized || (contractId !== undefined && parking.contractId !== contractId),
       ),
     );
+  }
+
+  private historicalActiveParking(vehicle: { id: string; plate: string }, scopedContractId?: number): ActiveParking | undefined {
+    const operation = this.activeParkingOperations()
+      .filter((item) => {
+        const samePlate = this.normalizePlate(item.plate ?? '') === this.normalizePlate(vehicle.plate);
+        const sameContract = scopedContractId === undefined || item.contractId === undefined || item.contractId === scopedContractId;
+        return samePlate && sameContract;
+      })
+      .sort((a, b) => this.operationTimestamp(b) - this.operationTimestamp(a))[0];
+    if (!operation) return undefined;
+
+    const end = this.operationDateTime(operation.date, operation.endTime);
+    const remainingSeconds = Math.max(0, Math.floor((end.getTime() - Date.now()) / 1000));
+    const hours = String(Math.floor(remainingSeconds / 3600)).padStart(2, '0');
+    const minutes = String(Math.floor((remainingSeconds % 3600) / 60)).padStart(2, '0');
+    const seconds = String(remainingSeconds % 60).padStart(2, '0');
+    return {
+      id: `history-${operation.id}`,
+      plate: vehicle.plate,
+      vehicleId: vehicle.id,
+      zone: operation.sectorName || operation.zoneName || operation.zone || '',
+      startTime: operation.startTime ?? '',
+      durationLabel: operation.durationLabel ?? '0 min',
+      timeRemaining: `${hours}:${minutes}:${seconds}`,
+      endTime: operation.endTime ?? '',
+      latitude: operation.latitude,
+      longitude: operation.longitude,
+      operationId: operation.id,
+      contractId: operation.contractId,
+      tariffId: undefined,
+      sectorId: operation.sectorId,
+      sectorColor: operation.sectorColor,
+      canExtend: true,
+      refundable: operation.refundable,
+    };
   }
 
   private beginActiveLoading(): void {
@@ -310,10 +353,14 @@ export class OperationsService {
   }
 
   private operationTimestamp(operation: Operation): number {
-    const [day, month, year] = operation.date.split('/').map(Number);
-    const [hours = 0, minutes = 0] = (operation.startTime ?? operation.endTime ?? '').split(':').map(Number);
+    return this.operationDateTime(operation.date, operation.startTime ?? operation.endTime).getTime();
+  }
+
+  private operationDateTime(date: string, time?: string): Date {
+    const [day, month, year] = date.split('/').map(Number);
+    const [hours = 0, minutes = 0] = (time ?? '').split(':').map(Number);
     const timestamp = new Date(year, month - 1, day, hours, minutes).getTime();
-    return Number.isNaN(timestamp) ? 0 : timestamp;
+    return new Date(Number.isNaN(timestamp) ? 0 : timestamp);
   }
 
   private contractIdsToCheck(): number[] {
@@ -395,6 +442,7 @@ export class OperationsService {
       contractId,
       tariffId: status.tariffId,
       sectorId: Number(status.sector ?? 0) || undefined,
+      sectorColor: status.sectorColor,
       operationDate: status.operationDate,
       canExtend: status.extension !== 0,
       refundable: this.refundableOption(status.refundable),
@@ -480,6 +528,7 @@ export class OperationsService {
       zoneName: item.zoneDesc ?? undefined,
       sectorId: item.sectorId,
       sectorName: item.sectorDesc ?? undefined,
+      sectorColor: item.sectorColor ?? undefined,
       latitude: item.latitude ?? undefined,
       longitude: item.longitude ?? undefined,
       timePeriod: [1, 2, 3].includes(item.timePeriod ?? 0) ? (item.timePeriod as 1 | 2 | 3) : undefined,
