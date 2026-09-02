@@ -71,6 +71,8 @@ export interface ActiveParking {
   contractId?: number;
   tariffId?: number;
   sectorId?: number;
+  /** Mirrors the APK parking-status `extension` flag. */
+  canExtend?: boolean;
 }
 
 interface ParkingStatusResponseDto {
@@ -97,14 +99,17 @@ export class OperationsService {
   private readonly locationSettings = inject(LocationSettingsService);
   private readonly _operations = signal<Operation[]>([]);
   private readonly _activeParkings = signal<ActiveParking[]>([]);
+  private readonly _activeLoading = signal(false);
   private readonly operationsLoadsInFlight = new Map<string, Promise<void>>();
   private dashboardParkingStatusesInFlight: Promise<void> | null = null;
   private firstActiveParkingSearchInFlight: Promise<boolean> | null = null;
+  private activeLoadingRequests = 0;
 
   readonly operations = this._operations.asReadonly();
   readonly activeParkings = this._activeParkings.asReadonly();
   readonly activeParkingsCount = computed(() => this._activeParkings().length);
   readonly hasActiveParkings = computed(() => this._activeParkings().length > 0);
+  readonly activeLoading = this._activeLoading.asReadonly();
   readonly source = signal<'idle' | 'remote' | 'error'>('idle');
   readonly activeSource = signal<'idle' | 'remote' | 'error'>('idle');
   readonly loading = signal(false);
@@ -168,13 +173,20 @@ export class OperationsService {
   }
 
   async loadParkingStatuses(vehicles: readonly { id: string; plate: string }[], contractId?: number): Promise<void> {
-    await this.loadParkingStatusesFromContracts(vehicles, () => (contractId ? [contractId] : this.contractIdsToCheck()), contractId);
+    this.beginActiveLoading();
+    try {
+      await this.loadParkingStatusesFromContracts(vehicles, () => (contractId ? [contractId] : this.contractIdsToCheck()), contractId);
+    } finally {
+      this.endActiveLoading();
+    }
   }
 
   loadDashboardParkingStatuses(vehicles: readonly { id: string; plate: string }[]): Promise<void> {
     if (this.dashboardParkingStatusesInFlight) return this.dashboardParkingStatusesInFlight;
+    this.beginActiveLoading();
     const request = this.loadParkingStatusesFromContracts(vehicles, (vehicle) => this.dashboardContractIds(vehicle));
     const tracked = request.finally(() => {
+      this.endActiveLoading();
       if (this.dashboardParkingStatusesInFlight === tracked) this.dashboardParkingStatusesInFlight = null;
     });
     this.dashboardParkingStatusesInFlight = tracked;
@@ -205,24 +217,43 @@ export class OperationsService {
     }
 
     const date = this.opsDate(this.api.serverNow ? this.api.serverNow() : new Date());
+    this.beginActiveLoading();
     let failedVehicleCount = 0;
+    let activeParkingFound = false;
+    let sessionChanged = false;
+    let resolveFirstActive!: (found: boolean) => void;
+    const firstActive = new Promise<boolean>((resolve) => {
+      resolveFirstActive = resolve;
+    });
 
-    for (const vehicle of vehicles) {
+    const vehicleSearches = vehicles.map(async (vehicle) => {
       const contractIds = this.dashboardContractIds(vehicle);
       let answered = contractIds.length === 0;
 
       for (const contractId of contractIds) {
+        if (activeParkingFound) return;
+        if (this.session.token() !== token) {
+          sessionChanged = true;
+          return;
+        }
         try {
           const status = await this.api.postOrNull<ParkingStatusResponseDto>(
             OPS_ENDPOINTS.parking.parkingStatus,
             { contractId, plate: vehicle.plate, date },
             { token },
           );
+          if (activeParkingFound) return;
+          if (this.session.token() !== token) {
+            sessionChanged = true;
+            return;
+          }
           answered = true;
           if (status?.status === 2) {
+            activeParkingFound = true;
             this.upsertActiveParking(this.mapParkingStatus(vehicle, contractId, status));
             this.activeSource.set('remote');
-            return true;
+            resolveFirstActive(true);
+            return;
           }
         } catch {
           // Error de red/backend para este contrato: se prueba el siguiente.
@@ -234,10 +265,16 @@ export class OperationsService {
       } else {
         failedVehicleCount += 1;
       }
-    }
+    });
 
-    this.activeSource.set(failedVehicleCount === 0 ? 'remote' : 'error');
-    return false;
+    const allSearchesFinished = Promise.all(vehicleSearches).then(() => {
+      if (activeParkingFound) return true;
+      this.activeSource.set(!sessionChanged && failedVehicleCount === 0 ? 'remote' : 'error');
+      return false;
+    });
+    void allSearchesFinished.finally(() => this.endActiveLoading());
+
+    return Promise.race([firstActive, allSearchesFinished]);
   }
 
   private async loadParkingStatusesFromContracts(
@@ -263,6 +300,7 @@ export class OperationsService {
         const contractIds = [...new Set(contractsFor(vehicle).filter((id) => id > 0))];
         let answered = contractIds.length === 0;
         for (const id of contractIds) {
+          if (this.session.token() !== token) return null;
           try {
             const status = await this.api.postOrNull<ParkingStatusResponseDto>(
               OPS_ENDPOINTS.parking.parkingStatus,
@@ -278,12 +316,15 @@ export class OperationsService {
             }
           } catch {
             // Error de red/backend para este contrato: se prueba el siguiente.
+            if (this.session.token() !== token) return null;
           }
         }
         if (!answered) throw new Error(`${vehicle.plate}: sin respuesta de ningún contrato`);
         return null;
       }),
     );
+
+    if (this.session.token() !== token) return;
 
     // Un fallo total de red no significa que los aparcamientos hayan terminado.
     // Conservamos el último estado confirmado para que un refresco no lo borre.
@@ -314,6 +355,16 @@ export class OperationsService {
         (parking) => this.normalizePlate(parking.plate) !== normalized || (contractId !== undefined && parking.contractId !== contractId),
       ),
     );
+  }
+
+  private beginActiveLoading(): void {
+    this.activeLoadingRequests += 1;
+    this._activeLoading.set(true);
+  }
+
+  private endActiveLoading(): void {
+    this.activeLoadingRequests = Math.max(0, this.activeLoadingRequests - 1);
+    this._activeLoading.set(this.activeLoadingRequests > 0);
   }
 
   private latestParkingContractId(plate: string): number | undefined {
@@ -399,13 +450,14 @@ export class OperationsService {
     const hours = String(Math.floor(remainingSeconds / 3600)).padStart(2, '0');
     const minutes = String(Math.floor((remainingSeconds % 3600) / 60)).padStart(2, '0');
     const seconds = String(remainingSeconds % 60).padStart(2, '0');
+    const durationMinutes = this.latestParkingDurationMinutes(vehicle.plate);
     return {
       id: `remote-${vehicle.plate}`,
       plate: vehicle.plate,
       vehicleId: vehicle.id,
       zone: status.sectorname || status.zonename || status.sector || '',
       startTime: this.timeLabel(start),
-      durationLabel: `${status.accumulatedTime ?? 0} min`,
+      durationLabel: `${durationMinutes ?? status.accumulatedTime ?? 0} min`,
       timeRemaining: `${hours}:${minutes}:${seconds}`,
       endTime: this.timeLabel(end),
       latitude: status.latitude,
@@ -415,7 +467,21 @@ export class OperationsService {
       contractId,
       tariffId: status.tariffId,
       sectorId: Number(status.sector ?? 0) || undefined,
+      canExtend: status.extension !== 0,
     };
+  }
+
+  private latestParkingDurationMinutes(plate: string): number | undefined {
+    const normalizedPlate = this.normalizePlate(plate);
+    const parkingTypes = new Set([OperationType.PARKING, OperationType.PARKING_EXTENSION]);
+    const operation = this._operations()
+      .filter((item) => parkingTypes.has(item.type) && this.normalizePlate(item.plate ?? '') === normalizedPlate && item.durationLabel)
+      .sort((a, b) => this.operationTimestamp(b) - this.operationTimestamp(a))[0];
+    if (!operation?.durationLabel) return undefined;
+    const hourMatch = operation.durationLabel.match(/(\d+)\s*h/i);
+    const minuteMatch = operation.durationLabel.match(/(\d+)\s*min/i);
+    const minutes = (hourMatch ? Number(hourMatch[1]) * 60 : 0) + (minuteMatch ? Number(minuteMatch[1]) : 0);
+    return minutes > 0 ? minutes : undefined;
   }
 
   private opsDate(date: Date): string {

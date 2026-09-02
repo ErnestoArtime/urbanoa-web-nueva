@@ -5,6 +5,7 @@ import { WalletService } from '../../core/services/wallet.service';
 import { UserService } from '../../core/services/user.service';
 import { OperationsService, type ActiveParking } from '../../core/services/operations.service';
 import { ParkingSessionService } from '../../core/services/parking-session.service';
+import type { UnparkingQuoteResult } from '../../core/services/parking-api.service';
 import { NavigationToCarService } from '../../core/services/navigation-to-car.service';
 import { OperationType } from '../../shared/models/operation-type';
 import { ParkingTicketCardComponent } from '../../shared/components/parking-ticket-card/parking-ticket-card.component';
@@ -66,7 +67,12 @@ import { DashboardApiService } from '../../core/services/dashboard-api.service';
 
         <div class="dashboard-grid mt-2">
           <div class="dashboard-col-left">
-            @if (parkingStatusLoading()) {
+            @if (parkingStatusLoading() && activeParkings().length > 0) {
+              <div class="parking-status-progress" role="status" aria-live="polite">
+                <span class="sr-only">{{ 'dashboard.loadingActiveParkings' | translate }}</span>
+              </div>
+            }
+            @if (parkingStatusLoading() && activeParkings().length === 0) {
               <div
                 class="skeleton-shape skeleton-card skeleton-active-ticket"
                 role="status"
@@ -140,7 +146,11 @@ import { DashboardApiService } from '../../core/services/dashboard-api.service';
         <app-result-modal
           type="confirmation"
           [title]="'dashboard.unpark' | translate"
-          [message]="'dashboard.unparkConfirmDetail' | translate: { amount: 'EUR3.70' }"
+          [message]="
+            (pendingUnparkAmount() ?? 0) > 0
+              ? ('dashboard.unparkConfirmDetail' | translate: { amount: 'EUR' + pendingUnparkAmount()!.toFixed(2) })
+              : ('dashboard.unparkNoRefund' | translate)
+          "
           [primaryText]="'common.accept' | translate"
           [secondaryText]="'common.cancel' | translate"
           (primaryAction)="confirmUnparkAction()"
@@ -265,6 +275,29 @@ import { DashboardApiService } from '../../core/services/dashboard-api.service';
         flex-direction: column;
         gap: 0.5rem;
       }
+      .parking-status-progress {
+        position: relative;
+        width: 100%;
+        height: 3px;
+        overflow: hidden;
+        border-radius: var(--radius-pill);
+        background: color-mix(in srgb, var(--color-primary) 16%, transparent);
+      }
+      .parking-status-progress::after {
+        position: absolute;
+        inset: 0 auto 0 0;
+        width: 42%;
+        content: '';
+        border-radius: inherit;
+        background: var(--color-primary);
+        transform: translateX(-110%);
+        animation: parking-status-sweep 1.05s ease-in-out infinite;
+      }
+      @keyframes parking-status-sweep {
+        to {
+          transform: translateX(345%);
+        }
+      }
       .active-parkings-summary {
         display: flex;
         align-items: center;
@@ -329,6 +362,14 @@ import { DashboardApiService } from '../../core/services/dashboard-api.service';
         white-space: nowrap;
         border: 0;
       }
+      @media (prefers-reduced-motion: reduce) {
+        .parking-status-progress::after {
+          width: 100%;
+          animation: none;
+          opacity: 0.55;
+          transform: none;
+        }
+      }
       @media (min-width: 960px) {
         :host > .page {
           max-width: 1420px;
@@ -374,24 +415,35 @@ export class HomeComponent {
     return list.slice(0, 3);
   });
   readonly initialLoading = computed(() => this.dashboardApi.source() === 'idle');
-  readonly parkingStatusLoading = computed(() => this.operationsService.activeSource() === 'idle');
+  readonly parkingStatusLoading = this.operationsService.activeLoading;
   readonly unparked = signal(false);
   readonly confirmUnpark = signal(false);
+  readonly pendingUnparkAmount = signal<number | null>(null);
   private pendingUnparkId = '';
+  private pendingUnparkQuote: UnparkingQuoteResult | undefined;
 
   constructor() {
     void this.dashboardApi.load();
   }
 
-  confirmUnparkFor(parking: ActiveParking): void {
+  async confirmUnparkFor(parking: ActiveParking): Promise<void> {
     this.pendingUnparkId = parking.id;
+    const quote = await this.parkingSessionService.quoteUnparking(parking.id);
+    if (!quote.success) {
+      this.unparkError.set(quote.error instanceof Error ? quote.error.message : 'No se pudo calcular el desaparcar.');
+      return;
+    }
+    this.pendingUnparkQuote = quote;
+    this.pendingUnparkAmount.set(quote.refundAmount ?? 0);
     this.confirmUnpark.set(true);
   }
 
   async confirmUnparkAction(): Promise<void> {
     this.confirmUnpark.set(false);
-    if (await this.parkingSessionService.leaveParking(this.pendingUnparkId)) {
+    if (await this.parkingSessionService.leaveParking(this.pendingUnparkId, this.pendingUnparkQuote)) {
       this.pendingUnparkId = '';
+      this.pendingUnparkQuote = undefined;
+      this.pendingUnparkAmount.set(null);
       this.unparked.set(true);
     }
   }

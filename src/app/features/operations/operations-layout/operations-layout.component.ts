@@ -11,6 +11,7 @@ import { UnpaidFinesService } from '../../../core/services/unpaid-fines.service'
 import { OperationsService, type ActiveParking } from '../../../core/services/operations.service';
 import { VehicleService } from '../../../core/services/vehicle.service';
 import { ParkingSessionService } from '../../../core/services/parking-session.service';
+import type { UnparkingQuoteResult } from '../../../core/services/parking-api.service';
 import { NavigationToCarService } from '../../../core/services/navigation-to-car.service';
 import type { Operation } from '../../../shared/models/operation';
 import { OperationIconComponent } from '../../../shared/components/operation-icon/operation-icon.component';
@@ -197,7 +198,11 @@ import { ParkingTicketCardComponent } from '../../../shared/components/parking-t
       <app-result-modal
         type="confirmation"
         [title]="'dashboard.unpark' | translate"
-        [message]="'dashboard.unparkConfirmDetail' | translate: { amount: 'EUR3.70' }"
+        [message]="
+          (pendingUnparkAmount() ?? 0) > 0
+            ? ('dashboard.unparkConfirmDetail' | translate: { amount: 'EUR' + pendingUnparkAmount()!.toFixed(2) })
+            : ('dashboard.unparkNoRefund' | translate)
+        "
         [primaryText]="'common.accept' | translate"
         [secondaryText]="'common.cancel' | translate"
         (primaryAction)="confirmUnparkAction()"
@@ -550,7 +555,9 @@ export class OperationsLayoutComponent implements OnInit {
   readonly activeParkingStatusLoading = computed(() => this.operationsService.activeSource() === 'idle');
   readonly unparked = signal(false);
   readonly confirmUnpark = signal(false);
+  readonly pendingUnparkAmount = signal<number | null>(null);
   private pendingUnparkId = '';
+  private pendingUnparkQuote: UnparkingQuoteResult | undefined;
   readonly filteredOps = computed(() => this.applyFilter(this.operations()));
   readonly groupedHistory = computed(() => this.groupByPeriod(this.filteredOps()));
   readonly initialLoading = computed(
@@ -603,15 +610,24 @@ export class OperationsLayoutComponent implements OnInit {
     this.rangeFilter.set(range);
   }
 
-  onUnpark(parkingId: string): void {
+  async onUnpark(parkingId: string): Promise<void> {
     this.pendingUnparkId = parkingId;
+    const quote = await this.parkingSessionService.quoteUnparking(parkingId);
+    if (!quote.success) {
+      this.unparkError.set(quote.error instanceof Error ? quote.error.message : 'No se pudo calcular el desaparcar.');
+      return;
+    }
+    this.pendingUnparkQuote = quote;
+    this.pendingUnparkAmount.set(quote.refundAmount ?? 0);
     this.confirmUnpark.set(true);
   }
 
   async confirmUnparkAction(): Promise<void> {
     this.confirmUnpark.set(false);
-    if (await this.parkingSessionService.leaveParking(this.pendingUnparkId)) {
+    if (await this.parkingSessionService.leaveParking(this.pendingUnparkId, this.pendingUnparkQuote)) {
       this.pendingUnparkId = '';
+      this.pendingUnparkQuote = undefined;
+      this.pendingUnparkAmount.set(null);
       this.unparked.set(true);
     }
   }

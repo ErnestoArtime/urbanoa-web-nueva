@@ -212,10 +212,57 @@ describe('OperationsService stored data migration', () => {
     await loading;
   });
 
-  it('stops the initial parking search as soon as one active parking is found', async () => {
+  it('uses the operation duration for the active parking timeline like the APK', async () => {
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'post', 'postOrNull']);
+    api.post.and.resolveTo([
+      {
+        contractId: 3,
+        contractName: 'CITY',
+        operationNumber: '1234567',
+        operationType: OperationType.PARKING,
+        paymentAmount: 100,
+        opDate: '120000010926',
+        plate: 'AAA111',
+        zoneDesc: 'ZONE',
+        sectorDesc: 'SECTOR',
+        parkingStartDate: '115500010926',
+        parkingEndDate: '145500010926',
+        duration: 180,
+        parkingDuration: 180,
+      },
+    ]);
+    api.postOrNull.and.resolveTo({
+      status: 2,
+      extension: 0,
+      tariffId: 1,
+      dateInitial: '115500010926',
+      dateEnd: '145500010926',
+      accumulatedTime: 0,
+      sector: '22002',
+      sectorname: 'SECTOR',
+      operationDate: '1234567',
+    });
+    TestBed.overrideProvider(OpsApiClient, { useValue: api });
+    TestBed.overrideProvider(OpsSessionService, { useValue: { token: () => 'token' } });
+    TestBed.overrideProvider(CitiesService, { useValue: { cities: () => [], contractIdFor: () => 0, knownContractIds: () => [3] } });
+    TestBed.overrideProvider(LocationSettingsService, { useValue: { settings: () => ({ preferredCityId: '' }) } });
+    const service = TestBed.inject(OperationsService);
+
+    await service.load();
+    await service.loadDashboardParkingStatuses([{ id: 'vehicle-1', plate: 'AAA111' }]);
+
+    expect(service.activeParkings()).toEqual([jasmine.objectContaining({ durationLabel: '180 min' })]);
+  });
+
+  it('checks vehicles in parallel and stops new requests after the first active parking', async () => {
+    let finishFirstVehicle!: (value: null) => void;
+    const firstVehicleResponse = new Promise<null>((resolve) => {
+      finishFirstVehicle = resolve;
+    });
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['postOrNull']);
-    api.postOrNull.and.callFake(((_endpoint: string, body: { plate: string }) => {
-      if (body.plate === 'AAA111') {
+    api.postOrNull.and.callFake(((_endpoint: string, body: { plate: string; contractId: number }) => {
+      if (body.plate === 'AAA111') return firstVehicleResponse;
+      if (body.plate === 'BBB222' && body.contractId === 3) {
         return Promise.resolve({
           status: 2,
           extension: 0,
@@ -237,14 +284,24 @@ describe('OperationsService stored data migration', () => {
     TestBed.overrideProvider(LocationSettingsService, { useValue: { settings: () => ({ preferredCityId: '' }) } });
     const service = TestBed.inject(OperationsService);
 
-    const found = await service.findFirstActiveParking([
+    const search = service.findFirstActiveParking([
       { id: 'a', plate: 'AAA111' },
       { id: 'b', plate: 'BBB222' },
     ]);
+    const found = await search;
 
     expect(found).toBeTrue();
-    expect(api.postOrNull).toHaveBeenCalledTimes(1);
-    expect(api.postOrNull.calls.mostRecent().args[1]).toEqual(jasmine.objectContaining({ contractId: 3, plate: 'AAA111' }));
+    expect(api.postOrNull.calls.allArgs().map((args) => args[1])).toEqual([
+      jasmine.objectContaining({ contractId: 3, plate: 'AAA111' }),
+      jasmine.objectContaining({ contractId: 3, plate: 'BBB222' }),
+    ]);
+    expect(service.activeLoading()).toBeTrue();
+
+    finishFirstVehicle(null);
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+    expect(api.postOrNull).toHaveBeenCalledTimes(2);
+    expect(service.activeLoading()).toBeFalse();
   });
 
   it('checks every candidate before reporting that there is no active parking', async () => {
