@@ -7,6 +7,7 @@ import { OperationsService } from '../../core/services/operations.service';
 import { TranslationService } from '../../core/services/translation.service';
 import { VehicleService } from '../../core/services/vehicle.service';
 import { OpsSessionService } from '../../core/api/ops-session.service';
+import { AuthService } from '../../core/services/auth.service';
 import { AppShellComponent } from './app-shell.component';
 
 describe('AppShellComponent session data bootstrap', () => {
@@ -34,6 +35,10 @@ describe('AppShellComponent session data bootstrap', () => {
         { provide: OperationsService, useValue: operations },
         { provide: VehicleService, useValue: vehicles },
         { provide: OpsSessionService, useValue: { token: () => 'session-token' } },
+        {
+          provide: AuthService,
+          useValue: { user: signal({ name: 'Test', surname: 'User', email: 'test@example.com' }).asReadonly(), logout: () => undefined },
+        },
       ],
     })
       .overrideComponent(AppShellComponent, { set: { template: '', imports: [] } })
@@ -71,6 +76,10 @@ describe('AppShellComponent session data bootstrap', () => {
         { provide: OperationsService, useValue: operations },
         { provide: VehicleService, useValue: vehicles },
         { provide: OpsSessionService, useValue: { token: () => 'session-token' } },
+        {
+          provide: AuthService,
+          useValue: { user: signal({ name: 'Test', surname: 'User', email: 'test@example.com' }).asReadonly(), logout: () => undefined },
+        },
       ],
     })
       .overrideComponent(AppShellComponent, { set: { template: '', imports: [] } })

@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { Router, RouterOutlet, NavigationEnd, NavigationStart, NavigationCancel, NavigationError } from '@angular/router';
 import { filter, map, startWith } from 'rxjs/operators';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -15,6 +15,7 @@ import { OperationsService } from '../../core/services/operations.service';
 import { OpsSessionService } from '../../core/api/ops-session.service';
 import { VehicleService } from '../../core/services/vehicle.service';
 import { OperationType } from '../../shared/models/operation-type';
+import { AuthService } from '../../core/services/auth.service';
 
 const MAIN_TAB_PATHS = ['/app/home', '/app/parking', '/app/operations', '/app/account'];
 
@@ -73,6 +74,8 @@ const TITLE_KEYS: Record<string, string> = {
         <div class="app-shell-toolbar">
           <app-breadcrumb />
           <div class="app-shell-toolbar-actions">
+            <span class="connected-user" [title]="connectedUser()">{{ connectedUser() }}</span>
+            <button type="button" class="toolbar-logout" (click)="logout()">{{ 'account.logout' | translate }}</button>
             <app-lang-selector />
           </div>
         </div>
@@ -168,6 +171,31 @@ const TITLE_KEYS: Record<string, string> = {
         align-items: center;
         gap: 0.5rem;
       }
+      .connected-user {
+        max-width: 220px;
+        overflow: hidden;
+        color: var(--color-text);
+        font-size: var(--text-sm);
+        font-weight: var(--font-medium);
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .toolbar-logout {
+        min-height: 34px;
+        padding: 0.35rem 0.65rem;
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-pill);
+        background: var(--color-surface);
+        color: var(--color-primary);
+        cursor: pointer;
+        font: inherit;
+        font-size: var(--text-xs);
+        font-weight: var(--font-bold);
+      }
+      .toolbar-logout:hover,
+      .toolbar-logout:focus-visible {
+        border-color: var(--color-primary);
+      }
       app-lang-selector {
         display: block;
       }
@@ -185,6 +213,11 @@ export class AppShellComponent {
   private readonly operationsService = inject(OperationsService);
   private readonly vehicleService = inject(VehicleService);
   private readonly opsSession = inject(OpsSessionService);
+  private readonly authService = inject(AuthService);
+  readonly connectedUser = computed(() => {
+    const user = this.authService.user();
+    return [user.name, user.surname].filter(Boolean).join(' ').trim() || user.email;
+  });
   readonly routeTransitionLoading = signal(false);
   private readonly routeTransitionMinMs = 1000;
   private routeTransitionStartedAt = 0;
@@ -260,6 +293,10 @@ export class AppShellComponent {
   };
 
   showBack = () => true;
+
+  logout(): void {
+    void this.authService.logout();
+  }
 
   headerTitle = () => {
     const u = this.url();
