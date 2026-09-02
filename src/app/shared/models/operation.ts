@@ -38,6 +38,7 @@ export interface Operation {
   zoneName?: string;
   sectorId?: number;
   sectorName?: string;
+  sectorColor?: string;
   latitude?: number;
   longitude?: number;
   /** Backend classification: 1 = historical, 2 = active, 3 = future. */

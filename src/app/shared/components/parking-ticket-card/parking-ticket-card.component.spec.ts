@@ -33,6 +33,16 @@ describe('ParkingTicketCardComponent', () => {
     expect(fixture.nativeElement.querySelector('.btn-danger')).not.toBeNull();
   });
 
+  it('uses the parking sector color for the ticket header', async () => {
+    const fixture = TestBed.createComponent(ParkingTicketCardComponent);
+    fixture.componentRef.setInput('parking', { ...parking(undefined), sectorColor: '1E88E5' });
+
+    await fixture.whenStable();
+
+    const ticket = fixture.nativeElement.querySelector('.parking-ticket-card') as HTMLElement;
+    expect(ticket.style.getPropertyValue('--ticket-header-color')).toBe('#1E88E5');
+  });
+
   for (const refundable of [0, 1, undefined] as const) {
     it(`hides the unpark button when refundable is ${String(refundable)}`, async () => {
       const fixture = TestBed.createComponent(ParkingTicketCardComponent);

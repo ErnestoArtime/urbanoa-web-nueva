@@ -1,8 +1,9 @@
-import { Component, input, output } from '@angular/core';
+import { Component, computed, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { LucideCarFront, LucideNavigation, LucideTimerReset } from '@lucide/angular';
 import type { ActiveParking } from '../../../core/services/operations.service';
+import { normalizeSectorColor } from '../../../shared/utils/sector-color';
 
 @Component({
   selector: 'app-active-ticket-card',
@@ -11,7 +12,7 @@ import type { ActiveParking } from '../../../core/services/operations.service';
   template: `
     @if (ticket(); as active) {
       <div class="active-ticket-shell">
-        <div class="card active-ticket-card">
+        <div class="card active-ticket-card" [style.--ticket-header-color]="ticketHeaderColor()">
           <div class="ticket-main-row">
             <div class="ticket-main-icon" [style.--ticket-progress]="ticketProgress(active)">
               <svg class="ticket-progress-ring" viewBox="0 0 44 44" aria-hidden="true">
@@ -101,7 +102,7 @@ import type { ActiveParking } from '../../../core/services/operations.service';
         right: 0;
         height: 8px;
         border-radius: var(--radius-md) var(--radius-md) 0 0;
-        background: linear-gradient(90deg, #8f84f3 0%, #7971de 48%, #7469d2 100%);
+        background: var(--ticket-header-color, linear-gradient(90deg, #8f84f3 0%, #7971de 48%, #7469d2 100%));
       }
       .ticket-main-row {
         display: flex;
@@ -261,6 +262,7 @@ export class ActiveTicketCardComponent {
   readonly unpark = output<void>();
   readonly extend = output<void>();
   readonly goToCar = output<ActiveParking>();
+  readonly ticketHeaderColor = computed(() => normalizeSectorColor(this.ticket()?.sectorColor));
 
   hasCoordinates(ticket: ActiveParking): boolean {
     return Number.isFinite(ticket.latitude) && Number.isFinite(ticket.longitude);

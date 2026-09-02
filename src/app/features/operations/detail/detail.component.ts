@@ -11,6 +11,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { TranslationService } from '../../../core/services/translation.service';
 import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
 import { LocationMap } from '../../../shared/components/location-map/location-map';
+import { normalizeSectorColor } from '../../../shared/utils/sector-color';
 
 @Component({
   selector: 'app-operations-detail',
@@ -92,7 +93,7 @@ import { LocationMap } from '../../../shared/components/location-map/location-ma
           </header>
           @if (isTicketOperation()) {
             <div class="ticket-shell">
-              <article class="ticket-card">
+              <article class="ticket-card" [style.--ticket-header-color]="ticketHeaderColor()">
                 <div class="ticket-accent"></div>
                 <div class="ticket-header">
                   <app-operation-icon [type]="operation.type" />
@@ -303,7 +304,7 @@ import { LocationMap } from '../../../shared/components/location-map/location-ma
       .ticket-accent {
         height: 14px;
         border-radius: 16px 16px 0 0;
-        background: #248cda;
+        background: var(--ticket-header-color, #248cda);
       }
       .ticket-header {
         display: grid;
@@ -469,6 +470,7 @@ export class OperationsDetailComponent {
     return this.service.getOperationById(this.id());
   });
   readonly opType = computed(() => this.op()?.type ?? OperationType.PARKING);
+  readonly ticketHeaderColor = computed(() => normalizeSectorColor(this.op()?.sectorColor));
   readonly detailTitle = computed(() => {
     const labels: Partial<Record<OperationType, string>> = {
       [OperationType.PARKING]: 'ops.detail.parkingDetail',
