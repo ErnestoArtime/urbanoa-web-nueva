@@ -8,6 +8,7 @@ import { ParkingFlowQuery, readParkingFlowQuery } from '../parking-flow.model';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { WalletService } from '../../../core/services/wallet.service';
 import { ParkingApiService } from '../../../core/services/parking-api.service';
+import { ParkingTicketStoreService } from '../../../core/services/parking-ticket-store.service';
 
 @Component({
   selector: 'app-parking-confirm',
@@ -201,6 +202,7 @@ export class ParkingConfirmComponent implements OnInit {
   private readonly store = inject(ParkingFlowStore);
   readonly walletService = inject(WalletService);
   private readonly parkingApi = inject(ParkingApiService);
+  private readonly ticketStore = inject(ParkingTicketStoreService);
   @ViewChild(SwipeToPayComponent) swipePay!: SwipeToPayComponent;
   private readonly initialQuery = readParkingFlowQuery(this.route);
   readonly query = computed(() =>
@@ -273,6 +275,16 @@ export class ParkingConfirmComponent implements OnInit {
       paymentCardId: this.requiresCard() ? this.selectedCardId() : '',
       paymentCardLabel: this.requiresCard() ? `${this.selectedCard().brand} •••• ${this.selectedCard().last4}` : '',
     };
+
+    const ticketId = Number(this.query().ticketId || 0);
+    if (ticketId > 0) {
+      this.ticketStore.save({
+        plate: this.query().plate,
+        ticketId,
+        sectorId: Number(this.query().sectorId || 0) || undefined,
+        contractId: Number(this.query().cityId || 0) || undefined,
+      });
+    }
 
     this.loading.set(false);
     await this.router.navigate(['/app/parking/success'], { queryParams: paymentQuery });

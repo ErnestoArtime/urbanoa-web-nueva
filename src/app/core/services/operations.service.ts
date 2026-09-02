@@ -71,6 +71,7 @@ export interface ActiveParking {
   contractId?: number;
   tariffId?: number;
   sectorId?: number;
+  operationDate?: string;
   /** Mirrors the APK parking-status `extension` flag. */
   canExtend?: boolean;
 }
@@ -467,6 +468,7 @@ export class OperationsService {
       contractId,
       tariffId: status.tariffId,
       sectorId: Number(status.sector ?? 0) || undefined,
+      operationDate: status.operationDate,
       canExtend: status.extension !== 0,
     };
   }
