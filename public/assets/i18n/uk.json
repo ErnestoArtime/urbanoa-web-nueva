@@ -63,6 +63,8 @@
   "parking.map.vehicle": "uk_Vehículo",
   "parking.map.noVehicles": "uk_Sin vehículos disponibles",
   "parking.map.noVehiclesAvailable": "uk_No hay vehículos disponibles para aparcar.",
+  "parking.map.activeParkingHelpLabel": "uk_Información sobre aparcamientos activos",
+  "parking.map.activeParkingHelp": "uk_Este vehículo tiene un aparcamiento activo. Si aparcas en la misma zona, se ampliará el aparcamiento actual; si eliges otra zona, se creará un nuevo aparcamiento activo.",
   "parking.map.selectedZone": "uk_Ubicación seleccionada",
   "parking.map.selectHint": "uk_Mueve el mapa y coloca el marcador dentro de una zona.",
   "parking.map.parkHere": "uk_Aparcar aquí",

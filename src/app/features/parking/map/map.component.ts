@@ -66,6 +66,21 @@ interface MapParkingZone {
               <b class="vehicle-control-chevron" aria-hidden="true"></b>
             </button>
 
+            @if (selectedVehicle() && isParkedIn(selectedVehicle()!)) {
+              <button
+                type="button"
+                class="parking-behavior-help-trigger"
+                [attr.aria-expanded]="showParkingBehaviorHelp()"
+                [attr.aria-label]="'parking.map.activeParkingHelpLabel' | translate"
+                (click)="toggleParkingBehaviorHelp()"
+              >
+                i
+              </button>
+              @if (showParkingBehaviorHelp()) {
+                <p class="parking-behavior-help" role="status">{{ 'parking.map.activeParkingHelp' | translate }}</p>
+              }
+            }
+
             @if (hasAvailableVehicles()) {
               <div class="vehicle-selector-dropdown" [class.is-open]="showVehicleSelector()" role="listbox">
                 @for (v of vehicles(); track v.id) {
@@ -74,7 +89,6 @@ interface MapParkingZone {
                     class="vehicle-option"
                     [class.selected]="v === selectedVehicle()"
                     [class.parked]="isParkedIn(v)"
-                    [disabled]="isParkedIn(v)"
                     (click)="selectVehicle(v)"
                   >
                     <span>{{ v.plate }}</span>
@@ -190,6 +204,39 @@ interface MapParkingZone {
       }
       .vehicle-control-wrapper {
         position: relative;
+      }
+      .parking-behavior-help-trigger {
+        position: absolute;
+        z-index: 1002;
+        top: 14px;
+        right: 38px;
+        display: grid;
+        width: 24px;
+        height: 24px;
+        padding: 0;
+        place-items: center;
+        border: 1px solid var(--color-primary);
+        border-radius: 50%;
+        background: var(--color-surface);
+        color: var(--color-primary);
+        cursor: pointer;
+        font-weight: var(--font-bold);
+      }
+      .parking-behavior-help {
+        position: absolute;
+        z-index: 1001;
+        top: calc(100% + 0.45rem);
+        left: 0;
+        width: 100%;
+        margin: 0;
+        padding: 0.7rem 0.8rem;
+        border: 1px solid var(--color-primary);
+        border-radius: 10px;
+        background: var(--color-surface);
+        color: var(--color-text);
+        box-shadow: var(--shadow-md);
+        font-size: var(--text-xs);
+        line-height: 1.4;
       }
       .search-control {
         display: flex;
@@ -568,7 +615,7 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
   translateLabel(value?: string): string {
     return this.translationService.translateLabel(value);
   }
-  readonly availableVehicles = computed(() => this.vehicles().filter((vehicle) => !this.isParkedIn(vehicle)));
+  readonly availableVehicles = computed(() => this.vehicles());
   readonly hasAvailableVehicles = computed(() => this.availableVehicles().length > 0);
   readonly selectedVehicle = signal<Vehicle | null>(
     this.availableVehicles().find((vehicle) => vehicle.id === this.query.vehicleId || vehicle.plate === this.query.plate) ??
@@ -577,9 +624,10 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
   readonly canStartParking = computed(() => {
     const zone = this.selectedZone();
     const vehicle = this.selectedVehicle();
-    return Boolean(zone?.sectorId && vehicle && !this.isParkedIn(vehicle));
+    return Boolean(zone?.sectorId && vehicle);
   });
   readonly showVehicleSelector = signal(false);
+  readonly showParkingBehaviorHelp = signal(false);
   private readonly syncSelectedVehicle = effect(() => {
     const vehicleId = this.store.vm().vehicleId;
     const vehicle = this.availableVehicles().find((item) => item.id === vehicleId);
@@ -600,10 +648,15 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
     this.showVehicleSelector.update((value) => !value);
   }
 
+  toggleParkingBehaviorHelp(): void {
+    this.showParkingBehaviorHelp.update((value) => !value);
+  }
+
   selectVehicle(vehicle: Vehicle): void {
     this.selectedVehicle.set(vehicle);
     this.store.selectVehicle(vehicle.id, vehicle.plate);
     this.showVehicleSelector.set(false);
+    this.showParkingBehaviorHelp.set(false);
   }
 
   vehicleQueryParams(): Record<string, string> {

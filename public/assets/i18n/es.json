@@ -63,6 +63,8 @@
   "parking.map.vehicle": "Vehículo",
   "parking.map.noVehicles": "Sin vehículos disponibles",
   "parking.map.noVehiclesAvailable": "No hay vehículos disponibles para aparcar.",
+  "parking.map.activeParkingHelpLabel": "Información sobre aparcamientos activos",
+  "parking.map.activeParkingHelp": "Este vehículo tiene un aparcamiento activo. Si aparcas en la misma zona, se ampliará el aparcamiento actual; si eliges otra zona, se creará un nuevo aparcamiento activo.",
   "parking.map.selectedZone": "Ubicación seleccionada",
   "parking.map.selectHint": "Mueve el mapa y coloca el marcador dentro de una zona.",
   "parking.map.parkHere": "Aparcar aquí",

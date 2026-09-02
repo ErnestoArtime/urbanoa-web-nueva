@@ -5,7 +5,6 @@ import { filter, map, startWith } from 'rxjs/operators';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { ParkingFlowStore } from '../parking-flow.store';
 import { VehicleService } from '../../../core/services/vehicle.service';
-import { ParkingSessionService } from '../../../core/services/parking-session.service';
 import type { Vehicle } from '../../../shared/models/vehicle';
 
 interface WizardStep {
@@ -531,13 +530,8 @@ export class ParkingWizardLayoutComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly store = inject(ParkingFlowStore);
   private readonly vehicleService = inject(VehicleService);
-  private readonly parkingSessionService = inject(ParkingSessionService);
-  readonly hasAvailableVehicles = computed(() =>
-    this.vehicleService.vehicles().some((vehicle) => !this.parkingSessionService.isVehicleParked(vehicle.id)),
-  );
-  readonly availableVehicles = computed(() =>
-    this.vehicleService.vehicles().filter((vehicle) => !this.parkingSessionService.isVehicleParked(vehicle.id)),
-  );
+  readonly hasAvailableVehicles = computed(() => this.vehicleService.vehicles().length > 0);
+  readonly availableVehicles = computed(() => this.vehicleService.vehicles());
   readonly vehiclePickerOpen = signal(false);
   readonly steps: WizardStep[] = [
     { labelKey: 'parking.wizard.step1.label', hintKey: 'parking.wizard.step1.hint', path: '/app/parking' },
