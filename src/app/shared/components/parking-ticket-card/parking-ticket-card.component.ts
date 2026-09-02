@@ -53,9 +53,11 @@ export type ParkingTicketCardVariant = 'dashboard' | 'operations-current' | 'det
               <svg lucideNavigation class="action-btn-icon" size="19" strokeWidth="2"></svg>
               {{ 'dashboard.howToGetThere' | translate }}
             </button>
-            <button type="button" class="btn btn-danger btn-sm" (click)="leaveParking.emit(active)">
-              {{ 'dashboard.unpark' | translate }}
-            </button>
+            @if (active.refundable === 2) {
+              <button type="button" class="btn btn-danger btn-sm" (click)="leaveParking.emit(active)">
+                {{ 'dashboard.unpark' | translate }}
+              </button>
+            }
             <button type="button" class="btn btn-primary btn-sm" [disabled]="active.canExtend === false" (click)="extendTime.emit(active)">
               <svg lucideTimerReset class="action-btn-icon" size="19" strokeWidth="2"></svg>
               {{ 'dashboard.extendTime' | translate }}

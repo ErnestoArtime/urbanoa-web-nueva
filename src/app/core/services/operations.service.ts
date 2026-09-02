@@ -50,6 +50,8 @@ interface OperationResponseDto {
   fineAmount?: number | null;
   latitude?: number | null;
   longitude?: number | null;
+  timePeriod?: number | null;
+  refundable?: number | string | null;
 }
 
 export interface ActiveParking {
@@ -73,6 +75,8 @@ export interface ActiveParking {
   sectorId?: number;
   /** Mirrors the APK parking-status `extension` flag. */
   canExtend?: boolean;
+  /** Backend unpark option: only value 2 grants permission to unpark. */
+  refundable?: 0 | 1 | 2;
 }
 
 interface ParkingStatusResponseDto {
@@ -89,6 +93,7 @@ interface ParkingStatusResponseDto {
   longitude?: number;
   operationDate?: string;
   streetname?: string;
+  refundable?: number | null;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -102,13 +107,19 @@ export class OperationsService {
   private readonly _activeLoading = signal(false);
   private readonly operationsLoadsInFlight = new Map<string, Promise<void>>();
   private dashboardParkingStatusesInFlight: Promise<void> | null = null;
-  private firstActiveParkingSearchInFlight: Promise<boolean> | null = null;
   private activeLoadingRequests = 0;
 
   readonly operations = this._operations.asReadonly();
   readonly activeParkings = this._activeParkings.asReadonly();
   readonly activeParkingsCount = computed(() => this._activeParkings().length);
   readonly hasActiveParkings = computed(() => this._activeParkings().length > 0);
+  readonly activeParkingOperations = computed(() =>
+    this._operations().filter(
+      (operation) =>
+        operation.timePeriod === 2 && (operation.type === OperationType.PARKING || operation.type === OperationType.PARKING_EXTENSION),
+    ),
+  );
+  readonly hasActiveParkingOperations = computed(() => this.activeParkingOperations().length > 0);
   readonly activeLoading = this._activeLoading.asReadonly();
   readonly source = signal<'idle' | 'remote' | 'error'>('idle');
   readonly activeSource = signal<'idle' | 'remote' | 'error'>('idle');
@@ -191,90 +202,6 @@ export class OperationsService {
     });
     this.dashboardParkingStatusesInFlight = tracked;
     return tracked;
-  }
-
-  findFirstActiveParking(vehicles: readonly { id: string; plate: string }[]): Promise<boolean> {
-    if (this.firstActiveParkingSearchInFlight) return this.firstActiveParkingSearchInFlight;
-    const request = this.searchFirstActiveParking(vehicles);
-    const tracked = request.finally(() => {
-      if (this.firstActiveParkingSearchInFlight === tracked) this.firstActiveParkingSearchInFlight = null;
-    });
-    this.firstActiveParkingSearchInFlight = tracked;
-    return tracked;
-  }
-
-  private async searchFirstActiveParking(vehicles: readonly { id: string; plate: string }[]): Promise<boolean> {
-    const token = this.session.token();
-    if (!token) {
-      this._activeParkings.set([]);
-      this.activeSource.set('error');
-      return false;
-    }
-    if (vehicles.length === 0) {
-      this._activeParkings.set([]);
-      this.activeSource.set('remote');
-      return false;
-    }
-
-    const date = this.opsDate(this.api.serverNow ? this.api.serverNow() : new Date());
-    this.beginActiveLoading();
-    let failedVehicleCount = 0;
-    let activeParkingFound = false;
-    let sessionChanged = false;
-    let resolveFirstActive!: (found: boolean) => void;
-    const firstActive = new Promise<boolean>((resolve) => {
-      resolveFirstActive = resolve;
-    });
-
-    const vehicleSearches = vehicles.map(async (vehicle) => {
-      const contractIds = this.dashboardContractIds(vehicle);
-      let answered = contractIds.length === 0;
-
-      for (const contractId of contractIds) {
-        if (activeParkingFound) return;
-        if (this.session.token() !== token) {
-          sessionChanged = true;
-          return;
-        }
-        try {
-          const status = await this.api.postOrNull<ParkingStatusResponseDto>(
-            OPS_ENDPOINTS.parking.parkingStatus,
-            { contractId, plate: vehicle.plate, date },
-            { token },
-          );
-          if (activeParkingFound) return;
-          if (this.session.token() !== token) {
-            sessionChanged = true;
-            return;
-          }
-          answered = true;
-          if (status?.status === 2) {
-            activeParkingFound = true;
-            this.upsertActiveParking(this.mapParkingStatus(vehicle, contractId, status));
-            this.activeSource.set('remote');
-            resolveFirstActive(true);
-            return;
-          }
-        } catch {
-          // Error de red/backend para este contrato: se prueba el siguiente.
-        }
-      }
-
-      if (answered) {
-        this.removeActiveParking(vehicle.plate);
-      } else {
-        failedVehicleCount += 1;
-      }
-    });
-
-    const allSearchesFinished = Promise.all(vehicleSearches).then(() => {
-      if (activeParkingFound) return true;
-      this.activeSource.set(!sessionChanged && failedVehicleCount === 0 ? 'remote' : 'error');
-      return false;
-    });
-    void allSearchesFinished.finally(() => this.endActiveLoading());
-
-    return Promise.race([firstActive, allSearchesFinished]);
   }
 
   private async loadParkingStatusesFromContracts(
@@ -468,6 +395,7 @@ export class OperationsService {
       tariffId: status.tariffId,
       sectorId: Number(status.sector ?? 0) || undefined,
       canExtend: status.extension !== 0,
+      refundable: this.refundableOption(status.refundable),
     };
   }
 
@@ -552,7 +480,14 @@ export class OperationsService {
       sectorName: item.sectorDesc ?? undefined,
       latitude: item.latitude ?? undefined,
       longitude: item.longitude ?? undefined,
+      timePeriod: [1, 2, 3].includes(item.timePeriod ?? 0) ? (item.timePeriod as 1 | 2 | 3) : undefined,
+      refundable: this.refundableOption(item.refundable),
     };
+  }
+
+  private refundableOption(value: number | string | null | undefined): 0 | 1 | 2 | undefined {
+    const normalized = Number(value);
+    return normalized === 0 || normalized === 1 || normalized === 2 ? normalized : undefined;
   }
 
   private datePartOptional(value: string | null | undefined): string | undefined {

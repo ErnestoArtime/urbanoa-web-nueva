@@ -40,4 +40,8 @@ export interface Operation {
   sectorName?: string;
   latitude?: number;
   longitude?: number;
+  /** Backend classification: 1 = historical, 2 = active, 3 = future. */
+  timePeriod?: 1 | 2 | 3;
+  /** Backend unpark option: 0 = hidden, 1 = disabled, 2 = enabled. */
+  refundable?: 0 | 1 | 2;
 }
