@@ -109,19 +109,6 @@ import { ParkingTicketCardComponent } from '../../../shared/components/parking-t
 
           <section class="actions-section">
             <a
-              routerLink="/app/operations/unpaid-fines"
-              [class.active]="isUnpaidFinesRoute()"
-              [attr.aria-current]="isUnpaidFinesRoute() ? 'page' : null"
-              class="list-item action-item"
-            >
-              <div class="list-item-content">
-                <div class="list-item-title">
-                  {{ 'ops.unpaidFines.title' | translate: { count: unpaidFinesCount() } }}
-                </div>
-              </div>
-              <span class="list-item-chevron">›</span>
-            </a>
-            <a
               routerLink="/app/operations/report"
               routerLinkActive="active"
               [routerLinkActiveOptions]="{ exact: false }"
@@ -225,6 +212,11 @@ import { ParkingTicketCardComponent } from '../../../shared/components/parking-t
   `,
   styles: [
     `
+      :host {
+        display: block;
+        height: 100%;
+        min-height: 0;
+      }
       .list-item.active {
         background: rgba(93, 154, 150, 0.16);
         color: var(--color-primary-dark);

@@ -16,7 +16,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
               <div class="list-item-content">
                 <div class="list-item-title">{{ 'ops.fineDetail.sanction' | translate }} · {{ fine.plate }}</div>
                 <div class="list-item-subtitle">{{ fine.location }}</div>
-                <div class="list-item-subtitle">{{ fine.date }} · {{ 'ops.fineDetail.status.' + fine.status | translate }}</div>
+                <div class="list-item-subtitle">{{ fine.date }}</div>
               </div>
               <span class="badge badge-error">{{ fine.amount }}</span>
             </a>

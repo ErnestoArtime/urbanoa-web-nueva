@@ -180,23 +180,12 @@ import { TranslationService } from '../../../core/services/translation.service';
       }
       .fine-ticket-card {
         --ticket-notch-r: 10px;
-        --ticket-cut-y: 116px;
         position: relative;
         overflow: hidden;
         border: 1px solid var(--color-border);
         border-radius: 16px;
         background: var(--color-surface);
         box-shadow: none;
-        -webkit-mask:
-          radial-gradient(circle at 0 var(--ticket-cut-y), transparent 0 var(--ticket-notch-r), #000 calc(var(--ticket-notch-r) + 1px)) left
-            top / 51% 100% no-repeat,
-          radial-gradient(circle at 100% var(--ticket-cut-y), transparent 0 var(--ticket-notch-r), #000 calc(var(--ticket-notch-r) + 1px))
-            right top / 51% 100% no-repeat;
-        mask:
-          radial-gradient(circle at 0 var(--ticket-cut-y), transparent 0 var(--ticket-notch-r), #000 calc(var(--ticket-notch-r) + 1px)) left
-            top / 51% 100% no-repeat,
-          radial-gradient(circle at 100% var(--ticket-cut-y), transparent 0 var(--ticket-notch-r), #000 calc(var(--ticket-notch-r) + 1px))
-            right top / 51% 100% no-repeat;
       }
       .fine-ticket-accent {
         height: 10px;
@@ -217,14 +206,36 @@ import { TranslationService } from '../../../core/services/translation.service';
       }
       .fine-ticket-cut {
         position: relative;
+        box-sizing: border-box;
         height: 20px;
         display: flex;
         align-items: center;
-        margin: 0 calc(var(--ticket-notch-r) + 5px);
+        padding-inline: calc(var(--ticket-notch-r) + 5px);
         background-image: linear-gradient(to right, rgba(149, 156, 146, 0.62) 50%, transparent 0);
+        background-clip: content-box;
+        background-origin: content-box;
         background-position: center;
         background-repeat: repeat-x;
         background-size: 8px 3px;
+      }
+      .fine-ticket-cut::before,
+      .fine-ticket-cut::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        z-index: 1;
+        width: calc(var(--ticket-notch-r) * 2);
+        height: calc(var(--ticket-notch-r) * 2);
+        border: 1px solid var(--color-border);
+        border-radius: 50%;
+        background: var(--color-background);
+        transform: translateY(-50%);
+      }
+      .fine-ticket-cut::before {
+        left: calc(-1 * var(--ticket-notch-r) - 1px);
+      }
+      .fine-ticket-cut::after {
+        right: calc(-1 * var(--ticket-notch-r) - 1px);
       }
       .fine-ticket-total {
         display: flex;
