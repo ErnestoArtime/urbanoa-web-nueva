@@ -1,6 +1,7 @@
 import { provideZonelessChangeDetection } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { OpsApiClient } from '../api/ops-api-client.service';
+import { OpsApiError } from '../api/ops-api.types';
 import { OpsSessionService } from '../api/ops-session.service';
 import { VehicleService } from './vehicle.service';
 
@@ -78,7 +79,11 @@ describe('VehicleService', () => {
 
     const result = await service.add({ plate: ' 9999 xyz ', isDefault: true });
 
-    expect(api.post.calls.argsFor(0)).toEqual(['OPSWebServicesAPI/AddUserPlateAPI', { plate: '9999 XYZ' }, { token: 'token' }]);
+    expect(api.post.calls.argsFor(0)).toEqual([
+      'OPSWebServicesAPI/AddUserPlateAPI',
+      { plate: '9999 XYZ', favorite: 1 },
+      { token: 'token' },
+    ]);
     expect(api.post.calls.argsFor(1)).toEqual([
       'OPSWebServicesAPI/UpdateUserPlateAPI',
       { plate: '9999 XYZ', favorite: 1 },
@@ -182,17 +187,31 @@ describe('VehicleService', () => {
     expect(service.vehicles()).toEqual([]);
   });
 
-  it('clears plates and records the failure when the plates request fails', async () => {
+  it('treats the known QueryUserPlatesAPI HTTP 500-for-empty-account quirk as a real empty list', async () => {
     localStorage.setItem('urbanoa.vehicles', JSON.stringify([{ id: '7777 KKK', plate: '7777 KKK', isDefault: false }]));
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'getOrNull', 'post']);
-    api.getOrNull.and.rejectWith(new Error('HTTP 500 - {"Message":"Error."}'));
+    api.getOrNull.and.rejectWith(new OpsApiError('http', 'OPSWebServicesAPI/QueryUserPlatesAPI', 'HTTP 500 - {"Message":"Error."}', 500));
     const service = serviceWith(api);
     TestBed.inject(OpsSessionService).setToken('token');
 
     await service.load();
 
-    expect(service.source()).toBe('error');
-    expect(service.lastError()).toBeTruthy();
+    expect(service.source()).toBe('remote');
+    expect(service.lastError()).toBeNull();
+    expect(service.vehicles()).toEqual([]);
+  });
+
+  it('treats any other plates load failure (network, backend, ...) as an empty list too', async () => {
+    localStorage.setItem('urbanoa.vehicles', JSON.stringify([{ id: '7777 KKK', plate: '7777 KKK', isDefault: false }]));
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'getOrNull', 'post']);
+    api.getOrNull.and.rejectWith(new OpsApiError('transport', 'OPSWebServicesAPI/QueryUserPlatesAPI', 'Network error'));
+    const service = serviceWith(api);
+    TestBed.inject(OpsSessionService).setToken('token');
+
+    await service.load();
+
+    expect(service.source()).toBe('remote');
+    expect(service.lastError()).toBeNull();
     expect(service.vehicles()).toEqual([]);
   });
 
@@ -205,7 +224,11 @@ describe('VehicleService', () => {
 
     const result = await service.add({ plate: '9999 XYZ', isDefault: false });
 
-    expect(api.post.calls.argsFor(0)).toEqual(['OPSWebServicesAPI/AddUserPlateAPI', { plate: '9999 XYZ' }, { token: 'token' }]);
+    expect(api.post.calls.argsFor(0)).toEqual([
+      'OPSWebServicesAPI/AddUserPlateAPI',
+      { plate: '9999 XYZ', favorite: 0 },
+      { token: 'token' },
+    ]);
     expect(api.post.calls.argsFor(1)).toEqual([
       'OPSWebServicesAPI/UpdateUserPlateAPI',
       { plate: '9999 XYZ', favorite: 1 },
@@ -213,6 +236,31 @@ describe('VehicleService', () => {
     ]);
     expect(service.vehicles().find((v) => v.plate === '9999 XYZ')?.isDefault).toBeTrue();
     expect(result.source).toBe('remote');
+  });
+
+  it('preserves the current favorite status when renaming a non-default plate', async () => {
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'getOrNull', 'post']);
+    api.getOrNull.and.resolveTo({
+      plates: [
+        { plate: '1234 ABC', favorite: true },
+        { plate: '5678 XYZ', favorite: false },
+      ],
+    });
+    api.post.and.resolveTo('OK');
+    const service = serviceWith(api);
+    TestBed.inject(OpsSessionService).setToken('token');
+    await service.load();
+    const nonFavorite = service.vehicles().find((v) => !v.isDefault)!;
+    api.post.calls.reset();
+
+    await service.update(nonFavorite.id, { plate: '9999 ZZZ' });
+
+    expect(api.post.calls.argsFor(0)).toEqual(['OPSWebServicesAPI/RemoveUserPlateAPI', { plate: '5678 XYZ' }, { token: 'token' }]);
+    expect(api.post.calls.argsFor(1)).toEqual([
+      'OPSWebServicesAPI/AddUserPlateAPI',
+      { plate: '9999 ZZZ', favorite: 0 },
+      { token: 'token' },
+    ]);
   });
 
   it('rejects a local-only plate when login is postponed', async () => {

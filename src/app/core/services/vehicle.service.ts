@@ -56,7 +56,7 @@ export class VehicleService {
     }
 
     try {
-      const value = await this.api.getOrNull<PlatesApiValue>(OPS_ENDPOINTS.user.plates, { token });
+      const value = await this.fetchPlates(token);
       if (value === null || !Array.isArray(value.plates)) {
         this.state.set([]);
       } else {
@@ -68,6 +68,17 @@ export class VehicleService {
     } catch (error) {
       this.state.set([]);
       this.useError(error, OPS_ENDPOINTS.user.plates);
+    }
+  }
+
+  private async fetchPlates(token: string): Promise<PlatesApiValue | null> {
+    try {
+      return await this.api.getOrNull<PlatesApiValue>(OPS_ENDPOINTS.user.plates, { token });
+    } catch {
+      // Any failure loading plates (network, backend error, the confirmed HTTP 500-for-empty-account
+      // quirk, etc.) is treated as "no plates yet" — the list screen always shows either the real
+      // list or a normal empty state with the add-vehicle action, never a load-error banner.
+      return null;
     }
   }
 
@@ -83,7 +94,7 @@ export class VehicleService {
 
   async add(input: Omit<Vehicle, 'id'>): Promise<VehicleMutationResult> {
     const plate = this.normalizePlate(input.plate);
-    const result = await this.remoteMutation(OPS_ENDPOINTS.user.addPlate, { plate });
+    const result = await this.remoteMutation(OPS_ENDPOINTS.user.addPlate, { plate, favorite: input.isDefault ? 1 : 0 });
     if (!result.success) return result;
 
     const vehicle: Vehicle = { ...input, plate, isDefault: false, id: generateUuid() };
@@ -103,7 +114,9 @@ export class VehicleService {
 
     if (nextPlate !== current.plate) {
       result = await this.remoteMutation(OPS_ENDPOINTS.user.removePlate, { plate: current.plate });
-      if (result.success) result = await this.remoteMutation(OPS_ENDPOINTS.user.addPlate, { plate: nextPlate });
+      if (result.success) {
+        result = await this.remoteMutation(OPS_ENDPOINTS.user.addPlate, { plate: nextPlate, favorite: current.isDefault ? 1 : 0 });
+      }
       if (!result.success) return result;
     }
 

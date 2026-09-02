@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { APP_BRAND } from '../../../shared/constants/app-brand';
 import { LocationSettingsService } from '../../../core/services/location-settings.service';
 import { CitiesService } from '../../../core/services/cities.service';
+import { UserService } from '../../../core/services/user.service';
 import type { Municipio } from '../../../shared/models/municipio';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 
@@ -114,13 +115,15 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 export class OnboardingLocationComponent {
   private readonly router = inject(Router);
   private readonly locationService = inject(LocationSettingsService);
+  private readonly citiesService = inject(CitiesService);
+  private readonly userService = inject(UserService);
   readonly brand = APP_BRAND;
   readonly municipios = signal<Municipio[]>([]);
   readonly showCityPicker = signal(false);
   readonly message = signal('');
 
   constructor() {
-    void inject(CitiesService)
+    void this.citiesService
       .getCities()
       .then((result) => this.municipios.set(result.data))
       .catch(() => this.municipios.set([]));
@@ -139,6 +142,7 @@ export class OnboardingLocationComponent {
 
   selectCity(id: string, name: string): void {
     this.locationService.setPreferredCity(id, name);
+    void this.userService.updatePreferredContract(this.citiesService.contractIdFor(id));
     this.showCityPicker.set(false);
     this.message.set('onboarding.location.citySavedRedirect');
     setTimeout(() => void this.router.navigate(['/onboarding/notification']), 1000);

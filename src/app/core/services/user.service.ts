@@ -131,6 +131,11 @@ export class UserService {
     return result;
   }
 
+  async updatePreferredContract(contractId: number): Promise<UserMutationResult> {
+    this.remoteProfile = { ...(this.remoteProfile ?? {}), contractId };
+    return this.remoteUpdate(this.state());
+  }
+
   updateLocal(changes: Partial<UserData>): void {
     const current = this.state();
     this.state.set({
@@ -214,5 +219,4 @@ export class UserService {
       addressLetterNumber: user.address.letter,
     };
   }
-
 }
