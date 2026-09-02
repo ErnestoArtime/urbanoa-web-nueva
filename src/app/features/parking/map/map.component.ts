@@ -2,7 +2,7 @@ import { AfterViewInit, Component, ElementRef, OnDestroy, ViewChild, computed, e
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import * as L from 'leaflet';
 import { LucideCarFront, LucideStar } from '@lucide/angular';
-import type { Vehicle } from '../../../shared/models/vehicle';
+import { preferredVehicle, type Vehicle } from '../../../shared/models/vehicle';
 import { LoaderComponent } from '../../../shared/components/loader/loader.component';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { ParkingFlowStore } from '../parking-flow.store';
@@ -572,8 +572,7 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
   readonly hasAvailableVehicles = computed(() => this.availableVehicles().length > 0);
   readonly selectedVehicle = signal<Vehicle | null>(
     this.availableVehicles().find((vehicle) => vehicle.id === this.query.vehicleId || vehicle.plate === this.query.plate) ??
-      this.availableVehicles()[0] ??
-      null,
+      preferredVehicle(this.availableVehicles()),
   );
   readonly canStartParking = computed(() => {
     const zone = this.selectedZone();
@@ -628,8 +627,7 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
       await this.parkingSessionService.loadParkingStatuses(this.vehicles(), selected.contractId);
       this.selectedVehicle.set(
         this.availableVehicles().find((vehicle) => vehicle.id === this.query.vehicleId || vehicle.plate === this.query.plate) ??
-          this.availableVehicles()[0] ??
-          null,
+          preferredVehicle(this.availableVehicles()),
       );
     } catch {
       this.mapError.set(true);
