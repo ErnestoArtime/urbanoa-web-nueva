@@ -12,6 +12,7 @@ import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 import { BreadcrumbService } from '../../core/services/breadcrumb.service';
 import { TranslationService } from '../../core/services/translation.service';
 import { OperationsService } from '../../core/services/operations.service';
+import { OpsSessionService } from '../../core/api/ops-session.service';
 import { VehicleService } from '../../core/services/vehicle.service';
 import { OperationType } from '../../shared/models/operation-type';
 
@@ -109,9 +110,16 @@ const TITLE_KEYS: Record<string, string> = {
       position: relative;
     }
     .app-shell-content {
+      display: flex;
+      min-height: 0;
+      flex-direction: column;
       flex: 1;
       overflow-y: auto;
+    }
+    :host ::ng-deep .app-shell-content > app-parking-wizard-layout {
+      display: block;
       min-height: 0;
+      flex: 1 1 auto;
     }
     .app-shell-content.with-bottom-nav {
       padding-bottom: var(--bottom-nav-height);
@@ -176,6 +184,7 @@ export class AppShellComponent {
   private readonly translationService = inject(TranslationService);
   private readonly operationsService = inject(OperationsService);
   private readonly vehicleService = inject(VehicleService);
+  private readonly opsSession = inject(OpsSessionService);
   readonly routeTransitionLoading = signal(false);
   private readonly routeTransitionMinMs = 1000;
   private routeTransitionStartedAt = 0;
@@ -227,10 +236,17 @@ export class AppShellComponent {
   }
 
   private async initializeSessionData(): Promise<void> {
+    const sessionToken = this.opsSession.token();
+    if (!sessionToken || !this.isAppRoute()) return;
     await Promise.all([this.operationsService.load(), this.vehicleService.load()]);
+    if (this.opsSession.token() !== sessionToken || !this.isAppRoute()) return;
     const currentPath = this.router.url.split(/[?#]/, 1)[0].replace(/\/+$/, '');
     if (currentPath === '/app') return;
     await this.operationsService.loadDashboardParkingStatuses(this.vehicleService.vehicles());
+  }
+
+  private isAppRoute(): boolean {
+    return this.router.url.split(/[?#]/, 1)[0].replace(/\/+$/, '') === '/app' || this.router.url.startsWith('/app/');
   }
 
   showBottomNav = () => {

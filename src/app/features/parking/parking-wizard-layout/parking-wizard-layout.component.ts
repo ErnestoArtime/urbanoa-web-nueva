@@ -159,7 +159,9 @@ interface WizardStep {
             </div>
           }
         </header>
-        <router-outlet />
+        <div class="wizard-route">
+          <router-outlet />
+        </div>
       </section>
     </div>
   `,
@@ -306,8 +308,18 @@ interface WizardStep {
       .wizard-detail.map-step {
         display: flex;
         flex-direction: column;
+        overflow: hidden;
       }
-      :host ::ng-deep .wizard-detail.map-step > app-parking-map {
+      .wizard-route {
+        min-height: 0;
+      }
+      .wizard-detail.map-step > .wizard-route {
+        display: flex;
+        flex: 1;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      :host ::ng-deep .wizard-detail.map-step .wizard-route > app-parking-map {
         flex: 1;
         min-height: 0;
       }
@@ -489,6 +501,7 @@ interface WizardStep {
           color: var(--color-text-muted);
         }
         .wizard-detail {
+          box-sizing: border-box;
           height: calc(100% - 1.1rem);
           margin: 0.55rem;
           overflow-y: auto;
@@ -499,7 +512,13 @@ interface WizardStep {
         .wizard-mobile-head {
           display: none;
         }
-        :host ::ng-deep .wizard-detail > app-parking-map {
+        :host ::ng-deep .wizard-route > app-parking-cities,
+        :host ::ng-deep .wizard-route > app-parking-streets {
+          display: block;
+          min-height: 0;
+          height: 100%;
+        }
+        :host ::ng-deep .wizard-detail .wizard-route > app-parking-map {
           display: block;
           height: 100%;
         }

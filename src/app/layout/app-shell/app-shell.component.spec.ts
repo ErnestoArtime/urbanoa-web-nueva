@@ -6,6 +6,7 @@ import { BreadcrumbService } from '../../core/services/breadcrumb.service';
 import { OperationsService } from '../../core/services/operations.service';
 import { TranslationService } from '../../core/services/translation.service';
 import { VehicleService } from '../../core/services/vehicle.service';
+import { OpsSessionService } from '../../core/api/ops-session.service';
 import { AppShellComponent } from './app-shell.component';
 
 describe('AppShellComponent session data bootstrap', () => {
@@ -32,6 +33,7 @@ describe('AppShellComponent session data bootstrap', () => {
         { provide: TranslationService, useValue: { translate: (key: string) => key } },
         { provide: OperationsService, useValue: operations },
         { provide: VehicleService, useValue: vehicles },
+        { provide: OpsSessionService, useValue: { token: () => 'session-token' } },
       ],
     })
       .overrideComponent(AppShellComponent, { set: { template: '', imports: [] } })
@@ -68,6 +70,7 @@ describe('AppShellComponent session data bootstrap', () => {
         { provide: TranslationService, useValue: { translate: (key: string) => key } },
         { provide: OperationsService, useValue: operations },
         { provide: VehicleService, useValue: vehicles },
+        { provide: OpsSessionService, useValue: { token: () => 'session-token' } },
       ],
     })
       .overrideComponent(AppShellComponent, { set: { template: '', imports: [] } })

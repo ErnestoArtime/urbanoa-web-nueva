@@ -110,6 +110,19 @@ const EMPTY_CITY: ParkingMunicipio = {
   `,
   styles: [
     `
+      :host {
+        display: block;
+        height: 100%;
+        min-height: 0;
+      }
+
+      .page {
+        box-sizing: border-box;
+        height: 100%;
+        min-height: 0;
+        overflow: hidden;
+      }
+
       .municipios-layout {
         display: grid;
         gap: 1rem;
@@ -300,17 +313,47 @@ const EMPTY_CITY: ParkingMunicipio = {
       }
 
       @media (min-width: 1024px) {
+        .page {
+          display: flex;
+          min-height: 0;
+          flex-direction: column;
+          overflow: hidden;
+        }
+
         .municipios-layout {
+          min-height: 0;
+          flex: 1;
+          height: 100%;
           grid-template-columns: minmax(0, 1fr) 320px;
+          grid-template-rows: minmax(0, 1fr);
           align-items: start;
         }
 
+        .municipios-grid {
+          min-height: 0;
+          overflow-y: auto;
+          align-content: start;
+          padding-right: 0.25rem;
+        }
+
         .municipio-detail {
-          position: sticky;
-          top: 1rem;
+          display: flex;
+          height: 100%;
+          min-height: 0;
+          flex-direction: column;
+          box-sizing: border-box;
+          overflow: hidden;
+        }
+
+        .municipio-detail ul {
+          flex: 1;
+          min-height: 0;
+          overflow-y: auto;
+          margin-bottom: 0.75rem;
         }
 
         .sticky-actions {
+          flex-shrink: 0;
           display: grid;
           gap: 0.65rem;
         }
