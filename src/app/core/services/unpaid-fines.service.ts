@@ -111,11 +111,13 @@ export class UnpaidFinesService {
         : undefined;
     const street = [operation.fineStreet, operation.fineStreetNumber].filter(Boolean).join(' ');
     const location = [operation.zoneName ?? operation.zone, operation.sectorName, street].filter(Boolean).join(' · ');
+    const time = operation.startTime ?? operation.endTime;
+    const date = time ? `${operation.date} | ${time}` : operation.date;
     return {
       id: operation.id,
       fineNumber: operation.fineNumber ?? operation.id,
       plate: operation.plate ?? '',
-      date: operation.date,
+      date,
       processingDate: operation.fineProcessingDate,
       amount: this.formatCurrency(amountValue),
       amountValue,

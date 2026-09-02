@@ -666,9 +666,14 @@ export class OperationsLayoutComponent implements OnInit {
 
   private applyFilter(list: Operation[]): Operation[] {
     const { from, to } = this.rangeFilter();
-    /* fines was filtered */
-    const history = list /*.filter((op) => op.type !== OperationType.UNPAID_FINES);*/
-    const sorted = [...history].sort((a, b) => this.toDateValue(b.date) - this.toDateValue(a.date));
+    const history = list.filter((op) => op.type !== OperationType.UNPAID_FINES);
+    const sorted = [...history].sort((a, b) => {
+      const diff = this.toDateValue(b.date) - this.toDateValue(a.date);
+      if (diff !== 0) return diff;
+      const aTime = a.startTime ?? a.endTime ?? '';
+      const bTime = b.startTime ?? b.endTime ?? '';
+      return bTime.localeCompare(aTime);
+    });
 
     if (!from && !to) {
       return sorted;
