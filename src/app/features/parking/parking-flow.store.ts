@@ -3,6 +3,19 @@ import { ActivatedRoute } from '@angular/router';
 import { ParkingFlowQuery } from './parking-flow.model';
 import type { ParkingTimeStep, ParkingPaymentSummary } from './models/parking-time-step.model';
 
+export interface ExtensionParkingContext {
+  plate: string;
+  vehicleId: string;
+  zone: string;
+  contractId?: number;
+  tariffId?: number;
+  sectorId?: number;
+  sectorColor?: string;
+  street?: string;
+  latitude?: number;
+  longitude?: number;
+}
+
 export interface ParkingFlowState {
   city: string;
   cityId: string;
@@ -67,6 +80,27 @@ export class ParkingFlowStore {
 
   reset(): void {
     this.state.set({});
+  }
+
+  startExtension(parking: ExtensionParkingContext): boolean {
+    if (!parking.plate || !parking.contractId || !parking.tariffId || !parking.sectorId) return false;
+
+    this.state.set({
+      cityId: String(parking.contractId),
+      plate: parking.plate,
+      vehicleId: parking.vehicleId,
+      zoneId: String(parking.sectorId),
+      zoneName: parking.zone,
+      sectorId: String(parking.sectorId),
+      sectorName: parking.zone,
+      sectorColor: parking.sectorColor ?? '',
+      street: parking.street ?? '',
+      ticketId: String(parking.tariffId),
+      tariffId: String(parking.tariffId),
+      latitude: parking.latitude == null ? '' : String(parking.latitude),
+      longitude: parking.longitude == null ? '' : String(parking.longitude),
+    });
+    return true;
   }
 
   hasLocationData(): boolean {

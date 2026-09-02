@@ -52,6 +52,9 @@ interface OperationResponseDto {
   longitude?: number | null;
   timePeriod?: number | null;
   refundable?: number | string | null;
+  extension?: number | string | null;
+  ticketId?: number | null;
+  ticketDesc?: string | null;
 }
 
 export interface ActiveParking {
@@ -320,10 +323,10 @@ export class OperationsService {
       longitude: operation.longitude,
       operationId: operation.id,
       contractId: operation.contractId,
-      tariffId: undefined,
+      tariffId: operation.ticketId,
       sectorId: operation.sectorId,
       sectorColor: operation.sectorColor,
-      canExtend: true,
+      canExtend: operation.extension === undefined ? true : operation.extension === 2,
       refundable: operation.refundable,
     };
   }
@@ -445,7 +448,9 @@ export class OperationsService {
       sectorColor: status.sectorColor,
       operationDate: status.operationDate,
       canExtend: status.extension !== 0,
-      refundable: this.refundableOption(status.refundable),
+      // ParkingStatusAPI is boolean-like (1 = allowed), unlike the 0/1/2
+      // visibility option returned by QueryUserOperationsAPI.
+      refundable: status.refundable === 1 ? 2 : 0,
     };
   }
 
@@ -533,6 +538,9 @@ export class OperationsService {
       longitude: item.longitude ?? undefined,
       timePeriod: [1, 2, 3].includes(item.timePeriod ?? 0) ? (item.timePeriod as 1 | 2 | 3) : undefined,
       refundable: this.refundableOption(item.refundable),
+      extension: this.refundableOption(item.extension),
+      ticketId: item.ticketId ?? undefined,
+      ticketName: item.ticketDesc ?? undefined,
     };
   }
 

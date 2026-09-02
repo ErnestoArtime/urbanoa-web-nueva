@@ -101,12 +101,12 @@ describe('OperationsService stored data migration', () => {
     expect(service.operations()[0]).toEqual(jasmine.objectContaining({ sectorColor: 'E53935' }));
   });
 
-  it('uses the parking status refundable option for the active parking', async () => {
+  it('maps the parking-status refundable flag to an enabled unpark action', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['postOrNull']);
     api.postOrNull.and.resolveTo({
       status: 2,
       extension: 0,
-      refundable: 2,
+      refundable: 1,
       tariffId: 4,
       dateInitial: '175900280826',
       dateEnd: '185900280826',

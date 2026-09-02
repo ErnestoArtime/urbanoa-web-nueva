@@ -78,4 +78,39 @@ describe('ParkingFlowStore', () => {
 
     expect(store.canConfirm()).toBeTrue();
   });
+
+  it('starts an extension with the active parking context required by the time-step guard', () => {
+    const store = new ParkingFlowStore();
+
+    store.startExtension({
+      plate: 'AAA123456',
+      vehicleId: 'vehicle-1',
+      zone: 'Z2 AZUL',
+      contractId: 3,
+      tariffId: 4,
+      sectorId: 22002,
+      sectorColor: '1E88E5',
+      street: 'Kale Nagusia',
+      latitude: 43.28,
+      longitude: -2.17,
+    });
+
+    expect(store.hasLocationData()).toBeTrue();
+    expect(store.hasTicketData()).toBeTrue();
+    expect(store.fromStore()).toEqual(
+      jasmine.objectContaining({
+        cityId: '3',
+        plate: 'AAA123456',
+        vehicleId: 'vehicle-1',
+        zoneId: '22002',
+        zone: 'Z2 AZUL',
+        sectorId: '22002',
+        tariffId: '4',
+        ticketId: '4',
+        street: 'Kale Nagusia',
+        latitude: '43.28',
+        longitude: '-2.17',
+      }),
+    );
+  });
 });

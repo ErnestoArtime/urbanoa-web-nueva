@@ -16,6 +16,7 @@ import { ProfileProgressCardComponent } from './components/profile-progress-card
 import { ResultModalComponent } from '../../shared/components/result-modal/result-modal.component';
 import { VehicleService } from '../../core/services/vehicle.service';
 import { DashboardApiService } from '../../core/services/dashboard-api.service';
+import { ParkingFlowStore } from '../parking/parking-flow.store';
 
 @Component({
   selector: 'app-home',
@@ -84,7 +85,7 @@ import { DashboardApiService } from '../../core/services/dashboard-api.service';
               <app-parking-ticket-card
                 [parking]="activeParkings()[0]"
                 (leaveParking)="confirmUnparkFor($event)"
-                (extendTime)="onExtend()"
+                (extendTime)="onExtend($event)"
                 (goToCar)="onGoToCar($event)"
               />
             } @else if (activeParkings().length > 1) {
@@ -98,7 +99,7 @@ import { DashboardApiService } from '../../core/services/dashboard-api.service';
                   <app-parking-ticket-card
                     [parking]="parking"
                     (leaveParking)="confirmUnparkFor($event)"
-                    (extendTime)="onExtend()"
+                    (extendTime)="onExtend($event)"
                     (goToCar)="onGoToCar($event)"
                   />
                 }
@@ -402,6 +403,7 @@ export class HomeComponent {
   private readonly navigationToCar = inject(NavigationToCarService);
   private readonly vehicleService = inject(VehicleService);
   private readonly dashboardApi = inject(DashboardApiService);
+  private readonly parkingFlowStore = inject(ParkingFlowStore);
   readonly user = this.userService.user;
   readonly fullName = computed(() => `${this.user().name} ${this.user().surname}`);
   readonly activeParkings = this.parkingSessionService.activeParkings;
@@ -448,8 +450,9 @@ export class HomeComponent {
     }
   }
 
-  onExtend(): void {
-    this.router.navigate(['/app/parking/time-steps']);
+  onExtend(parking: ActiveParking): void {
+    if (!this.parkingFlowStore.startExtension(parking)) return;
+    void this.router.navigate(['/app/parking/time-steps']);
   }
 
   onRecharge(): void {

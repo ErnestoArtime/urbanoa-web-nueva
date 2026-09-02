@@ -18,6 +18,7 @@ import { OperationIconComponent } from '../../../shared/components/operation-ico
 import { SplitViewComponent } from '../../../layout/split-view/split-view.component';
 import { ResultModalComponent } from '../../../shared/components/result-modal/result-modal.component';
 import { ParkingTicketCardComponent } from '../../../shared/components/parking-ticket-card/parking-ticket-card.component';
+import { ParkingFlowStore } from '../../parking/parking-flow.store';
 
 @Component({
   selector: 'app-operations-layout',
@@ -93,7 +94,7 @@ import { ParkingTicketCardComponent } from '../../../shared/components/parking-t
                   [parking]="parking"
                   variant="operations-current"
                   (leaveParking)="onUnpark($event.id)"
-                  (extendTime)="onExtend()"
+                  (extendTime)="onExtend($event)"
                   (goToCar)="onGoToCar($event)"
                 />
                 @if (!$last) {
@@ -546,6 +547,7 @@ export class OperationsLayoutComponent implements OnInit {
   readonly operationsService = inject(OperationsService);
   private readonly parkingSessionService = inject(ParkingSessionService);
   private readonly navigationToCar = inject(NavigationToCarService);
+  private readonly parkingFlowStore = inject(ParkingFlowStore);
   private readonly vehicleService = inject(VehicleService);
   private readonly operations = this.operationsService.operations;
   private readonly rangeFilter = signal<DateRange>({ from: '', to: '' });
@@ -637,8 +639,9 @@ export class OperationsLayoutComponent implements OnInit {
     }
   }
 
-  onExtend(): void {
-    this.router.navigate(['/app/parking/time-steps']);
+  onExtend(parking: ActiveParking): void {
+    if (!this.parkingFlowStore.startExtension(parking)) return;
+    void this.router.navigate(['/app/parking/time-steps']);
   }
 
   onGoToCar(parking: ActiveParking): void {
