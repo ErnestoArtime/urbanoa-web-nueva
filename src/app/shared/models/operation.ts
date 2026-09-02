@@ -45,4 +45,8 @@ export interface Operation {
   timePeriod?: 1 | 2 | 3;
   /** Backend unpark option: 0 = hidden, 1 = disabled, 2 = enabled. */
   refundable?: 0 | 1 | 2;
+  /** Backend extension option: 0 = hidden, 1 = disabled, 2 = enabled. */
+  extension?: 0 | 1 | 2;
+  ticketId?: number;
+  ticketName?: string;
 }
