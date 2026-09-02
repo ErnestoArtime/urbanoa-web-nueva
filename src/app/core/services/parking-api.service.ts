@@ -112,7 +112,7 @@ export class ParkingApiService {
     }
   }
 
-  async queryUnparking(input: { contractId: number; plate: string; groupId?: number; ticketId?: number }): Promise<UnparkingQuoteResult> {
+  async queryUnparking(input: { contractId: number; plate: string; groupId?: number; ticketId?: number; datetime?: string }): Promise<UnparkingQuoteResult> {
     const token = this.session.token();
     if (!token)
       return {
@@ -127,8 +127,8 @@ export class ParkingApiService {
         { ...input, datetime: date },
         { token },
       );
-      if (quote.result !== undefined && quote.result !== 0) {
-        const message = this.translation.translate(quote.result === -4 ? 'parking.unparking.noRights' : 'parking.unparking.quoteError');
+      if (quote.result !== undefined && quote.result !== 1) {
+        const message = this.unparkResultMessage(quote.result);
         return {
           success: false,
           source: 'remote',
@@ -177,6 +177,25 @@ export class ParkingApiService {
     }
   }
 
+  private unparkResultMessage(result: number): string {
+    switch (result) {
+      case -1:
+        return 'No se pudo calcular el desaparcar. (autenticación no válida)';
+      case -4:
+        return 'La matrícula no tiene derechos al desaparcar.';
+      case -9:
+        return 'No se pudo calcular el desaparcar. (error genérico)';
+      case -10:
+        return 'No se pudo calcular el desaparcar. (parámetro de entrada no válido)';
+      case -11:
+        return 'No se pudo calcular el desaparcar. (parámetro de entrada faltante)';
+      case -12:
+        return 'No se pudo calcular el desaparcar. (error del sistema)';
+      default:
+        return `No se pudo calcular el desaparcar. (resultado ${result})`;
+    }
+  }
+
   async tickets(input: {
     contractId: number;
     plate: string;
@@ -188,16 +207,16 @@ export class ParkingApiService {
     const response = await this.api.post<{
       ticketlist:
         | {
-            ticketId: number;
-            ticketDesc: string;
-            minAmount: number | string;
-            schedule: string;
-            ticketBehText?: string;
-            maxTime?: string;
-            zoneId?: number;
-            sectorId?: number;
-            sectorColor?: string;
-          }[]
+        ticketId: number;
+        ticketDesc: string;
+        minAmount: number | string;
+        schedule: string;
+        ticketBehText?: string;
+        maxTime?: string;
+        zoneId?: number;
+        sectorId?: number;
+        sectorColor?: string;
+      }[]
         | null;
     }>(
       OPS_ENDPOINTS.parking.tickets,

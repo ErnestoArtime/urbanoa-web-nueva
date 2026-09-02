@@ -73,6 +73,7 @@ export interface ActiveParking {
   contractId?: number;
   tariffId?: number;
   sectorId?: number;
+  operationDate?: string;
   /** Mirrors the APK parking-status `extension` flag. */
   canExtend?: boolean;
   /** Backend unpark option: only value 2 grants permission to unpark. */
@@ -394,6 +395,7 @@ export class OperationsService {
       contractId,
       tariffId: status.tariffId,
       sectorId: Number(status.sector ?? 0) || undefined,
+      operationDate: status.operationDate,
       canExtend: status.extension !== 0,
       refundable: this.refundableOption(status.refundable),
     };
