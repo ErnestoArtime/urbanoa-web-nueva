@@ -182,7 +182,7 @@ export class ParkingApiService {
       case -1:
         return 'No se pudo calcular el desaparcar. (autenticación no válida)';
       case -4:
-        return 'La matrícula no tiene derechos al desaparcar.';
+        return 'La matrícula no tiene derechos al desaparcar';
       case -9:
         return 'No se pudo calcular el desaparcar. (error genérico)';
       case -10:

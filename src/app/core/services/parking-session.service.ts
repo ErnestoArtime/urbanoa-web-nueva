@@ -58,6 +58,7 @@ export class ParkingSessionService {
       this.walletService.load(),
       this.operationsService.loadParkingStatuses([{ id: parking.vehicleId, plate: parking.plate }], parking.contractId),
     ]);
+    this.ticketStore.clearByPlate(parking.plate);
     return true;
   }
 
