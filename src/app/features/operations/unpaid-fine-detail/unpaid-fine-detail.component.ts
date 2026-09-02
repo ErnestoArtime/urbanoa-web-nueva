@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, OnDestroy, ViewChild, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { DecimalPipe } from '@angular/common';
 import { FineStatus, UnpaidFinesService } from '../../../core/services/unpaid-fines.service';
@@ -32,7 +32,7 @@ import { TranslationService } from '../../../core/services/translation.service';
             </aside>
           }
           <div class="fine-ticket-shell mt-2">
-            <article class="fine-ticket-card">
+            <article #fineTicketCard class="fine-ticket-card">
               <div class="fine-ticket-accent"></div>
               <div class="fine-ticket-body">
                 <p>
@@ -68,7 +68,9 @@ import { TranslationService } from '../../../core/services/translation.service';
                   </p>
                 }
               </div>
-              <div class="fine-ticket-cut"></div>
+              <div #fineTicketCut class="fine-ticket-cut" aria-hidden="true">
+                <div class="fine-ticket-cut-line"></div>
+              </div>
               <div class="fine-ticket-total">
                 <strong>{{ 'ops.fineDetail.amount' | translate }}</strong>
                 <div class="amount-stack">
@@ -180,12 +182,23 @@ import { TranslationService } from '../../../core/services/translation.service';
       }
       .fine-ticket-card {
         --ticket-notch-r: 10px;
+        --ticket-cut-y: 50%;
         position: relative;
         overflow: hidden;
         border: 1px solid var(--color-border);
         border-radius: 16px;
         background: var(--color-surface);
         box-shadow: none;
+        -webkit-mask:
+          radial-gradient(circle at 0 var(--ticket-cut-y), transparent 0 var(--ticket-notch-r), #000 calc(var(--ticket-notch-r) + 1px)) left
+            top / 51% 100% no-repeat,
+          radial-gradient(circle at 100% var(--ticket-cut-y), transparent 0 var(--ticket-notch-r), #000 calc(var(--ticket-notch-r) + 1px))
+            right top / 51% 100% no-repeat;
+        mask:
+          radial-gradient(circle at 0 var(--ticket-cut-y), transparent 0 var(--ticket-notch-r), #000 calc(var(--ticket-notch-r) + 1px)) left
+            top / 51% 100% no-repeat,
+          radial-gradient(circle at 100% var(--ticket-cut-y), transparent 0 var(--ticket-notch-r), #000 calc(var(--ticket-notch-r) + 1px))
+            right top / 51% 100% no-repeat;
       }
       .fine-ticket-accent {
         height: 10px;
@@ -206,36 +219,15 @@ import { TranslationService } from '../../../core/services/translation.service';
       }
       .fine-ticket-cut {
         position: relative;
-        box-sizing: border-box;
         height: 20px;
         display: flex;
         align-items: center;
-        padding-inline: calc(var(--ticket-notch-r) + 5px);
-        background-image: linear-gradient(to right, rgba(149, 156, 146, 0.62) 50%, transparent 0);
-        background-clip: content-box;
-        background-origin: content-box;
-        background-position: center;
-        background-repeat: repeat-x;
-        background-size: 8px 3px;
       }
-      .fine-ticket-cut::before,
-      .fine-ticket-cut::after {
-        content: '';
-        position: absolute;
-        top: 50%;
-        z-index: 1;
-        width: calc(var(--ticket-notch-r) * 2);
-        height: calc(var(--ticket-notch-r) * 2);
-        border: 1px solid var(--color-border);
-        border-radius: 50%;
-        background: var(--color-background);
-        transform: translateY(-50%);
-      }
-      .fine-ticket-cut::before {
-        left: calc(-1 * var(--ticket-notch-r) - 1px);
-      }
-      .fine-ticket-cut::after {
-        right: calc(-1 * var(--ticket-notch-r) - 1px);
+      .fine-ticket-cut-line {
+        flex: 1;
+        height: 0;
+        margin: 0 calc(var(--ticket-notch-r) + 5px);
+        border-top: 3px dashed rgba(149, 156, 146, 0.62);
       }
       .fine-ticket-total {
         display: flex;
@@ -287,7 +279,10 @@ import { TranslationService } from '../../../core/services/translation.service';
     `,
   ],
 })
-export class UnpaidFineDetailComponent {
+export class UnpaidFineDetailComponent implements AfterViewInit, OnDestroy {
+  @ViewChild('fineTicketCard') private fineTicketCard?: ElementRef<HTMLElement>;
+  @ViewChild('fineTicketCut') private fineTicketCut?: ElementRef<HTMLElement>;
+
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly unpaidFinesService = inject(UnpaidFinesService);
@@ -308,6 +303,31 @@ export class UnpaidFineDetailComponent {
 
   readonly capturedWalletAmount = signal(0);
   readonly capturedCardAmount = signal(0);
+  private ticketResizeObserver?: ResizeObserver;
+
+  ngAfterViewInit(): void {
+    const card = this.fineTicketCard?.nativeElement;
+    const cut = this.fineTicketCut?.nativeElement;
+    if (!card || !cut) return;
+
+    const updateCutPosition = () => {
+      const cardRect = card.getBoundingClientRect();
+      const cutRect = cut.getBoundingClientRect();
+      const cutCenter = cutRect.top - cardRect.top + cutRect.height / 2;
+      card.style.setProperty('--ticket-cut-y', `${cutCenter}px`);
+    };
+
+    updateCutPosition();
+    if (typeof ResizeObserver !== 'undefined') {
+      this.ticketResizeObserver = new ResizeObserver(updateCutPosition);
+      this.ticketResizeObserver.observe(card);
+      this.ticketResizeObserver.observe(cut);
+    }
+  }
+
+  ngOnDestroy(): void {
+    this.ticketResizeObserver?.disconnect();
+  }
 
   readonly successMessage = computed(() => {
     const wallet = this.capturedWalletAmount();
