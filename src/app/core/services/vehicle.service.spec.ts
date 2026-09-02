@@ -25,6 +25,23 @@ describe('VehicleService', () => {
     expect(service.vehicles()).toEqual([{ id: '1234ABC', plate: '1234ABC', isDefault: true }]);
   });
 
+  it('exposes the first favorite as the main vehicle while preserving added order as fallback', async () => {
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'getOrNull', 'post']);
+    api.getOrNull.and.resolveTo({
+      plates: [
+        { plate: '1111 AAA', favorite: false },
+        { plate: '2222 BBB', favorite: true },
+        { plate: '3333 CCC', favorite: false },
+      ],
+    });
+    const service = serviceWith(api);
+    TestBed.inject(OpsSessionService).setToken('token');
+
+    await service.load();
+
+    expect(service.mainVehicle()?.plate).toBe('2222 BBB');
+  });
+
   it('shares an in-flight plate request between the wizard layout and the map', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'getOrNull', 'post']);
     let resolveRequest!: (value: { plates: { plate: string; favorite: boolean }[] }) => void;

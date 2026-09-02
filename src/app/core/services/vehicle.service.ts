@@ -1,5 +1,5 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
-import type { Vehicle } from '../../shared/models/vehicle';
+import { preferredVehicle, type Vehicle } from '../../shared/models/vehicle';
 import { OpsApiClient } from '../api/ops-api-client.service';
 import { OpsApiError } from '../api/ops-api.types';
 import { OPS_ENDPOINTS } from '../api/ops-endpoints';
@@ -32,7 +32,7 @@ export class VehicleService {
   readonly vehicles = this.state.asReadonly();
   readonly source = this.sourceState.asReadonly();
   readonly lastError = this.errorState.asReadonly();
-  readonly mainVehicle = computed(() => this.state().find((vehicle) => vehicle.isDefault) ?? this.state()[0] ?? null);
+  readonly mainVehicle = computed(() => preferredVehicle(this.state()));
 
   private readonly api = inject(OpsApiClient);
   private readonly session = inject(OpsSessionService);

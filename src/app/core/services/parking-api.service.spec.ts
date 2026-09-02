@@ -3,9 +3,22 @@ import { TestBed } from '@angular/core/testing';
 import { OpsApiClient } from '../api/ops-api-client.service';
 import { OpsSessionService } from '../api/ops-session.service';
 import { ParkingApiService } from './parking-api.service';
+import { TranslationService } from './translation.service';
 
 function serviceWith(api: jasmine.SpyObj<OpsApiClient>): ParkingApiService {
-  TestBed.configureTestingModule({ providers: [provideZonelessChangeDetection(), { provide: OpsApiClient, useValue: api }] });
+  TestBed.configureTestingModule({
+    providers: [
+      provideZonelessChangeDetection(),
+      { provide: OpsApiClient, useValue: api },
+      {
+        provide: TranslationService,
+        useValue: {
+          translate: (key: string) =>
+            key === 'parking.unparking.noRights' ? 'La matrícula no tiene derechos al desaparcar' : 'No se pudo calcular el desaparcar.',
+        },
+      },
+    ],
+  });
   return TestBed.inject(ParkingApiService);
 }
 
@@ -176,6 +189,6 @@ describe('ParkingApiService', () => {
       { token: 'token' },
     );
     expect(result.success).toBeFalse();
-    expect(result.error instanceof Error ? result.error.message : '').toBe('La matrícula no tiene derechos al desaparcar.');
+    expect(result.error instanceof Error ? result.error.message : '').toBe('La matrícula no tiene derechos al desaparcar');
   });
 });

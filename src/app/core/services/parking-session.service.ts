@@ -1,6 +1,6 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { OperationsService, type ActiveParking } from './operations.service';
-import { ParkingApiService } from './parking-api.service';
+import { ParkingApiService, type UnparkingQuoteResult } from './parking-api.service';
 import { WalletService } from './wallet.service';
 
 @Injectable({ providedIn: 'root' })
@@ -15,19 +15,33 @@ export class ParkingSessionService {
   readonly activeSource = this.operationsService.activeSource;
   readonly unparkError = signal<string | null>(null);
 
-  async leaveParking(parkingId: string): Promise<boolean> {
+  async quoteUnparking(parkingId: string): Promise<UnparkingQuoteResult> {
+    const parking = this.operationsService.getActiveParking(parkingId);
+    if (!parking?.contractId) {
+      return { success: false, source: 'remote', error: new Error('No se encontró el aparcamiento activo.') };
+    }
+    return this.parkingApi.queryUnparking({
+      contractId: parking.contractId,
+      plate: parking.plate,
+      ...(parking.sectorId ? { groupId: parking.sectorId } : {}),
+      ticketId: parking.tariffId,
+    });
+  }
+
+  async leaveParking(parkingId: string, preparedQuote?: UnparkingQuoteResult): Promise<boolean> {
     this.unparkError.set(null);
     const parking = this.operationsService.getActiveParking(parkingId);
     if (!parking?.contractId) {
       this.unparkError.set('No se encontró el aparcamiento activo.');
       return false;
     }
-    const result = await this.parkingApi.unpark({
+    const input = {
       contractId: parking.contractId,
       plate: parking.plate,
       ...(parking.sectorId ? { groupId: parking.sectorId } : {}),
       ticketId: parking.tariffId,
-    });
+    };
+    const result = preparedQuote ? await this.parkingApi.unpark(input, preparedQuote) : await this.parkingApi.unpark(input);
     if (!result.success) {
       this.operationsService.restoreActiveParking(parking);
       const error = result.error;

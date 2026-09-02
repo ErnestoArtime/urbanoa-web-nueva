@@ -4,6 +4,7 @@ import { OpsApiClient } from '../api/ops-api-client.service';
 import { OpsSessionService } from '../api/ops-session.service';
 import { OpsApiError } from '../api/ops-api.types';
 import { formatOpsDate } from '../utils/ops-date';
+import { TranslationService } from './translation.service';
 
 export interface ConfirmParkingInput {
   contractId: number;
@@ -25,6 +26,10 @@ export interface ParkingApiResult {
   refundAmount?: number;
   challengeUrl?: string;
   error?: unknown;
+}
+
+export interface UnparkingQuoteResult extends ParkingApiResult {
+  quantity?: number;
 }
 
 interface UnparkingResponseDto {
@@ -64,6 +69,7 @@ export interface ParkingSectorOption {
 export class ParkingApiService {
   private readonly api = inject(OpsApiClient);
   private readonly session = inject(OpsSessionService);
+  private readonly translation = inject(TranslationService);
 
   serverNow(): Date {
     return this.api.serverNow();
@@ -106,7 +112,7 @@ export class ParkingApiService {
     }
   }
 
-  async unpark(input: { contractId: number; plate: string; groupId?: number; ticketId?: number }): Promise<ParkingApiResult> {
+  async queryUnparking(input: { contractId: number; plate: string; groupId?: number; ticketId?: number }): Promise<UnparkingQuoteResult> {
     const token = this.session.token();
     if (!token)
       return {
@@ -122,19 +128,41 @@ export class ParkingApiService {
         { token },
       );
       if (quote.result !== undefined && quote.result !== 0) {
-        const message = quote.result === -4 ? 'La matrícula no tiene derechos al desaparcar.' : 'No se pudo calcular el desaparcar.';
+        const message = this.translation.translate(quote.result === -4 ? 'parking.unparking.noRights' : 'parking.unparking.quoteError');
         return {
           success: false,
           source: 'remote',
           error: new OpsApiError('backend', OPS_ENDPOINTS.parking.queryUnparking, message),
         };
       }
+      return { success: true, source: 'remote', refundAmount: Math.max(0, quote.payAmount) / 100, quantity: quote.payAmount };
+    } catch (error) {
+      return { success: false, source: 'remote', error };
+    }
+  }
+
+  async unpark(
+    input: { contractId: number; plate: string; groupId?: number; ticketId?: number },
+    preparedQuote?: UnparkingQuoteResult,
+  ): Promise<ParkingApiResult> {
+    const token = this.session.token();
+    if (!token) {
+      return {
+        success: false,
+        source: 'remote',
+        error: new OpsApiError('transport', OPS_ENDPOINTS.parking.confirmUnparking, 'Se requiere una sesión válida'),
+      };
+    }
+    const quote = preparedQuote ?? (await this.queryUnparking(input));
+    if (!quote.success) return quote;
+    try {
+      const date = this.opsDate(this.api.serverNow ? this.api.serverNow() : new Date());
       await this.api.post<string>(
         OPS_ENDPOINTS.parking.confirmUnparking,
         {
           contractId: input.contractId,
           plate: input.plate,
-          quantity: quote.payAmount,
+          quantity: quote.quantity ?? 0,
           groupId: input.groupId,
           ticketId: input.ticketId,
           cloudToken: '',
@@ -143,7 +171,7 @@ export class ParkingApiService {
         },
         { token },
       );
-      return { success: true, source: 'remote', refundAmount: Math.max(0, quote.payAmount) / 100 };
+      return { success: true, source: 'remote', refundAmount: quote.refundAmount };
     } catch (error) {
       return { success: false, source: 'remote', error };
     }

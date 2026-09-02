@@ -3,6 +3,7 @@ import { Injectable, signal } from '@angular/core';
 @Injectable({ providedIn: 'root' })
 export class OpsSessionService {
   private readonly authToken = signal<string | null>(null);
+  private readonly activeRequests = new Set<AbortController>();
 
   constructor() {
     try {
@@ -23,5 +24,15 @@ export class OpsSessionService {
 
   clear(): void {
     this.authToken.set(null);
+    for (const controller of this.activeRequests) controller.abort();
+    this.activeRequests.clear();
+  }
+
+  registerRequest(controller: AbortController): void {
+    this.activeRequests.add(controller);
+  }
+
+  unregisterRequest(controller: AbortController): void {
+    this.activeRequests.delete(controller);
   }
 }
