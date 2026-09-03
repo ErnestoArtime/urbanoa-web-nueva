@@ -20,6 +20,7 @@ ARG OPS_BACKEND_URL=http://185.76.212.27
 RUN echo "Building ${MSA_PROJECT}-${MSA_VERSION} exposing at ${MSA_PORT}"
 
 COPY --from=builder /app/dist/web-urbanoa/browser /usr/share/nginx/html
+COPY --from=builder /app/src/assets/ /usr/share/nginx/html/web-urbanoa/browser/assets/
 COPY --from=builder /app/deploy/nginx.conf.template /tmp/nginx.conf.template
 RUN sed "s|__OPS_BACKEND_URL__|${OPS_BACKEND_URL}|g" \
     /tmp/nginx.conf.template \
