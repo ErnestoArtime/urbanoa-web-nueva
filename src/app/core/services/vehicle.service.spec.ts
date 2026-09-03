@@ -113,7 +113,7 @@ describe('VehicleService', () => {
     expect(result.success).toBeTrue();
   });
 
-  it('promotes and remotely favorites a new default when the favorite plate is removed', async () => {
+  it('keeps the remaining plates without a favorite when the favorite plate is removed', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'getOrNull', 'post']);
     api.getOrNull.and.resolveTo({
       plates: [
@@ -132,9 +132,8 @@ describe('VehicleService', () => {
     const result = await service.remove(favorite.id);
 
     expect(api.post).toHaveBeenCalledWith('OPSWebServicesAPI/RemoveUserPlateAPI', { plate: favorite.plate }, { token: 'token' });
-    expect(api.post).toHaveBeenCalledWith('OPSWebServicesAPI/UpdateUserPlateAPI', { plate: other.plate, favorite: 1 }, { token: 'token' });
-    expect(api.post.calls.count()).toBe(2);
-    expect(service.vehicles().find((v) => v.id === other.id)?.isDefault).toBeTrue();
+    expect(api.post.calls.count()).toBe(1);
+    expect(service.vehicles().find((v) => v.id === other.id)?.isDefault).toBeFalse();
     expect(result.success).toBeTrue();
   });
 
@@ -160,18 +159,38 @@ describe('VehicleService', () => {
     expect(service.vehicles().find((v) => v.isDefault)).toBeTruthy();
   });
 
-  it('promotes the first plate to favorite when the remote list arrives without any', async () => {
+  it('keeps the remote list without a favorite when none is explicitly marked', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'getOrNull', 'post']);
     api.getOrNull.and.resolveTo({ plates: [{ plate: '1111 AAA' }, { plate: '2222 BBB' }] });
-    api.post.and.resolveTo('OK');
     const service = serviceWith(api);
     TestBed.inject(OpsSessionService).setToken('token');
 
     await service.load();
 
-    expect(api.post).toHaveBeenCalledWith('OPSWebServicesAPI/UpdateUserPlateAPI', { plate: '1111 AAA', favorite: 1 }, { token: 'token' });
-    expect(service.vehicles().find((v) => v.plate === '1111 AAA')?.isDefault).toBeTrue();
+    expect(api.post).not.toHaveBeenCalled();
+    expect(service.vehicles().find((v) => v.plate === '1111 AAA')?.isDefault).toBeFalse();
     expect(service.vehicles().find((v) => v.plate === '2222 BBB')?.isDefault).toBeFalse();
+  });
+
+  it('keeps only the first remote favorite', async () => {
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'getOrNull', 'post']);
+    api.getOrNull.and.resolveTo({
+      plates: [
+        { plate: '1111 AAA', favorite: true },
+        { plate: '2222 BBB', favorite: true },
+      ],
+    });
+    const service = serviceWith(api);
+    TestBed.inject(OpsSessionService).setToken('token');
+
+    await service.load();
+
+    expect(
+      service
+        .vehicles()
+        .filter((vehicle) => vehicle.isDefault)
+        .map((vehicle) => vehicle.plate),
+    ).toEqual(['1111 AAA']);
   });
 
   it('treats a successful empty response as a real empty list', async () => {
@@ -215,7 +234,7 @@ describe('VehicleService', () => {
     expect(service.vehicles()).toEqual([]);
   });
 
-  it('promotes a newly added plate when the list would be left without any favorite', async () => {
+  it('does not promote a newly added plate when favorite is not explicitly selected', async () => {
     localStorage.setItem('urbanoa.vehicles', JSON.stringify([{ id: '7777 KKK', plate: '7777 KKK', isDefault: false }]));
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'getOrNull', 'post']);
     api.post.and.resolveTo('OK');
@@ -229,12 +248,8 @@ describe('VehicleService', () => {
       { plate: '9999 XYZ', favorite: 0 },
       { token: 'token' },
     ]);
-    expect(api.post.calls.argsFor(1)).toEqual([
-      'OPSWebServicesAPI/UpdateUserPlateAPI',
-      { plate: '9999 XYZ', favorite: 1 },
-      { token: 'token' },
-    ]);
-    expect(service.vehicles().find((v) => v.plate === '9999 XYZ')?.isDefault).toBeTrue();
+    expect(api.post.calls.count()).toBe(1);
+    expect(service.vehicles().find((v) => v.plate === '9999 XYZ')?.isDefault).toBeFalse();
     expect(result.source).toBe('remote');
   });
 
