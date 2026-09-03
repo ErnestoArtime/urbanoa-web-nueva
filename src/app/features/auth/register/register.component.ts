@@ -6,6 +6,7 @@ import { apiErrorKey } from '../../../core/http/api-error-key';
 import { AuthService } from '../../../core/services/auth.service';
 import { APP_BRAND } from '../../../shared/constants/app-brand';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { FOREIGN_PLATE_MAX_LENGTH, isValidPlate } from '../../../shared/utils/plate-validation';
 
 function passwordsMatch(control: AbstractControl): ValidationErrors | null {
   const password = control.get('password')?.value;
@@ -30,10 +31,18 @@ function passwordsMatch(control: AbstractControl): ValidationErrors | null {
         <form class="form-grid" [formGroup]="form" (ngSubmit)="onSubmit()">
           <label class="outlined-field"
             ><span>{{ 'auth.register.plate' | translate }}</span
-            ><input formControlName="plate" placeholder="1234 ABC"
+            ><input
+              formControlName="plate"
+              placeholder="1234 ABC"
+              [attr.maxlength]="form.controls.foreignPlate.value ? FOREIGN_PLATE_MAX_LENGTH : null"
+              (input)="clearPlateError()"
           /></label>
           @if (form.controls.plate.touched && form.controls.plate.invalid) {
-            <p class="form-error">{{ 'auth.register.plateRequired' | translate }}</p>
+            <p class="form-error">
+              {{
+                (form.controls.plate.hasError('plateInvalid') ? 'auth.register.plateInvalid' : 'auth.register.plateRequired') | translate
+              }}
+            </p>
           }
           <label class="foreign-check"
             ><input type="checkbox" formControlName="foreignPlate" /> {{ 'auth.register.foreignPlate' | translate }}</label
@@ -244,6 +253,7 @@ export class RegisterComponent {
   readonly submitting = signal(false);
   readonly errorKey = signal('');
   readonly brand = APP_BRAND;
+  readonly FOREIGN_PLATE_MAX_LENGTH = FOREIGN_PLATE_MAX_LENGTH;
 
   readonly form = this.formBuilder.nonNullable.group(
     {
@@ -265,8 +275,20 @@ export class RegisterComponent {
     this.showConfirmation.update((value) => !value);
   }
 
+  clearPlateError(): void {
+    const errors = this.form.controls.plate.errors;
+    if (!errors?.['plateInvalid']) return;
+    const remaining = { ...errors };
+    delete remaining['plateInvalid'];
+    this.form.controls.plate.setErrors(Object.keys(remaining).length > 0 ? remaining : null);
+  }
+
   async onSubmit(): Promise<void> {
     if (this.submitting()) return;
+    const values = this.form.getRawValue();
+    if (!isValidPlate(values.plate, values.foreignPlate)) {
+      this.form.controls.plate.setErrors({ ...(this.form.controls.plate.errors ?? {}), plateInvalid: true });
+    }
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
@@ -274,7 +296,7 @@ export class RegisterComponent {
 
     this.submitting.set(true);
     this.errorKey.set('');
-    const { email, password, plate } = this.form.getRawValue();
+    const { email, password, plate } = values;
 
     try {
       await this.authService.register({ email, password, plates: [plate] });

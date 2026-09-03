@@ -23,7 +23,7 @@ describe('VehicleEditComponent', () => {
   beforeEach(() => {
     localStorage.clear();
     const vehicles = [
-      { id: '1', plate: '1234 ABC', isDefault: true },
+      { id: '1', plate: '1234 BCD', isDefault: true },
       { id: '2', plate: '5678 XYZ', isDefault: false },
     ];
     paramMap$ = new BehaviorSubject(convertToParamMap({ id: '1' }));
@@ -42,8 +42,8 @@ describe('VehicleEditComponent', () => {
     const fixture = mount();
 
     expect(fixture.componentInstance.id()).toBe('1');
-    expect(fixture.componentInstance.plate()).toBe('1234 ABC');
-    expect(fixture.componentInstance.favorite()).toBeTrue();
+    expect(fixture.componentInstance.plate()).toBe('1234 BCD');
+    expect(fixture.componentInstance.foreignPlate()).toBeFalse();
   });
 
   it('updates the panel when the route parameter changes to another vehicle', () => {
@@ -54,6 +54,6 @@ describe('VehicleEditComponent', () => {
 
     expect(fixture.componentInstance.id()).toBe('2');
     expect(fixture.componentInstance.plate()).toBe('5678 XYZ');
-    expect(fixture.componentInstance.favorite()).toBeFalse();
+    expect(fixture.componentInstance.foreignPlate()).toBeFalse();
   });
 });

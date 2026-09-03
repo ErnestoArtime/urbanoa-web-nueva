@@ -6,6 +6,7 @@ import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/
 import { ResultModalComponent } from '../../../shared/components/result-modal/result-modal.component';
 import { VehicleService } from '../../../core/services/vehicle.service';
 import { ParkingSessionService } from '../../../core/services/parking-session.service';
+import { FOREIGN_PLATE_MAX_LENGTH, isValidPlate } from '../../../shared/utils/plate-validation';
 
 @Component({
   selector: 'app-vehicle-edit',
@@ -16,14 +17,22 @@ import { ParkingSessionService } from '../../../core/services/parking-session.se
       <div class="card">
         <div class="form-group">
           <label>{{ 'account.vehicleEdit.plate' | translate }}</label
-          ><input class="form-input" [class.invalid]="plateError()" [value]="plate()" (input)="setPlate($event)" />
+          ><input
+            class="form-input"
+            [class.invalid]="plateError()"
+            [value]="plate()"
+            (input)="setPlate($event)"
+            [attr.maxlength]="foreignPlate() ? FOREIGN_PLATE_MAX_LENGTH : null"
+          />
           @if (plateError()) {
-            <p class="form-error">{{ 'account.vehicleAdd.plateRequired' | translate }}</p>
+            <p class="form-error">
+              {{ (plate().trim() ? 'account.vehicleAdd.plateInvalid' : 'account.vehicleAdd.plateRequired') | translate }}
+            </p>
           }
         </div>
         <label class="switch-row"
-          ><span>{{ 'account.vehicleEdit.favorite' | translate }}</span
-          ><input type="checkbox" [checked]="favorite()" (change)="favorite.set(checked($event))" /><span class="switch"></span
+          ><span>{{ 'account.vehicleEdit.foreignPlate' | translate }}</span
+          ><input type="checkbox" [checked]="foreignPlate()" (change)="foreignPlate.set(checked($event))" /><span class="switch"></span
         ></label>
         <button type="button" class="btn btn-primary btn-block mt-2" [disabled]="saving()" (click)="save()">
           {{ 'account.vehicleEdit.save' | translate }}
@@ -119,7 +128,8 @@ export class VehicleEditComponent implements OnInit {
   readonly id = computed(() => this.paramMap().get('id') ?? '');
   private readonly vehicle = computed(() => this.vehicleService.getById(this.id()));
   readonly plate = signal('');
-  readonly favorite = signal(false);
+  readonly foreignPlate = signal(false);
+  readonly FOREIGN_PLATE_MAX_LENGTH = FOREIGN_PLATE_MAX_LENGTH;
   readonly plateError = signal(false);
   readonly result = signal<'saved' | 'deleted' | null>(null);
   readonly confirmDelete = signal(false);
@@ -130,7 +140,7 @@ export class VehicleEditComponent implements OnInit {
     effect(() => {
       const vehicle = this.vehicle();
       this.plate.set(vehicle?.plate ?? '');
-      this.favorite.set(vehicle?.isDefault ?? false);
+      this.foreignPlate.set(vehicle?.isForeign ?? !isValidPlate(vehicle?.plate ?? '', false));
       this.plateError.set(false);
       this.result.set(null);
       this.confirmDelete.set(false);
@@ -154,12 +164,12 @@ export class VehicleEditComponent implements OnInit {
 
   async save(): Promise<void> {
     const plate = this.plate().trim();
-    if (!plate) {
+    if (!isValidPlate(plate, this.foreignPlate())) {
       this.plateError.set(true);
       return;
     }
     this.saving.set(true);
-    const mutation = await this.vehicleService.update(this.id(), { plate, isDefault: this.favorite() });
+    const mutation = await this.vehicleService.update(this.id(), { plate, isForeign: this.foreignPlate() });
     this.saving.set(false);
     if (mutation.success) this.result.set('saved');
   }

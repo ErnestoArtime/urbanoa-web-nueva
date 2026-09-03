@@ -4,6 +4,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
 import { ResultModalComponent } from '../../../shared/components/result-modal/result-modal.component';
 import { VehicleService } from '../../../core/services/vehicle.service';
+import { FOREIGN_PLATE_MAX_LENGTH, isValidPlate } from '../../../shared/utils/plate-validation';
 
 @Component({
   selector: 'app-vehicle-add',
@@ -19,19 +20,18 @@ import { VehicleService } from '../../../core/services/vehicle.service';
             [class.invalid]="plateError()"
             [value]="plate()"
             (input)="setPlate($event)"
+            [attr.maxlength]="foreignPlate() ? FOREIGN_PLATE_MAX_LENGTH : null"
             [placeholder]="'account.vehicleAdd.plate' | translate"
           />
           @if (plateError()) {
-            <p class="form-error">{{ 'account.vehicleAdd.plateRequired' | translate }}</p>
+            <p class="form-error">
+              {{ (plate().trim() ? 'account.vehicleAdd.plateInvalid' : 'account.vehicleAdd.plateRequired') | translate }}
+            </p>
           }
         </div>
         <label class="switch-row"
           ><span>{{ 'account.vehicleAdd.foreignPlate' | translate }}</span
           ><input type="checkbox" [checked]="foreignPlate()" (change)="foreignPlate.set(checked($event))" /><span class="switch"></span
-        ></label>
-        <label class="switch-row"
-          ><span>{{ 'account.vehicleAdd.favorite' | translate }}</span
-          ><input type="checkbox" [checked]="favorite()" (change)="favorite.set(checked($event))" /><span class="switch"></span
         ></label>
         <button type="button" class="btn btn-primary btn-block mt-2" [disabled]="saving()" (click)="save()">
           {{ 'account.vehicleAdd.save' | translate }}
@@ -100,7 +100,7 @@ export class VehicleAddComponent {
   private readonly router = inject(Router);
   readonly plate = signal('');
   readonly foreignPlate = signal(false);
-  readonly favorite = signal(false);
+  readonly FOREIGN_PLATE_MAX_LENGTH = FOREIGN_PLATE_MAX_LENGTH;
   readonly plateError = signal(false);
   readonly saved = signal(false);
   readonly saving = signal(false);
@@ -116,14 +116,15 @@ export class VehicleAddComponent {
 
   async save(): Promise<void> {
     const plate = this.plate().trim();
-    if (!plate) {
+    if (!isValidPlate(plate, this.foreignPlate())) {
       this.plateError.set(true);
       return;
     }
     this.saving.set(true);
     const mutation = await this.vehicleService.add({
       plate,
-      isDefault: this.favorite(),
+      isDefault: false,
+      isForeign: this.foreignPlate(),
       label: this.foreignPlate() ? 'account.vehicle.foreignPlate' : undefined,
     });
     this.saving.set(false);
