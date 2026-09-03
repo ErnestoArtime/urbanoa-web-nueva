@@ -239,7 +239,7 @@ export class ParkingSuccessComponent implements OnInit {
 
   async ngOnInit(): Promise<void> {
     await Promise.all([this.operations.load(), this.wallet.load()]);
-    await this.operations.loadParkingStatuses(this.vehicles.vehicles(), Number(this.query().cityId) || undefined);
+    this.operations.syncActiveParkingsFromOperations(this.vehicles.vehicles());
   }
 
   startTime(): string {

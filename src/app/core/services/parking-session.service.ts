@@ -53,11 +53,8 @@ export class ParkingSessionService {
       this.unparkError.set(error instanceof Error ? error.message : 'No se pudo completar el desaparcar.');
       return false;
     }
-    await Promise.all([
-      this.operationsService.load(),
-      this.walletService.load(),
-      this.operationsService.loadParkingStatuses([{ id: parking.vehicleId, plate: parking.plate }], parking.contractId),
-    ]);
+    await Promise.all([this.operationsService.load(), this.walletService.load()]);
+    this.operationsService.syncActiveParkingsFromOperations([{ id: parking.vehicleId, plate: parking.plate }]);
     this.ticketStore.clearByPlate(parking.plate);
     return true;
   }

@@ -11,6 +11,7 @@ export interface Operation {
   type: OperationType;
   plate: string | null;
   date: string;
+  operationDate?: string;
   amount: number;
   zone: string | null;
   relatedOperationId?: string;
@@ -20,6 +21,8 @@ export interface Operation {
   durationLabel?: string;
   startTime?: string;
   endTime?: string;
+  startDate?: string;
+  endDate?: string;
   contractId?: number;
   contractName?: string;
   fineNumber?: string;
@@ -49,4 +52,5 @@ export interface Operation {
   extension?: 0 | 1 | 2;
   ticketId?: number;
   ticketName?: string;
+  street?: string;
 }

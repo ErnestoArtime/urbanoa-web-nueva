@@ -23,29 +23,25 @@ describe('ParkingSessionService', () => {
     TestBed.configureTestingModule({ providers: [provideZonelessChangeDetection(), provideHttpClient()] });
   });
 
-  it('syncs remote parking statuses across contracts and marks the source as remote', async () => {
+  it('syncs active parkings from QueryUserOperationsAPI and marks the source as remote', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'post', 'postOrNull']);
-    const fakePost = <T>(endpoint: string, body?: { contractId?: number }): Promise<T> => {
-      if (endpoint === 'OPSWebServicesAPI/QueryParkingStatusAPI') {
-        return (
-          body?.contractId === 3
-            ? Promise.resolve({
-                status: 2,
-                extension: 0,
-                tariffId: 7,
-                dateInitial: '260825100000',
-                dateEnd: '260825110000',
-                accumulatedTime: 60,
-                zonename: 'Zona Centro',
-                sectorname: 'S1',
-                streetname: 'Nagusia Kalea',
-              })
-            : Promise.reject(new Error('sin aparcamiento'))
-        ) as Promise<T>;
-      }
-      return Promise.reject(new Error(`endpoint inesperado: ${endpoint}`)) as Promise<T>;
-    };
-    api.postOrNull.and.callFake(fakePost);
+    api.post.and.resolveTo([
+      {
+        contractId: 3,
+        operationNumber: 'active-1',
+        operationType: 1,
+        paymentAmount: 100,
+        opDate: '100000030926',
+        plate: '1234 ABC',
+        parkingStartDate: '100000030926',
+        parkingEndDate: '110000030926',
+        duration: 60,
+        timePeriod: 2,
+        ticketId: 7,
+        sectorId: 17,
+        sectorDesc: 'S1',
+      },
+    ]);
     const service = serviceWith(api);
     TestBed.inject(OpsSessionService).setToken('token');
 
@@ -54,6 +50,7 @@ describe('ParkingSessionService', () => {
     expect(service.activeSource()).toBe('remote');
     expect(service.activeParkings().length).toBe(1);
     expect(service.isVehicleParked('1234 ABC')).toBeTrue();
+    expect(api.postOrNull).not.toHaveBeenCalled();
   });
 
   it('confirms unparking remotely and refreshes backend state', async () => {
@@ -65,7 +62,7 @@ describe('ParkingSessionService', () => {
       activeParkings: () => [parking], activeParkingsCount: () => 1, hasActiveParkings: () => true, activeSource: () => 'remote',
       getActiveParking: jasmine.createSpy().and.returnValue(parking),
       isVehicleParked: jasmine.createSpy().and.returnValue(true), isPlateParked: jasmine.createSpy().and.returnValue(true),
-      load: jasmine.createSpy().and.resolveTo(), loadParkingStatuses: jasmine.createSpy().and.resolveTo(),
+      load: jasmine.createSpy().and.resolveTo(), syncActiveParkingsFromOperations: jasmine.createSpy(),
     };
     const parkingApi = { unpark: jasmine.createSpy().and.resolveTo({ success: true, source: 'remote', refundAmount: 0.4 }) };
     const wallet = { load: jasmine.createSpy().and.resolveTo() };
@@ -84,7 +81,7 @@ describe('ParkingSessionService', () => {
     expect(parkingApi.unpark).toHaveBeenCalledOnceWith({ contractId: 3, plate: '1234 ABC', ticketId: 7 });
     expect(operations.load).toHaveBeenCalled();
     expect(wallet.load).toHaveBeenCalled();
-    expect(operations.loadParkingStatuses).toHaveBeenCalledWith([{ id: 'vehicle-1', plate: '1234 ABC' }], 3);
+    expect(operations.syncActiveParkingsFromOperations).toHaveBeenCalledWith([{ id: 'vehicle-1', plate: '1234 ABC' }]);
   });
 
   it('uses the persisted QueryTicketsAPI ticketId when unparking', async () => {
@@ -97,7 +94,7 @@ describe('ParkingSessionService', () => {
       activeParkings: () => [parking], activeParkingsCount: () => 1, hasActiveParkings: () => true, activeSource: () => 'remote',
       getActiveParking: jasmine.createSpy().and.returnValue(parking),
       isVehicleParked: jasmine.createSpy().and.returnValue(true), isPlateParked: jasmine.createSpy().and.returnValue(true),
-      load: jasmine.createSpy().and.resolveTo(), loadParkingStatuses: jasmine.createSpy().and.resolveTo(),
+      load: jasmine.createSpy().and.resolveTo(), syncActiveParkingsFromOperations: jasmine.createSpy(),
       restoreActiveParking: jasmine.createSpy(),
     };
     const parkingApi = { unpark: jasmine.createSpy().and.resolveTo({ success: true, source: 'remote', refundAmount: 0.4 }) };
@@ -139,14 +136,27 @@ describe('ParkingSessionService', () => {
     expect(service.activeParkings().length).toBe(0);
   });
 
-  it('clears active parkings remotely when there are no vehicles to check', async () => {
-    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'post']);
+  it('keeps operations-based active parkings even when the vehicle list is unavailable', async () => {
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'post', 'postOrNull']);
+    api.post.and.resolveTo([
+      {
+        contractId: 3,
+        operationNumber: 'active-1',
+        operationType: 1,
+        paymentAmount: 100,
+        opDate: '100000030926',
+        plate: '1234 ABC',
+        parkingEndDate: '110000030926',
+        timePeriod: 2,
+      },
+    ]);
     const service = serviceWith(api);
     TestBed.inject(OpsSessionService).setToken('token');
     await service.loadParkingStatuses([]);
 
-    expect(api.post).not.toHaveBeenCalled();
-    expect(service.activeParkings().length).toBe(0);
+    expect(api.post).toHaveBeenCalledTimes(1);
+    expect(api.postOrNull).not.toHaveBeenCalled();
+    expect(service.activeParkings()).toEqual([jasmine.objectContaining({ plate: '1234 ABC', vehicleId: '1234 ABC' })]);
   });
 
   it('reports an error without a session token', async () => {
