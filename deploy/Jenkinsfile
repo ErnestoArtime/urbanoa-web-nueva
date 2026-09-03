@@ -14,5 +14,6 @@ frontendPipeline([
     projectName: projectName,
     containerName: containerName,
     port: port,
+    assetsDir: 'public/assets',
 
 ])
