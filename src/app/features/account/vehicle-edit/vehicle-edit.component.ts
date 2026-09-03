@@ -34,6 +34,10 @@ import { FOREIGN_PLATE_MAX_LENGTH, isValidPlate } from '../../../shared/utils/pl
           ><span>{{ 'account.vehicleEdit.foreignPlate' | translate }}</span
           ><input type="checkbox" [checked]="foreignPlate()" (change)="foreignPlate.set(checked($event))" /><span class="switch"></span
         ></label>
+        <label class="switch-row"
+          ><span>{{ 'account.vehicleEdit.favorite' | translate }}</span
+          ><input type="checkbox" [checked]="favorite()" (change)="favorite.set(checked($event))" /><span class="switch"></span
+        ></label>
         <button type="button" class="btn btn-primary btn-block mt-2" [disabled]="saving()" (click)="save()">
           {{ 'account.vehicleEdit.save' | translate }}
         </button>
@@ -129,6 +133,7 @@ export class VehicleEditComponent implements OnInit {
   private readonly vehicle = computed(() => this.vehicleService.getById(this.id()));
   readonly plate = signal('');
   readonly foreignPlate = signal(false);
+  readonly favorite = signal(false);
   readonly FOREIGN_PLATE_MAX_LENGTH = FOREIGN_PLATE_MAX_LENGTH;
   readonly plateError = signal(false);
   readonly result = signal<'saved' | 'deleted' | null>(null);
@@ -141,6 +146,7 @@ export class VehicleEditComponent implements OnInit {
       const vehicle = this.vehicle();
       this.plate.set(vehicle?.plate ?? '');
       this.foreignPlate.set(vehicle?.isForeign ?? !isValidPlate(vehicle?.plate ?? '', false));
+      this.favorite.set(vehicle?.isDefault ?? false);
       this.plateError.set(false);
       this.result.set(null);
       this.confirmDelete.set(false);
@@ -169,7 +175,7 @@ export class VehicleEditComponent implements OnInit {
       return;
     }
     this.saving.set(true);
-    const mutation = await this.vehicleService.update(this.id(), { plate, isForeign: this.foreignPlate() });
+    const mutation = await this.vehicleService.update(this.id(), { plate, isForeign: this.foreignPlate(), isDefault: this.favorite() });
     this.saving.set(false);
     if (mutation.success) this.result.set('saved');
   }

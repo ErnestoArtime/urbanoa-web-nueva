@@ -111,22 +111,31 @@ export class VehicleService {
     if (!current) return { success: false, source: 'error' };
 
     const nextPlate = this.normalizePlate(changes.plate ?? current.plate);
+    const nextIsDefault = changes.isDefault ?? current.isDefault;
+    const plateChanged = nextPlate !== current.plate;
+    const favoriteChanged = nextIsDefault !== current.isDefault;
     let result: VehicleMutationResult = { success: true, source: 'remote' };
 
-    if (nextPlate !== current.plate) {
+    if (plateChanged) {
       result = await this.remoteMutation(OPS_ENDPOINTS.user.removePlate, { plate: current.plate });
       if (result.success) {
-        result = await this.remoteMutation(OPS_ENDPOINTS.user.addPlate, { plate: nextPlate, favorite: current.isDefault ? 1 : 0 });
+        result = await this.remoteMutation(OPS_ENDPOINTS.user.addPlate, { plate: nextPlate, favorite: nextIsDefault ? 1 : 0 });
       }
       if (!result.success) return result;
     }
 
+    if (!plateChanged && favoriteChanged) {
+      result = await this.remoteMutation(OPS_ENDPOINTS.user.updatePlate, { plate: nextPlate, favorite: nextIsDefault ? 1 : 0 });
+      if (!result.success) return result;
+    }
+
     this.state.update((vehicles) =>
-      vehicles.map((vehicle) => (vehicle.id === id ? { ...vehicle, ...changes, plate: nextPlate } : vehicle)),
+      vehicles.map((vehicle) => (vehicle.id === id ? { ...vehicle, ...changes, plate: nextPlate, isDefault: nextIsDefault } : vehicle)),
     );
     this.persist();
 
-    if (result.success && changes.isDefault) result = await this.setDefault(id);
+    await this.refreshFromServer();
+
     return result;
   }
 
@@ -135,17 +144,27 @@ export class VehicleService {
     if (!current) return { success: false, source: 'error' };
     if (current.isDefault) return { success: true, source: 'remote' };
 
-    const previousDefault = this.state().find((vehicle) => vehicle.isDefault && vehicle.id !== id);
-
-    let result = await this.remoteMutation(OPS_ENDPOINTS.user.updatePlate, { plate: current.plate, favorite: 1 });
-    if (result.success && previousDefault) {
-      result = await this.remoteMutation(OPS_ENDPOINTS.user.updatePlate, { plate: previousDefault.plate, favorite: 0 });
-    }
+    const result = await this.remoteMutation(OPS_ENDPOINTS.user.updatePlate, { plate: current.plate, favorite: 1 });
     if (!result.success) return result;
 
     this.state.update((vehicles) => vehicles.map((vehicle) => ({ ...vehicle, isDefault: vehicle.id === id })));
     this.persist();
     return result;
+  }
+
+  /** Refetch the vehicles from QueryUserPlatesAPI, preserving any local-only label. */
+  private async refreshFromServer(): Promise<void> {
+    const token = this.session.token();
+    if (!token) return;
+    const value = await this.fetchPlates(token);
+    if (value === null || !Array.isArray(value.plates)) return;
+    const previous = new Map(this.state().map((vehicle) => [vehicle.plate, vehicle]));
+    const merged = value.plates.map((item) => {
+      const vehicle = this.fromApi(item);
+      return previous.get(vehicle.plate) ? { ...vehicle, label: previous.get(vehicle.plate)!.label } : vehicle;
+    });
+    this.state.set(merged);
+    this.persist();
   }
 
   async remove(id: string): Promise<VehicleMutationResult> {

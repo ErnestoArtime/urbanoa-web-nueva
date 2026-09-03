@@ -4,7 +4,6 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
 import { ResultModalComponent } from '../../../shared/components/result-modal/result-modal.component';
 import { VehicleService } from '../../../core/services/vehicle.service';
-import { FOREIGN_PLATE_MAX_LENGTH, isValidPlate } from '../../../shared/utils/plate-validation';
 
 @Component({
   selector: 'app-vehicle-add',
@@ -20,13 +19,10 @@ import { FOREIGN_PLATE_MAX_LENGTH, isValidPlate } from '../../../shared/utils/pl
             [class.invalid]="plateError()"
             [value]="plate()"
             (input)="setPlate($event)"
-            [attr.maxlength]="foreignPlate() ? FOREIGN_PLATE_MAX_LENGTH : null"
             [placeholder]="'account.vehicleAdd.plate' | translate"
           />
           @if (plateError()) {
-            <p class="form-error">
-              {{ (plate().trim() ? 'account.vehicleAdd.plateInvalid' : 'account.vehicleAdd.plateRequired') | translate }}
-            </p>
+            <p class="form-error">{{ 'account.vehicleAdd.plateRequired' | translate }}</p>
           }
         </div>
         <label class="switch-row"
@@ -100,7 +96,6 @@ export class VehicleAddComponent {
   private readonly router = inject(Router);
   readonly plate = signal('');
   readonly foreignPlate = signal(false);
-  readonly FOREIGN_PLATE_MAX_LENGTH = FOREIGN_PLATE_MAX_LENGTH;
   readonly plateError = signal(false);
   readonly saved = signal(false);
   readonly saving = signal(false);
@@ -116,7 +111,7 @@ export class VehicleAddComponent {
 
   async save(): Promise<void> {
     const plate = this.plate().trim();
-    if (!isValidPlate(plate, this.foreignPlate())) {
+    if (!plate) {
       this.plateError.set(true);
       return;
     }
@@ -124,7 +119,6 @@ export class VehicleAddComponent {
     const mutation = await this.vehicleService.add({
       plate,
       isDefault: false,
-      isForeign: this.foreignPlate(),
       label: this.foreignPlate() ? 'account.vehicle.foreignPlate' : undefined,
     });
     this.saving.set(false);

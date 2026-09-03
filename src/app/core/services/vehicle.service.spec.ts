@@ -63,7 +63,7 @@ describe('VehicleService', () => {
     expect(service.vehicles()).toEqual([{ id: '1234ABC', plate: '1234ABC', isDefault: true }]);
   });
 
-  it('marks a newly added plate favorite and clears the previous favorite remotely', async () => {
+  it('marks a newly added plate as the only favorite, letting the API demote the previous one', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'getOrNull', 'post']);
     api.getOrNull.and.resolveTo({
       plates: [
@@ -89,11 +89,7 @@ describe('VehicleService', () => {
       { plate: '9999 XYZ', favorite: 1 },
       { token: 'token' },
     ]);
-    expect(api.post.calls.argsFor(2)).toEqual([
-      'OPSWebServicesAPI/UpdateUserPlateAPI',
-      { plate: '1234 ABC', favorite: 0 },
-      { token: 'token' },
-    ]);
+    expect(api.post.calls.count()).toBe(2);
     expect(result.source).toBe('remote');
     expect(service.vehicles().find((v) => v.plate === '9999 XYZ')?.isDefault).toBeTrue();
     expect(service.vehicles().find((v) => v.plate === '1234 ABC')?.isDefault).toBeFalse();
@@ -276,6 +272,77 @@ describe('VehicleService', () => {
       { plate: '9999 ZZZ', favorite: 0 },
       { token: 'token' },
     ]);
+  });
+
+  it('marks a favorite via a single UpdateUserPlateAPI call and refreshes the list from QueryUserPlatesAPI', async () => {
+    let plates: { plate: string; favorite: boolean }[] = [
+      { plate: '1234 ABC', favorite: true },
+      { plate: '5678 XYZ', favorite: false },
+    ];
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'getOrNull', 'post']);
+    api.getOrNull.and.callFake(<T,>(): Promise<T | null> => Promise.resolve({ plates } as T));
+    api.post.and.callFake(<T,>(_endpoint: string, body: unknown): Promise<T> => {
+      const plateBody = body as { plate?: string; favorite?: number };
+      if (plateBody?.plate) {
+        plates = plates.map((p) => ({ ...p, favorite: p.plate === plateBody.plate && plateBody.favorite === 1 }));
+      }
+      return Promise.resolve('OK' as T);
+    });
+    const service = serviceWith(api);
+    TestBed.inject(OpsSessionService).setToken('token');
+    await service.load();
+    const nonFavorite = service.vehicles().find((v) => !v.isDefault)!;
+    api.post.calls.reset();
+
+    const result = await service.update(nonFavorite.id, { isDefault: true });
+
+    expect(api.post).toHaveBeenCalledWith('OPSWebServicesAPI/UpdateUserPlateAPI', { plate: '5678 XYZ', favorite: 1 }, { token: 'token' });
+    expect(api.post).not.toHaveBeenCalledWith(
+      'OPSWebServicesAPI/UpdateUserPlateAPI',
+      { plate: '1234 ABC', favorite: 0 },
+      { token: 'token' },
+    );
+    expect(api.post.calls.count()).toBe(1);
+    expect(api.getOrNull).toHaveBeenCalled();
+    expect(result.success).toBeTrue();
+    expect(service.vehicles().find((v) => v.plate === '5678 XYZ')?.isDefault).toBeTrue();
+    expect(service.vehicles().filter((v) => v.isDefault).length).toBe(1);
+  });
+
+  it('persists a favorite toggle from the edit screen (same plate, isForeign) via UpdateUserPlateAPI', async () => {
+    let plates: { plate: string; favorite: boolean }[] = [
+      { plate: '1234 ABC', favorite: true },
+      { plate: '5678 XYZ', favorite: false },
+    ];
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'getOrNull', 'post']);
+    api.getOrNull.and.callFake(<T,>(): Promise<T | null> => Promise.resolve({ plates } as T));
+    api.post.and.callFake(<T,>(_endpoint: string, body: unknown): Promise<T> => {
+      const plateBody = body as { plate?: string; favorite?: number };
+      if (plateBody?.plate) {
+        plates = plates.map((p) => ({ ...p, favorite: p.plate === plateBody.plate && plateBody.favorite === 1 }));
+      }
+      return Promise.resolve('OK' as T);
+    });
+    const service = serviceWith(api);
+    TestBed.inject(OpsSessionService).setToken('token');
+    await service.load();
+    const nonFavorite = service.vehicles().find((v) => !v.isDefault)!;
+    api.post.calls.reset();
+
+    const result = await service.update(nonFavorite.id, {
+      plate: nonFavorite.plate,
+      isForeign: false,
+      isDefault: true,
+    });
+
+    expect(api.post).toHaveBeenCalledWith('OPSWebServicesAPI/UpdateUserPlateAPI', { plate: '5678 XYZ', favorite: 1 }, { token: 'token' });
+    expect(api.post).not.toHaveBeenCalledWith(
+      'OPSWebServicesAPI/UpdateUserPlateAPI',
+      { plate: '1234 ABC', favorite: 0 },
+      { token: 'token' },
+    );
+    expect(api.post.calls.count()).toBe(1);
+    expect(result.success).toBeTrue();
   });
 
   it('rejects a local-only plate when login is postponed', async () => {
