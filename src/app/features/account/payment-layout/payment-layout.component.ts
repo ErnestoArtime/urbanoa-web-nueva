@@ -7,12 +7,11 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { SplitViewComponent } from '../../../layout/split-view/split-view.component';
 import { UserService } from '../../../core/services/user.service';
 import { WalletService } from '../../../core/services/wallet.service';
-import { WalletMovementListComponent } from '../../../shared/components/wallet-movement-list/wallet-movement-list.component';
 import { ResultModalComponent } from '../../../shared/components/result-modal/result-modal.component';
 
 @Component({
   selector: 'app-payment-layout',
-  imports: [RouterLink, SplitViewComponent, TranslatePipe, DecimalPipe, WalletMovementListComponent, ResultModalComponent],
+  imports: [RouterLink, SplitViewComponent, TranslatePipe, DecimalPipe, ResultModalComponent],
   template: `
     <app-split-view [hideList]="isChildRoute()" [hideDetail]="!isChildRoute()">
       <div splitList class="page">
@@ -81,8 +80,6 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
           }}</a>
         </div>
         <a routerLink="/app/account/payment-methods/add" class="btn btn-secondary btn-block mt-2">{{ 'account.addCard' | translate }}</a>
-
-        <app-wallet-movement-list class="mt-2" [movements]="walletService.movements()" title="account.movements" />
       </div>
     </app-split-view>
     @if (cardToDelete()) {

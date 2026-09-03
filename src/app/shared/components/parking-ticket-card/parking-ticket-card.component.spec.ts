@@ -24,13 +24,14 @@ describe('ParkingTicketCardComponent', () => {
     });
   });
 
-  it('shows the unpark button only when refundable is 2', async () => {
+  it('shows unparking and extension actions when refundable is not 0', async () => {
     const fixture = TestBed.createComponent(ParkingTicketCardComponent);
-    fixture.componentRef.setInput('parking', parking(2));
+    fixture.componentRef.setInput('parking', parking(1));
 
     await fixture.whenStable();
 
     expect(fixture.nativeElement.querySelector('.btn-danger')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.btn-primary')).not.toBeNull();
   });
 
   it('uses the parking sector color for the ticket header', async () => {
@@ -43,14 +44,13 @@ describe('ParkingTicketCardComponent', () => {
     expect(ticket.style.getPropertyValue('--ticket-header-color')).toBe('#1E88E5');
   });
 
-  for (const refundable of [0, 1, undefined] as const) {
-    it(`hides the unpark button when refundable is ${String(refundable)}`, async () => {
-      const fixture = TestBed.createComponent(ParkingTicketCardComponent);
-      fixture.componentRef.setInput('parking', parking(refundable));
+  it('hides unparking and extension actions when refundable is 0', async () => {
+    const fixture = TestBed.createComponent(ParkingTicketCardComponent);
+    fixture.componentRef.setInput('parking', parking(0));
 
-      await fixture.whenStable();
+    await fixture.whenStable();
 
-      expect(fixture.nativeElement.querySelector('.btn-danger')).toBeNull();
-    });
-  }
+    expect(fixture.nativeElement.querySelector('.btn-danger')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.btn-primary')).toBeNull();
+  });
 });
