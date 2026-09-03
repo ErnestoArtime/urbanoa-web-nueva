@@ -1,0 +1,9 @@
+{
+  "app": {
+    "name": "mf-arinpark",
+    "version": "0.0.1"
+  },
+  "build": {
+    "version": "0.0.1"
+  }
+}
