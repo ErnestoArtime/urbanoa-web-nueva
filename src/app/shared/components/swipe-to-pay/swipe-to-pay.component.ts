@@ -1,5 +1,6 @@
-import { Component, computed, input, output, signal, ElementRef, ViewChild } from '@angular/core';
+import { Component, computed, inject, input, output, signal, ElementRef, ViewChild } from '@angular/core';
 import { AppIconComponent } from '../../icons/app-icon.component';
+import { TranslationService } from '../../../core/services/translation.service';
 
 @Component({
   selector: 'app-swipe-to-pay',
@@ -10,7 +11,7 @@ import { AppIconComponent } from '../../icons/app-icon.component';
       <div
         class="swipe-track"
         role="button"
-        [attr.aria-label]="swipeComplete() ? completedLabel() : label()"
+        [attr.aria-label]="displayLabel()"
         [attr.aria-disabled]="disabled() || swipeComplete()"
         tabindex="0"
         (keydown.enter)="confirmByKeyboard()"
@@ -27,7 +28,7 @@ import { AppIconComponent } from '../../icons/app-icon.component';
         >
           <app-icon name="chevron" [stroke]="true" />
         </div>
-        <span class="swipe-label">{{ swipeComplete() ? completedLabel() : label() }}</span>
+        <span class="swipe-label">{{ displayLabel() }}</span>
       </div>
       @if (disabled()) {
         <p class="swipe-disabled-hint">{{ disabledHint() }}</p>
@@ -130,13 +131,18 @@ import { AppIconComponent } from '../../icons/app-icon.component';
 })
 export class SwipeToPayComponent {
   @ViewChild('swipeArea') swipeArea!: ElementRef<HTMLElement>;
+  private readonly translationService = inject(TranslationService);
 
-  readonly label = input('Desliza para pagar');
-  readonly completedLabel = input('Completado');
+  readonly label = input<string>();
+  readonly completedLabel = input<string>();
   readonly disabled = input(false);
   readonly disabledHint = input('');
 
   readonly complete = output<void>();
+  readonly displayLabel = () =>
+    this.swipeComplete()
+      ? (this.completedLabel() ?? this.translationService.translate('payment.swipeCompleted'))
+      : (this.label() ?? this.translationService.translate('payment.swipeToPay'));
 
   readonly swipeComplete = signal(false);
   readonly thumbX = signal(4);

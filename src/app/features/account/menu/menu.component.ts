@@ -1,8 +1,10 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { NavigationEnd, Router, RouterLink } from '@angular/router';
-import { ACCOUNT_MENU, MOCK_USER, MOCK_VEHICLES } from '../../../shared/mock-data';
+import { ACCOUNT_MENU } from '../../../shared/constants/navigation';
 import { WalletService } from '../../../core/services/wallet.service';
+import { UserService } from '../../../core/services/user.service';
+import { VehicleService } from '../../../core/services/vehicle.service';
 import { AccountProfileComponent } from '../profile/profile.component';
 import { AccountSettingsComponent } from '../settings/settings.component';
 import { AccountNotificationsComponent } from '../notifications/notifications.component';
@@ -18,6 +20,7 @@ import { VehicleEditComponent } from '../vehicle-edit/vehicle-edit.component';
 import { PaymentAddComponent } from '../payment-add/payment-add.component';
 import { WebContentComponent } from '../web-content/web-content.component';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { TranslationService } from '../../../core/services/translation.service';
 
 import { APP_BRAND } from '../../../shared/constants/app-brand';
 import { environment } from '../../../../environments/environment';
@@ -48,10 +51,10 @@ import { environment } from '../../../../environments/environment';
       <section class="account-master">
         <h1 class="page-title">{{ 'account.title' | translate }}</h1>
         <div class="account-profile">
-          <span class="account-avatar">{{ user.name.charAt(0) }}</span>
+          <span class="account-avatar">{{ user().name.charAt(0) }}</span>
           <div>
-            <strong>{{ user.name }} {{ user.surname }}</strong
-            ><span>{{ user.email }}</span
+            <strong>{{ user().name }} {{ user().surname }}</strong
+            ><span>{{ user().email }}</span
             ><span>{{ walletService.balance() | number: '1.2-2' }} €</span>
           </div>
         </div>
@@ -76,17 +79,19 @@ import { environment } from '../../../../environments/environment';
           }
         </ul>
         <div class="account-actions">
-          <a routerLink="/auth/login" class="btn btn-ghost btn-block">Cerrar sesión</a>
-          <button type="button" class="btn btn-danger btn-block" (click)="select('delete-account')">Eliminar cuenta</button>
+          <a routerLink="/auth/login" class="btn btn-ghost btn-block">{{ 'account.logout' | translate }}</a>
+          <button type="button" class="btn btn-danger btn-block" (click)="select('delete-account')">
+            {{ 'account.deleteAccount' | translate }}
+          </button>
         </div>
       </section>
       <aside class="account-detail">
         @if (!selected()) {
-          <div class="detail-placeholder">Selecciona una opción para ver y editar sus datos</div>
+          <div class="detail-placeholder">{{ 'account.selectOption' | translate }}</div>
         } @else {
           <div class="detail-toolbar">
             <span class="back-btn" (click)="goBack()">←</span>
-            <strong>{{ selectedLabel() }}</strong>
+            <strong>{{ selectedLabel() | translate }}</strong>
             <span class="detail-toolbar-actions"></span>
           </div>
           <div class="detail-content">
@@ -104,7 +109,7 @@ import { environment } from '../../../../environments/environment';
                 <app-account-tax-data />
               }
               @case ('help') {
-                <app-web-content title="Ayuda" backLink="/app/account" [url]="helpUrl" />
+                <app-web-content [title]="'account.menu.help' | translate" backLink="/app/account" [url]="helpUrl()" />
               }
               @case ('about') {
                 <app-account-about />
@@ -116,15 +121,15 @@ import { environment } from '../../../../environments/environment';
                 <app-account-support-success />
               }
               @case ('terms-and-conditions') {
-                <app-web-content title="Términos y condiciones" backLink="/app/account" [url]="termsUrl" />
+                <app-web-content [title]="'account.menu.terms' | translate" backLink="/app/account" [url]="termsUrl()" />
               }
               @case ('privacy-policy') {
-                <app-web-content title="Política de privacidad" backLink="/app/account" [url]="privacyUrl" />
+                <app-web-content [title]="'account.menu.privacy' | translate" backLink="/app/account" [url]="privacyUrl()" />
               }
               @case ('delete-account') {
                 <div class="page account-static-page">
-                  <h1 class="page-title">Eliminar cuenta</h1>
-                  <p>Esta acción eliminaría tu cuenta de forma permanente tras confirmación.</p>
+                  <h1 class="page-title">{{ 'account.deleteAccount' | translate }}</h1>
+                  <p>{{ 'account.deleteAccountDetail' | translate }}</p>
                 </div>
               }
               @case ('change-password') {
@@ -138,12 +143,16 @@ import { environment } from '../../../../environments/environment';
                 } @else {
                   <div class="page">
                     <ul class="list card" style="padding:0;overflow:hidden">
-                      @for (v of vehicles; track v.id) {
+                      @for (v of vehicles(); track v.id) {
                         <a class="list-item" (click)="vehiclesSub.set('edit'); $event.preventDefault()">
                           <div class="list-item-content">
                             <div class="list-item-title">{{ v.plate }}</div>
                             <div class="list-item-subtitle">
-                              {{ v.isDefault ? ('account.vehicleFavorite' | translate) : (v.label ?? '') }}
+                              @if (v.isDefault) {
+                                {{ 'account.vehicleFavorite' | translate }}
+                              } @else if (v.label; as label) {
+                                {{ translateLabel(label) }}
+                              }
                             </div>
                           </div>
                           @if (v.isDefault) {
@@ -169,7 +178,7 @@ import { environment } from '../../../../environments/environment';
                   <div class="page">
                     <div class="wallet-card mb-2">
                       <p style="opacity:0.9">{{ 'account.wallet' | translate }} {{ brand.name }}</p>
-                      <p class="wallet-balance">{{ user.balance | number: '1.2-2' }} €</p>
+                      <p class="wallet-balance">{{ walletService.balance() | number: '1.2-2' }} €</p>
                     </div>
                     <p class="section-title">{{ 'account.cards' | translate }}</p>
                     <div class="card">
@@ -408,19 +417,24 @@ import { environment } from '../../../../environments/environment';
     `,
   ],
 })
-export class AccountMenuComponent {
+export class AccountMenuComponent implements OnInit {
   private readonly router = inject(Router);
+  private readonly translationService = inject(TranslationService);
   readonly walletService = inject(WalletService);
-  readonly user = MOCK_USER;
+
+  translateLabel(value: string): string {
+    return this.translationService.translateLabel(value);
+  }
+  readonly user = inject(UserService).user;
   readonly menu = ACCOUNT_MENU;
-  readonly vehicles = MOCK_VEHICLES;
+  readonly vehicles = inject(VehicleService).vehicles;
   readonly selected = signal<string | null>(null);
   readonly vehiclesSub = signal<string | null>(null);
   readonly paymentSub = signal<string | null>(null);
   readonly brand = APP_BRAND;
-  readonly helpUrl = `${environment.externalContentBaseUrl}/Arinpark/ArinparkFAQ-ESP.html`;
-  readonly termsUrl = `${environment.externalContentBaseUrl}/arinpark/CU_es.html`;
-  readonly privacyUrl = `${environment.externalContentBaseUrl}/arinpark/es.html`;
+  readonly helpUrl = computed(() => `${environment.externalContentBaseUrl}/Arinpark/ArinparkFAQ-${this.legalLanguage().faq}.html`);
+  readonly termsUrl = computed(() => `${environment.externalContentBaseUrl}/arinpark/CU_${this.legalLanguage().code}.html`);
+  readonly privacyUrl = computed(() => `${environment.externalContentBaseUrl}/arinpark/${this.legalLanguage().code}.html`);
   readonly toast = signal('');
   private readonly iconByKey: Record<string, string> = {
     profile:
@@ -450,11 +464,25 @@ export class AccountMenuComponent {
       'M508.5-291.5Q520-303 520-320v-160q0-17-11.5-28.5T480-520q-17 0-28.5 11.5T440-480v160q0 17 11.5 28.5T480-280q17 0 28.5-11.5Zm0-320Q520-623 520-640t-11.5-28.5Q497-680 480-680t-28.5 11.5Q440-657 440-640t11.5 28.5Q463-600 480-600t28.5-11.5ZM480-80q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Z',
   };
 
+  private legalLanguage(): { code: string; faq: string } {
+    const language = this.translationService.currentLang$();
+    return {
+      es: { code: 'es', faq: 'ESP' },
+      eu: { code: 'eus', faq: 'EUS' },
+      fr: { code: 'fr', faq: 'FRA' },
+      uk: { code: 'en', faq: 'ENG' },
+    }[language];
+  }
+
   constructor() {
     this.syncFromUrl(this.router.url);
     this.router.events.subscribe((event) => {
       if (event instanceof NavigationEnd) this.syncFromUrl(event.urlAfterRedirects);
     });
+  }
+
+  ngOnInit(): void {
+    if (!this.walletService.loading()) void this.walletService.load();
   }
 
   readonly selectedLabel = () => {
@@ -504,14 +532,18 @@ export class AccountMenuComponent {
   private async shareApp(): Promise<void> {
     if (navigator.share) {
       try {
-        await navigator.share({ title: this.brand.name, text: `Descarga ${this.brand.name}`, url: this.brand.storeUrl });
+        await navigator.share({
+          title: this.brand.name,
+          text: this.translationService.translate('account.shareText', { brand: this.brand.name }),
+          url: this.brand.storeUrl,
+        });
       } catch {
         /* user dismissed share */
       }
     } else {
       try {
         await navigator.clipboard.writeText(this.brand.storeUrl);
-        this.showToast('Enlace copiado');
+        this.showToast(this.translationService.translate('account.linkCopied'));
       } catch {
         /* clipboard unavailable */
       }
@@ -559,8 +591,8 @@ export class AccountMenuComponent {
       this.paymentSub.set('refund');
       return;
     }
-    if (accountPath === 'support-success') {
-      this.selected.set(accountPath);
+    if (accountPath === 'support-success' || accountPath.startsWith('support/')) {
+      this.selected.set('support');
       return;
     }
 

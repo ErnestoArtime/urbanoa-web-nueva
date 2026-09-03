@@ -1,0 +1,100 @@
+{
+  "cataloguesDir": "public/assets/i18n",
+  "sourceDir": "src",
+  "referenceLanguage": "es",
+  "requiredLanguages": ["es", "eu", "fr", "uk"],
+  "catalogueStructure": "flat",
+  "template": "docs/traducciones_agrupadas_urbanoa - original.xlsx",
+  "output": "docs/traducciones_agrupadas_urbanoa.xlsx",
+  "auditOutput": "docs/i18n-audit.json",
+  "literalsOutput": "docs/i18n-direct-literals.md",
+  "summarySheet": "Resumen",
+  "indexSheet": "Índice",
+  "generalSheet": "General",
+  "keyHeader": "Clave",
+  "featureHeader": "Funcionalidad",
+  "countHeader": "Claves",
+  "keyColumnWidth": 38,
+  "languageColumnWidth": 24,
+  "featureColumnWidth": 24,
+  "missingTranslationPattern": "{language}_{reference}",
+  "supportedExtensions": [".html", ".ts"],
+  "excludedFileSuffixes": [".spec.ts"],
+  "dynamicPrefixes": [],
+  "ignoredKeyPrefixes": ["urbanoa."],
+  "translationKeyPrefixes": [
+    "account",
+    "app",
+    "auth",
+    "breadcrumb",
+    "common",
+    "dashboard",
+    "layout",
+    "nav",
+    "onboarding",
+    "ops",
+    "parking",
+    "payment",
+    "validation",
+    "wallet"
+  ],
+  "simpleTranslationKeyPrefixes": ["mv_"],
+  "ignoredDirectLiterals": [
+    "ArinPark",
+    "ap",
+    "es",
+    "eu",
+    "fr",
+    "uk",
+    "ES",
+    "EU",
+    "FR",
+    "UK",
+    "DINERS",
+    "JCB",
+    "UnionPay",
+    "Juan García",
+    "GERTEK SDAD. DE GESTIONES Y SERVICIOS, S.A.",
+    "Dirección: Gregorio De La Revilla 27, 2º",
+    "48010 - Bilbao (España)",
+    "Teléfono: 944399809",
+    "CIF: A95158895",
+    "Recarga de saldo",
+    "Devolución de saldo",
+    "Pago de denuncia"
+  ],
+  "sheetRules": [
+    {
+      "sheet": "Inicio y comunes",
+      "prefixes": ["app.", "nav.", "layout.", "common.", "validation.", "breadcrumb."]
+    },
+    {
+      "sheet": "Autenticación",
+      "prefixes": ["auth."]
+    },
+    {
+      "sheet": "Onboarding",
+      "prefixes": ["onboarding."]
+    },
+    {
+      "sheet": "Dashboard",
+      "prefixes": ["dashboard."]
+    },
+    {
+      "sheet": "Aparcar",
+      "prefixes": ["parking."]
+    },
+    {
+      "sheet": "Operaciones",
+      "prefixes": ["ops."]
+    },
+    {
+      "sheet": "Cuenta",
+      "prefixes": ["account."]
+    },
+    {
+      "sheet": "Pagos y cartera",
+      "prefixes": ["payment.", "wallet."]
+    }
+  ]
+}

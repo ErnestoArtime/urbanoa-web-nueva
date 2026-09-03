@@ -13,7 +13,7 @@ import type { WalletMovement } from '../../../core/services/wallet.service';
         <div class="wallet-movement">
           <div class="movement-info">
             <strong>{{ movement.descriptionKey | translate: movement.descriptionParams }}</strong>
-            <span>{{ movement.date | date: 'dd/MM/yyyy' }}</span>
+            <span>{{ movement.date | date: 'dd/MM/yyyy': 'Europe/Madrid' }}</span>
           </div>
           <strong class="movement-amount" [class.positive]="movement.amount > 0">
             {{ movement.amount > 0 ? '+' : '' }}{{ movement.amount | number: '1.2-2' }} €

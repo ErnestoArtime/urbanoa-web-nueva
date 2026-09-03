@@ -1,4 +1,5 @@
 export interface ParkingTimeStep {
+  tariffType: number;
   time: number;
   quantity: number;
   timeFormatted: string;
@@ -11,6 +12,10 @@ export interface ParkingTimeStep {
 export interface ParkingTimeStepInput {
   tariffId: string;
   tariffPrice: number;
+  contractId?: number;
+  sectorId?: number;
+  ticketId?: number;
+  plate?: string;
   startDate?: Date;
   maxMinutes?: number;
   stepMinutes?: number;

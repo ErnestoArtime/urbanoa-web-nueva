@@ -3,14 +3,19 @@ import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { TranslationService } from '../../../core/services/translation.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
-import { OperationType, OPERATION_TYPE_LABELS } from '../../../shared/models/operation-type';
-import { APP_BRAND } from '../../../shared/constants/app-brand';
+import { OperationType } from '../../../shared/models/operation-type';
 import { OperationsService } from '../../../core/services/operations.service';
 import { DateRangeFilterComponent, type DateRange } from '../../../shared/components/date-range-filter/date-range-filter.component';
 import type { Operation } from '../../../shared/models/operation';
+import { OpsApiClient } from '../../../core/api/ops-api-client.service';
+import { OpsSessionService } from '../../../core/api/ops-session.service';
+import { OPS_ENDPOINTS } from '../../../core/api/ops-endpoints';
+import { UserService } from '../../../core/services/user.service';
+import { AuthService } from '../../../core/services/auth.service';
+import { formatOpsDate } from '../../../core/utils/ops-date';
 
 type ReportRange = 'last7' | 'last14' | 'last30' | 'last6m' | 'last12m' | 'last5y';
-type ReportFilterKey = 'parks' | 'extends' | 'refunds' | 'recharges' | 'parkingEnd' | 'balanceRefunds' | 'fines';
+type ReportFilterKey = 'parks' | 'extends' | 'refunds' | 'recharges' | 'balanceRefunds' | 'fines';
 
 interface ReportFilterItem {
   key: ReportFilterKey;
@@ -96,6 +101,9 @@ interface ReportRangeItem {
         >
           {{ isGenerating() ? ('ops.report.generating' | translate) : ('ops.report.generateButton' | translate) }}
         </button>
+        @if (reportError()) {
+          <p class="form-error" role="alert">No se pudo generar el informe PDF.</p>
+        }
       </div>
     </div>
   `,
@@ -247,6 +255,10 @@ export class ReportComponent {
   private readonly operationsService = inject(OperationsService);
   private readonly translationService = inject(TranslationService);
   private readonly fb = inject(FormBuilder);
+  private readonly api = inject(OpsApiClient);
+  private readonly session = inject(OpsSessionService);
+  private readonly userService = inject(UserService);
+  private readonly authService = inject(AuthService);
 
   readonly form = this.fb.nonNullable.group({
     customDates: [false],
@@ -254,7 +266,6 @@ export class ReportComponent {
     extends: [true],
     refunds: [true],
     recharges: [true],
-    parkingEnd: [true],
     balanceRefunds: [true],
     fines: [true],
   });
@@ -276,7 +287,6 @@ export class ReportComponent {
     { key: 'extends', labelKey: 'ops.report.extension', descKey: 'ops.report.extensionDesc', type: OperationType.PARKING_EXTENSION },
     { key: 'refunds', labelKey: 'ops.report.refunds', descKey: 'ops.report.refundsDesc', type: OperationType.REFUND },
     { key: 'recharges', labelKey: 'ops.report.topUps', descKey: 'ops.report.topUpsDesc', type: OperationType.TOP_UP },
-    { key: 'parkingEnd', labelKey: 'ops.type.parkingEndRefund', descKey: 'ops.report.parkingEndDesc', type: OperationType.PARKING_END },
     {
       key: 'balanceRefunds',
       labelKey: 'ops.report.balanceRefunds',
@@ -286,7 +296,7 @@ export class ReportComponent {
     { key: 'fines', labelKey: 'ops.report.fines', descKey: 'ops.report.finesDesc', type: OperationType.FINE_PAYMENT },
   ];
   readonly isGenerating = signal(false);
-  readonly reportHtml = signal<string | null>(null);
+  readonly reportError = signal(false);
 
   readonly reportOperations = () => this.buildFilteredOperations();
 
@@ -322,59 +332,43 @@ export class ReportComponent {
     }
   }
 
-  private buildReportHtml(operations: Operation[]): string {
-    const rows = operations
-      .map(
-        (op) => `
-      <tr>
-        <td>${this.translationService.translate(OPERATION_TYPE_LABELS[op.type])}</td>
-        <td>${op.plate ?? '—'}</td>
-        <td>${op.date}</td>
-        <td style="text-align:right">${op.amount > 0 ? '+' : ''}${op.amount.toFixed(2)} €</td>
-      </tr>`,
-      )
-      .join('');
-
-    const total = operations.reduce((sum, item) => sum + item.amount, 0);
-    const title = this.translationService.translate('ops.report');
-
-    return `<!DOCTYPE html>
-<html lang="es">
-<head><meta charset="utf-8"><title>${title}</title>
-<style>
-  body { font-family: 'Segoe UI', Arial, sans-serif; margin: 2rem; color: #222; }
-  h1 { font-size: var(--text-2xl); margin-bottom: 0.25rem; }
-  .sub { color: var(--color-text-muted); font-size: var(--text-sm); margin-bottom: 1.5rem; }
-  table { width: 100%; border-collapse: collapse; font-size: var(--text-sm); }
-  th { text-align: left; padding: 0.5rem; background: #f5f5f5; font-weight: var(--font-medium); }
-  td { padding: 0.5rem; border-bottom: 1px solid #eee; }
-  .total { margin-top: 1.5rem; font-weight: var(--font-bold); font-size: var(--text-base); text-align: right; }
-  .footer { margin-top: 2rem; font-size: var(--text-xs); color: #999; text-align: center; }
-</style></head>
-<body>
-  <h1>${title}</h1>
-  <p class="sub">${this.translationService.translate('ops.report.generatedOn')} ${new Date().toLocaleDateString('es-ES')}</p>
-  <table>
-    <thead><tr><th>${this.translationService.translate('ops.report.operation')}</th><th>${this.translationService.translate('ops.report.plate')}</th><th>${this.translationService.translate('ops.report.date')}</th><th style="text-align:right">${this.translationService.translate('ops.report.amount')}</th></tr></thead>
-    <tbody>${rows}</tbody>
-  </table>
-  <p class="total">${this.translationService.translate('ops.report.total')}: ${total > 0 ? '+' : ''}${total.toFixed(2)} €</p>
-  <p class="footer">${APP_BRAND.name} — ${this.translationService.translate('ops.report.generatedFromApp')}</p>
-</body></html>`;
-  }
-
-  generateReport(): void {
+  async generateReport(): Promise<void> {
     if (this.dateRangeError()) return;
     this.isGenerating.set(true);
-    const operations = this.buildFilteredOperations();
-    const html = this.buildReportHtml(operations);
-    this.reportHtml.set(html);
-    const blob = new Blob([html], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    globalThis.open(url, '_blank');
-    setTimeout(() => URL.revokeObjectURL(url), 10_000);
-    this.isGenerating.set(false);
-    this.router.navigate(['/app/operations/report-success']);
+    this.reportError.set(false);
+    const viewer = globalThis.open('', '_blank');
+    let completed = false;
+    try {
+      const token = this.session.token();
+      if (!token) throw new Error('No hay una sesión OPS activa');
+      const range = this.resolveRange();
+      const email = this.authService.user().email.trim() || (await this.userService.load()).email.trim();
+      if (!email) throw new Error('El correo del usuario está vacío');
+      const content = await this.api.post<string>(
+        OPS_ENDPOINTS.user.report,
+        {
+          contractId: 0,
+          dateStart: this.toBackendDate(range.start),
+          dateEnd: this.toBackendDate(range.end),
+          operationTypeList: this.filters.filter((filter) => this.isFilterEnabled(filter.key)).map((filter) => filter.type),
+          mail: email,
+          reportFormat: 1,
+        },
+        { token },
+      );
+      const pdf = this.base64Pdf(content);
+      const url = URL.createObjectURL(pdf);
+      if (viewer) viewer.location.href = url;
+      else globalThis.open(url, '_blank');
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      completed = true;
+    } catch {
+      viewer?.close();
+      this.reportError.set(true);
+    } finally {
+      this.isGenerating.set(false);
+    }
+    if (completed) void this.router.navigate(['/app/operations/report-success']);
   }
 
   private buildFilteredOperations(): Operation[] {
@@ -425,8 +419,6 @@ export class ReportComponent {
         return 'refunds';
       case OperationType.TOP_UP:
         return 'recharges';
-      case OperationType.PARKING_END:
-        return 'parkingEnd';
       case OperationType.BALANCE_REFUND:
         return 'balanceRefunds';
       case OperationType.FINE_PAYMENT:
@@ -443,5 +435,16 @@ export class ReportComponent {
     }
     const [day, month, year] = value.split('/').map(Number);
     return new Date(year, month - 1, day, 12, 0, 0, 0);
+  }
+
+  private toBackendDate(value: Date): string {
+    return formatOpsDate(value);
+  }
+
+  private base64Pdf(content: string): Blob {
+    const normalized = content.replace(/^data:application\/pdf;base64,/, '').replace(/\s/g, '');
+    const binary = atob(normalized);
+    const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
+    return new Blob([bytes], { type: 'application/pdf' });
   }
 }

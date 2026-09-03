@@ -1,7 +1,8 @@
-import { Component, input, output } from '@angular/core';
+import { Component, inject, input, output } from '@angular/core';
 import { LucideCarFront, LucidePencil } from '@lucide/angular';
-import type { Vehicle } from '../../mock-data';
+import type { Vehicle } from '../../models/vehicle';
 import { TranslatePipe } from '../../pipes/translate.pipe';
+import { TranslationService } from '../../../core/services/translation.service';
 
 @Component({
   selector: 'app-vehicle-card',
@@ -12,7 +13,7 @@ import { TranslatePipe } from '../../pipes/translate.pipe';
       <span class="vehicle-icon"><svg lucideCarFront size="22" strokeWidth="2.3"></svg></span>
       <div class="vehicle-body">
         <strong>{{ vehicle().plate }}</strong>
-        <span>{{ subtitleKey() | translate }}</span>
+        <span>{{ subtitle() }}</span>
       </div>
       <button type="button" class="vehicle-edit" (click)="edit.emit(vehicle())" [attr.aria-label]="'common.edit' | translate">
         <svg lucidePencil size="18" strokeWidth="2.2"></svg>
@@ -77,10 +78,11 @@ export class VehicleCardComponent {
   readonly vehicle = input.required<Vehicle>();
   readonly parked = input(false);
   readonly edit = output<Vehicle>();
+  private readonly translation = inject(TranslationService);
 
-  subtitleKey(): string {
-    if (this.parked()) return 'account.vehicle.alreadyParked';
-    if (this.vehicle().isDefault) return 'dashboard.vehicle';
-    return this.vehicle().label ? this.vehicle().label! : 'account.vehicle.available';
+  subtitle(): string {
+    if (this.parked()) return this.translation.translate('account.vehicle.alreadyParked');
+    if (this.vehicle().isDefault) return this.translation.translate('dashboard.vehicle');
+    return this.translation.translateLabel(this.vehicle().label);
   }
 }

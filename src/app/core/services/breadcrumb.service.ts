@@ -52,7 +52,7 @@ export class BreadcrumbService {
       success: 'breadcrumb.success',
       operations: 'nav.operations',
       detail: 'breadcrumb.detail',
-      'unpaid-fines': 'ops.denuncias',
+      'unpaid-fines': 'ops.sanciones',
       'unpaid-fine-detail': 'ops.fineDetail.title',
       report: 'ops.report',
       'report-success': 'ops.report.success',
@@ -71,6 +71,7 @@ export class BreadcrumbService {
       support: 'account.support',
       'support-success': 'account.supportSuccess.title',
       about: 'account.menu.about',
+      'delete-account': 'account.deleteAccount.title',
     };
     return map[segment] ?? segment;
   }

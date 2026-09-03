@@ -1,7 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { MOCK_USER } from '../../../shared/mock-data';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
 import { UserService } from '../../../core/services/user.service';
@@ -30,6 +29,10 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
             }
           </div>
           <div class="form-group">
+            <label>{{ 'account.profile.secondSurname' | translate }}</label
+            ><input class="form-input" formControlName="secondSurname" [placeholder]="'account.profile.secondSurname' | translate" />
+          </div>
+          <div class="form-group">
             <label>{{ 'account.profile.nif' | translate }} <span aria-hidden="true">*</span></label
             ><input class="form-input" formControlName="nif" [placeholder]="'account.profile.nif' | translate" />
             @if (form.controls.nif.touched && form.controls.nif.invalid) {
@@ -47,7 +50,13 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
             <label>{{ 'account.profile.email' | translate }} <span aria-hidden="true">*</span></label
             ><input class="form-input" type="email" formControlName="email" [placeholder]="'account.profile.email' | translate" />
             @if (form.controls.email.touched && form.controls.email.invalid) {
-              <p class="form-error">{{ form.controls.email.hasError('email') ? ('account.profile.emailInvalid' | translate) : ('account.profile.emailRequired' | translate) }}</p>
+              <p class="form-error">
+                {{
+                  form.controls.email.hasError('email')
+                    ? ('account.profile.emailInvalid' | translate)
+                    : ('account.profile.emailRequired' | translate)
+                }}
+              </p>
             }
           </div>
           <button type="submit" class="btn btn-primary btn-block" [disabled]="saving()">
@@ -66,6 +75,15 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
           (primaryAction)="saved.set(false)"
         />
       }
+      @if (saveFailed()) {
+        <app-result-modal
+          type="error"
+          [title]="'account.profile.saveError' | translate"
+          [message]="'account.profile.saveErrorDetail' | translate"
+          [primaryText]="'common.accept' | translate"
+          (primaryAction)="saveFailed.set(false)"
+        />
+      }
     </div>
   `,
   styles: [':host{display:block}'],
@@ -73,12 +91,14 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
 export class AccountProfileComponent {
   readonly saved = signal(false);
   readonly saving = signal(false);
+  readonly saveFailed = signal(false);
   private readonly fb = inject(FormBuilder);
   private readonly userService = inject(UserService);
 
   readonly form = this.fb.nonNullable.group({
     name: ['', Validators.required],
     surname: ['', Validators.required],
+    secondSurname: [''],
     nif: ['', Validators.required],
     phone: ['', Validators.required],
     email: ['', [Validators.required, Validators.email]],
@@ -88,18 +108,17 @@ export class AccountProfileComponent {
     this.form.patchValue(this.userService.user());
   }
 
-  onSave(): void {
+  async onSave(): Promise<void> {
     this.form.markAllAsTouched();
-    if (this.form.invalid) return;
+    if (this.form.invalid || this.saving()) return;
 
     this.saving.set(true);
-    setTimeout(() => {
-      const raw = this.form.getRawValue();
-      const data = { name: raw.name || '', surname: raw.surname || '', email: raw.email || '', nif: raw.nif || '', phone: raw.phone || '' };
-      Object.assign(MOCK_USER, data);
-      this.userService.updateUser(data);
-      this.saving.set(false);
+    const result = await this.userService.save(this.form.getRawValue());
+    this.saving.set(false);
+    if (result.success) {
       this.saved.set(true);
-    }, 1500);
+    } else {
+      this.saveFailed.set(true);
+    }
   }
 }

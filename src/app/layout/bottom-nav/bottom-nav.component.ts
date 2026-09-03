@@ -4,7 +4,7 @@ import { LucideCarFront, LucideCircleUserRound, LucideHistory, LucideLayoutGrid 
 import { filter, map, startWith } from 'rxjs/operators';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
-import { NAV_ITEMS, ACCOUNT_MENU } from '../../shared/mock-data';
+import { NAV_ITEMS, ACCOUNT_MENU } from '../../shared/constants/navigation';
 import { ParkingSessionService } from '../../core/services/parking-session.service';
 
 const CHILD_LABELS = new Map(ACCOUNT_MENU.map((m) => [m.path, m.labelKey]));

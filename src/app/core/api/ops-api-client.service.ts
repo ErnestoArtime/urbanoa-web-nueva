@@ -1,0 +1,127 @@
+import { inject, Injectable } from '@angular/core';
+import { environment } from '../../../environments/environment';
+import { OpsApiEnvelope, OpsApiError } from './ops-api.types';
+import { OpsSessionService } from './ops-session.service';
+import { TranslationService } from '../services/translation.service';
+
+interface OpsRequestOptions {
+  body?: unknown;
+  token?: string | null;
+  headers?: Record<string, string>;
+  timeoutMs?: number;
+  /** Devuelve null en vez de fallar cuando el envelope es exitoso pero `value` es null. */
+  allowEmptyValue?: boolean;
+}
+
+@Injectable({ providedIn: 'root' })
+export class OpsApiClient {
+  private serverOffsetMs = 0;
+
+  private readonly session = inject(OpsSessionService);
+  private readonly translation = inject(TranslationService);
+
+  get<T>(endpoint: string, options: Omit<OpsRequestOptions, 'body'> = {}): Promise<T> {
+    return this.request<T>('GET', endpoint, options);
+  }
+
+  getOrNull<T>(endpoint: string, options: Omit<OpsRequestOptions, 'body'> = {}): Promise<T | null> {
+    return this.request<T | null>('GET', endpoint, { ...options, allowEmptyValue: true });
+  }
+
+  post<T>(endpoint: string, body: unknown, options: Omit<OpsRequestOptions, 'body'> = {}): Promise<T> {
+    return this.request<T>('POST', endpoint, { ...options, body });
+  }
+
+  postOrNull<T>(endpoint: string, body: unknown, options: Omit<OpsRequestOptions, 'body'> = {}): Promise<T | null> {
+    return this.request<T | null>('POST', endpoint, { ...options, body, allowEmptyValue: true });
+  }
+
+  serverNow(): Date {
+    return new Date(Date.now() + this.serverOffsetMs);
+  }
+
+  private async request<T>(method: 'GET' | 'POST', endpoint: string, options: OpsRequestOptions): Promise<T> {
+    const controller = new AbortController();
+    this.session?.registerRequest(controller);
+    const timeout = setTimeout(() => controller.abort(), options.timeoutMs ?? 15_000);
+    const headers: Record<string, string> = {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      cityId: '0',
+      ...options.headers,
+    };
+
+    if (options.token) headers['Authorization'] = `Bearer ${options.token}`;
+
+    try {
+      const response = await fetch(`${environment.opsApiBaseUrl}/${endpoint}`, {
+        method,
+        headers,
+        body: method === 'POST' ? JSON.stringify(options.body) : undefined,
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        const responseBody = await response.text().catch(() => '');
+        const detail = responseBody.trim().replace(/\s+/g, ' ').slice(0, 500);
+        throw new OpsApiError('http', endpoint, `${endpoint}: HTTP ${response.status}${detail ? ` - ${detail}` : ''}`, response.status);
+      }
+
+      const serverDate = response.headers.get('date');
+      if (serverDate) {
+        const parsedServerDate = Date.parse(serverDate);
+        if (!Number.isNaN(parsedServerDate)) this.serverOffsetMs = parsedServerDate - Date.now();
+      }
+
+      let payload: unknown;
+      try {
+        payload = await response.json();
+      } catch {
+        throw new OpsApiError('invalid-response', endpoint, `${endpoint}: la respuesta no es JSON válido`, response.status);
+      }
+
+      if (!this.isEnvelope<T>(payload)) {
+        throw new OpsApiError('invalid-response', endpoint, `${endpoint}: contrato de respuesta inesperado`, response.status);
+      }
+
+      if (!payload.isSuccess) {
+        if (payload.error?.code === -23 && !endpoint.endsWith('LoginUserAPI')) {
+          window.dispatchEvent(new CustomEvent('urbanoa:session-expired'));
+        }
+        const message = this.localizedBackendMessage(payload.error, endpoint);
+        throw new OpsApiError('backend', endpoint, message, response.status, payload.error);
+      }
+
+      if (payload.value === null) {
+        if (options.allowEmptyValue) return null as T;
+        throw new OpsApiError('invalid-response', endpoint, `${endpoint}: respuesta satisfactoria sin datos`, response.status);
+      }
+
+      return payload.value;
+    } catch (error) {
+      if (error instanceof OpsApiError) throw error;
+      const message = error instanceof Error ? error.message : 'Error de red desconocido';
+      throw new OpsApiError('transport', endpoint, `${endpoint}: ${message}`);
+    } finally {
+      clearTimeout(timeout);
+      this.session?.unregisterRequest(controller);
+    }
+  }
+
+  private isEnvelope<T>(payload: unknown): payload is OpsApiEnvelope<T> {
+    if (!payload || typeof payload !== 'object') return false;
+    const value = payload as Partial<OpsApiEnvelope<T>>;
+    return typeof value.isSuccess === 'boolean' && 'value' in value && 'error' in value;
+  }
+
+  private localizedBackendMessage(error: OpsApiEnvelope<unknown>['error'], endpoint: string): string {
+    if (!error) return `${endpoint}: error del servicio`;
+    const messages: Record<string, string | undefined> = {
+      es: error.message_ES,
+      eu: error.message_EU,
+      fr: error.message_FR,
+      uk: error.message_EN,
+    };
+    return messages[this.translation.currentLang$()] ?? error.message_ES ?? error.message_EN ?? `${endpoint}: error del servicio`;
+  }
+}

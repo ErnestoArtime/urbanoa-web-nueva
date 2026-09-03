@@ -1,9 +1,10 @@
 import { Component, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 
 @Component({
   selector: 'app-detail-panel-header',
-  imports: [RouterLink],
+  imports: [RouterLink, TranslatePipe],
   template: `
     <div class="detail-panel-header">
       @if (backRoute()) {
@@ -12,7 +13,7 @@ import { RouterLink } from '@angular/router';
       <h2 class="header-title">{{ title() }}</h2>
       <div class="header-actions">
         @if (showAttach()) {
-          <button type="button" class="icon-btn" aria-label="Adjuntar">
+          <button type="button" class="icon-btn" [attr.aria-label]="'common.attach' | translate">
             <svg viewBox="0 -960 960 960" width="20" height="20">
               <path
                 d="M450-80q-88 0-149-63t-61-151v-430q0-65 46-110.5T397-880q65 0 111 45.5T554-724v410q0 38-26.5 65T463-222q-38 0-64.5-27T372-314v-370q0-13 8.5-21.5T402-714q13 0 21.5 8.5T432-684v370q0 12 8.5 20.5T461-285q12 0 20.5-8.5T490-314v-410q0-39-27.5-67T397-819q-39 0-66 28t-27 67v430q0 62 43 106t103 44q60 0 103-44t43-106v-400q0-13 8.5-21.5T626-714q13 0 21.5 8.5T656-684v400q0 88-61 151T450-80Z"
@@ -22,7 +23,7 @@ import { RouterLink } from '@angular/router';
           </button>
         }
         @if (showMore()) {
-          <button type="button" class="icon-btn" aria-label="Más opciones">
+          <button type="button" class="icon-btn" [attr.aria-label]="'common.moreOptions' | translate">
             <svg viewBox="0 -960 960 960" width="20" height="20">
               <path
                 d="M480-160q-33 0-56.5-23.5T400-240q0-33 23.5-56.5T480-320q33 0 56.5 23.5T560-240q0 33-23.5 56.5T480-160Zm0-240q-33 0-56.5-23.5T400-480q0-33 23.5-56.5T480-560q33 0 56.5 23.5T560-480q0 33-23.5 56.5T480-400Zm0-240q-33 0-56.5-23.5T400-720q0-33 23.5-56.5T480-800q33 0 56.5 23.5T560-720q0 33-23.5 56.5T480-640Z"

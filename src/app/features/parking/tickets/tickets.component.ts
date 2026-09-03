@@ -1,10 +1,10 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, effect, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { MOCK_TARIFFS } from '../../../shared/mock-data';
 import { LoaderComponent } from '../../../shared/components/loader/loader.component';
 import { ParkingFlowStore } from '../parking-flow.store';
 import { ParkingFlowQuery, readParkingFlowQuery } from '../parking-flow.model';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { ParkingApiService, ParkingTicketOption } from '../../../core/services/parking-api.service';
 
 @Component({
   selector: 'app-parking-tickets',
@@ -12,23 +12,23 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
   template: `
     <app-loader [visible]="loading()" [message]="'parking.tickets.loading' | translate" />
     <div class="page flow-page">
-      <a routerLink="/app/parking" [queryParams]="{ city: query.city }" class="back-link">{{ 'parking.tickets.back' | translate }}</a>
+      <a routerLink="/app/parking" [queryParams]="{ city: query().city }" class="back-link">{{ 'parking.tickets.back' | translate }}</a>
       <h1 class="page-title">{{ 'parking.tickets.title' | translate }}</h1>
       <div class="selection-summary card">
-        <span class="zone-color" [style.background]="'#' + query.sectorColor"></span>
+        <span class="zone-color" [style.background]="'#' + query().sectorColor"></span>
         <div>
-          <strong>{{ query.street }}</strong>
-          <p>{{ query.zone }} · {{ query.cityName }}</p>
-          <small>{{ 'parking.tickets.vehicle' | translate: { plate: query.plate } }}</small>
+          <strong>{{ query().street }}</strong>
+          <p>{{ query().zone }} · {{ query().cityName }}</p>
+          <small>{{ 'parking.tickets.vehicle' | translate: { plate: query().plate } }}</small>
         </div>
       </div>
       <div class="tariff-list">
-        @for (tariff of tariffs; track tariff.id) {
+        @for (tariff of tariffs(); track tariff.id) {
           <a routerLink="/app/parking/time-steps" [queryParams]="withTariff(tariff)" (click)="onSelectTariff(tariff)" class="ticket-option">
-            <span class="ticket-color" [style.background]="'#' + (query.sectorColor || '2b6767')"></span>
+            <span class="ticket-color" [style.background]="'#' + (query().sectorColor || '2b6767')"></span>
             <div class="ticket-option-head">
               <div>
-                <small>{{ query.zone || ('parking.tickets.defaultZone' | translate) }}</small>
+                <small>{{ query().zone || ('parking.tickets.defaultZone' | translate) }}</small>
                 <h2>{{ tariff.name }}</h2>
                 <p>{{ tariff.desc }}</p>
               </div>
@@ -37,17 +37,20 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
             <div class="ticket-meta">
               <span
                 ><small>{{ 'parking.tickets.sector' | translate }}</small
-                ><strong>{{ query.sector || query.street }}</strong></span
+                ><strong>{{ query().sector || query().street }}</strong></span
               ><span
                 ><small>{{ 'parking.tickets.schedule' | translate }}</small
-                ><strong>{{ 'parking.tickets.scheduleValue' | translate }}</strong></span
+                ><strong>{{ tariff.schedule || '—' }}</strong></span
               ><span
                 ><small>{{ 'parking.tickets.minimum' | translate }}</small
-                ><strong>{{ 'parking.tickets.minimumValue' | translate }}</strong></span
+                ><strong>{{ tariff.minAmount || '—' }}</strong></span
               >
             </div>
             <span class="ticket-action">{{ 'parking.tickets.getTicket' | translate }} <b>›</b></span>
           </a>
+        }
+        @if (!loading() && !tariffs().length) {
+          <p class="card" role="status">{{ error() ? 'No se pudieron cargar las tarifas.' : 'No hay tarifas disponibles.' }}</p>
         }
       </div>
     </div>
@@ -164,16 +167,65 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 export class ParkingTicketsComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly store = inject(ParkingFlowStore);
-  readonly tariffs = MOCK_TARIFFS;
-  readonly query: ParkingFlowQuery = this.store.hasMinimumParkingData() ? this.store.fromStore() : readParkingFlowQuery(this.route);
+  private readonly parkingApi = inject(ParkingApiService);
+  readonly tariffs = signal<ParkingTicketOption[]>([]);
+  readonly source = signal<'idle' | 'remote' | 'error'>('idle');
+  readonly error = signal(false);
+  private readonly initialQuery = readParkingFlowQuery(this.route);
+  readonly query = computed(() =>
+    this.store.hasMinimumParkingData() ? ({ ...this.initialQuery, ...this.store.fromStore() } as ParkingFlowQuery) : this.initialQuery,
+  );
   readonly loading = signal(true);
-  ngOnInit(): void {
-    setTimeout(() => this.loading.set(false), 600);
+  private currentlyLoadedPlate = '';
+  private requestSequence = 0;
+
+  async ngOnInit(): Promise<void> {
+    this.currentlyLoadedPlate = this.query().plate;
+    await this.loadTariffs();
   }
-  withTariff(tariff: (typeof MOCK_TARIFFS)[number]): Record<string, string> {
-    return { ...this.query, tariffId: tariff.id, tariff: tariff.name, tariffPrice: tariff.price };
+
+  private readonly reloadOnVehicleChange = effect(() => {
+    const plate = this.query().plate;
+    if (this.currentlyLoadedPlate && plate && plate !== this.currentlyLoadedPlate) {
+      this.currentlyLoadedPlate = plate;
+      void this.loadTariffs();
+    }
+  });
+
+  private async loadTariffs(): Promise<void> {
+    const requestId = ++this.requestSequence;
+    const query = this.query();
+    this.loading.set(true);
+    this.error.set(false);
+    try {
+      const result = await this.parkingApi.tickets({
+        contractId: Number(query.cityId || 0),
+        plate: query.plate,
+        zone: Number(query.sectorId || query.zoneId || 0),
+        date: this.parkingApi.opsDate(this.parkingApi.serverNow()),
+      });
+      if (requestId !== this.requestSequence) return;
+      this.tariffs.set(result.data);
+      this.source.set('remote');
+    } catch {
+      if (requestId !== this.requestSequence) return;
+      this.tariffs.set([]);
+      this.source.set('error');
+      this.error.set(true);
+    } finally {
+      if (requestId === this.requestSequence) this.loading.set(false);
+    }
   }
-  onSelectTariff(tariff: (typeof MOCK_TARIFFS)[number]): void {
-    this.store.update({ tariffId: tariff.id, tariffName: tariff.name, tariffPrice: tariff.price });
+  withTariff(tariff: ParkingTicketOption): Record<string, string> {
+    return { ...this.query(), ticketId: tariff.id, tariffId: tariff.id, tariff: tariff.name, tariffPrice: tariff.price };
+  }
+  onSelectTariff(tariff: ParkingTicketOption): void {
+    this.store.update({
+      ticketId: tariff.id,
+      ticketName: tariff.name,
+      tariffId: tariff.id,
+      tariffName: tariff.name,
+      tariffPrice: tariff.price,
+    });
   }
 }

@@ -3,6 +3,7 @@ import { RouterLink } from '@angular/router';
 import { LucideCarFront, LucideNavigation, LucideTimerReset } from '@lucide/angular';
 import type { ActiveParking } from '../../../core/services/operations.service';
 import { TranslatePipe } from '../../pipes/translate.pipe';
+import { normalizeSectorColor } from '../../utils/sector-color';
 
 export type ParkingTicketCardVariant = 'dashboard' | 'operations-current' | 'detail';
 
@@ -12,7 +13,11 @@ export type ParkingTicketCardVariant = 'dashboard' | 'operations-current' | 'det
   imports: [RouterLink, TranslatePipe, LucideCarFront, LucideNavigation, LucideTimerReset],
   template: `
     @if (parking(); as active) {
-      <article class="parking-ticket-card card" [class.detail-variant]="variant() === 'detail'">
+      <article
+        class="parking-ticket-card card"
+        [class.detail-variant]="variant() === 'detail'"
+        [style.--ticket-header-color]="ticketHeaderColor()"
+      >
         <div class="ticket-main-row">
           <div class="ticket-main-icon" [style.--ticket-progress]="ticketProgress()">
             <svg class="ticket-progress-ring" viewBox="0 0 44 44" aria-hidden="true">
@@ -53,10 +58,12 @@ export type ParkingTicketCardVariant = 'dashboard' | 'operations-current' | 'det
               <svg lucideNavigation class="action-btn-icon" size="19" strokeWidth="2"></svg>
               {{ 'dashboard.howToGetThere' | translate }}
             </button>
-            <button type="button" class="btn btn-danger btn-sm" (click)="leaveParking.emit(active)">
-              {{ 'dashboard.unpark' | translate }}
-            </button>
-            <button type="button" class="btn btn-primary btn-sm" (click)="extendTime.emit(active)">
+            @if (active.refundable === 2) {
+              <button type="button" class="btn btn-danger btn-sm" (click)="leaveParking.emit(active)">
+                {{ 'dashboard.unpark' | translate }}
+              </button>
+            }
+            <button type="button" class="btn btn-primary btn-sm" [disabled]="active.canExtend === false" (click)="extendTime.emit(active)">
               <svg lucideTimerReset class="action-btn-icon" size="19" strokeWidth="2"></svg>
               {{ 'dashboard.extendTime' | translate }}
             </button>
@@ -100,7 +107,7 @@ export type ParkingTicketCardVariant = 'dashboard' | 'operations-current' | 'det
         z-index: 0;
         height: var(--space-2);
         border-radius: var(--radius-md) var(--radius-md) 0 0;
-        background: linear-gradient(90deg, #8f84f3 0%, #7971de 48%, #7469d2 100%);
+        background: var(--ticket-header-color, linear-gradient(90deg, #8f84f3 0%, #7971de 48%, #7469d2 100%));
       }
       .parking-ticket-card > * {
         position: relative;
@@ -252,6 +259,7 @@ export class ParkingTicketCardComponent {
   readonly goToCar = output<ActiveParking>();
   readonly leaveParking = output<ActiveParking>();
   readonly extendTime = output<ActiveParking>();
+  readonly ticketHeaderColor = computed(() => normalizeSectorColor(this.parking()?.sectorColor));
 
   readonly ticketProgress = computed(() => {
     const active = this.parking();

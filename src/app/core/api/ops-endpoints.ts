@@ -1,0 +1,65 @@
+const API_PREFIX = 'OPSWebServicesAPI/';
+
+const endpoint = (name: string): string => `${API_PREFIX}${name}`;
+
+export const OPS_ENDPOINTS = {
+  auth: {
+    login: endpoint('LoginUserAPI'),
+    register: endpoint('RegisterUserAPI'),
+    recoverPassword: endpoint('RecoverPasswordAPI'),
+    verifyRecoveryPassword: endpoint('VerifyRecoveryPasswordAPI'),
+    updatePassword: endpoint('UpdatePasswordAPI'),
+    resendMail: endpoint('ResendMailAPI'),
+  },
+  parking: {
+    contracts: endpoint('QueryContractsAPI'),
+    mapStretches: endpoint('QueryMapStretchesAPI'),
+    sectors: endpoint('QuerySectorsAPI'),
+    zone: endpoint('QueryZoneAPI'),
+    place: endpoint('QueryPlaceAPI'),
+    streets: endpoint('QueryStreetsAPI'),
+    tickets: endpoint('QueryTicketsAPI'),
+    parkingStatus: endpoint('QueryParkingStatusAPI'),
+    queryParking: endpoint('QueryParkingOperationWithTimeStepsAPI'),
+    queryParkingMoneySteps: endpoint('QueryParkingOperationWithMoneyStepsAPI'),
+    queryParkingForTime: endpoint('QueryParkingOperationForTimeAPI'),
+    queryParkingForMoney: endpoint('QueryParkingOperationForMoneyAPI'),
+    confirmParking: endpoint('ConfirmParkingOperationAPI'),
+    queryUnparking: endpoint('QueryUnParkingOperationAPI'),
+    confirmUnparking: endpoint('ConfirmUnParkingOperationAPI'),
+  },
+  fines: {
+    confirmPayment: endpoint('ConfirmFinePaymentAPI'),
+    updateStatus: endpoint('UpdateFineStatusAPI'),
+  },
+  user: {
+    query: endpoint('QueryUserAPI'),
+    update: endpoint('UpdateUserAPI'),
+    cancel: endpoint('CancelUserAccountAPI'),
+    updatePassword: endpoint('UpdatePasswordAPI'),
+    changePassword: endpoint('ChangePasswordAPI'),
+    plates: endpoint('QueryUserPlatesAPI'),
+    addPlate: endpoint('AddUserPlateAPI'),
+    removePlate: endpoint('RemoveUserPlateAPI'),
+    updatePlate: endpoint('UpdateUserPlateAPI'),
+    notifications: endpoint('QueryUserNotificationsAPI'),
+    updateNotifications: endpoint('UpdateUserNotificationsAPI'),
+    operations: endpoint('QueryUserOperationsAPI'),
+    report: endpoint('QueryUserReportAPI'),
+  },
+  wallet: {
+    credit: endpoint('QueryUserCreditAPI'),
+    recharge: endpoint('RechargeUserCreditAPI'),
+    refund: endpoint('RefundUserCreditAPI'),
+    paymentMethods: endpoint('QueryUserPaymentMethodsAPI'),
+    removePaymentMethod: endpoint('RemoveUserPaymentMethodAPI'),
+    updatePaymentMethod: endpoint('UpdateUserPaymentMethodAPI'),
+    loadPaymentForm: endpoint('LoadPaymentMethodFormAPI'),
+    addPaymentMethod: endpoint('AddUserPaymentMethodAPI'),
+  },
+  support: {
+    add: endpoint('AddUserFeedbackAPI'),
+    query: endpoint('QueryUserFeedbackAPI'),
+    update: endpoint('UpdateUserFeedbackAPI'),
+  },
+} as const;

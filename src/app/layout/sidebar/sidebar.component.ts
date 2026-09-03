@@ -2,7 +2,7 @@ import { Component, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { LucideCarFront, LucideCircleUserRound, LucideHistory, LucideLayoutGrid } from '@lucide/angular';
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
-import { NAV_ITEMS } from '../../shared/mock-data';
+import { NAV_ITEMS } from '../../shared/constants/navigation';
 import { APP_BRAND } from '../../shared/constants/app-brand';
 import { ParkingSessionService } from '../../core/services/parking-session.service';
 

@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, computed, inject, OnInit } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ParkingFlowStore } from '../parking-flow.store';
 import { ParkingFlowQuery, readParkingFlowQuery } from '../parking-flow.model';
@@ -6,8 +6,9 @@ import { AppIconComponent } from '../../../shared/icons/app-icon.component';
 import { OperationIconComponent } from '../../../shared/components/operation-icon/operation-icon.component';
 import { OperationType } from '../../../shared/models/operation-type';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
-import { ParkingSessionService } from '../../../core/services/parking-session.service';
-import { generateUuid } from '../../../core/utils/generate-uuid';
+import { OperationsService } from '../../../core/services/operations.service';
+import { VehicleService } from '../../../core/services/vehicle.service';
+import { WalletService } from '../../../core/services/wallet.service';
 
 @Component({
   selector: 'app-parking-success',
@@ -24,8 +25,8 @@ import { generateUuid } from '../../../core/utils/generate-uuid';
             <div class="ticket-head">
               <app-operation-icon [type]="parkingType" />
               <div>
-                <strong>{{ query.plate }}</strong
-                ><span>{{ query.zone }} · {{ query.cityName }}</span>
+                <strong>{{ query().plate }}</strong
+                ><span>{{ query().zone }} · {{ query().cityName }}</span>
               </div>
             </div>
             <div class="ticket-times">
@@ -34,24 +35,24 @@ import { generateUuid } from '../../../core/utils/generate-uuid';
                 ><strong>{{ startTime() }}</strong
                 ><span>{{ 'parking.success.today' | translate }}</span>
               </div>
-              <i></i><b>{{ query.duration }}</b
+              <i></i><b>{{ query().duration }}</b
               ><i></i>
               <div>
                 <small>{{ 'parking.success.end' | translate }}</small
-                ><strong>{{ query.endTime }}</strong
+                ><strong>{{ query().endTime }}</strong
                 ><span>{{ 'parking.success.today' | translate }}</span>
               </div>
             </div>
             <div class="ticket-cut"><div class="ticket-cut-line"></div></div>
             <div class="ticket-total">
               <span>{{ 'parking.success.total' | translate }}</span
-              ><strong>{{ query.amount }}</strong>
+              ><strong>{{ query().amount }}</strong>
             </div>
           </article>
         </div>
         <div class="actions">
           <a routerLink="/app/home" class="btn btn-primary btn-block">{{ 'parking.success.goHome' | translate }}</a>
-          <a routerLink="/app/parking" [queryParams]="{ city: query.city }" class="btn btn-ghost btn-block">{{
+          <a routerLink="/app/parking" [queryParams]="{ city: query().city }" class="btn btn-ghost btn-block">{{
             'parking.success.viewMap' | translate
           }}</a>
         </div>
@@ -227,45 +228,23 @@ import { generateUuid } from '../../../core/utils/generate-uuid';
 export class ParkingSuccessComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly store = inject(ParkingFlowStore);
-  private readonly parkingSessionService = inject(ParkingSessionService);
-  readonly query: ParkingFlowQuery =
-    this.route.snapshot.queryParamMap.has('paymentWalletAmount') || !this.store.hasMinimumParkingData()
-      ? readParkingFlowQuery(this.route)
-      : this.store.fromStore();
+  private readonly operations = inject(OperationsService);
+  private readonly vehicles = inject(VehicleService);
+  private readonly wallet = inject(WalletService);
+  private readonly initialQuery = readParkingFlowQuery(this.route);
+  readonly query = computed(() =>
+    this.store.hasMinimumParkingData() ? ({ ...this.initialQuery, ...this.store.fromStore() } as ParkingFlowQuery) : this.initialQuery,
+  );
   readonly parkingType = OperationType.PARKING;
 
-  ngOnInit(): void {
-    const parsedAmount = parseFloat(this.query.amount.replace('€', '').replace(',', '.').trim()) || 0;
-    const minutes = Number(this.query.minutes || 0);
-    const hoursPart = String(Math.floor(minutes / 60)).padStart(2, '0');
-    const minutesPart = String(minutes % 60).padStart(2, '0');
-    this.parkingSessionService.startParking({
-      id: generateUuid(),
-      plate: this.query.plate,
-      vehicleId: this.query.vehicleId || '',
-      zone: `${this.query.zone} — ${this.query.cityName}`,
-      startTime: this.startTime(),
-      durationLabel: this.query.duration,
-      timeRemaining: `${hoursPart}:${minutesPart}:00`,
-      endTime: this.query.endTime,
-      amount: parsedAmount,
-      paymentBreakdown: {
-        walletAmount: Number(this.query.paymentWalletAmount || parsedAmount) || 0,
-        cardAmount: Number(this.query.paymentCardAmount || 0) || 0,
-        cardLabel: this.query.paymentCardLabel,
-      },
-      cardId: this.query.paymentCardId,
-      cardLabel: this.query.paymentCardLabel,
-      latitude: Number(this.query.latitude) || undefined,
-      longitude: Number(this.query.longitude) || undefined,
-      street: this.query.street,
-    });
+  async ngOnInit(): Promise<void> {
+    await Promise.all([this.operations.load(), this.wallet.load()]);
+    await this.operations.loadParkingStatuses(this.vehicles.vehicles(), Number(this.query().cityId) || undefined);
   }
 
   startTime(): string {
-    const [hours, minutes] = (this.query.endTime || '00:00').split(':').map(Number);
-    const end = new Date(2026, 0, 1, hours, minutes);
-    end.setMinutes(end.getMinutes() - Number(this.query.minutes || 0));
-    return end.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+    const [hours, minutes] = (this.query().endTime || '00:00').split(':').map(Number);
+    const start = (hours * 60 + minutes - Number(this.query().minutes || 0) + 24 * 60) % (24 * 60);
+    return `${String(Math.floor(start / 60)).padStart(2, '0')}:${String(start % 60).padStart(2, '0')}`;
   }
 }

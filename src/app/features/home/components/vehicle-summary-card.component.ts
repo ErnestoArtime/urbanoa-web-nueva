@@ -2,7 +2,7 @@ import { Component, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { AppIconComponent } from '../../../shared/icons/app-icon.component';
-import type { Vehicle } from '../../../shared/mock-data';
+import type { Vehicle } from '../../../shared/models/vehicle';
 
 @Component({
   selector: 'app-vehicle-summary-card',

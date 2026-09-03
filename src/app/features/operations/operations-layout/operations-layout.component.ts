@@ -1,20 +1,24 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { RouterLink, RouterLinkActive, NavigationEnd, Router } from '@angular/router';
 import { filter, map, startWith } from 'rxjs/operators';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { DateRangeFilterComponent, type DateRange } from '../../../shared/components/date-range-filter/date-range-filter.component';
 import { OperationType, OPERATION_TYPE_LABELS } from '../../../shared/models/operation-type';
 import { UnpaidFinesService } from '../../../core/services/unpaid-fines.service';
 import { OperationsService, type ActiveParking } from '../../../core/services/operations.service';
+import { VehicleService } from '../../../core/services/vehicle.service';
 import { ParkingSessionService } from '../../../core/services/parking-session.service';
+import type { UnparkingQuoteResult } from '../../../core/services/parking-api.service';
 import { NavigationToCarService } from '../../../core/services/navigation-to-car.service';
 import type { Operation } from '../../../shared/models/operation';
 import { OperationIconComponent } from '../../../shared/components/operation-icon/operation-icon.component';
 import { SplitViewComponent } from '../../../layout/split-view/split-view.component';
 import { ResultModalComponent } from '../../../shared/components/result-modal/result-modal.component';
 import { ParkingTicketCardComponent } from '../../../shared/components/parking-ticket-card/parking-ticket-card.component';
+import { ParkingFlowStore } from '../../parking/parking-flow.store';
 
 @Component({
   selector: 'app-operations-layout',
@@ -30,125 +34,178 @@ import { ParkingTicketCardComponent } from '../../../shared/components/parking-t
     ResultModalComponent,
   ],
   template: `
-    <app-split-view [hideList]="isDetailRoute()" [hideDetail]="!isDetailRoute()">
+    <app-split-view [hideList]="isDetailRoute()" [hideDetail]="!isDetailRoute()" [showOutlet]="isDetailRoute()" emptyMessageKey="ops.empty">
       <div splitList class="page">
         <h1 class="page-title">{{ 'ops.title' | translate }}</h1>
+        @if (initialLoading()) {
+          <div class="operations-skeleton" role="status" aria-live="polite" [attr.aria-label]="'common.loading' | translate">
+            <span class="sr-only">{{ 'common.loading' | translate }}</span>
+            <div class="skeleton-line skeleton-label"></div>
+            <div class="skeleton-card skeleton-card-current"></div>
+            <div class="skeleton-card skeleton-card-action"></div>
+            <div class="skeleton-panel">
+              <div class="skeleton-line skeleton-heading"></div>
+              <div class="skeleton-chips"><span></span><span></span><span></span></div>
+              <div class="skeleton-filter"></div>
+            </div>
+            <div class="skeleton-list-row"></div>
+            <div class="skeleton-list-row"></div>
+            <div class="skeleton-list-row"></div>
+          </div>
+        }
 
-        <section class="current-section">
-          <p class="section-label">
-            {{ 'ops.inProgress' | translate }}
-            @if (activeParkingsCount() > 1) {
-              <span class="active-parkings-count">{{ activeParkingsCount() }}</span>
+        <div [class.operations-content-hidden]="initialLoading()">
+          @if (unpaidFinesCount() > 0) {
+            <section class="sanctions-alert">
+              <a
+                routerLink="/app/operations/unpaid-fines"
+                [class.active]="isUnpaidFinesRoute()"
+                [attr.aria-current]="isUnpaidFinesRoute() ? 'page' : null"
+                class="sanctions-alert-link"
+              >
+                <div class="sanctions-alert-copy">
+                  <strong>{{ 'ops.unpaidFines.bannerTitle' | translate }}</strong>
+                  <span>{{ 'ops.unpaidFines.bannerCount' | translate: { count: unpaidFinesCount() } }} &gt;</span>
+                </div>
+                <app-operation-icon [type]="OperationType.UNPAID_FINES" />
+              </a>
+            </section>
+          }
+
+          <section class="current-section">
+            <p class="section-label">
+              {{ 'ops.inProgress' | translate }}
+              @if (activeParkingsCount() > 1) {
+                <span class="active-parkings-count">{{ activeParkingsCount() }}</span>
+              }
+            </p>
+            @if (activeParkingStatusLoading()) {
+              <div
+                class="skeleton-card skeleton-card-current active-parking-skeleton"
+                role="status"
+                aria-live="polite"
+                [attr.aria-label]="'common.loading' | translate"
+              >
+                <span class="sr-only">{{ 'common.loading' | translate }}</span>
+              </div>
+            } @else if (activeParkings().length > 0) {
+              @for (parking of activeParkings(); track parking.id) {
+                <app-parking-ticket-card
+                  [parking]="parking"
+                  variant="operations-current"
+                  (leaveParking)="onUnpark($event.id)"
+                  (extendTime)="onExtend($event)"
+                  (goToCar)="onGoToCar($event)"
+                />
+                @if (!$last) {
+                  <div class="parking-separator"></div>
+                }
+              }
+            } @else {
+              <article class="active-operation empty-active-operation">
+                <p>{{ 'ops.noActive' | translate }}</p>
+              </article>
             }
-          </p>
-          @if (activeParkings().length > 0) {
-            @for (parking of activeParkings(); track parking.id) {
-              <app-parking-ticket-card
-                [parking]="parking"
-                variant="operations-current"
-                (leaveParking)="onUnpark($event.id)"
-                (extendTime)="onExtend()"
-                (goToCar)="onGoToCar($event)"
-              />
-              @if (!$last) {
-                <div class="parking-separator"></div>
+          </section>
+
+          <section class="actions-section">
+            <a
+              routerLink="/app/operations/report"
+              routerLinkActive="active"
+              [routerLinkActiveOptions]="{ exact: false }"
+              ariaCurrentWhenActive="page"
+              class="list-item action-item"
+            >
+              <div class="list-item-content">
+                <div class="list-item-title">{{ 'ops.report' | translate }}</div>
+              </div>
+              <span class="list-item-chevron">›</span>
+            </a>
+          </section>
+
+          <section class="history-filter-panel">
+            <p class="section-label history-label">{{ 'dashboard.recentOps' | translate }}</p>
+            <app-date-range-filter (rangeChange)="onRangeChange($event)" />
+          </section>
+
+          <ul class="list history-list">
+            @for (group of groupedHistory(); track group.label) {
+              <li class="history-group-label">{{ group.label | translate }}</li>
+              @for (op of group.items; track op.id) {
+                <a
+                  [routerLink]="['/app/operations/detail', op.id]"
+                  class="list-item"
+                  routerLinkActive="active"
+                  [routerLinkActiveOptions]="{ exact: true }"
+                >
+                  <app-operation-icon [type]="op.type" />
+                  <div class="list-item-content">
+                    <div class="list-item-title" [class.finish-op-title]="isFinishParking(op)">
+                      {{ OPERATION_TYPE_LABELS[op.type] | translate }}
+                    </div>
+                    <div class="list-item-subtitle">
+                      {{ op.date }}{{ operationTime(op) ? ' · ' + operationTime(op) : '' }}{{ op.zone ? ' — ' + op.zone : '' }}
+                    </div>
+                    @if (op.plate) {
+                      <div class="operation-meta">
+                        {{ op.plate }}
+                        @if (isParking(op) && op.durationLabel) {
+                          <span> · {{ op.durationLabel }}</span>
+                        }
+                      </div>
+                    }
+                  </div>
+                  <span [class]="op.amount > 0 ? 'operation-amount operation-amount-credit' : 'operation-amount operation-amount-debit'">
+                    {{ op.amount > 0 ? '+' : '' }}{{ op.amount | number: '1.2-2' }} €
+                  </span>
+                </a>
               }
             }
-          } @else {
-            <article class="active-operation empty-active-operation">
-              <p>{{ 'ops.noActive' | translate }}</p>
-            </article>
-          }
-        </section>
-
-        <section class="actions-section">
-          <a
-            routerLink="/app/operations/unpaid-fines"
-            [class.active]="isUnpaidFinesRoute()"
-            [attr.aria-current]="isUnpaidFinesRoute() ? 'page' : null"
-            class="list-item action-item"
-          >
-            <div class="list-item-content">
-              <div class="list-item-title">
-                {{ 'ops.unpaidFines.title' | translate: { count: unpaidFinesCount() } }}
-              </div>
-            </div>
-            <span class="list-item-chevron">›</span>
-          </a>
-          <a
-            routerLink="/app/operations/report"
-            routerLinkActive="active"
-            [routerLinkActiveOptions]="{ exact: false }"
-            ariaCurrentWhenActive="page"
-            class="list-item action-item"
-          >
-            <div class="list-item-content">
-              <div class="list-item-title">{{ 'ops.report' | translate }}</div>
-            </div>
-            <span class="list-item-chevron">›</span>
-          </a>
-        </section>
-
-        <section class="history-filter-panel">
-          <p class="section-label history-label">{{ 'dashboard.recentOps' | translate }}</p>
-          <app-date-range-filter (rangeChange)="onRangeChange($event)" />
-        </section>
-
-        <ul class="list history-list">
-          @for (group of groupedHistory(); track group.label) {
-            <li class="history-group-label">{{ group.label }}</li>
-            @for (op of group.items; track op.id) {
-              <a
-                [routerLink]="['/app/operations/detail', op.id]"
-                class="list-item"
-                routerLinkActive="active"
-                [routerLinkActiveOptions]="{ exact: true }"
-              >
-                <app-operation-icon [type]="op.type" />
-                <div class="list-item-content">
-                  <div class="list-item-title" [class.finish-op-title]="isFinishParking(op)">
-                    {{ OPERATION_TYPE_LABELS[op.type] | translate }}
+            @if (groupedHistory().length === 0) {
+              <li class="list-item" style="justify-content:center;color:var(--color-muted)">
+                @if (operationsSource() === 'error') {
+                  <div class="operations-error">
+                    <span>{{ 'ops.loadError' | translate }}</span>
+                    <button type="button" class="btn btn-secondary" (click)="retryOperations()">{{ 'common.retry' | translate }}</button>
                   </div>
-                  <div class="list-item-subtitle">{{ op.date }}{{ operationTime(op) ? ' · ' + operationTime(op) : '' }}{{ op.zone ? ' — ' + op.zone : '' }}</div>
-                  @if (op.plate) {
-                    <div class="operation-meta">
-                      {{ op.plate }}
-                      @if (isParking(op) && op.durationLabel) {
-                        <span> · {{ op.durationLabel }}</span>
-                      }
-                    </div>
-                  }
-                </div>
-                <span [class]="op.amount > 0 ? 'operation-amount operation-amount-credit' : 'operation-amount operation-amount-debit'">
-                  {{ op.amount > 0 ? '+' : '' }}{{ op.amount | number: '1.2-2' }} €
-                </span>
-              </a>
+                } @else {
+                  {{ 'ops.empty' | translate }}
+                }
+              </li>
             }
-          }
-          @if (groupedHistory().length === 0) {
-            <li class="list-item" style="justify-content:center;color:var(--color-muted)">
-              {{ 'ops.empty' | translate }}
-            </li>
-          }
-        </ul>
+          </ul>
+        </div>
       </div>
     </app-split-view>
     @if (unparked()) {
       <app-result-modal
         type="unpark"
-        title="Aparcamiento finalizado"
-        message="La devolución de saldo se ha añadido al monedero."
-        primaryText="Aceptar"
+        [title]="'parking.ended' | translate"
+        [message]="'dashboard.unparkSuccessDetail' | translate"
+        [primaryText]="'common.accept' | translate"
         (primaryAction)="unparked.set(false)"
+      />
+    }
+    @if (unparkError(); as error) {
+      <app-result-modal
+        type="error"
+        [title]="'dashboard.unparkError' | translate"
+        [message]="error"
+        [primaryText]="'common.accept' | translate"
+        (primaryAction)="unparkError.set(null)"
       />
     }
     @if (confirmUnpark()) {
       <app-result-modal
         type="confirmation"
-        title="Desaparcar"
-        message="Al dejar el aparcamiento recibirás un reembolso de EUR3.70."
-        primaryText="Aceptar"
-        secondaryText="Cancelar"
+        [title]="'dashboard.unpark' | translate"
+        [message]="
+          (pendingUnparkAmount() ?? 0) > 0
+            ? ('dashboard.unparkConfirmDetail' | translate: { amount: 'EUR' + pendingUnparkAmount()!.toFixed(2) })
+            : ('dashboard.unparkNoRefund' | translate)
+        "
+        [primaryText]="'common.accept' | translate"
+        [secondaryText]="'common.cancel' | translate"
         (primaryAction)="confirmUnparkAction()"
         (secondaryAction)="confirmUnpark.set(false)"
       />
@@ -156,10 +213,101 @@ import { ParkingTicketCardComponent } from '../../../shared/components/parking-t
   `,
   styles: [
     `
+      :host {
+        display: block;
+        height: 100%;
+        min-height: 0;
+      }
       .list-item.active {
         background: rgba(93, 154, 150, 0.16);
         color: var(--color-primary-dark);
         box-shadow: inset 4px 0 0 var(--color-primary);
+      }
+      .operations-content-hidden {
+        display: none;
+      }
+      .operations-skeleton {
+        display: grid;
+        gap: 0.75rem;
+        padding-top: 0.75rem;
+      }
+      .operations-skeleton > div,
+      .active-parking-skeleton,
+      .skeleton-chips span {
+        position: relative;
+        overflow: hidden;
+        border-radius: var(--radius-md);
+        background: #e7ebe2;
+      }
+      .operations-skeleton > div::after,
+      .active-parking-skeleton::after,
+      .skeleton-chips span::after {
+        position: absolute;
+        inset: 0;
+        content: '';
+        transform: translateX(-100%);
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.72), transparent);
+        animation: operations-shimmer 1.25s ease-in-out infinite;
+      }
+      .skeleton-line {
+        height: 0.75rem;
+      }
+      .skeleton-label {
+        width: 30%;
+      }
+      .skeleton-heading {
+        width: 42%;
+      }
+      .skeleton-card-current {
+        height: 5.5rem;
+      }
+      .active-parking-skeleton {
+        margin-bottom: 0.1rem;
+      }
+      .skeleton-card-action {
+        height: 4.25rem;
+        margin-top: 0.25rem;
+      }
+      .skeleton-panel {
+        display: grid;
+        gap: 0.7rem;
+        padding: 0.8rem;
+        background: transparent !important;
+        border: 1px solid var(--color-border);
+      }
+      .skeleton-panel::after {
+        display: none;
+      }
+      .skeleton-chips {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.45rem;
+      }
+      .skeleton-chips span {
+        height: 1.9rem;
+        border-radius: var(--radius-pill);
+      }
+      .skeleton-filter {
+        height: 2.6rem;
+      }
+      .skeleton-list-row {
+        height: 4.4rem;
+      }
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+      @keyframes operations-shimmer {
+        to {
+          transform: translateX(100%);
+        }
       }
       .op-icon {
         font-size: var(--text-base);
@@ -268,6 +416,55 @@ import { ParkingTicketCardComponent } from '../../../shared/components/parking-t
         border-radius: var(--radius-md);
         border: 1px solid var(--color-border);
       }
+      .sanctions-alert {
+        margin-top: 0.85rem;
+      }
+      .sanctions-alert-link {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        min-height: 76px;
+        padding: 0.85rem 1rem;
+        border: 1px solid #d97770;
+        border-radius: var(--radius-md);
+        background: #fbd5d0;
+        color: #813832;
+        text-decoration: none;
+        transition:
+          background 0.18s ease,
+          box-shadow 0.18s ease;
+      }
+      .sanctions-alert-link:hover,
+      .sanctions-alert-link.active {
+        background: #f8cbc5;
+        box-shadow: var(--shadow-sm);
+        text-decoration: none;
+      }
+      .sanctions-alert-copy {
+        display: flex;
+        min-width: 0;
+        flex-direction: column;
+        gap: 0.2rem;
+      }
+      .sanctions-alert-copy strong {
+        font-size: var(--text-sm);
+        font-weight: var(--font-medium);
+      }
+      .sanctions-alert-copy span {
+        font-size: var(--text-xs);
+      }
+      :host ::ng-deep .sanctions-alert .operation-icon {
+        flex-basis: 42px;
+        width: 42px;
+        height: 42px;
+        background: transparent;
+        color: #93433d;
+      }
+      :host ::ng-deep .sanctions-alert .operation-icon svg {
+        width: 28px;
+        height: 28px;
+      }
       .action-item {
         background: transparent;
         border-radius: var(--radius-sm);
@@ -344,11 +541,14 @@ import { ParkingTicketCardComponent } from '../../../shared/components/parking-t
     `,
   ],
 })
-export class OperationsLayoutComponent {
+export class OperationsLayoutComponent implements OnInit {
   private readonly router = inject(Router);
-  private readonly operationsService = inject(OperationsService);
+  private readonly destroyRef = inject(DestroyRef);
+  readonly operationsService = inject(OperationsService);
   private readonly parkingSessionService = inject(ParkingSessionService);
   private readonly navigationToCar = inject(NavigationToCarService);
+  private readonly parkingFlowStore = inject(ParkingFlowStore);
+  private readonly vehicleService = inject(VehicleService);
   private readonly operations = this.operationsService.operations;
   private readonly rangeFilter = signal<DateRange>({ from: '', to: '' });
   private readonly unpaidFinesService = inject(UnpaidFinesService);
@@ -356,12 +556,20 @@ export class OperationsLayoutComponent {
   readonly OperationType = OperationType;
   readonly OPERATION_TYPE_LABELS = OPERATION_TYPE_LABELS;
   readonly activeParkings = this.parkingSessionService.activeParkings;
+  readonly unparkError = this.parkingSessionService.unparkError;
   readonly activeParkingsCount = this.parkingSessionService.activeParkingsCount;
+  readonly operationsSource = this.operationsService.source;
+  readonly activeParkingStatusLoading = computed(() => this.operationsService.activeSource() === 'idle');
   readonly unparked = signal(false);
   readonly confirmUnpark = signal(false);
+  readonly pendingUnparkAmount = signal<number | null>(null);
   private pendingUnparkId = '';
+  private pendingUnparkQuote: UnparkingQuoteResult | undefined;
   readonly filteredOps = computed(() => this.applyFilter(this.operations()));
   readonly groupedHistory = computed(() => this.groupByPeriod(this.filteredOps()));
+  readonly initialLoading = computed(
+    () => this.operationsService.source() === 'idle' || (this.operationsService.loading() && this.operations().length === 0),
+  );
 
   private readonly url = toSignal(
     this.router.events.pipe(
@@ -371,6 +579,29 @@ export class OperationsLayoutComponent {
     ),
     { initialValue: this.router.url },
   );
+
+  ngOnInit(): void {
+    void this.reload();
+    this.router.events
+      .pipe(
+        filter((event): event is NavigationEnd => event instanceof NavigationEnd),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((event) => {
+        if (event.urlAfterRedirects.split('?')[0].replace(/\/$/, '') === '/app/operations') {
+          this.reload();
+        }
+      });
+  }
+
+  private async reload(): Promise<void> {
+    await Promise.all([this.operationsService.load(), this.vehicleService.load()]);
+    await this.operationsService.loadDashboardParkingStatuses(this.vehicleService.vehicles());
+  }
+
+  retryOperations(): void {
+    void this.operationsService.load();
+  }
 
   isDetailRoute = () => {
     const path = this.url().split('?')[0].replace(/\/$/, '');
@@ -386,21 +617,31 @@ export class OperationsLayoutComponent {
     this.rangeFilter.set(range);
   }
 
-  onUnpark(parkingId: string): void {
+  async onUnpark(parkingId: string): Promise<void> {
     this.pendingUnparkId = parkingId;
+    const quote = await this.parkingSessionService.quoteUnparking(parkingId);
+    if (!quote.success) {
+      this.unparkError.set(quote.error instanceof Error ? quote.error.message : 'No se pudo calcular el desaparcar.');
+      return;
+    }
+    this.pendingUnparkQuote = quote;
+    this.pendingUnparkAmount.set(quote.refundAmount ?? 0);
     this.confirmUnpark.set(true);
   }
 
-  confirmUnparkAction(): void {
+  async confirmUnparkAction(): Promise<void> {
     this.confirmUnpark.set(false);
-    if (this.parkingSessionService.leaveParking(this.pendingUnparkId)) {
+    if (await this.parkingSessionService.leaveParking(this.pendingUnparkId, this.pendingUnparkQuote)) {
       this.pendingUnparkId = '';
+      this.pendingUnparkQuote = undefined;
+      this.pendingUnparkAmount.set(null);
       this.unparked.set(true);
     }
   }
 
-  onExtend(): void {
-    this.router.navigate(['/app/parking/time-steps']);
+  onExtend(parking: ActiveParking): void {
+    if (!this.parkingFlowStore.startExtension(parking)) return;
+    void this.router.navigate(['/app/parking/time-steps']);
   }
 
   onGoToCar(parking: ActiveParking): void {
@@ -412,7 +653,7 @@ export class OperationsLayoutComponent {
   }
 
   isFinishParking(op: Operation): boolean {
-    return op.type === OperationType.PARKING_END;
+    return op.type === OperationType.REFUND;
   }
 
   isParking(op: Operation): boolean {
@@ -426,7 +667,13 @@ export class OperationsLayoutComponent {
   private applyFilter(list: Operation[]): Operation[] {
     const { from, to } = this.rangeFilter();
     const history = list.filter((op) => op.type !== OperationType.UNPAID_FINES);
-    const sorted = [...history].sort((a, b) => this.toDateValue(b.date) - this.toDateValue(a.date));
+    const sorted = [...history].sort((a, b) => {
+      const diff = this.toDateValue(b.date) - this.toDateValue(a.date);
+      if (diff !== 0) return diff;
+      const aTime = a.startTime ?? a.endTime ?? '';
+      const bTime = b.startTime ?? b.endTime ?? '';
+      return bTime.localeCompare(aTime);
+    });
 
     if (!from && !to) {
       return sorted;
@@ -452,25 +699,25 @@ export class OperationsLayoutComponent {
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
     const groups: Record<string, Operation[]> = {
-      Hoy: [],
-      Ayer: [],
-      'Esta semana': [],
-      'Este mes': [],
-      Anteriores: [],
+      'ops.today': [],
+      'ops.yesterday': [],
+      'ops.thisWeek': [],
+      'ops.thisMonth': [],
+      'ops.previous': [],
     };
 
     for (const op of list) {
       const d = this.parseDate(op.date);
       if (d >= startOfToday) {
-        groups['Hoy'].push(op);
+        groups['ops.today'].push(op);
       } else if (d >= startOfYesterday) {
-        groups['Ayer'].push(op);
+        groups['ops.yesterday'].push(op);
       } else if (d >= startOfWeek) {
-        groups['Esta semana'].push(op);
+        groups['ops.thisWeek'].push(op);
       } else if (d >= startOfMonth) {
-        groups['Este mes'].push(op);
+        groups['ops.thisMonth'].push(op);
       } else {
-        groups['Anteriores'].push(op);
+        groups['ops.previous'].push(op);
       }
     }
 

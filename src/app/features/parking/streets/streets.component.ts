@@ -3,17 +3,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { ParkingStreet, StreetsService } from '../../../core/services/streets.service';
 import { ParkingFlowStore } from '../parking-flow.store';
-
-const CITY_API_IDS: Record<string, number> = {
-  durango: 1,
-  zarautz: 3,
-  tolosa: 5,
-  bergara: 23,
-  arrasate: 61,
-  soria: 73,
-  deba: 79,
-  mutriku: 81,
-};
+import { CitiesService } from '../../../core/services/cities.service';
 
 @Component({
   selector: 'app-parking-streets',
@@ -24,6 +14,13 @@ const CITY_API_IDS: Record<string, number> = {
         'parking.streets.back' | translate
       }}</a>
       <h1 class="page-title">{{ 'parking.selectStreet' | translate }}</h1>
+      <div class="selected-city card" aria-live="polite">
+        <small>{{ 'parking.cities.selected' | translate }}</small>
+        <strong>{{ selectedCityName }}</strong>
+      </div>
+      @if (dataSource() === 'error') {
+        <p class="data-notice" role="alert">No se pudieron cargar las calles.</p>
+      }
       <div class="form-group">
         <input
           class="form-input"
@@ -54,6 +51,21 @@ const CITY_API_IDS: Record<string, number> = {
       .back-link {
         display: inline-block;
         margin-bottom: 1rem;
+      }
+      .selected-city {
+        display: flex;
+        flex-direction: column;
+        gap: 0.15rem;
+        margin: 0.75rem 0 1rem;
+        border-left: 4px solid var(--color-primary);
+      }
+      .selected-city small {
+        color: var(--color-text-muted);
+        font-size: var(--text-xs);
+      }
+      .selected-city strong {
+        color: var(--color-primary-dark);
+        font-size: var(--text-lg);
       }
       .street-icon {
         position: relative;
@@ -88,19 +100,30 @@ const CITY_API_IDS: Record<string, number> = {
         justify-content: center;
         color: var(--color-text-muted);
       }
+      .data-notice {
+        margin: 0 0 1rem;
+        padding: 0.75rem 0.9rem;
+        border: 1px solid #e5b85c;
+        border-radius: var(--radius-md);
+        background: #fff8e7;
+        color: #714b00;
+      }
     `,
   ],
 })
 export class ParkingStreetsComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly streetsService = inject(StreetsService);
+  private readonly citiesService = inject(CitiesService);
   private readonly flowStore = inject(ParkingFlowStore);
   readonly streets = signal<ParkingStreet[]>([]);
   readonly search = signal('');
   readonly loading = signal(true);
-  readonly cityId = this.route.snapshot.queryParamMap.get('city') ?? this.route.snapshot.queryParamMap.get('municipio') ?? 'zarautz';
-  readonly cityName = this.route.snapshot.queryParamMap.get('cityName') ?? 'Zarautz';
-  readonly plate = this.route.snapshot.queryParamMap.get('plate') ?? this.flowStore.vm().plate ?? '1234 ABC';
+  readonly dataSource = signal<'loading' | 'remote' | 'error'>('loading');
+  readonly cityId = this.route.snapshot.queryParamMap.get('city') ?? this.route.snapshot.queryParamMap.get('municipio') ?? '';
+  readonly cityName = this.route.snapshot.queryParamMap.get('cityName') ?? '';
+  readonly selectedCityName = this.cityName || this.cityLabel(this.cityId);
+  readonly plate = this.route.snapshot.queryParamMap.get('plate') ?? this.flowStore.vm().plate ?? '';
   readonly vehicleId = this.route.snapshot.queryParamMap.get('vehicleId') ?? this.flowStore.vm().vehicleId ?? '';
   readonly filteredStreets = computed(() => {
     const term = this.search().trim().toLocaleLowerCase('es');
@@ -112,10 +135,17 @@ export class ParkingStreetsComponent implements OnInit {
   });
 
   async ngOnInit(): Promise<void> {
-    const numericId = Number(this.cityId);
-    const apiCityId = Number.isFinite(numericId) ? numericId : (CITY_API_IDS[this.cityId.toLowerCase()] ?? 3);
-    this.streets.set(await this.streetsService.getStreets(apiCityId));
-    this.loading.set(false);
+    const contractId = this.citiesService.contractIdFor(this.cityId);
+    try {
+      const result = await this.streetsService.getStreets(contractId);
+      this.streets.set(result.data);
+      this.dataSource.set('remote');
+    } catch {
+      this.streets.set([]);
+      this.dataSource.set('error');
+    } finally {
+      this.loading.set(false);
+    }
   }
 
   updateSearch(event: Event): void {
@@ -125,8 +155,8 @@ export class ParkingStreetsComponent implements OnInit {
   streetParams(street: ParkingStreet): Record<string, string> {
     return {
       city: this.cityId,
-      cityName: this.cityName,
-      cityId: this.cityId,
+      cityName: this.selectedCityName,
+      cityId: String(this.citiesService.contractIdFor(this.cityId)),
       plate: this.plate,
       vehicleId: this.vehicleId,
       zoneId: String(street.zoneId),
@@ -134,11 +164,33 @@ export class ParkingStreetsComponent implements OnInit {
       street: street.name,
       streetId: String(street.id),
       sector: street.zoneDescription,
-      sectorColor: '3f51b5',
-      sectorId: '1',
-      ticketId: '1',
-      latitude: '0',
-      longitude: '0',
+      sectorColor: '',
+      sectorId: String(street.zoneId),
+      ticketId: '',
+      latitude: this.route.snapshot.queryParamMap.get('latitude') ?? '',
+      longitude: this.route.snapshot.queryParamMap.get('longitude') ?? '',
     };
+  }
+
+  private cityLabel(identifier: string): string {
+    const labels: Record<string, string> = {
+      '1': 'Durango',
+      '3': 'Zarautz',
+      '5': 'Tolosa',
+      '23': 'Bergara',
+      '61': 'Arrasate',
+      '73': 'Soria',
+      '79': 'Deba',
+      '81': 'Mutriku',
+      arrasate: 'Arrasate',
+      bergara: 'Bergara',
+      deba: 'Deba',
+      durango: 'Durango',
+      mutriku: 'Mutriku',
+      soria: 'Soria',
+      tolosa: 'Tolosa',
+      zarautz: 'Zarautz',
+    };
+    return labels[identifier.toLocaleLowerCase('es')] ?? identifier;
   }
 }

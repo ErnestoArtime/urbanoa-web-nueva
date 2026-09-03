@@ -374,6 +374,10 @@ a:hover {
   background: var(--color-accent-soft);
   color: var(--color-primary-dark);
 }
+.badge-warning {
+  background: #fff8e7;
+  color: #714b00;
+}
 .badge-error {
   background: var(--color-error-bg);
   color: var(--color-error);

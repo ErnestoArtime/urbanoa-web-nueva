@@ -1,15 +1,17 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { filter, map, startWith } from 'rxjs/operators';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { ACCOUNT_MENU } from '../../../shared/mock-data';
+import { ACCOUNT_MENU } from '../../../shared/constants/navigation';
 import { AppIconComponent } from '../../../shared/icons/app-icon.component';
 import { SplitViewComponent } from '../../../layout/split-view/split-view.component';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { APP_BRAND } from '../../../shared/constants/app-brand';
+import { AuthService } from '../../../core/services/auth.service';
 import { UserService } from '../../../core/services/user.service';
 import { WalletService } from '../../../core/services/wallet.service';
+import { TranslationService } from '../../../core/services/translation.service';
 
 @Component({
   selector: 'app-account-shell',
@@ -220,9 +222,11 @@ import { WalletService } from '../../../core/services/wallet.service';
     `,
   ],
 })
-export class AccountShellComponent {
+export class AccountShellComponent implements OnInit {
   private readonly router = inject(Router);
+  private readonly authService = inject(AuthService);
   private readonly userService = inject(UserService);
+  private readonly translationService = inject(TranslationService);
   readonly walletService = inject(WalletService);
   readonly menu = ACCOUNT_MENU;
   readonly user = this.userService.user;
@@ -240,6 +244,10 @@ export class AccountShellComponent {
 
   readonly isRootRoute = () => this.url() === '/app/account';
 
+  ngOnInit(): void {
+    void this.userService.load();
+  }
+
   readonly STORE_URL = APP_BRAND.storeUrl;
 
   readonly itemGroupLabel = (index: number) => {
@@ -249,7 +257,7 @@ export class AccountShellComponent {
   };
 
   logout(): void {
-    void this.router.navigate(['/auth/login']);
+    void this.authService.logout();
   }
 
   handleAction(key: string): void {
@@ -263,14 +271,18 @@ export class AccountShellComponent {
   private async shareApp(): Promise<void> {
     if (navigator.share) {
       try {
-        await navigator.share({ title: this.brand.name, text: `Descarga ${this.brand.name}`, url: this.STORE_URL });
+        await navigator.share({
+          title: this.brand.name,
+          text: this.translationService.translate('account.shareText', { brand: this.brand.name }),
+          url: this.STORE_URL,
+        });
       } catch {
         /* user dismissed share */
       }
     } else {
       try {
         await navigator.clipboard.writeText(this.STORE_URL);
-        this.showToast('Enlace copiado');
+        this.showToast(this.translationService.translate('account.linkCopied'));
       } catch {
         /* clipboard unavailable */
       }

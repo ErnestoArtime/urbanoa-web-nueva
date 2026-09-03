@@ -1,7 +1,8 @@
-import { AfterViewInit, Component, ElementRef, OnDestroy, ViewChild, computed, inject, signal } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, OnDestroy, ViewChild, computed, effect, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import * as L from 'leaflet';
-import { MOCK_MUNICIPIOS, type Municipio, type Vehicle } from '../../../shared/mock-data';
+import { LucideCarFront, LucideStar } from '@lucide/angular';
+import { preferredVehicle, type Vehicle } from '../../../shared/models/vehicle';
 import { LoaderComponent } from '../../../shared/components/loader/loader.component';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { ParkingFlowStore } from '../parking-flow.store';
@@ -9,11 +10,15 @@ import { ParkingFlowQuery, readParkingFlowQuery } from '../parking-flow.model';
 import { VehicleService } from '../../../core/services/vehicle.service';
 import { LocationSettingsService } from '../../../core/services/location-settings.service';
 import { ParkingSessionService } from '../../../core/services/parking-session.service';
+import { TranslationService } from '../../../core/services/translation.service';
+import { MapLocationControlComponent, type MapLocationState } from './map-location-control.component';
+import { CitiesService, type ParkingMunicipio } from '../../../core/services/cities.service';
+import { ParkingApiService } from '../../../core/services/parking-api.service';
 
 interface MapParkingZone {
   zoneId: number;
+  sectorId?: number;
   name: string;
-  street: string;
   color: string;
   points: L.LatLngTuple[];
   layer: L.Polygon;
@@ -21,7 +26,7 @@ interface MapParkingZone {
 
 @Component({
   selector: 'app-parking-map',
-  imports: [RouterLink, LoaderComponent, TranslatePipe],
+  imports: [RouterLink, LoaderComponent, TranslatePipe, MapLocationControlComponent, LucideCarFront, LucideStar],
   template: `
     <app-loader [visible]="mapLoading()" [message]="'parking.map.loading' | translate" imageSrc="/assets/brand/login-logo.jpg" />
     <section class="parking-map-page">
@@ -40,6 +45,7 @@ interface MapParkingZone {
       <div class="map-frame">
         <div #mapContainer class="leaflet-map" [attr.aria-label]="'parking.map.ariaLabel' | translate"></div>
         <div class="map-target" aria-hidden="true"><span></span></div>
+        <app-map-location-control [state]="locationState()" (locate)="locateUser()" />
 
         <section class="parking-controls">
           <a routerLink="/app/parking/cities" [queryParams]="vehicleQueryParams()" class="search-control"
@@ -52,13 +58,28 @@ interface MapParkingZone {
 
           <div class="vehicle-control-wrapper" [class.selector-open]="showVehicleSelector()">
             <button type="button" class="vehicle-control" [disabled]="!hasAvailableVehicles()" (click)="toggleVehicleSelector()">
-              <span>▣</span>
+              <span class="vehicle-control-icon"><svg lucideCarFront size="20" strokeWidth="2.2"></svg></span>
               <span
                 ><small>{{ 'parking.map.vehicle' | translate }}</small
                 ><strong>{{ selectedVehicle()?.plate ?? ('parking.map.noVehicles' | translate) }}</strong></span
               >
-              <b>▼</b>
+              <b class="vehicle-control-chevron" aria-hidden="true"></b>
             </button>
+
+            @if (selectedVehicle() && isParkedIn(selectedVehicle()!)) {
+              <button
+                type="button"
+                class="parking-behavior-help-trigger"
+                [attr.aria-expanded]="showParkingBehaviorHelp()"
+                [attr.aria-label]="'parking.map.activeParkingHelpLabel' | translate"
+                (click)="toggleParkingBehaviorHelp()"
+              >
+                i
+              </button>
+              @if (showParkingBehaviorHelp()) {
+                <p class="parking-behavior-help" role="status">{{ 'parking.map.activeParkingHelp' | translate }}</p>
+              }
+            }
 
             @if (hasAvailableVehicles()) {
               <div class="vehicle-selector-dropdown" [class.is-open]="showVehicleSelector()" role="listbox">
@@ -68,15 +89,14 @@ interface MapParkingZone {
                     class="vehicle-option"
                     [class.selected]="v === selectedVehicle()"
                     [class.parked]="isParkedIn(v)"
-                    [disabled]="isParkedIn(v)"
                     (click)="selectVehicle(v)"
                   >
                     <span>{{ v.plate }}</span>
-                    <span class="vehicle-label">{{ v.label }}</span>
+                    <span class="vehicle-label">{{ translateLabel(v.label) }}</span>
                     @if (isParkedIn(v)) {
                       <span class="badge badge-warning">{{ 'account.vehicle.alreadyParked' | translate }}</span>
                     } @else if (v.isDefault) {
-                      <span class="badge badge-primary">★</span>
+                      <span class="badge badge-primary"><svg lucideStar size="12" strokeWidth="2.5"></svg></span>
                     }
                   </button>
                 }
@@ -89,8 +109,7 @@ interface MapParkingZone {
               <span [style.background]="'#' + zone.color"></span>
               <div>
                 <small>{{ 'parking.map.selectedZone' | translate }}</small
-                ><strong>{{ zone.street }}</strong
-                ><em>{{ zone.name }}</em>
+                ><strong>{{ zone.name }}</strong>
               </div>
             </div>
           } @else {
@@ -186,6 +205,39 @@ interface MapParkingZone {
       .vehicle-control-wrapper {
         position: relative;
       }
+      .parking-behavior-help-trigger {
+        position: absolute;
+        z-index: 1002;
+        top: 14px;
+        right: 38px;
+        display: grid;
+        width: 24px;
+        height: 24px;
+        padding: 0;
+        place-items: center;
+        border: 1px solid var(--color-primary);
+        border-radius: 50%;
+        background: var(--color-surface);
+        color: var(--color-primary);
+        cursor: pointer;
+        font-weight: var(--font-bold);
+      }
+      .parking-behavior-help {
+        position: absolute;
+        z-index: 1001;
+        top: calc(100% + 0.45rem);
+        left: 0;
+        width: 100%;
+        margin: 0;
+        padding: 0.7rem 0.8rem;
+        border: 1px solid var(--color-primary);
+        border-radius: 10px;
+        background: var(--color-surface);
+        color: var(--color-text);
+        box-shadow: var(--shadow-md);
+        font-size: var(--text-xs);
+        line-height: 1.4;
+      }
       .search-control {
         display: flex;
         align-items: center;
@@ -217,10 +269,18 @@ interface MapParkingZone {
         text-align: left;
       }
       .vehicle-control b {
+        display: inline-block;
+        width: 0.45rem;
+        height: 0.45rem;
+        margin: -0.2rem 0 0 0.15rem;
+        border-right: 2px solid var(--color-primary);
+        border-bottom: 2px solid var(--color-primary);
+        transform: rotate(45deg);
         transition: transform 180ms ease;
       }
       .vehicle-control-wrapper.selector-open .vehicle-control b {
-        transform: rotate(180deg);
+        margin-top: 0.2rem;
+        transform: rotate(225deg);
       }
       .search-control > span:nth-child(2),
       .vehicle-control > span:nth-child(2) {
@@ -228,6 +288,14 @@ interface MapParkingZone {
         flex: 1;
         flex-direction: column;
         min-width: 0;
+      }
+      .vehicle-control > span:first-child {
+        display: inline-grid;
+        width: 1.25rem;
+        height: 1.25rem;
+        flex: 0 0 1.25rem;
+        place-items: center;
+        line-height: 1;
       }
       .search-control small,
       .vehicle-control small {
@@ -257,7 +325,9 @@ interface MapParkingZone {
         opacity: 0;
         overflow: hidden;
         pointer-events: none;
-        transition: max-height 180ms ease, opacity 140ms ease;
+        transition:
+          max-height 180ms ease,
+          opacity 140ms ease;
       }
       .vehicle-selector-dropdown.is-open {
         max-height: 18rem;
@@ -517,52 +587,76 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
   private readonly store = inject(ParkingFlowStore);
   private readonly vehicleService = inject(VehicleService);
   private readonly locationSettings = inject(LocationSettingsService);
-  private readonly query: ParkingFlowQuery = this.store.hasMinimumParkingData() ? this.store.fromStore() : readParkingFlowQuery(this.route);
+  private readonly translationService = inject(TranslationService);
+  private readonly citiesService = inject(CitiesService);
+  private readonly parkingApi = inject(ParkingApiService);
+  private readonly query: ParkingFlowQuery = readParkingFlowQuery(this.route);
   private map?: L.Map;
   private zoneLayer?: L.FeatureGroup;
   private resizeObserver?: ResizeObserver;
   private resizeFrame?: number;
+  private locationMarker?: L.CircleMarker;
   private readonly zones: MapParkingZone[] = [];
   private highlightedZone?: MapParkingZone;
-  readonly selected: Municipio = this.resolveMunicipio();
-
-  private resolveMunicipio(): Municipio {
-    const fromQuery = MOCK_MUNICIPIOS.find((m) => m.id === this.query.city);
-    if (fromQuery) return fromQuery;
-    const preferredId = this.locationSettings.settings().preferredCityId;
-    if (preferredId) {
-      const match = MOCK_MUNICIPIOS.find((m) => m.id === preferredId);
-      if (match) return match;
-    }
-    return MOCK_MUNICIPIOS[1];
+  private readonly selectedState = signal<ParkingMunicipio>(EMPTY_CITY);
+  get selected(): ParkingMunicipio {
+    return this.selectedState();
   }
   readonly mapLoading = signal(true);
   readonly flowError = signal(this.route.snapshot.queryParamMap.get('flowError') === 'missingData');
   readonly mapError = signal(false);
+  readonly locationState = signal<MapLocationState>('idle');
   readonly zoneCount = signal(0);
   readonly selectedZone = signal<MapParkingZone | null>(null);
   readonly vehicles = this.vehicleService.vehicles;
   private readonly parkingSessionService = inject(ParkingSessionService);
   readonly isParkedIn = (vehicle: Vehicle) => this.parkingSessionService.isVehicleParked(vehicle.id);
-  readonly availableVehicles = computed(() => this.vehicles().filter((vehicle) => !this.isParkedIn(vehicle)));
+
+  translateLabel(value?: string): string {
+    return this.translationService.translateLabel(value);
+  }
+  readonly availableVehicles = computed(() => this.vehicles());
   readonly hasAvailableVehicles = computed(() => this.availableVehicles().length > 0);
   readonly selectedVehicle = signal<Vehicle | null>(
     this.availableVehicles().find((vehicle) => vehicle.id === this.query.vehicleId || vehicle.plate === this.query.plate) ??
-      this.availableVehicles()[0] ??
-      null,
+      preferredVehicle(this.availableVehicles()),
   );
-  readonly canStartParking = computed(() => Boolean(this.selectedZone() && this.selectedVehicle() && !this.isParkedIn(this.selectedVehicle()!)));
+  readonly canStartParking = computed(() => {
+    const zone = this.selectedZone();
+    const vehicle = this.selectedVehicle();
+    return Boolean(zone?.sectorId && vehicle);
+  });
   readonly showVehicleSelector = signal(false);
+  readonly showParkingBehaviorHelp = signal(false);
+  private readonly syncSelectedVehicle = effect(() => {
+    const vehicleId = this.store.vm().vehicleId;
+    const vehicle = this.availableVehicles().find((item) => item.id === vehicleId);
+    if (vehicle && this.selectedVehicle()?.id !== vehicle.id) this.selectedVehicle.set(vehicle);
+  });
+
+  // Clear selected vehicle and selector when the vehicle is removed from the list
+  private readonly clearSelectedVehicleOnRemoval = effect(() => {
+    const vehicle = this.selectedVehicle();
+    if (vehicle && !this.vehicles().some((v) => v.id === vehicle.id)) {
+      this.selectedVehicle.set(null);
+      this.showVehicleSelector.set(false);
+    }
+  });
 
   toggleVehicleSelector(): void {
     if (!this.hasAvailableVehicles()) return;
     this.showVehicleSelector.update((value) => !value);
   }
 
+  toggleParkingBehaviorHelp(): void {
+    this.showParkingBehaviorHelp.update((value) => !value);
+  }
+
   selectVehicle(vehicle: Vehicle): void {
     this.selectedVehicle.set(vehicle);
-    this.store.update({ vehicleId: vehicle.id, plate: vehicle.plate });
+    this.store.selectVehicle(vehicle.id, vehicle.plate);
     this.showVehicleSelector.set(false);
+    this.showParkingBehaviorHelp.set(false);
   }
 
   vehicleQueryParams(): Record<string, string> {
@@ -570,9 +664,31 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
     return vehicle ? { vehicleId: vehicle.id, plate: vehicle.plate } : {};
   }
 
-  ngAfterViewInit(): void {
+  async ngAfterViewInit(): Promise<void> {
+    try {
+      await this.vehicleService.load();
+      const { data } = await this.citiesService.getCities();
+      const requestedContractId = Number(this.query.cityId);
+      const preferredId = this.locationSettings.settings().preferredCityId;
+      const selected =
+        data.find((city) => city.contractId === requestedContractId) ??
+        data.find((city) => city.id === this.query.city) ??
+        data.find((city) => city.id === preferredId || String(city.contractId) === preferredId) ??
+        data[0];
+      if (!selected) throw new Error('No hay contratos de aparcamiento disponibles');
+      this.selectedState.set(selected);
+      await this.parkingSessionService.loadParkingStatuses(this.vehicles(), selected.contractId);
+      this.selectedVehicle.set(
+        this.availableVehicles().find((vehicle) => vehicle.id === this.query.vehicleId || vehicle.plate === this.query.plate) ??
+          preferredVehicle(this.availableVehicles()),
+      );
+    } catch {
+      this.mapError.set(true);
+      this.mapLoading.set(false);
+      return;
+    }
     const vehicle = this.selectedVehicle();
-    if (vehicle) this.store.update({ vehicleId: vehicle.id, plate: vehicle.plate });
+    if (vehicle) this.store.selectVehicle(vehicle.id, vehicle.plate);
     this.map = L.map(this.mapContainer.nativeElement, { zoomControl: false }).setView(this.cityCenter(), 15);
     L.control.zoom({ position: 'topright' }).addTo(this.map);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -592,6 +708,28 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
     this.map?.remove();
   }
 
+  async locateUser(): Promise<void> {
+    if (this.locationState() === 'locating') return;
+    this.locationState.set('locating');
+    const result = await this.locationSettings.requestCurrentLocation();
+    if (!result.ok) {
+      this.locationState.set(result.status === 'denied' ? 'denied' : 'unavailable');
+      return;
+    }
+    const { lastLatitude, lastLongitude } = this.locationSettings.settings();
+    if (lastLatitude === undefined || lastLongitude === undefined || !this.map) {
+      this.locationState.set('unavailable');
+      return;
+    }
+    const point: L.LatLngExpression = [lastLatitude, lastLongitude];
+    this.locationMarker?.remove();
+    this.locationMarker = L.circleMarker(point, { radius: 9, color: '#fff', weight: 3, fillColor: '#16765d', fillOpacity: 1 }).addTo(
+      this.map,
+    );
+    this.map.flyTo(point, 17, { duration: 0.8 });
+    this.locationState.set('located');
+  }
+
   private scheduleMapResize(): void {
     if (this.resizeFrame !== undefined) cancelAnimationFrame(this.resizeFrame);
     this.resizeFrame = requestAnimationFrame(() => {
@@ -607,13 +745,15 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
     if (!zone || !center || !vehicle || !this.canStartParking()) return;
     this.store.update({
       city: this.selected.id,
-      cityId: String(this.contractId()),
+      cityId: String(this.selected.contractId),
       cityName: this.selected.nombre,
       plate: vehicle.plate,
       vehicleId: vehicle.id,
       zoneId: String(zone.zoneId),
       zoneName: zone.name,
-      street: zone.street,
+      sectorId: String(zone.sectorId),
+      sectorName: zone.name,
+      street: '',
       sectorColor: zone.color,
       latitude: center.lat.toFixed(7),
       longitude: center.lng.toFixed(7),
@@ -622,12 +762,14 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
       queryParams: {
         city: this.selected.id,
         cityName: this.selected.nombre,
-        cityId: this.contractId(),
+        cityId: this.selected.contractId,
         plate: vehicle.plate,
         vehicleId: vehicle.id,
         zoneId: zone.zoneId,
         zone: zone.name,
-        street: zone.street,
+        sectorId: zone.sectorId,
+        sector: zone.name,
+        street: '',
         sectorColor: zone.color,
         latitude: center.lat.toFixed(7),
         longitude: center.lng.toFixed(7),
@@ -646,14 +788,15 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
       deba: [43.29448, -2.35403],
       mutriku: [43.3060587, -2.3872368],
     };
-    return centers[this.selected.id] ?? centers['zarautz'];
+    if (this.selected.latitude && this.selected.longitude) return [this.selected.latitude, this.selected.longitude];
+    return centers[this.selected.id] ?? [43.283891, -2.168643];
   }
 
   private async loadRealZones(): Promise<void> {
     try {
-      const response = await fetch(`assets/municipios/kml/${this.selected.id}.kml`);
-      if (!response.ok) throw new Error(`KML ${response.status}`);
-      const xml = new DOMParser().parseFromString(await response.text(), 'application/xml');
+      const response = await this.parkingApi.mapStretches(this.selected.contractId);
+      if (!response.data?.trim()) throw new Error('QueryMapStretchesAPI no devolvió KML');
+      const xml = new DOMParser().parseFromString(response.data, 'application/xml');
       const layers: L.Polygon[] = [];
       for (const placemark of Array.from(xml.getElementsByTagName('Placemark'))) {
         const name = placemark.getElementsByTagName('name')[0]?.textContent?.trim() || 'Zona';
@@ -679,7 +822,6 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
           const zone: MapParkingZone = {
             zoneId,
             name: description || this.readableZoneName(name),
-            street: this.cleanLocationName(name),
             color,
             points,
             layer,
@@ -727,6 +869,28 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
       this.highlightedZone = undefined;
     }
     this.selectedZone.set(zone);
+    if (zone && this.map) void this.resolveSector(zone, this.map.getCenter());
+  }
+
+  private async resolveSector(zone: MapParkingZone, point: L.LatLng): Promise<void> {
+    try {
+      const sectors = await this.parkingApi.sectors({
+        contractId: this.selected.contractId,
+        latitude: point.lat,
+        longitude: point.lng,
+      });
+      const match = sectors.find((sector) => sector.zoneId === zone.zoneId) ?? sectors[0];
+      if (!match || this.selectedZone() !== zone) return;
+      const resolved = {
+        ...zone,
+        sectorId: match.sectorId,
+        name: match.sector || match.zone || zone.name,
+        color: (match.sectorColor || match.zoneColor || zone.color).replace('#', ''),
+      };
+      this.selectedZone.set(resolved);
+    } catch {
+      this.mapError.set(true);
+    }
   }
 
   private containsPoint(point: L.LatLng, polygon: L.LatLngTuple[]): boolean {
@@ -744,7 +908,7 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
       this.cleanLocationName(name)
         .replace(/^Z_\d+_/i, '')
         .replaceAll('_', ' ')
-        .trim() || 'Zona regulada'
+        .trim() || this.translationService.translate('parking.map.defaultZoneName')
     );
   }
 
@@ -754,12 +918,22 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
       .replace(/\s*#[0-9a-f]{6}\s*$/i, '')
       .trim();
   }
-
-  private contractId(): number {
-    return (
-      ({ durango: 1, zarautz: 3, tolosa: 5, bergara: 23, arrasate: 61, soria: 73, deba: 79, mutriku: 81 } as Record<string, number>)[
-        this.selected.id
-      ] ?? 3
-    );
-  }
 }
+
+const EMPTY_CITY: ParkingMunicipio = {
+  id: '',
+  nombre: '',
+  provincia: '',
+  zonas: 0,
+  imagen: '',
+  contractId: 0,
+  description1: '',
+  address: '',
+  email: '',
+  imagePath: '',
+  longitude: 0,
+  latitude: 0,
+  phone: '',
+  radius: '',
+  zones: [],
+};

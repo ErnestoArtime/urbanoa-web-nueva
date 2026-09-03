@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal, ViewChild } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { LoaderComponent } from '../../../shared/components/loader/loader.component';
 import { PaymentSummaryComponent } from '../../../shared/components/payment-summary/payment-summary.component';
@@ -7,6 +7,8 @@ import { ParkingFlowStore } from '../parking-flow.store';
 import { ParkingFlowQuery, readParkingFlowQuery } from '../parking-flow.model';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { WalletService } from '../../../core/services/wallet.service';
+import { ParkingApiService } from '../../../core/services/parking-api.service';
+import { ParkingTicketStoreService } from '../../../core/services/parking-ticket-store.service';
 
 @Component({
   selector: 'app-parking-confirm',
@@ -14,32 +16,32 @@ import { WalletService } from '../../../core/services/wallet.service';
   template: `
     <div class="page flow-page confirm-page has-sticky-actions">
       <app-loader [visible]="loading()" [message]="'parking.confirm.loading' | translate" imageSrc="/assets/brand/login-logo.jpg" />
-      <a routerLink="/app/parking/time-steps" [queryParams]="query" class="back-link">{{ 'parking.confirm.back' | translate }}</a>
+      <a routerLink="/app/parking/time-steps" [queryParams]="query()" class="back-link">{{ 'parking.confirm.back' | translate }}</a>
       <h1 class="page-title">{{ 'parking.confirm.title' | translate }}</h1>
 
       <div class="card summary">
         <div class="zone-heading">
           <span [style.background]="sectorColor()"></span>
           <div>
-            <strong>{{ query.zone }}</strong>
-            <p>{{ query.street }} · {{ query.cityName }}</p>
+            <strong>{{ query().zone }}</strong>
+            <p>{{ query().street }} · {{ query().cityName }}</p>
           </div>
         </div>
         <p>
           <span>{{ 'parking.confirm.vehicle' | translate }}</span
-          ><strong>{{ query.plate }}</strong>
+          ><strong>{{ query().plate }}</strong>
         </p>
         <p>
           <span>{{ 'parking.confirm.duration' | translate }}</span
-          ><strong>{{ query.duration }} · hasta {{ query.endTime }}</strong>
+          ><strong>{{ query().duration }} · hasta {{ query().endTime }}</strong>
         </p>
         <p>
           <span>{{ 'parking.confirm.tariff' | translate }}</span
-          ><strong>{{ query.tariff }}</strong>
+          ><strong>{{ query().tariff }}</strong>
         </p>
         <p class="total-row">
           <span>{{ 'parking.confirm.amount' | translate }}</span
-          ><strong>{{ query.amount }}</strong>
+          ><strong>{{ query().amount }}</strong>
         </p>
       </div>
 
@@ -69,7 +71,7 @@ import { WalletService } from '../../../core/services/wallet.service';
       <app-payment-summary [wallet]="wallet()" [totalAmount]="totalAmount()" />
 
       <div class="sticky-actions">
-        <app-swipe-to-pay (complete)="onSwipeComplete()" />
+        <app-swipe-to-pay #swipePay [disabled]="requiresCard() && !walletService.cards().length" (complete)="onSwipeComplete()" />
       </div>
 
       <a routerLink="/app/account/payment-methods" class="change-payment">{{ 'parking.confirm.changePayment' | translate }}</a>
@@ -194,12 +196,18 @@ import { WalletService } from '../../../core/services/wallet.service';
     `,
   ],
 })
-export class ParkingConfirmComponent {
+export class ParkingConfirmComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly store = inject(ParkingFlowStore);
   readonly walletService = inject(WalletService);
-  readonly query: ParkingFlowQuery = this.store.hasMinimumParkingData() ? this.store.fromStore() : readParkingFlowQuery(this.route);
+  private readonly parkingApi = inject(ParkingApiService);
+  private readonly ticketStore = inject(ParkingTicketStoreService);
+  @ViewChild(SwipeToPayComponent) swipePay!: SwipeToPayComponent;
+  private readonly initialQuery = readParkingFlowQuery(this.route);
+  readonly query = computed(() =>
+    this.store.hasMinimumParkingData() ? ({ ...this.initialQuery, ...this.store.fromStore() } as ParkingFlowQuery) : this.initialQuery,
+  );
   readonly selectedCardId = signal(this.walletService.defaultCardId());
   readonly selectedCard = computed(
     () => this.walletService.cards().find((card) => card.id === this.selectedCardId()) ?? this.walletService.mainCard,
@@ -211,33 +219,74 @@ export class ParkingConfirmComponent {
   readonly loading = signal(false);
 
   readonly totalAmount = computed(() => {
-    const raw = this.query.amount?.replace('€', '').replace(',', '.').trim();
+    const raw = this.query().amount?.replace('€', '').replace(',', '.').trim();
     return raw ? parseFloat(raw) : 0;
   });
   readonly cardAmount = computed(() => Math.max(0, this.totalAmount() - this.walletService.balance()));
   readonly requiresCard = computed(() => this.cardAmount() > 0);
 
-  sectorColor(): string {
-    return this.query.sectorColor ? `#${this.query.sectorColor.replace('#', '')}` : 'var(--color-primary)';
+  async ngOnInit(): Promise<void> {
+    if (!this.walletService.loading()) await this.walletService.load();
+    if (!this.selectedCardId()) this.selectedCardId.set(this.walletService.defaultCardId());
   }
 
-  onSwipeComplete(): void {
+  sectorColor(): string {
+    return this.query().sectorColor ? `#${this.query().sectorColor.replace('#', '')}` : 'var(--color-primary)';
+  }
+
+  async onSwipeComplete(): Promise<void> {
     if (this.loading()) return;
     const amount = this.totalAmount();
-    if (this.requiresCard() && !this.walletService.cards().some((card) => card.id === this.selectedCardId())) return;
+    const cards = this.walletService.cards();
+    if (this.requiresCard()) {
+      const selected = cards.find((card) => card.id === this.selectedCardId()) ?? cards[0];
+      if (!selected) return;
+      this.selectedCardId.set(selected.id);
+    }
     const walletAmount = Math.min(amount, this.walletService.balance());
-    const paid = walletAmount <= 0 || this.walletService.debit(walletAmount, 'Estacionamiento', 'parking-payment');
-    if (!paid) return;
+    this.loading.set(true);
+    const result = await this.parkingApi.confirmParking({
+      contractId: Number(this.query().cityId || 0),
+      plate: this.query().plate,
+      sector: Number(this.query().sectorId || 0),
+      quantity: Math.round(amount * 100),
+      tariffType: Number(this.query().tariffType || 0),
+      date: this.parkingApi.opsDate(this.parkingApi.serverNow()),
+      time: Number(this.query().minutes || 0),
+      latitude: Number(this.query().latitude || 0),
+      longitude: Number(this.query().longitude || 0),
+      street: this.query().street,
+      payMethodId: Number(this.selectedCardId() || 0),
+    });
+    if (!result.success) {
+      this.loading.set(false);
+      this.swipePay.reset();
+      return;
+    }
+    if (result.challengeUrl) {
+      window.location.assign(result.challengeUrl);
+      return;
+    }
 
     const paymentQuery = {
-      ...this.query,
+      ...this.query(),
       paymentWalletAmount: walletAmount.toFixed(2),
       paymentCardAmount: this.cardAmount().toFixed(2),
       paymentCardId: this.requiresCard() ? this.selectedCardId() : '',
       paymentCardLabel: this.requiresCard() ? `${this.selectedCard().brand} •••• ${this.selectedCard().last4}` : '',
     };
 
-    this.loading.set(true);
-    setTimeout(() => void this.router.navigate(['/app/parking/success'], { queryParams: paymentQuery }), 1500);
+    const ticketId = Number(this.query().ticketId || 0);
+    if (ticketId > 0) {
+      this.ticketStore.save({
+        plate: this.query().plate,
+        ticketId,
+        sectorId: Number(this.query().sectorId || 0) || undefined,
+        contractId: Number(this.query().cityId || 0) || undefined,
+      });
+    }
+
+    this.loading.set(false);
+    await this.router.navigate(['/app/parking/success'], { queryParams: paymentQuery });
   }
 }

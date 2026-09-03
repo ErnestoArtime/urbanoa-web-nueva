@@ -14,7 +14,8 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
           @for (fine of fines(); track fine.id) {
             <a [routerLink]="['/app/operations/unpaid-fine-detail', fine.id]" class="list-item">
               <div class="list-item-content">
-                <div class="list-item-title">{{ fine.plate }} — {{ fine.location }}</div>
+                <div class="list-item-title">{{ 'ops.fineDetail.sanction' | translate }} · {{ fine.plate }}</div>
+                <div class="list-item-subtitle">{{ fine.location }}</div>
                 <div class="list-item-subtitle">{{ fine.date }}</div>
               </div>
               <span class="badge badge-error">{{ fine.amount }}</span>
