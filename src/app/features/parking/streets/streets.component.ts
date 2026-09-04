@@ -30,7 +30,7 @@ import { CitiesService } from '../../../core/services/cities.service';
           (input)="updateSearch($event)"
         />
       </div>
-      <ul class="list card" style="padding:0;overflow:hidden">
+      <ul class="list card streets-list">
         @for (street of filteredStreets(); track street.id) {
           <a [routerLink]="['/app/parking/tickets']" [queryParams]="streetParams(street)" class="list-item">
             <span class="street-icon" aria-hidden="true"><i></i></span>
@@ -41,13 +41,26 @@ import { CitiesService } from '../../../core/services/cities.service';
             <span class="list-item-chevron">›</span>
           </a>
         } @empty {
-          <li class="list-item empty-streets">{{ loading() ? 'Cargando calles…' : 'No se encontraron calles' }}</li>
+          @if (dataSource() !== 'error') {
+            <li class="list-item empty-streets">{{ loading() ? 'Cargando calles…' : 'No se encontraron calles' }}</li>
+          }
         }
       </ul>
     </div>
   `,
   styles: [
     `
+      :host {
+        display: block;
+        height: 100%;
+        min-height: 0;
+      }
+      .page {
+        box-sizing: border-box;
+        height: 100%;
+        min-height: 0;
+        overflow: hidden;
+      }
       .back-link {
         display: inline-block;
         margin-bottom: 1rem;
@@ -107,6 +120,18 @@ import { CitiesService } from '../../../core/services/cities.service';
         border-radius: var(--radius-md);
         background: #fff8e7;
         color: #714b00;
+      }
+      @media (min-width: 1024px) {
+        .page {
+          display: flex;
+          flex-direction: column;
+        }
+        .streets-list {
+          flex: 1;
+          min-height: 0;
+          overflow-y: auto;
+          box-sizing: border-box;
+        }
       }
     `,
   ],
