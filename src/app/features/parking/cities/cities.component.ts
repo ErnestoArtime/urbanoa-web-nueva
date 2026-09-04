@@ -48,8 +48,9 @@ const EMPTY_CITY: ParkingMunicipio = {
         />
       </label>
       <div class="municipios-layout mt-2">
-        <div class="municipios-grid">
-          @for (m of filteredMunicipios(); track m.id) {
+        <div class="municipios-panel">
+          <div class="municipios-grid">
+            @for (m of filteredMunicipios(); track m.id) {
             <button type="button" class="municipio-card" [class.active]="selected().id === m.id" (click)="selected.set(m)">
               <div class="municipio-img">
                 @if (m.imagePath || m.imagen) {
@@ -66,6 +67,7 @@ const EMPTY_CITY: ParkingMunicipio = {
           } @empty {
             <p class="empty-result">{{ 'parking.cities.empty' | translate }}</p>
           }
+          </div>
         </div>
         <aside class="municipio-detail">
           <span class="detail-kicker">{{ 'parking.cities.selected' | translate }}</span>
@@ -128,6 +130,17 @@ const EMPTY_CITY: ParkingMunicipio = {
         gap: 1rem;
       }
 
+      .municipios-panel {
+        min-height: 0;
+        box-sizing: border-box;
+        padding: 1rem;
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        background: var(--color-surface);
+        overflow-y: auto;
+        max-height: 70vh;
+      }
+
       .data-notice {
         margin: 0.75rem 0 0;
         padding: 0.75rem 0.9rem;
@@ -166,7 +179,7 @@ const EMPTY_CITY: ParkingMunicipio = {
 
       .municipios-grid {
         display: grid;
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
         gap: 1rem;
       }
 
@@ -198,14 +211,14 @@ const EMPTY_CITY: ParkingMunicipio = {
         position: relative;
         align-items: center;
         justify-content: center;
-        min-height: 100px;
+        aspect-ratio: 16 / 10;
         overflow: hidden;
         background: linear-gradient(145deg, #dce9df, #cbdedb);
       }
 
       .municipio-img img {
         width: 100%;
-        height: 118px;
+        height: 100%;
         object-fit: cover;
         filter: saturate(0.72) contrast(0.94);
       }
@@ -306,12 +319,6 @@ const EMPTY_CITY: ParkingMunicipio = {
         text-align: center;
       }
 
-      @media (min-width: 640px) {
-        .municipios-grid {
-          grid-template-columns: repeat(3, 1fr);
-        }
-      }
-
       @media (min-width: 1024px) {
         .page {
           display: flex;
@@ -326,14 +333,17 @@ const EMPTY_CITY: ParkingMunicipio = {
           height: 100%;
           grid-template-columns: minmax(0, 1fr) 320px;
           grid-template-rows: minmax(0, 1fr);
-          align-items: start;
+          align-items: stretch;
+        }
+
+        .municipios-panel {
+          min-height: 0;
+          height: 100%;
+          max-height: 100%;
         }
 
         .municipios-grid {
-          min-height: 0;
-          overflow-y: auto;
           align-content: start;
-          padding-right: 0.25rem;
         }
 
         .municipio-detail {
