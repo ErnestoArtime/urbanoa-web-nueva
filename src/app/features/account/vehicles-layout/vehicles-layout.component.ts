@@ -18,7 +18,7 @@ import type { Vehicle } from '../../../shared/models/vehicle';
       <div splitList class="page has-sticky-actions">
         <h1 class="page-title">{{ 'account.menu.vehicles' | translate }}</h1>
         @if (vehicles().length > 0) {
-          <ul class="list card" style="padding:0;overflow:hidden">
+          <ul class="list card vehicles-list">
             @for (v of vehicles(); track v.id) {
               <li class="list-item vehicle-item">
                 <a [routerLink]="['/app/account/vehicles/edit', v.id]" class="vehicle-item-link">
@@ -58,6 +58,18 @@ import type { Vehicle } from '../../../shared/models/vehicle';
   `,
   styles: [
     `
+      .page {
+        display: flex;
+        box-sizing: border-box;
+        height: 100%;
+        min-height: 0;
+        flex-direction: column;
+      }
+      .vehicles-list {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+      }
       .list-item.vehicle-item {
         padding: 0;
         align-items: stretch;
