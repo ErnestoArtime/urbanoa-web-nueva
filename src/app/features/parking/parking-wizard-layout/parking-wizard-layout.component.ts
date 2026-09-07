@@ -127,11 +127,13 @@ interface WizardStep {
               <small>{{ 'parking.wizard.vehicle' | translate }}</small>
               <button
                 type="button"
+                class="mobile-vehicle-picker-trigger"
                 [disabled]="!canChangeVehicle()"
                 (click)="toggleVehiclePicker()"
                 [attr.aria-expanded]="vehiclePickerOpen()"
+                [attr.aria-label]="'parking.wizard.changeVehicle' | translate"
               >
-                {{ query()['plate'] }}
+                <strong>{{ query()['plate'] }}</strong>
                 @if (canChangeVehicle()) {
                   <span class="vehicle-picker-chevron" aria-hidden="true"></span>
                 }
@@ -267,39 +269,94 @@ interface WizardStep {
       }
       .mobile-vehicle-picker {
         position: relative;
-        display: flex;
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
         align-items: center;
-        gap: 0.4rem;
+        gap: 0.6rem;
+        min-width: 0;
+        margin-top: 0.35rem;
+        padding: 0.45rem 0.6rem;
+        border-radius: 12px;
+        background: var(--color-active);
         color: var(--color-text-muted);
         font-size: var(--text-xs);
       }
-      .mobile-vehicle-picker button {
+      .mobile-vehicle-picker-trigger {
+        display: flex;
+        min-width: 0;
+        width: 100%;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.6rem;
         padding: 0;
         border: 0;
         background: transparent;
         color: var(--color-primary);
         cursor: pointer;
+        font: inherit;
         font-weight: var(--font-bold);
+        text-align: left;
+      }
+      .mobile-vehicle-picker-trigger strong {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
       .mobile-vehicle-picker .vehicle-picker-chevron {
+        flex: 0 0 auto;
         display: inline-block;
         width: 0.4rem;
         height: 0.4rem;
-        margin: -0.15rem 0 0 0.15rem;
+        margin-top: -0.15rem;
         border-right: 2px solid var(--color-primary);
         border-bottom: 2px solid var(--color-primary);
         transform: rotate(45deg);
         transition: transform 180ms ease;
       }
-      .mobile-vehicle-picker button[aria-expanded='true'] .vehicle-picker-chevron {
+      .mobile-vehicle-picker-trigger[aria-expanded='true'] .vehicle-picker-chevron {
         margin-top: 0.15rem;
         transform: rotate(225deg);
       }
       .mobile-vehicle-picker .vehicle-picker-menu {
+        z-index: 20;
         top: calc(100% + 0.4rem);
-        right: auto;
+        right: 0;
         bottom: auto;
         left: 0;
+      }
+      .vehicle-picker-menu {
+        position: absolute;
+        z-index: 5;
+        display: grid;
+        min-width: 190px;
+        padding: 0.3rem;
+        border: 1px solid var(--color-border);
+        border-radius: 10px;
+        background: var(--color-surface);
+        box-shadow: var(--shadow-md);
+      }
+      .vehicle-picker-option {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 0.55rem 0.65rem;
+        border: 0;
+        border-radius: 7px;
+        background: transparent;
+        color: var(--color-text);
+        cursor: pointer;
+        text-align: left;
+      }
+      .vehicle-picker-option:hover,
+      .vehicle-picker-option.selected {
+        background: var(--color-active);
+      }
+      .vehicle-picker-option small {
+        color: var(--color-text-muted);
+      }
+      .vehicle-picker-option strong {
+        overflow-wrap: anywhere;
       }
       .wizard-mobile-head.map-step {
         display: none;
@@ -459,7 +516,7 @@ interface WizardStep {
           transition: transform 180ms ease;
         }
         .vehicle-picker-trigger:disabled,
-        .mobile-vehicle-picker button:disabled {
+        .mobile-vehicle-picker-trigger:disabled {
           cursor: default;
         }
         .vehicle-picker-trigger[aria-expanded='true'] .vehicle-picker-chevron {
@@ -467,37 +524,10 @@ interface WizardStep {
           transform: rotate(225deg);
         }
         .vehicle-picker-menu {
-          position: absolute;
-          z-index: 5;
           top: auto;
           right: 0;
           bottom: calc(100% + 0.35rem);
-          display: grid;
-          min-width: 190px;
-          padding: 0.3rem;
-          border: 1px solid var(--color-border);
-          border-radius: 10px;
-          background: var(--color-surface);
-          box-shadow: var(--shadow-md);
-        }
-        .vehicle-picker-option {
-          display: flex;
-          flex-direction: column;
-          align-items: flex-start;
-          padding: 0.55rem 0.65rem;
-          border: 0;
-          border-radius: 7px;
-          background: transparent;
-          color: var(--color-text);
-          cursor: pointer;
-          text-align: left;
-        }
-        .vehicle-picker-option:hover,
-        .vehicle-picker-option.selected {
-          background: var(--color-active);
-        }
-        .vehicle-picker-option small {
-          color: var(--color-text-muted);
+          left: auto;
         }
         .wizard-detail {
           box-sizing: border-box;
