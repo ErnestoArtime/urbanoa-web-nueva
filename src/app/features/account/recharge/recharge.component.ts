@@ -1,5 +1,5 @@
 import { DecimalPipe } from '@angular/common';
-import { Component, inject, signal } from '@angular/core';
+import { Component, effect, input, output, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { RouterLink } from '@angular/router';
@@ -14,7 +14,11 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
   imports: [ReactiveFormsModule, RouterLink, TranslatePipe, DetailPanelHeaderComponent, ResultModalComponent, DecimalPipe],
   template: `
     <div class="page account-static-page">
-      <app-detail-panel-header [title]="'account.recharge.title' | translate" backRoute="/app/account/payment-methods" />
+      @if (!embedded()) {
+        <app-detail-panel-header [title]="'account.recharge.title' | translate" backRoute="/app/account/payment-methods" />
+      } @else {
+        <h2>{{ 'account.recharge.title' | translate }}</h2>
+      }
       @if (walletService.source() === 'error') {
         <p class="data-notice" role="alert">No se pudo conectar con el servicio de pagos.</p>
       }
@@ -22,7 +26,13 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
         <div class="card empty-recharge-state">
           <p class="card-title">{{ 'dashboard.cardEmptyTitle' | translate }}</p>
           <p class="text-muted">{{ 'dashboard.cardEmptyDetail' | translate }}</p>
-          <a routerLink="/app/account/payment-methods/add" class="btn btn-primary btn-block mt-2">{{ 'account.addCard' | translate }}</a>
+          @if (embedded()) {
+            <button type="button" class="btn btn-primary btn-block mt-2" (click)="addCard.emit()">
+              {{ 'account.addCard' | translate }}
+            </button>
+          } @else {
+            <a routerLink="/app/account/payment-methods/add" class="btn btn-primary btn-block mt-2">{{ 'account.addCard' | translate }}</a>
+          }
         </div>
       } @else {
         <form [formGroup]="form" (ngSubmit)="confirm()" novalidate>
@@ -151,6 +161,11 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
   ],
 })
 export class AccountRechargeComponent {
+  readonly cardId = input('');
+  readonly addCard = output<void>();
+  readonly embedded = input(false);
+  readonly back = output<void>();
+
   readonly walletService = inject(WalletService);
   private readonly route = inject(ActivatedRoute);
   private readonly operationsService = inject(OperationsService);
@@ -161,6 +176,10 @@ export class AccountRechargeComponent {
   readonly form = this.fb.nonNullable.group({
     amount: [1, [Validators.required, Validators.min(1)]],
     cardId: [this.initialCardId(), Validators.required],
+  });
+
+  private readonly syncCard = effect(() => {
+    if (this.cardId()) this.form.controls.cardId.setValue(this.cardId());
   });
 
   selectedAmount(): number {

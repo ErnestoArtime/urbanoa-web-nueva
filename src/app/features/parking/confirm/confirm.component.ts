@@ -1,3 +1,4 @@
+import { WalletManagerModalComponent } from '../../account/wallet-manager-modal/wallet-manager-modal.component';
 import { Component, computed, inject, OnInit, signal, ViewChild } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { LoaderComponent } from '../../../shared/components/loader/loader.component';
@@ -14,10 +15,19 @@ import { OpsApiError } from '../../../core/api/ops-api.types';
 import { Operation } from '../../../shared/models/operation';
 import { OperationType } from '../../../shared/models/operation-type';
 import { parseOpsDate } from '../../../core/utils/ops-date';
+import { ResultModalComponent } from '../../../shared/components/result-modal/result-modal.component';
 
 @Component({
   selector: 'app-parking-confirm',
-  imports: [RouterLink, LoaderComponent, PaymentSummaryComponent, SwipeToPayComponent, TranslatePipe],
+  imports: [
+    WalletManagerModalComponent,
+    ResultModalComponent,
+    RouterLink,
+    LoaderComponent,
+    PaymentSummaryComponent,
+    SwipeToPayComponent,
+    TranslatePipe,
+  ],
   template: `
     <div class="page flow-page confirm-page has-sticky-actions">
       <app-loader [visible]="loading()" [message]="'parking.confirm.loading' | translate" imageSrc="/assets/brand/login-logo.jpg" />
@@ -53,42 +63,57 @@ import { parseOpsDate } from '../../../core/utils/ops-date';
         </p>
       </div>
 
-      <section class="card payment-selector">
-        <p class="payment-selector-title">{{ 'payment.methodLabel' | translate }}</p>
-        <p class="wallet-priority">
-          El saldo del monedero se utilizará primero: {{ walletService.balance().toFixed(2).replace('.', ',') }} € disponibles.
-        </p>
-        @if (requiresCard()) {
-          <p class="card-needed">Selecciona una tarjeta para abonar los {{ cardAmount().toFixed(2).replace('.', ',') }} € restantes.</p>
-          @for (card of walletService.cards(); track card.id) {
-            <label class="payment-option" [class.selected]="selectedCardId() === card.id">
-              <input
-                type="radio"
-                name="parking-payment"
-                [value]="card.id"
-                [checked]="selectedCardId() === card.id"
-                (change)="selectedCardId.set(card.id)"
-              />
-              <span>{{ card.brand }} •••• {{ card.last4 }}</span
-              ><small>Caduca {{ card.expiryDate }}</small>
-            </label>
+      <app-payment-summary [wallet]="wallet()" [totalAmount]="totalAmount()">
+        <section class="payment-selector" [class.empty-payment]="requiresCard() && !walletService.cards().length">
+          <p class="wallet-priority">
+            {{ 'payment.walletPriority' | translate: { balance: walletService.balance().toFixed(2).replace('.', ',') } }}
+          </p>
+          @if (requiresCard() && walletService.cards().length > 1) {
+            <p class="card-needed">{{ 'payment.chooseCard' | translate: { amount: cardAmount().toFixed(2).replace('.', ',') } }}</p>
+            @for (card of walletService.cards(); track card.id) {
+              <label class="payment-option" [class.selected]="selectedCard().id === card.id">
+                <input
+                  type="radio"
+                  name="parking-payment"
+                  [value]="card.id"
+                  [checked]="selectedCard().id === card.id"
+                  (change)="selectedCardId.set(card.id)"
+                />
+                <span>{{ card.brand }} •••• {{ card.last4 }}</span
+                ><small>{{ 'payment.cardExpiry' | translate: { date: card.expiryDate } }}</small>
+              </label>
+            }
           }
-        }
-      </section>
-
-      <app-payment-summary [wallet]="wallet()" [totalAmount]="totalAmount()" />
+        </section>
+      </app-payment-summary>
 
       <div class="sticky-actions" [attr.aria-busy]="loading()">
         <app-swipe-to-pay
           #swipePay
-          [disabled]="loading() || (requiresCard() && !walletService.cards().length)"
+          [disabled]="loading() || walletService.loading() || walletManagerOpen()"
           [label]="loading() ? ('parking.confirm.loading' | translate) : undefined"
           [completedLabel]="loading() ? ('parking.confirm.loading' | translate) : undefined"
           (complete)="onSwipeComplete()"
         />
       </div>
 
-      <a routerLink="/app/account/payment-methods" class="change-payment">{{ 'parking.confirm.changePayment' | translate }}</a>
+      <button type="button" class="btn btn-ghost change-payment" [disabled]="loading()" (click)="walletManagerOpen.set(true)">
+        {{ 'parking.confirm.changePayment' | translate }}
+      </button>
+      @if (walletManagerOpen()) {
+        <app-wallet-manager-modal (closed)="walletManagerOpen.set(false)" />
+      }
+      @if (paymentAlertOpen()) {
+        <app-result-modal
+          type="warning"
+          [title]="'payment.insufficient.title' | translate"
+          [message]="'payment.insufficient.message' | translate"
+          [primaryText]="'parking.confirm.changePayment' | translate"
+          [secondaryText]="'common.cancel' | translate"
+          (primaryAction)="openPaymentMethods()"
+          (secondaryAction)="paymentAlertOpen.set(false)"
+        />
+      }
     </div>
   `,
   styles: [
@@ -148,6 +173,7 @@ import { parseOpsDate } from '../../../core/utils/ops-date';
       }
       .change-payment {
         display: block;
+        width: 100%;
         margin-top: 0.7rem;
         text-align: center;
         font-size: var(--text-xs);
@@ -156,6 +182,14 @@ import { parseOpsDate } from '../../../core/utils/ops-date';
         display: grid;
         gap: 0.5rem;
         margin-top: 0.8rem;
+      }
+      .payment-selector.empty-payment {
+        margin: 0 0 0.5rem;
+      }
+      .payment-selector.empty-payment .wallet-priority {
+        color: var(--color-text);
+        font-size: var(--text-sm);
+        line-height: 1.5;
       }
       .payment-selector-title {
         font-weight: var(--font-bold);
@@ -241,6 +275,8 @@ export class ParkingConfirmComponent implements OnInit {
     balance: this.walletService.balance(),
     mainCard: this.selectedCard(),
   }));
+  readonly walletManagerOpen = signal(false);
+  readonly paymentAlertOpen = signal(false);
   readonly loading = signal(false);
   readonly submitError = signal<string | null>(null);
   private confirmationPending = false;
@@ -262,12 +298,17 @@ export class ParkingConfirmComponent implements OnInit {
   }
 
   async onSwipeComplete(): Promise<void> {
-    if (this.confirmationPending) return;
+    if (this.confirmationPending || this.walletService.loading() || this.walletManagerOpen()) return;
     const amount = this.totalAmount();
     const cards = this.walletService.cards();
+    if (this.requiresCard() && !cards.length) {
+      this.paymentAlertOpen.set(true);
+      this.swipePay.reset();
+      return;
+    }
     if (this.requiresCard()) {
-      const selected = cards.find((card) => card.id === this.selectedCardId()) ?? cards[0];
-      if (!selected) return;
+      const selected = cards.find((card) => card.id === this.selectedCardId()) ?? this.selectedCard();
+      if (!selected?.id) return;
       this.selectedCardId.set(selected.id);
     }
     const walletAmount = Math.min(amount, this.walletService.balance());
@@ -312,6 +353,11 @@ export class ParkingConfirmComponent implements OnInit {
     }
 
     await this.finishConfirmation(walletAmount, result.operationId);
+  }
+
+  openPaymentMethods(): void {
+    this.paymentAlertOpen.set(false);
+    this.walletManagerOpen.set(true);
   }
 
   private async finishConfirmation(walletAmount: number, operationId?: number | string, recovered?: Operation): Promise<void> {

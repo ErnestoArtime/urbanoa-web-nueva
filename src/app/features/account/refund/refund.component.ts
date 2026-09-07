@@ -1,5 +1,5 @@
 import { DecimalPipe } from '@angular/common';
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, effect, input, output, inject, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { WalletService } from '../../../core/services/wallet.service';
@@ -12,7 +12,11 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
   imports: [TranslatePipe, DecimalPipe, DetailPanelHeaderComponent, ResultModalComponent],
   template: `
     <div class="page account-static-page">
-      <app-detail-panel-header [title]="'account.refund.title' | translate" backRoute="/app/account/payment-methods" />
+      @if (!embedded()) {
+        <app-detail-panel-header [title]="'account.refund.title' | translate" backRoute="/app/account/payment-methods" />
+      } @else {
+        <h2>{{ 'account.refund.title' | translate }}</h2>
+      }
       @if (walletService.source() === 'error') {
         <p class="data-notice" role="alert">No se pudo conectar con el servicio de pagos.</p>
       }
@@ -111,6 +115,10 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
   ],
 })
 export class AccountRefundComponent {
+  readonly cardId = input('');
+  readonly embedded = input(false);
+  readonly back = output<void>();
+
   private readonly route = inject(ActivatedRoute);
   readonly walletService = inject(WalletService);
   private readonly operationsService = inject(OperationsService);
@@ -122,6 +130,10 @@ export class AccountRefundComponent {
   readonly refundQuote = signal<number | null>(null);
   readonly refundedAmount = signal(0);
   readonly done = signal(false);
+
+  private readonly syncCard = effect(() => {
+    if (this.cardId()) this.selectedCardId.set(this.cardId());
+  });
 
   requestRefund(): void {
     if (this.requesting() || this.walletService.balance() <= 0 || !this.selectedCard()) return;
