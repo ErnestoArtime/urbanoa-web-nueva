@@ -1,10 +1,11 @@
-import { Component, inject } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { LucideCarFront, LucideCircleUserRound, LucideHistory, LucideLayoutGrid } from '@lucide/angular';
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 import { NAV_ITEMS } from '../../shared/constants/navigation';
 import { APP_BRAND } from '../../shared/constants/app-brand';
 import { ParkingSessionService } from '../../core/services/parking-session.service';
+import { UnpaidFinesService } from '../../core/services/unpaid-fines.service';
 
 @Component({
   selector: 'app-sidebar',
@@ -32,8 +33,8 @@ import { ParkingSessionService } from '../../core/services/parking-session.servi
                 }
                 @case ('operations') {
                   <svg lucideHistory class="sidebar-icon" size="25" strokeWidth="2.35"></svg>
-                  @if (activeParkingsCount() > 0) {
-                    <span class="active-count">{{ activeParkingsCount() }}</span>
+                  @if (operationsBadgeCount() > 0) {
+                    <span class="active-count">{{ operationsBadgeCount() }}</span>
                   }
                 }
                 @case ('account') {
@@ -139,7 +140,11 @@ import { ParkingSessionService } from '../../core/services/parking-session.servi
 })
 export class SidebarComponent {
   private readonly parkingSessionService = inject(ParkingSessionService);
+  private readonly unpaidFinesService = inject(UnpaidFinesService);
   readonly activeParkingsCount = this.parkingSessionService.activeParkingsCount;
+  readonly operationsBadgeCount = computed(
+    () => this.activeParkingsCount() + this.unpaidFinesService.fines().length,
+  );
   readonly brand = APP_BRAND;
   readonly navItems = NAV_ITEMS;
 
