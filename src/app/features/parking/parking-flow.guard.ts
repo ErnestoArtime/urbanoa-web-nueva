@@ -29,7 +29,9 @@ function loadRouteQuery(route: ActivatedRouteSnapshot, store: ParkingFlowStore):
     duration: params['duration'] ?? '',
     minutes: params['minutes'] ?? '',
     amount: params['amount'] ?? '',
+    startTime: params['startTime'] ?? '',
     endTime: params['endTime'] ?? '',
+    mode: params['mode'] === 'extension' ? 'extension' : 'parking',
   });
 }
 

@@ -25,7 +25,7 @@ function serviceWith(api: jasmine.SpyObj<OpsApiClient>): ParkingApiService {
 describe('ParkingApiService', () => {
   it('uses the exact APK contract to confirm parking', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
-    api.post.and.resolveTo('OK');
+    api.post.and.resolveTo({ operationId: 8431063, challengeUrl: null });
     const service = serviceWith(api);
     TestBed.inject(OpsSessionService).setToken('token');
 
@@ -63,9 +63,10 @@ describe('ParkingApiService', () => {
         streetno: '',
         payMethodId: 7,
       },
-      { token: 'token' },
+      { token: 'token', timeoutMs: 60_000 },
     );
     expect(result.source).toBe('remote');
+    expect(result.operationId).toBe(8431063);
   });
 
   it('rejects confirmation when there is no authenticated session', async () => {
@@ -88,6 +89,57 @@ describe('ParkingApiService', () => {
 
     expect(api.post).not.toHaveBeenCalled();
     expect(result).toEqual(jasmine.objectContaining({ success: false, source: 'remote' }));
+  });
+
+  it('extends through the same confirmation endpoint used by the APK', async () => {
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
+    api.post.and.resolveTo({ operationId: 8431064, challengeUrl: null });
+    const service = serviceWith(api);
+    TestBed.inject(OpsSessionService).setToken('token');
+
+    await service.confirmExtension({
+      contractId: 3,
+      plate: '1234ABC',
+      sector: 22002,
+      quantity: 250,
+      tariffType: 6,
+      date: '150000030926',
+      time: 90,
+      latitude: 0,
+      longitude: 0,
+      street: '',
+      payMethodId: 7,
+    });
+
+    expect(api.post).toHaveBeenCalledOnceWith(
+      'OPSWebServicesAPI/ConfirmParkingOperationAPI',
+      jasmine.objectContaining({ contractId: 3, plate: '1234ABC', sector: 22002, quantity: 250, time: 90, latitude: 0, longitude: 0 }),
+      { token: 'token', timeoutMs: 60_000 },
+    );
+  });
+
+  it('returns the PSD2 challenge URL from the new confirmation response object', async () => {
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
+    api.post.and.resolveTo({ operationId: null, challengeUrl: 'https://paycomet.example/challenge/123' });
+    const service = serviceWith(api);
+    TestBed.inject(OpsSessionService).setToken('token');
+
+    const result = await service.confirmParking({
+      contractId: 3,
+      plate: '1234ABC',
+      sector: 4,
+      quantity: 125,
+      tariffType: 2,
+      date: '120000130826',
+      time: 60,
+      latitude: 43.2,
+      longitude: -2.1,
+      street: 'Nagusia Kalea',
+      payMethodId: 7,
+    });
+
+    expect(result).toEqual(jasmine.objectContaining({ success: true, challengeUrl: 'https://paycomet.example/challenge/123' }));
+    expect(result.operationId).toBeUndefined();
   });
 
   it('queries tickets with the Swagger fields and maps the returned tariff text', async () => {

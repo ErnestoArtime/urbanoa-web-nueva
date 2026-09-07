@@ -17,13 +17,13 @@ import { WalletService } from '../../../core/services/wallet.service';
     <div class="page success-page">
       <div class="success-content text-center">
         <div class="success-mark"><span>✓</span><app-icon name="parkingSlip" [stroke]="false" /></div>
-        <h1 class="page-title">{{ 'parking.success.title' | translate }}</h1>
-        <p class="page-subtitle">{{ 'parking.success.subtitle' | translate }}</p>
+        <h1 class="page-title">{{ (isExtension() ? 'parking.extension.success.title' : 'parking.success.title') | translate }}</h1>
+        <p class="page-subtitle">{{ (isExtension() ? 'parking.extension.success.subtitle' : 'parking.success.subtitle') | translate }}</p>
         <div class="success-ticket-shell">
           <article class="success-ticket">
             <div class="ticket-accent"></div>
             <div class="ticket-head">
-              <app-operation-icon [type]="parkingType" />
+              <app-operation-icon [type]="parkingType()" />
               <div>
                 <strong>{{ query().plate }}</strong
                 ><span>{{ query().zone }} · {{ query().cityName }}</span>
@@ -235,7 +235,8 @@ export class ParkingSuccessComponent implements OnInit {
   readonly query = computed(() =>
     this.store.hasMinimumParkingData() ? ({ ...this.initialQuery, ...this.store.fromStore() } as ParkingFlowQuery) : this.initialQuery,
   );
-  readonly parkingType = OperationType.PARKING;
+  readonly isExtension = computed(() => this.query().mode === 'extension');
+  readonly parkingType = computed(() => (this.isExtension() ? OperationType.PARKING_EXTENSION : OperationType.PARKING));
 
   async ngOnInit(): Promise<void> {
     await Promise.all([this.operations.load(), this.wallet.load()]);
@@ -243,6 +244,7 @@ export class ParkingSuccessComponent implements OnInit {
   }
 
   startTime(): string {
+    if (this.query().startTime) return this.query().startTime;
     const [hours, minutes] = (this.query().endTime || '00:00').split(':').map(Number);
     const start = (hours * 60 + minutes - Number(this.query().minutes || 0) + 24 * 60) % (24 * 60);
     return `${String(Math.floor(start / 60)).padStart(2, '0')}:${String(start % 60).padStart(2, '0')}`;

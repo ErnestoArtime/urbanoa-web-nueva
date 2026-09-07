@@ -6,6 +6,7 @@ export interface ParkingTimeStep {
   hourMinute: string;
   dayDescriptor: string;
   datetimeRaw: string;
+  startDatetimeRaw: string;
   amount: number;
 }
 

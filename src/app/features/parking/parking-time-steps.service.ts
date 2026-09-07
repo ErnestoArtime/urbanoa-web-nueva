@@ -69,6 +69,7 @@ export class ParkingTimeStepsService {
         hourMinute: `${Math.floor(step.time / 60)}:${String(step.time % 60).padStart(2, '0')}`,
         dayDescriptor: 'hoy',
         datetimeRaw: step.datetime,
+        startDatetimeRaw: response.dateInitial,
         amount: step.quantity / 100,
       }));
       if (!mapped.length) throw new Error('El servicio no devolvió tramos de tiempo');

@@ -9,6 +9,11 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { WalletService } from '../../../core/services/wallet.service';
 import { ParkingApiService } from '../../../core/services/parking-api.service';
 import { ParkingTicketStoreService } from '../../../core/services/parking-ticket-store.service';
+import { OperationsService } from '../../../core/services/operations.service';
+import { OpsApiError } from '../../../core/api/ops-api.types';
+import { Operation } from '../../../shared/models/operation';
+import { OperationType } from '../../../shared/models/operation-type';
+import { parseOpsDate } from '../../../core/utils/ops-date';
 
 @Component({
   selector: 'app-parking-confirm',
@@ -18,6 +23,9 @@ import { ParkingTicketStoreService } from '../../../core/services/parking-ticket
       <app-loader [visible]="loading()" [message]="'parking.confirm.loading' | translate" imageSrc="/assets/brand/login-logo.jpg" />
       <a routerLink="/app/parking/time-steps" [queryParams]="query()" class="back-link">{{ 'parking.confirm.back' | translate }}</a>
       <h1 class="page-title">{{ 'parking.confirm.title' | translate }}</h1>
+      @if (submitError()) {
+        <p class="submit-error" role="alert">{{ submitError() }}</p>
+      }
 
       <div class="card summary">
         <div class="zone-heading">
@@ -70,8 +78,14 @@ import { ParkingTicketStoreService } from '../../../core/services/parking-ticket
 
       <app-payment-summary [wallet]="wallet()" [totalAmount]="totalAmount()" />
 
-      <div class="sticky-actions">
-        <app-swipe-to-pay #swipePay [disabled]="requiresCard() && !walletService.cards().length" (complete)="onSwipeComplete()" />
+      <div class="sticky-actions" [attr.aria-busy]="loading()">
+        <app-swipe-to-pay
+          #swipePay
+          [disabled]="loading() || (requiresCard() && !walletService.cards().length)"
+          [label]="loading() ? ('parking.confirm.loading' | translate) : undefined"
+          [completedLabel]="loading() ? ('parking.confirm.loading' | translate) : undefined"
+          (complete)="onSwipeComplete()"
+        />
       </div>
 
       <a routerLink="/app/account/payment-methods" class="change-payment">{{ 'parking.confirm.changePayment' | translate }}</a>
@@ -171,6 +185,16 @@ import { ParkingTicketStoreService } from '../../../core/services/parking-ticket
         color: var(--color-text-muted);
         font-size: var(--text-sm);
       }
+      .submit-error {
+        margin-bottom: 0.8rem;
+        padding: 0.75rem 0.9rem;
+        border-radius: var(--radius-md);
+        background: var(--color-error-bg);
+        color: var(--color-error);
+      }
+      .sticky-actions {
+        margin-top: 1rem;
+      }
       @media (min-width: 960px) and (max-height: 950px) {
         .confirm-page {
           padding-top: 1rem;
@@ -203,6 +227,7 @@ export class ParkingConfirmComponent implements OnInit {
   readonly walletService = inject(WalletService);
   private readonly parkingApi = inject(ParkingApiService);
   private readonly ticketStore = inject(ParkingTicketStoreService);
+  private readonly operations = inject(OperationsService);
   @ViewChild(SwipeToPayComponent) swipePay!: SwipeToPayComponent;
   private readonly initialQuery = readParkingFlowQuery(this.route);
   readonly query = computed(() =>
@@ -217,6 +242,8 @@ export class ParkingConfirmComponent implements OnInit {
     mainCard: this.selectedCard(),
   }));
   readonly loading = signal(false);
+  readonly submitError = signal<string | null>(null);
+  private confirmationPending = false;
 
   readonly totalAmount = computed(() => {
     const raw = this.query().amount?.replace('€', '').replace(',', '.').trim();
@@ -235,7 +262,7 @@ export class ParkingConfirmComponent implements OnInit {
   }
 
   async onSwipeComplete(): Promise<void> {
-    if (this.loading()) return;
+    if (this.confirmationPending) return;
     const amount = this.totalAmount();
     const cards = this.walletService.cards();
     if (this.requiresCard()) {
@@ -244,8 +271,11 @@ export class ParkingConfirmComponent implements OnInit {
       this.selectedCardId.set(selected.id);
     }
     const walletAmount = Math.min(amount, this.walletService.balance());
+    this.confirmationPending = true;
     this.loading.set(true);
-    const result = await this.parkingApi.confirmParking({
+    this.submitError.set(null);
+    const attemptStartedAt = this.parkingApi.serverNow();
+    const confirmation = {
       contractId: Number(this.query().cityId || 0),
       plate: this.query().plate,
       sector: Number(this.query().sectorId || 0),
@@ -257,9 +287,22 @@ export class ParkingConfirmComponent implements OnInit {
       longitude: Number(this.query().longitude || 0),
       street: this.query().street,
       payMethodId: Number(this.selectedCardId() || 0),
-    });
+    };
+    const result =
+      this.query().mode === 'extension'
+        ? await this.parkingApi.confirmExtension({ ...confirmation, latitude: 0, longitude: 0, street: '' })
+        : await this.parkingApi.confirmParking(confirmation);
     if (!result.success) {
+      const recovered = this.shouldRecoverOperation(result.error)
+        ? await this.recoverConfirmedOperation(attemptStartedAt, amount)
+        : undefined;
+      if (recovered) {
+        await this.finishConfirmation(walletAmount, recovered.id, recovered);
+        return;
+      }
+      this.submitError.set(result.error instanceof Error ? result.error.message : 'No se pudo confirmar la operación.');
       this.loading.set(false);
+      this.confirmationPending = false;
       this.swipePay.reset();
       return;
     }
@@ -268,8 +311,15 @@ export class ParkingConfirmComponent implements OnInit {
       return;
     }
 
+    await this.finishConfirmation(walletAmount, result.operationId);
+  }
+
+  private async finishConfirmation(walletAmount: number, operationId?: number | string, recovered?: Operation): Promise<void> {
     const paymentQuery = {
       ...this.query(),
+      operationId: operationId ?? '',
+      ...(recovered?.startTime ? { startTime: recovered.startTime } : {}),
+      ...(recovered?.endTime ? { endTime: recovered.endTime } : {}),
       paymentWalletAmount: walletAmount.toFixed(2),
       paymentCardAmount: this.cardAmount().toFixed(2),
       paymentCardId: this.requiresCard() ? this.selectedCardId() : '',
@@ -286,7 +336,60 @@ export class ParkingConfirmComponent implements OnInit {
       });
     }
 
-    this.loading.set(false);
     await this.router.navigate(['/app/parking/success'], { queryParams: paymentQuery });
+    this.loading.set(false);
+    this.confirmationPending = false;
+  }
+
+  private shouldRecoverOperation(error: unknown): boolean {
+    return (
+      error instanceof OpsApiError &&
+      (error.backendError?.code === -13 ||
+        error.kind === 'timeout' ||
+        error.kind === 'abort' ||
+        error.kind === 'transport' ||
+        error.kind === 'invalid-response' ||
+        (error.kind === 'http' && (error.status ?? 0) >= 500))
+    );
+  }
+
+  private async recoverConfirmedOperation(attemptStartedAt: Date, amount: number): Promise<Operation | undefined> {
+    const query = this.query();
+    const expectedType = query.mode === 'extension' ? OperationType.PARKING_EXTENSION : OperationType.PARKING;
+    const contractId = Number(query.cityId || 0);
+    const sectorId = Number(query.sectorId || 0);
+    const normalizedPlate = this.normalizePlate(query.plate);
+    const recoveryWindowMs = 10 * 60_000;
+    const retryDelaysMs = [0, 500, 1_500, 3_000];
+
+    for (const delayMs of retryDelaysMs) {
+      if (delayMs) await this.waitForRecoveryRetry(delayMs);
+      await this.operations.load();
+      if (this.operations.source() !== 'remote') continue;
+
+      const recovered = this.operations
+        .operations()
+        .filter(
+          (operation) =>
+            operation.type === expectedType &&
+            this.normalizePlate(operation.plate ?? '') === normalizedPlate &&
+            (!contractId || operation.contractId === undefined || operation.contractId === contractId) &&
+            (!sectorId || operation.sectorId === undefined || operation.sectorId === sectorId) &&
+            Math.abs(Math.abs(operation.amount) - amount) < 0.01 &&
+            operation.operationDate &&
+            Math.abs(parseOpsDate(operation.operationDate).getTime() - attemptStartedAt.getTime()) <= recoveryWindowMs,
+        )
+        .sort((left, right) => parseOpsDate(right.operationDate!).getTime() - parseOpsDate(left.operationDate!).getTime())[0];
+      if (recovered) return recovered;
+    }
+    return undefined;
+  }
+
+  private waitForRecoveryRetry(delayMs: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, delayMs));
+  }
+
+  private normalizePlate(plate: string): string {
+    return plate.replace(/\s+/g, '').toLocaleUpperCase('es');
   }
 }

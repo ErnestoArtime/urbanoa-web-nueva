@@ -23,9 +23,15 @@ export interface ConfirmParkingInput {
 export interface ParkingApiResult {
   success: boolean;
   source: 'remote';
+  operationId?: number;
   refundAmount?: number;
   challengeUrl?: string;
   error?: unknown;
+}
+
+interface ConfirmParkingResponseDto {
+  operationId: number | null;
+  challengeUrl: string | null;
 }
 
 export interface UnparkingQuoteResult extends ParkingApiResult {
@@ -76,6 +82,15 @@ export class ParkingApiService {
   }
 
   async confirmParking(input: ConfirmParkingInput): Promise<ParkingApiResult> {
+    return this.confirmParkingOperation(input);
+  }
+
+  /** The APK extends a parking through the same confirmation operation. */
+  async confirmExtension(input: ConfirmParkingInput): Promise<ParkingApiResult> {
+    return this.confirmParkingOperation(input);
+  }
+
+  private async confirmParkingOperation(input: ConfirmParkingInput): Promise<ParkingApiResult> {
     const token = this.session.token();
     if (!token)
       return {
@@ -84,7 +99,7 @@ export class ParkingApiService {
         error: new OpsApiError('transport', OPS_ENDPOINTS.parking.confirmParking, 'Se requiere una sesión válida'),
       };
     try {
-      const response = await this.api.post<unknown>(
+      const response = await this.api.post<ConfirmParkingResponseDto | string>(
         OPS_ENDPOINTS.parking.confirmParking,
         {
           contractId: input.contractId,
@@ -104,15 +119,30 @@ export class ParkingApiService {
           streetno: '',
           payMethodId: input.payMethodId,
         },
-        { token },
+        // La confirmación puede completar la escritura en OPS después del timeout
+        // estándar; no se debe cancelar una operación de pago a los 15 segundos.
+        { token, timeoutMs: 60_000 },
       );
-      return { success: true, source: 'remote', challengeUrl: this.challengeUrl(response) };
+      const operationId = this.operationId(response);
+      const challengeUrl = this.challengeUrl(response);
+      return {
+        success: true,
+        source: 'remote',
+        ...(operationId !== undefined ? { operationId } : {}),
+        ...(challengeUrl ? { challengeUrl } : {}),
+      };
     } catch (error) {
       return { success: false, source: 'remote', error };
     }
   }
 
-  async queryUnparking(input: { contractId: number; plate: string; groupId?: number; ticketId?: number; datetime?: string }): Promise<UnparkingQuoteResult> {
+  async queryUnparking(input: {
+    contractId: number;
+    plate: string;
+    groupId?: number;
+    ticketId?: number;
+    datetime?: string;
+  }): Promise<UnparkingQuoteResult> {
     const token = this.session.token();
     if (!token)
       return {
@@ -207,16 +237,16 @@ export class ParkingApiService {
     const response = await this.api.post<{
       ticketlist:
         | {
-        ticketId: number;
-        ticketDesc: string;
-        minAmount: number | string;
-        schedule: string;
-        ticketBehText?: string;
-        maxTime?: string;
-        zoneId?: number;
-        sectorId?: number;
-        sectorColor?: string;
-      }[]
+            ticketId: number;
+            ticketDesc: string;
+            minAmount: number | string;
+            schedule: string;
+            ticketBehText?: string;
+            maxTime?: string;
+            zoneId?: number;
+            sectorId?: number;
+            sectorColor?: string;
+          }[]
         | null;
     }>(
       OPS_ENDPOINTS.parking.tickets,
@@ -286,7 +316,18 @@ export class ParkingApiService {
   }
 
   private challengeUrl(value: unknown): string | undefined {
-    const candidate = typeof value === 'string' ? value.trim() : '';
+    const candidate =
+      typeof value === 'string'
+        ? value.trim()
+        : value && typeof value === 'object' && typeof (value as Partial<ConfirmParkingResponseDto>).challengeUrl === 'string'
+          ? (value as Partial<ConfirmParkingResponseDto>).challengeUrl!.trim()
+          : '';
     return /^https?:\/\//i.test(candidate) ? candidate : undefined;
+  }
+
+  private operationId(value: unknown): number | undefined {
+    if (!value || typeof value !== 'object') return undefined;
+    const candidate = (value as Partial<ConfirmParkingResponseDto>).operationId;
+    return typeof candidate === 'number' && Number.isInteger(candidate) && candidate >= 0 ? candidate : undefined;
   }
 }

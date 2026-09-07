@@ -59,11 +59,6 @@ export class ParkingSessionService {
     return true;
   }
 
-  extendParking(parkingId: string, minutes: number): boolean {
-    const parking = this.operationsService.getActiveParking(parkingId);
-    return Boolean(parking && minutes > 0);
-  }
-
   isVehicleParked(vehicleIdOrPlate: string): boolean {
     return this.operationsService.isVehicleParked(vehicleIdOrPlate) || this.operationsService.isPlateParked(vehicleIdOrPlate);
   }

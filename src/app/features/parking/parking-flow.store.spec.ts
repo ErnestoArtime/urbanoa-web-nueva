@@ -55,7 +55,9 @@ describe('ParkingFlowStore', () => {
         duration: '',
         minutes: '',
         amount: '',
+        startTime: '',
         endTime: '',
+        mode: 'parking',
       }),
     );
   });
@@ -110,6 +112,7 @@ describe('ParkingFlowStore', () => {
         street: 'Kale Nagusia',
         latitude: '43.28',
         longitude: '-2.17',
+        mode: 'extension',
       }),
     );
   });

@@ -40,7 +40,9 @@ export interface ParkingFlowState {
   duration: string;
   minutes: string;
   amount: string;
+  startTime: string;
   endTime: string;
+  mode: 'parking' | 'extension';
   selectedStep: ParkingTimeStep | null;
   paymentSummary: ParkingPaymentSummary | null;
 }
@@ -71,7 +73,9 @@ export class ParkingFlowStore {
       duration: undefined,
       minutes: undefined,
       amount: undefined,
+      startTime: undefined,
       endTime: undefined,
+      mode: 'parking',
       selectedStep: undefined,
       paymentSummary: undefined,
     });
@@ -99,6 +103,7 @@ export class ParkingFlowStore {
       tariffId: String(parking.tariffId),
       latitude: parking.latitude == null ? '' : String(parking.latitude),
       longitude: parking.longitude == null ? '' : String(parking.longitude),
+      mode: 'extension',
     });
     return true;
   }
@@ -152,7 +157,9 @@ export class ParkingFlowStore {
       duration: s.duration ?? '',
       minutes: s.minutes ?? '',
       amount: s.amount ?? '',
+      startTime: s.startTime ?? '',
       endTime: s.endTime ?? '',
+      mode: s.mode ?? 'parking',
     };
   }
 
@@ -188,7 +195,9 @@ export class ParkingFlowStore {
       duration: params['duration'] ?? '',
       minutes: params['minutes'] ?? '',
       amount: params['amount'] ?? '',
+      startTime: params['startTime'] ?? '',
       endTime: params['endTime'] ?? '',
+      mode: params['mode'] === 'extension' ? 'extension' : 'parking',
     });
   }
 
@@ -218,7 +227,9 @@ export class ParkingFlowStore {
     if (s.duration) result['duration'] = s.duration;
     if (s.minutes) result['minutes'] = s.minutes;
     if (s.amount) result['amount'] = s.amount;
+    if (s.startTime) result['startTime'] = s.startTime;
     if (s.endTime) result['endTime'] = s.endTime;
+    if (s.mode) result['mode'] = s.mode;
     return result;
   }
 }

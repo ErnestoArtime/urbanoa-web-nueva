@@ -9,7 +9,7 @@ import { ParkingSessionService } from '../../../core/services/parking-session.se
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { LucideCarFront } from '@lucide/angular';
 import { OpsApiClient } from '../../../core/api/ops-api-client.service';
-import { formatOpsTime } from '../../../core/utils/ops-date';
+import { formatOpsTime, parseOpsDate } from '../../../core/utils/ops-date';
 
 @Component({
   selector: 'app-parking-time-steps',
@@ -375,6 +375,7 @@ export class ParkingTimeStepsComponent implements OnInit {
     hourMinute: '1:00',
     dayDescriptor: 'hoy',
     datetimeRaw: '',
+    startDatetimeRaw: '',
     amount: 0,
   });
   readonly selectedIndex = computed(() => this.steps().findIndex((s) => s.time === this.selectedStep().time));
@@ -435,10 +436,10 @@ export class ParkingTimeStepsComponent implements OnInit {
   }
 
   startTime(): string {
-    return this.formatTime(this.startedAt);
+    return this.stepTime(this.selectedStep().startDatetimeRaw, this.startedAt);
   }
   endTime(): string {
-    return this.formatTime(new Date(this.startedAt.getTime() + this.selectedStep().time * 60000));
+    return this.stepTime(this.selectedStep().datetimeRaw, new Date(this.startedAt.getTime() + this.selectedStep().time * 60000));
   }
   amountFormatted(): string {
     return `${this.selectedStep().amount.toFixed(2).replace('.', ',')} €`;
@@ -457,6 +458,7 @@ export class ParkingTimeStepsComponent implements OnInit {
       duration: step.timeFormatted,
       minutes: String(step.time),
       amount: this.amountFormatted(),
+      startTime: this.startTime(),
       endTime: this.endTime(),
       tariffType: String(step.tariffType),
     };
@@ -468,6 +470,7 @@ export class ParkingTimeStepsComponent implements OnInit {
       duration: step.timeFormatted,
       minutes: String(step.time),
       amount: this.amountFormatted(),
+      startTime: this.startTime(),
       endTime: this.endTime(),
       tariffType: String(step.tariffType),
     });
@@ -482,5 +485,10 @@ export class ParkingTimeStepsComponent implements OnInit {
   }
   private formatTime(date: Date): string {
     return formatOpsTime(date);
+  }
+
+  private stepTime(raw: string, fallback: Date): string {
+    if (!/^\d{12}$/.test(raw)) return this.formatTime(fallback);
+    return this.formatTime(parseOpsDate(raw));
   }
 }

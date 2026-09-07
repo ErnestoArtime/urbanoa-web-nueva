@@ -46,6 +46,14 @@ describe('ParkingTimeStepsService', () => {
       }),
       { token: 'token' },
     );
-    expect(result[0]).toEqual(jasmine.objectContaining({ tariffType: 6, time: 60, amount: 1.5, datetimeRaw: '130000270826' }));
+    expect(result[0]).toEqual(
+      jasmine.objectContaining({
+        tariffType: 6,
+        time: 60,
+        amount: 1.5,
+        startDatetimeRaw: '120000270826',
+        datetimeRaw: '130000270826',
+      }),
+    );
   });
 });
