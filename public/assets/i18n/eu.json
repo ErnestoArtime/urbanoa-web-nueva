@@ -439,6 +439,7 @@
   "ops.fineDetail.availableBalance": "eu_Saldo disponible",
   "ops.fineDetail.pay": "eu_Pagar",
   "ops.fineDetail.paid": "eu_Sanción pagada",
+  "ops.fineDetail.understood": "eu_Entendido",
   "layout.splitView.empty": "eu_Selecciona un elemento de la lista",
   "ops.inProgress": "eu_En curso",
   "ops.noActive": "eu_No hay operaciones en curso.",
