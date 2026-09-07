@@ -19,7 +19,7 @@ export class ParkingSessionService {
 
   async quoteUnparking(parkingId: string): Promise<UnparkingQuoteResult> {
     const parking = this.operationsService.getActiveParking(parkingId);
-    if (!parking?.contractId) {
+    if (!parking?.contractId || parking.refundable !== 2) {
       return { success: false, source: 'remote', error: new Error('No se encontró el aparcamiento activo.') };
     }
     const storedTicket = this.ticketStore.getByPlate(parking.plate)?.ticketId;
@@ -34,7 +34,7 @@ export class ParkingSessionService {
   async leaveParking(parkingId: string, preparedQuote?: UnparkingQuoteResult): Promise<boolean> {
     this.unparkError.set(null);
     const parking = this.operationsService.getActiveParking(parkingId);
-    if (!parking?.contractId) {
+    if (!parking?.contractId || parking.refundable !== 2) {
       this.unparkError.set('No se encontró el aparcamiento activo.');
       return false;
     }

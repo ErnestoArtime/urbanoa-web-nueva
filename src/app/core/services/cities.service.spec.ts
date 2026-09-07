@@ -4,6 +4,14 @@ import { OpsApiClient } from '../api/ops-api-client.service';
 import { CitiesService } from './cities.service';
 
 describe('CitiesService', () => {
+  it('resolves missing municipality names by contract without inventing unknown cities', () => {
+    TestBed.configureTestingModule({ providers: [provideZonelessChangeDetection(), { provide: OpsApiClient, useValue: {} }] });
+    const service = TestBed.inject(CitiesService);
+    expect(service.nameFor({ contractId: 3 })).toBe('Zarautz');
+    expect(service.nameFor({ contractId: 1 })).toBe('Durango');
+    expect(service.nameFor({ contractId: 3, cityName: '  Nombre recibido  ' })).toBe('Nombre recibido');
+    expect(service.nameFor({ contractId: 999 })).toBe('');
+  });
   it('maps QueryContractsAPI to the view model', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'post']);
     api.get.and.resolveTo({

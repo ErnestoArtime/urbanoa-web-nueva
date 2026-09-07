@@ -32,6 +32,22 @@ describe('OperationsService stored data migration', () => {
     expect(service.operations()).toEqual([]);
   });
 
+  it('counts active parking and extensions plus only payable fines', async () => {
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
+    api.post.and.resolveTo([
+      { operationNumber: 1, operationType: 1, timePeriod: 2, opDate: '120000070926' },
+      { operationNumber: 2, operationType: 2, timePeriod: 2, opDate: '130000070926' },
+      { operationNumber: 3, operationType: 1, timePeriod: 1, opDate: '110000070926' },
+      { operationNumber: 4, operationType: 2, timePeriod: 3, opDate: '140000070926' },
+      ...[1, 2, 3, undefined].map((fineStatus, i) => ({ operationNumber: 5 + i, operationType: 104, fineStatus, opDate: '120000070926' })),
+    ]);
+    TestBed.overrideProvider(OpsApiClient, { useValue: api });
+    TestBed.overrideProvider(OpsSessionService, { useValue: { token: () => 'token' } });
+    const service = TestBed.inject(OperationsService);
+    await service.load();
+    expect(service.operationsBadgeCount()).toBe(3);
+  });
+
   it('maps operation type 7 as a balance refund', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
     api.post.and.resolveTo([{ operationNumber: 17, operationType: 7, paymentAmount: 500, opDate: '120000260826', plate: null }]);
@@ -64,9 +80,7 @@ describe('OperationsService stored data migration', () => {
 
     await service.load();
 
-    expect(service.operations()[0]).toEqual(
-      jasmine.objectContaining({ operationTime: '21:01', startTime: '21:01', endTime: '10:30' }),
-    );
+    expect(service.operations()[0]).toEqual(jasmine.objectContaining({ operationTime: '21:01', startTime: '21:01', endTime: '10:30' }));
   });
 
   it('uses the QueryUserOperationsAPI timePeriod field to identify active parking operations', async () => {

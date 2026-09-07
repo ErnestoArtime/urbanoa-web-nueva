@@ -78,6 +78,24 @@ const CITY_CENTERS: Record<number, { latitude: number; longitude: number }> = {
   81: { latitude: 43.3060587, longitude: -2.3872368 },
 };
 
+const ZARAUTZ_FALLBACK: ParkingMunicipio = {
+  id: 'zarautz',
+  nombre: 'Zarautz',
+  provincia: 'Gipuzkoa',
+  zonas: 0,
+  imagen: 'zarautz.jpg',
+  contractId: CONTRACT_IDS['zarautz'],
+  description1: 'Zarautz',
+  address: '',
+  email: '',
+  imagePath: '',
+  longitude: CITY_CENTERS[CONTRACT_IDS['zarautz']].longitude,
+  latitude: CITY_CENTERS[CONTRACT_IDS['zarautz']].latitude,
+  phone: '',
+  radius: '',
+  zones: [],
+};
+
 @Injectable({ providedIn: 'root' })
 export class CitiesService {
   private readonly api = inject(OpsApiClient);
@@ -89,6 +107,8 @@ export class CitiesService {
     const value = await this.api.get<ContractsApiValue>(OPS_ENDPOINTS.parking.contracts);
     if (!Array.isArray(value.contractlist)) throw new Error('QueryContractsAPI no devolvió contractlist');
     const cities = value.contractlist.map((item) => this.toMunicipio(item));
+    // Older API deployments may omit Zarautz from QueryContractsAPI.
+    if (!cities.some((city) => city.contractId === CONTRACT_IDS['zarautz'])) cities.push(ZARAUTZ_FALLBACK);
     const enriched = await Promise.all(
       cities.map(async (city) => {
         const zones = new Map<number, string>();
@@ -129,8 +149,16 @@ export class CitiesService {
     return [...new Set(Object.values(CONTRACT_IDS))];
   }
 
+  nameFor(input: CityCoordinatesInput): string {
+    if (input.cityName?.trim()) return input.cityName.trim();
+    const city = this.state().find((item) => item.contractId === input.contractId);
+    if (city) return city.nombre;
+    const knownName = Object.entries(CONTRACT_IDS).find(([, id]) => id === input.contractId)?.[0];
+    return knownName ? knownName.charAt(0).toUpperCase() + knownName.slice(1) : '';
+  }
+
   selectableCities(cities: readonly ParkingMunicipio[] = this.state()): ParkingMunicipio[] {
-    return cities.filter((city) => city.contractId > 0 && city.zones.length > 0);
+    return cities.filter((city) => city.contractId > 0 && (city.zones.length > 0 || city.contractId === CONTRACT_IDS['zarautz']));
   }
 
   coordinatesFor(input: CityCoordinatesInput): { latitude: number; longitude: number } | null {

@@ -55,20 +55,35 @@ describe('ParkingSessionService', () => {
 
   it('confirms unparking remotely and refreshes backend state', async () => {
     const parking = {
-      id: 'parking-1', plate: '1234 ABC', vehicleId: 'vehicle-1', zone: 'Centro', startTime: '10:00',
-      durationLabel: '1 h', timeRemaining: '01:00:00', endTime: '11:00', contractId: 3, tariffId: 7,
+      id: 'parking-1',
+      plate: '1234 ABC',
+      vehicleId: 'vehicle-1',
+      zone: 'Centro',
+      startTime: '10:00',
+      durationLabel: '1 h',
+      timeRemaining: '01:00:00',
+      endTime: '11:00',
+      contractId: 3,
+      tariffId: 7,
+      refundable: 2,
     };
     const operations = {
-      activeParkings: () => [parking], activeParkingsCount: () => 1, hasActiveParkings: () => true, activeSource: () => 'remote',
+      activeParkings: () => [parking],
+      activeParkingsCount: () => 1,
+      hasActiveParkings: () => true,
+      activeSource: () => 'remote',
       getActiveParking: jasmine.createSpy().and.returnValue(parking),
-      isVehicleParked: jasmine.createSpy().and.returnValue(true), isPlateParked: jasmine.createSpy().and.returnValue(true),
-      load: jasmine.createSpy().and.resolveTo(), syncActiveParkingsFromOperations: jasmine.createSpy(),
+      isVehicleParked: jasmine.createSpy().and.returnValue(true),
+      isPlateParked: jasmine.createSpy().and.returnValue(true),
+      load: jasmine.createSpy().and.resolveTo(),
+      syncActiveParkingsFromOperations: jasmine.createSpy(),
     };
     const parkingApi = { unpark: jasmine.createSpy().and.resolveTo({ success: true, source: 'remote', refundAmount: 0.4 }) };
     const wallet = { load: jasmine.createSpy().and.resolveTo() };
     TestBed.configureTestingModule({
       providers: [
-        provideZonelessChangeDetection(), ParkingSessionService,
+        provideZonelessChangeDetection(),
+        ParkingSessionService,
         { provide: OperationsService, useValue: operations },
         { provide: ParkingApiService, useValue: parkingApi },
         { provide: WalletService, useValue: wallet },
@@ -86,15 +101,30 @@ describe('ParkingSessionService', () => {
 
   it('uses the persisted QueryTicketsAPI ticketId when unparking', async () => {
     const parking = {
-      id: 'parking-1', plate: '1234 ABC', vehicleId: 'vehicle-1', zone: 'Centro', startTime: '10:00',
-      durationLabel: '1 h', timeRemaining: '01:00:00', endTime: '11:00', contractId: 3, tariffId: 7,
-      sectorId: 17, operationDate: '100000260825',
+      id: 'parking-1',
+      plate: '1234 ABC',
+      vehicleId: 'vehicle-1',
+      zone: 'Centro',
+      startTime: '10:00',
+      durationLabel: '1 h',
+      timeRemaining: '01:00:00',
+      endTime: '11:00',
+      contractId: 3,
+      tariffId: 7,
+      refundable: 2,
+      sectorId: 17,
+      operationDate: '100000260825',
     };
     const operations = {
-      activeParkings: () => [parking], activeParkingsCount: () => 1, hasActiveParkings: () => true, activeSource: () => 'remote',
+      activeParkings: () => [parking],
+      activeParkingsCount: () => 1,
+      hasActiveParkings: () => true,
+      activeSource: () => 'remote',
       getActiveParking: jasmine.createSpy().and.returnValue(parking),
-      isVehicleParked: jasmine.createSpy().and.returnValue(true), isPlateParked: jasmine.createSpy().and.returnValue(true),
-      load: jasmine.createSpy().and.resolveTo(), syncActiveParkingsFromOperations: jasmine.createSpy(),
+      isVehicleParked: jasmine.createSpy().and.returnValue(true),
+      isPlateParked: jasmine.createSpy().and.returnValue(true),
+      load: jasmine.createSpy().and.resolveTo(),
+      syncActiveParkingsFromOperations: jasmine.createSpy(),
       restoreActiveParking: jasmine.createSpy(),
     };
     const parkingApi = { unpark: jasmine.createSpy().and.resolveTo({ success: true, source: 'remote', refundAmount: 0.4 }) };
@@ -105,7 +135,8 @@ describe('ParkingSessionService', () => {
     };
     TestBed.configureTestingModule({
       providers: [
-        provideZonelessChangeDetection(), ParkingSessionService,
+        provideZonelessChangeDetection(),
+        ParkingSessionService,
         { provide: OperationsService, useValue: operations },
         { provide: ParkingApiService, useValue: parkingApi },
         { provide: WalletService, useValue: wallet },
@@ -126,7 +157,8 @@ describe('ParkingSessionService', () => {
     expect(ticketStore.clearByPlate).toHaveBeenCalledWith('1234 ABC');
   });
 
-  it('clears local parkings when every contract query fails', async () => {    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'post']);
+  it('clears local parkings when every contract query fails', async () => {
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'post']);
     api.post.and.rejectWith(new Error('backend down'));
     const service = serviceWith(api);
     TestBed.inject(OpsSessionService).setToken('token');

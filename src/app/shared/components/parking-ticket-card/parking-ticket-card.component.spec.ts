@@ -24,14 +24,22 @@ describe('ParkingTicketCardComponent', () => {
     });
   });
 
-  it('shows unparking and extension actions when refundable is not 0', async () => {
+  it('shows disabled actions when both flags are 1', async () => {
     const fixture = TestBed.createComponent(ParkingTicketCardComponent);
-    fixture.componentRef.setInput('parking', parking(1));
+    fixture.componentRef.setInput('parking', { ...parking(1), extension: 1 });
 
     await fixture.whenStable();
 
     expect(fixture.nativeElement.querySelector('.btn-danger')).not.toBeNull();
     expect(fixture.nativeElement.querySelector('.btn-primary')).not.toBeNull();
+  });
+
+  it('hides actions when their flags are absent', async () => {
+    const fixture = TestBed.createComponent(ParkingTicketCardComponent);
+    fixture.componentRef.setInput('parking', parking(undefined));
+    await fixture.whenStable();
+    expect(fixture.nativeElement.querySelector('.btn-danger')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.btn-primary')).toBeNull();
   });
 
   it('uses the parking sector color for the ticket header', async () => {
@@ -44,13 +52,29 @@ describe('ParkingTicketCardComponent', () => {
     expect(ticket.style.getPropertyValue('--ticket-header-color')).toBe('#1E88E5');
   });
 
-  it('hides unparking and extension actions when refundable is 0', async () => {
+  it('keeps extension enabled independently of hidden unparking', async () => {
     const fixture = TestBed.createComponent(ParkingTicketCardComponent);
-    fixture.componentRef.setInput('parking', parking(0));
+    fixture.componentRef.setInput('parking', { ...parking(0), extension: 2 });
 
     await fixture.whenStable();
 
     expect(fixture.nativeElement.querySelector('.btn-danger')).toBeNull();
-    expect(fixture.nativeElement.querySelector('.btn-primary')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.btn-primary').disabled).toBeFalse();
   });
+
+  for (const refundable of [0, 1, 2] as const) {
+    for (const extension of [0, 1, 2] as const) {
+      it(`renders independent action states ${refundable}/${extension}`, async () => {
+        const fixture = TestBed.createComponent(ParkingTicketCardComponent);
+        fixture.componentRef.setInput('parking', { ...parking(refundable), extension });
+        await fixture.whenStable();
+        const unpark = fixture.nativeElement.querySelector('.btn-danger') as HTMLButtonElement | null;
+        const extend = fixture.nativeElement.querySelector('.btn-primary') as HTMLButtonElement | null;
+        expect(!!unpark).toBe(refundable !== 0);
+        expect(!!extend).toBe(extension !== 0);
+        if (unpark) expect(unpark.disabled).toBe(refundable !== 2);
+        if (extend) expect(extend.disabled).toBe(extension !== 2);
+      });
+    }
+  }
 });

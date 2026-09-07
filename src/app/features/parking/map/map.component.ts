@@ -48,13 +48,27 @@ interface MapParkingZone {
         <app-map-location-control [state]="locationState()" (locate)="locateUser()" />
 
         <section class="parking-controls">
-          <a routerLink="/app/parking/cities" [queryParams]="vehicleQueryParams()" class="search-control"
-            ><span>⌕</span
-            ><span
-              ><small>{{ 'parking.map.municipio' | translate }}</small
-              ><strong>{{ selected.nombre }}</strong></span
-            ><b>›</b></a
-          >
+          <div class="municipio-control">
+            <a routerLink="/app/parking/cities" [queryParams]="vehicleQueryParams()" class="search-control"
+              ><span>⌕</span
+              ><span
+                ><small>{{ 'parking.map.municipio' | translate }}</small
+                ><strong>{{ selected.nombre }}</strong></span
+              ><b>›</b></a
+            >
+            <a
+              routerLink="/app/parking/city-info"
+              [queryParams]="{
+                city: selected.id,
+                cityId: selected.contractId,
+                vehicleId: selectedVehicle()?.id,
+                plate: selectedVehicle()?.plate,
+              }"
+              class="municipio-info"
+              [attr.aria-label]="'parking.map.municipioInfo' | translate"
+              >i</a
+            >
+          </div>
 
           <div class="vehicle-control-wrapper" [class.selector-open]="showVehicleSelector()">
             <button type="button" class="vehicle-control" [disabled]="!hasAvailableVehicles()" (click)="toggleVehicleSelector()">
@@ -261,6 +275,25 @@ interface MapParkingZone {
         color: inherit;
         width: 100%;
         text-align: left;
+      }
+      .municipio-control {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+      }
+      .municipio-control .search-control {
+        flex: 1;
+      }
+      .municipio-info {
+        display: grid;
+        place-items: center;
+        width: 2rem;
+        height: 2rem;
+        border: 1px solid var(--color-border);
+        border-radius: 50%;
+        color: var(--color-primary);
+        font-weight: var(--font-bold);
+        text-decoration: none;
       }
       .vehicle-control {
         width: 100%;

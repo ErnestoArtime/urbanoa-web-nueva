@@ -79,6 +79,7 @@ export interface ActiveParking {
   operationDate?: string;
   /** Mirrors the APK parking-status `extension` flag. */
   canExtend?: boolean;
+  extension?: 0 | 1 | 2;
   /** Backend unpark option: only value 2 grants permission to unpark. */
   refundable?: 0 | 1 | 2;
 }
@@ -104,6 +105,11 @@ export class OperationsService {
     ),
   );
   readonly hasActiveParkingOperations = computed(() => this.activeParkingOperations().length > 0);
+  readonly operationsBadgeCount = computed(
+    () =>
+      this.activeParkingOperations().length +
+      this._operations().filter((operation) => operation.type === OperationType.UNPAID_FINES && operation.fineStatus === 1).length,
+  );
   readonly activeLoading = this._activeLoading.asReadonly();
   readonly source = signal<'idle' | 'remote' | 'error'>('idle');
   readonly activeSource = signal<'idle' | 'remote' | 'error'>('idle');
@@ -241,6 +247,7 @@ export class OperationsService {
       sectorId: operation.sectorId,
       sectorColor: operation.sectorColor,
       canExtend: operation.extension === 2,
+      extension: operation.extension,
       refundable: operation.refundable,
     };
   }
@@ -335,7 +342,7 @@ export class OperationsService {
       item.operationType === OperationType.PARKING_EXTENSION
         ? start
         : item.operationType === OperationType.PARKING
-          ? start ?? operationTime
+          ? (start ?? operationTime)
           : operationTime;
     const duration = item.parkingDuration ?? item.duration;
     const fineStatus = [1, 2, 3].includes(item.fineStatus ?? 0) ? (item.fineStatus as 1 | 2 | 3) : undefined;
