@@ -8,6 +8,7 @@ import { TranslationService } from '../../core/services/translation.service';
 import { VehicleService } from '../../core/services/vehicle.service';
 import { OpsSessionService } from '../../core/api/ops-session.service';
 import { AuthService } from '../../core/services/auth.service';
+import { UserService } from '../../core/services/user.service';
 import { AppShellComponent } from './app-shell.component';
 
 describe('AppShellComponent session data bootstrap', () => {
@@ -24,6 +25,10 @@ describe('AppShellComponent session data bootstrap', () => {
     operations.load.and.resolveTo();
     operations.loadDashboardParkingStatuses.and.resolveTo();
     vehicles.load.and.resolveTo();
+    const profile = {
+      load: jasmine.createSpy().and.resolveTo(),
+      user: signal({ name: 'Norkis', surname: 'Verdecia', email: 'n.verdecia@gentalia.es' }).asReadonly(),
+    };
 
     await TestBed.configureTestingModule({
       imports: [AppShellComponent],
@@ -35,6 +40,7 @@ describe('AppShellComponent session data bootstrap', () => {
         { provide: OperationsService, useValue: operations },
         { provide: VehicleService, useValue: vehicles },
         { provide: OpsSessionService, useValue: { token: () => 'session-token' } },
+        { provide: UserService, useValue: profile },
         {
           provide: AuthService,
           useValue: { user: signal({ name: 'Test', surname: 'User', email: 'test@example.com' }).asReadonly(), logout: () => undefined },
@@ -49,7 +55,10 @@ describe('AppShellComponent session data bootstrap', () => {
 
     expect(operations.load).toHaveBeenCalledTimes(1);
     expect(vehicles.load).toHaveBeenCalledTimes(1);
+    expect(profile.load).toHaveBeenCalledTimes(1);
     expect(operations.loadDashboardParkingStatuses).toHaveBeenCalledOnceWith([jasmine.objectContaining({ id: 'v1', plate: 'AAA111' })]);
+    expect(fixture.componentInstance.connectedUserName()).toBe('Norkis Verdecia');
+    expect(fixture.componentInstance.connectedUserEmail()).toBe('n.verdecia@gentalia.es');
   });
 
   it('leaves the initial active-parking lookup to the entry route', async () => {
@@ -65,6 +74,7 @@ describe('AppShellComponent session data bootstrap', () => {
     operations.load.and.resolveTo();
     operations.loadDashboardParkingStatuses.and.resolveTo();
     vehicles.load.and.resolveTo();
+    const profile = { load: jasmine.createSpy().and.resolveTo(), user: signal({ name: '', surname: '', email: '' }).asReadonly() };
 
     await TestBed.configureTestingModule({
       imports: [AppShellComponent],
@@ -76,6 +86,7 @@ describe('AppShellComponent session data bootstrap', () => {
         { provide: OperationsService, useValue: operations },
         { provide: VehicleService, useValue: vehicles },
         { provide: OpsSessionService, useValue: { token: () => 'session-token' } },
+        { provide: UserService, useValue: profile },
         {
           provide: AuthService,
           useValue: { user: signal({ name: 'Test', surname: 'User', email: 'test@example.com' }).asReadonly(), logout: () => undefined },

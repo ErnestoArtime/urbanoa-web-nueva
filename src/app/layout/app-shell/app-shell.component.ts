@@ -16,6 +16,7 @@ import { OpsSessionService } from '../../core/api/ops-session.service';
 import { VehicleService } from '../../core/services/vehicle.service';
 import { OperationType } from '../../shared/models/operation-type';
 import { AuthService } from '../../core/services/auth.service';
+import { UserService } from '../../core/services/user.service';
 
 const MAIN_TAB_PATHS = ['/app/home', '/app/parking', '/app/operations', '/app/account'];
 
@@ -74,7 +75,12 @@ const TITLE_KEYS: Record<string, string> = {
         <div class="app-shell-toolbar">
           <app-breadcrumb />
           <div class="app-shell-toolbar-actions">
-            <span class="connected-user" [title]="connectedUser()">{{ connectedUser() }}</span>
+            <div class="connected-user" [title]="connectedUserEmail()">
+              @if (connectedUserName()) {
+                <strong>{{ connectedUserName() }}</strong>
+              }
+              <span>{{ connectedUserEmail() }}</span>
+            </div>
             <button type="button" class="toolbar-logout" (click)="logout()">{{ 'account.logout' | translate }}</button>
             <app-lang-selector />
           </div>
@@ -172,13 +178,28 @@ const TITLE_KEYS: Record<string, string> = {
         gap: 0.5rem;
       }
       .connected-user {
+        display: flex;
         max-width: 220px;
         overflow: hidden;
+        flex-direction: column;
+        align-items: flex-end;
         color: var(--color-text);
         font-size: var(--text-sm);
-        font-weight: var(--font-medium);
         text-overflow: ellipsis;
         white-space: nowrap;
+      }
+      .connected-user strong,
+      .connected-user span {
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .connected-user strong {
+        font-weight: var(--font-bold);
+      }
+      .connected-user span {
+        color: var(--color-text-muted);
+        font-size: var(--text-2xs);
       }
       .toolbar-logout {
         min-height: 34px;
@@ -214,10 +235,13 @@ export class AppShellComponent {
   private readonly vehicleService = inject(VehicleService);
   private readonly opsSession = inject(OpsSessionService);
   private readonly authService = inject(AuthService);
-  readonly connectedUser = computed(() => {
-    const user = this.authService.user();
-    return [user.name, user.surname].filter(Boolean).join(' ').trim() || user.email;
+  private readonly userService = inject(UserService);
+  readonly connectedUserName = computed(() => {
+    const profile = this.userService.user();
+    const session = this.authService.user();
+    return [profile.name || session.name, profile.surname || session.surname].filter(Boolean).join(' ').trim();
   });
+  readonly connectedUserEmail = computed(() => this.userService.user().email || this.authService.user().email);
   readonly routeTransitionLoading = signal(false);
   private readonly routeTransitionMinMs = 1000;
   private routeTransitionStartedAt = 0;
@@ -271,7 +295,7 @@ export class AppShellComponent {
   private async initializeSessionData(): Promise<void> {
     const sessionToken = this.opsSession.token();
     if (!sessionToken || !this.isAppRoute()) return;
-    await Promise.all([this.operationsService.load(), this.vehicleService.load()]);
+    await Promise.all([this.operationsService.load(), this.vehicleService.load(), this.userService.load()]);
     if (this.opsSession.token() !== sessionToken || !this.isAppRoute()) return;
     const currentPath = this.router.url.split(/[?#]/, 1)[0].replace(/\/+$/, '');
     if (currentPath === '/app') return;
