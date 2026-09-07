@@ -4,12 +4,14 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { ParkingStreet, StreetsService } from '../../../core/services/streets.service';
 import { ParkingFlowStore } from '../parking-flow.store';
 import { CitiesService } from '../../../core/services/cities.service';
+import { LoaderComponent } from '../../../shared/components/loader/loader.component';
 
 @Component({
   selector: 'app-parking-streets',
-  imports: [RouterLink, TranslatePipe],
+  imports: [RouterLink, TranslatePipe, LoaderComponent],
   template: `
     <div class="page">
+      <app-loader [visible]="loading()" [message]="'parking.streets.loading' | translate" imageSrc="/assets/brand/login-logo.jpg" />
       <a [routerLink]="['/app/parking/city-info']" [queryParams]="{ id: cityId }" class="back-link">{{
         'parking.streets.back' | translate
       }}</a>
@@ -19,7 +21,10 @@ import { CitiesService } from '../../../core/services/cities.service';
         <strong>{{ selectedCityName }}</strong>
       </div>
       @if (dataSource() === 'error') {
-        <p class="data-notice" role="alert">No se pudieron cargar las calles.</p>
+        <div class="data-notice" role="alert">
+          <span>{{ 'parking.streets.loadError' | translate }}</span>
+          <button type="button" class="btn btn-secondary btn-sm" (click)="loadStreets()">{{ 'common.retry' | translate }}</button>
+        </div>
       }
       <div class="form-group">
         <input
@@ -41,7 +46,9 @@ import { CitiesService } from '../../../core/services/cities.service';
             <span class="list-item-chevron">›</span>
           </a>
         } @empty {
-          <li class="list-item empty-streets">{{ loading() ? 'Cargando calles…' : 'No se encontraron calles' }}</li>
+          @if (!loading()) {
+            <li class="list-item empty-streets">{{ 'parking.streets.empty' | translate }}</li>
+          }
         }
       </ul>
     </div>
@@ -101,6 +108,10 @@ import { CitiesService } from '../../../core/services/cities.service';
         color: var(--color-text-muted);
       }
       .data-notice {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
         margin: 0 0 1rem;
         padding: 0.75rem 0.9rem;
         border: 1px solid #e5b85c;
@@ -135,7 +146,13 @@ export class ParkingStreetsComponent implements OnInit {
   });
 
   async ngOnInit(): Promise<void> {
+    await this.loadStreets();
+  }
+
+  async loadStreets(): Promise<void> {
     const contractId = this.citiesService.contractIdFor(this.cityId);
+    this.loading.set(true);
+    this.dataSource.set('loading');
     try {
       const result = await this.streetsService.getStreets(contractId);
       this.streets.set(result.data);

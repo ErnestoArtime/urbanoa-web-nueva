@@ -125,7 +125,7 @@ export class OnboardingLocationComponent {
   constructor() {
     void this.citiesService
       .getCities()
-      .then((result) => this.municipios.set(result.data))
+      .then((result) => this.municipios.set(this.citiesService.selectableCities(result.data)))
       .catch(() => this.municipios.set([]));
   }
 

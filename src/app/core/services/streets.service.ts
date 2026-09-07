@@ -20,7 +20,7 @@ interface StreetsApiItem {
 
 interface StreetsApiValue {
   streetsFullNumber: number;
-  streetsFulllist: StreetsApiItem[];
+  streetsFulllist: StreetsApiItem[] | null;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -29,9 +29,12 @@ export class StreetsService {
 
   async getStreets(contractId: number): Promise<DataResult<ParkingStreet[]>> {
     const value = await this.api.post<StreetsApiValue>(OPS_ENDPOINTS.parking.streets, { contractId });
-    if (!Array.isArray(value.streetsFulllist)) throw new Error('QueryStreetsAPI no devolvió streetsFulllist');
+    if (value.streetsFulllist !== null && !Array.isArray(value.streetsFulllist)) {
+      throw new Error('QueryStreetsAPI no devolvió streetsFulllist');
+    }
+    const streets = value.streetsFulllist ?? [];
     return {
-      data: value.streetsFulllist.map((item) => ({
+      data: streets.map((item) => ({
         id: item.streetId,
         name: item.street,
         zoneId: item.zone,

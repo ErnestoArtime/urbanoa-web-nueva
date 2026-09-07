@@ -48,6 +48,14 @@ export interface ParkingMunicipio extends Municipio {
   zones: ParkingZoneSummary[];
 }
 
+export interface CityCoordinatesInput {
+  contractId?: number;
+  cityId?: number;
+  cityName?: string;
+  latitude?: number;
+  longitude?: number;
+}
+
 const CONTRACT_IDS: Record<string, number> = {
   durango: 1,
   zarautz: 3,
@@ -57,6 +65,17 @@ const CONTRACT_IDS: Record<string, number> = {
   soria: 73,
   deba: 79,
   mutriku: 81,
+};
+
+const CITY_CENTERS: Record<number, { latitude: number; longitude: number }> = {
+  1: { latitude: 43.168126, longitude: -2.632122 },
+  3: { latitude: 43.283891, longitude: -2.168643 },
+  5: { latitude: 43.136874, longitude: -2.07578 },
+  23: { latitude: 43.119115, longitude: -2.414244 },
+  61: { latitude: 43.065894125, longitude: -2.490005041 },
+  73: { latitude: 41.766359417, longitude: -2.47352316 },
+  79: { latitude: 43.29448, longitude: -2.35403 },
+  81: { latitude: 43.3060587, longitude: -2.3872368 },
 };
 
 @Injectable({ providedIn: 'root' })
@@ -110,6 +129,27 @@ export class CitiesService {
     return [...new Set(Object.values(CONTRACT_IDS))];
   }
 
+  selectableCities(cities: readonly ParkingMunicipio[] = this.state()): ParkingMunicipio[] {
+    return cities.filter((city) => city.contractId > 0 && city.zones.length > 0);
+  }
+
+  coordinatesFor(input: CityCoordinatesInput): { latitude: number; longitude: number } | null {
+    if (this.validCoordinates(input.latitude, input.longitude)) {
+      return { latitude: input.latitude!, longitude: input.longitude! };
+    }
+    const city = this.state().find(
+      (item) =>
+        item.contractId === input.contractId ||
+        item.contractId === input.cityId ||
+        (input.cityName ? this.slug(item.nombre) === this.slug(input.cityName) : false),
+    );
+    if (city && this.validCoordinates(city.latitude, city.longitude)) {
+      return { latitude: city.latitude, longitude: city.longitude };
+    }
+    const contractId = input.contractId ?? city?.contractId ?? (input.cityName ? CONTRACT_IDS[this.slug(input.cityName)] : undefined);
+    return contractId ? (CITY_CENTERS[contractId] ?? null) : null;
+  }
+
   private toMunicipio(item: ContractApiItem): ParkingMunicipio {
     const name = item.description1 || item.description2;
     const id = this.slug(name);
@@ -161,5 +201,15 @@ export class CitiesService {
       .toLocaleLowerCase('es')
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-|-$/g, '');
+  }
+
+  private validCoordinates(latitude?: number, longitude?: number): boolean {
+    return (
+      Number.isFinite(latitude) &&
+      Number.isFinite(longitude) &&
+      Math.abs(latitude!) <= 90 &&
+      Math.abs(longitude!) <= 180 &&
+      (latitude !== 0 || longitude !== 0)
+    );
   }
 }

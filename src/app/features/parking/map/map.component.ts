@@ -70,14 +70,18 @@ interface MapParkingZone {
               <button
                 type="button"
                 class="parking-behavior-help-trigger"
+                [class.active]="showParkingBehaviorHelp()"
                 [attr.aria-expanded]="showParkingBehaviorHelp()"
+                aria-controls="parking-behavior-help"
                 [attr.aria-label]="'parking.map.activeParkingHelpLabel' | translate"
                 (click)="toggleParkingBehaviorHelp()"
               >
                 i
               </button>
               @if (showParkingBehaviorHelp()) {
-                <p class="parking-behavior-help" role="status">{{ 'parking.map.activeParkingHelp' | translate }}</p>
+                <p id="parking-behavior-help" class="parking-behavior-help" role="status">
+                  {{ 'parking.map.activeParkingHelp' | translate }}
+                </p>
               }
             }
 
@@ -221,6 +225,13 @@ interface MapParkingZone {
         color: var(--color-primary);
         cursor: pointer;
         font-weight: var(--font-bold);
+        transition:
+          color 160ms ease,
+          background-color 160ms ease;
+      }
+      .parking-behavior-help-trigger.active {
+        background: var(--color-primary);
+        color: var(--color-surface);
       }
       .parking-behavior-help {
         position: absolute;
@@ -610,7 +621,8 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
   readonly selectedZone = signal<MapParkingZone | null>(null);
   readonly vehicles = this.vehicleService.vehicles;
   private readonly parkingSessionService = inject(ParkingSessionService);
-  readonly isParkedIn = (vehicle: Vehicle) => this.parkingSessionService.isVehicleParked(vehicle.id);
+  readonly isParkedIn = (vehicle: Vehicle) =>
+    this.parkingSessionService.isVehicleParked(vehicle.id) || this.parkingSessionService.isVehicleParked(vehicle.plate);
 
   translateLabel(value?: string): string {
     return this.translationService.translateLabel(value);
@@ -645,11 +657,15 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
 
   toggleVehicleSelector(): void {
     if (!this.hasAvailableVehicles()) return;
-    this.showVehicleSelector.update((value) => !value);
+    const willOpen = !this.showVehicleSelector();
+    this.showVehicleSelector.set(willOpen);
+    if (willOpen) this.showParkingBehaviorHelp.set(false);
   }
 
   toggleParkingBehaviorHelp(): void {
-    this.showParkingBehaviorHelp.update((value) => !value);
+    const willOpen = !this.showParkingBehaviorHelp();
+    this.showParkingBehaviorHelp.set(willOpen);
+    if (willOpen) this.showVehicleSelector.set(false);
   }
 
   selectVehicle(vehicle: Vehicle): void {
@@ -668,16 +684,17 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
     try {
       await this.vehicleService.load();
       const { data } = await this.citiesService.getCities();
+      const selectableCities = this.citiesService.selectableCities(data);
       const requestedContractId = Number(this.query.cityId);
       const preferredId = this.locationSettings.settings().preferredCityId;
       const selected =
-        data.find((city) => city.contractId === requestedContractId) ??
-        data.find((city) => city.id === this.query.city) ??
-        data.find((city) => city.id === preferredId || String(city.contractId) === preferredId) ??
-        data[0];
+        selectableCities.find((city) => city.contractId === requestedContractId) ??
+        selectableCities.find((city) => city.id === this.query.city) ??
+        selectableCities.find((city) => city.id === preferredId || String(city.contractId) === preferredId) ??
+        selectableCities[0];
       if (!selected) throw new Error('No hay contratos de aparcamiento disponibles');
       this.selectedState.set(selected);
-      await this.parkingSessionService.loadParkingStatuses(this.vehicles(), selected.contractId);
+      await this.parkingSessionService.loadParkingStatuses(this.vehicles());
       this.selectedVehicle.set(
         this.availableVehicles().find((vehicle) => vehicle.id === this.query.vehicleId || vehicle.plate === this.query.plate) ??
           preferredVehicle(this.availableVehicles()),
@@ -690,6 +707,7 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
     const vehicle = this.selectedVehicle();
     if (vehicle) this.store.selectVehicle(vehicle.id, vehicle.plate);
     this.map = L.map(this.mapContainer.nativeElement, { zoomControl: false }).setView(this.cityCenter(), 15);
+    this.map.on('movestart', () => this.showParkingBehaviorHelp.set(false));
     L.control.zoom({ position: 'topright' }).addTo(this.map);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
@@ -778,18 +796,8 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
   }
 
   private cityCenter(): L.LatLngExpression {
-    const centers: Record<string, [number, number]> = {
-      durango: [43.168126, -2.632122],
-      zarautz: [43.283891, -2.168643],
-      tolosa: [43.136874, -2.07578],
-      bergara: [43.119115, -2.414244],
-      arrasate: [43.065894125, -2.490005041],
-      soria: [41.766359417, -2.47352316],
-      deba: [43.29448, -2.35403],
-      mutriku: [43.3060587, -2.3872368],
-    };
-    if (this.selected.latitude && this.selected.longitude) return [this.selected.latitude, this.selected.longitude];
-    return centers[this.selected.id] ?? [43.283891, -2.168643];
+    const coordinates = this.citiesService.coordinatesFor(this.selected);
+    return coordinates ? [coordinates.latitude, coordinates.longitude] : [43.283891, -2.168643];
   }
 
   private async loadRealZones(): Promise<void> {

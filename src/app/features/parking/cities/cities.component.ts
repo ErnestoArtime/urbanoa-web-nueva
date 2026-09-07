@@ -376,7 +376,7 @@ export class ParkingCitiesComponent implements OnInit {
   async ngOnInit(): Promise<void> {
     try {
       const result = await this.citiesService.getCities();
-      this.municipios.set(result.data);
+      this.municipios.set(this.citiesService.selectableCities(result.data));
       this.dataSource.set('remote');
       this.selected.set(this.defaultCity());
     } catch {
