@@ -4,6 +4,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
 import { map } from 'rxjs/operators';
 import { OperationsService } from '../../../core/services/operations.service';
+import { isAcknowledgedFine } from '../../../core/services/unpaid-fines.service';
 import { OperationType } from '../../../shared/models/operation-type';
 import { OperationIconComponent } from '../../../shared/components/operation-icon/operation-icon.component';
 import { AppIconComponent } from '../../../shared/icons/app-icon.component';
@@ -21,7 +22,7 @@ import { CitiesService } from '../../../core/services/cities.service';
     <div class="page operation-detail-page">
       <app-detail-panel-header [title]="detailTitle() | translate" backRoute="/app/operations" />
       @if (op(); as operation) {
-        @if (operation.type === types.FINE_PAYMENT) {
+        @if (isFinePaymentDetail()) {
           <section class="fine-payment-detail">
             <article class="fine-payment-card card">
               <div class="fine-payment-kind">
@@ -467,7 +468,6 @@ export class OperationsDetailComponent {
   private readonly service = inject(OperationsService);
   private readonly translationService = inject(TranslationService);
   private readonly citiesService = inject(CitiesService);
-  readonly types = OperationType;
   readonly id = toSignal(this.route.paramMap.pipe(map((p) => p.get('id') ?? '1')), { initialValue: '1' });
   constructor() {
     void this.service.loadDetail(this.id());
@@ -479,8 +479,14 @@ export class OperationsDetailComponent {
     return this.service.getOperationById(this.id());
   });
   readonly opType = computed(() => this.op()?.type ?? OperationType.PARKING);
+  readonly isFinePaymentDetail = computed(() => {
+    const operation = this.op();
+    return (operation?.type === OperationType.FINE_PAYMENT || (operation !== undefined && isAcknowledgedFine(operation))) ?? false;
+  });
   readonly ticketHeaderColor = computed(() => normalizeSectorColor(this.op()?.sectorColor));
   readonly detailTitle = computed(() => {
+    const operation = this.op();
+    if (operation !== undefined && isAcknowledgedFine(operation)) return 'ops.fineDetail.sanction';
     const labels: Partial<Record<OperationType, string>> = {
       [OperationType.PARKING]: 'ops.detail.parkingDetail',
       [OperationType.PARKING_EXTENSION]: 'ops.detail.extension',

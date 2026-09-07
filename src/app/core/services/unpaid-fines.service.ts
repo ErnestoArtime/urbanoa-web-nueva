@@ -54,6 +54,10 @@ export interface FineStatusUpdateResult {
   success: boolean;
 }
 
+export function isAcknowledgedFine(operation: Operation): boolean {
+  return operation.type === OperationType.UNPAID_FINES && operation.fineStatus === FineStatus.EXPIRED && operation.timePeriod === 1;
+}
+
 @Injectable({ providedIn: 'root' })
 export class UnpaidFinesService {
   private readonly walletService = inject(WalletService);
@@ -63,7 +67,12 @@ export class UnpaidFinesService {
   readonly fines = computed(() =>
     this.operationsService
       .operations()
-      .filter((operation) => operation.type === OperationType.UNPAID_FINES)
+      .filter(
+        (operation) =>
+          operation.type === OperationType.UNPAID_FINES &&
+          (operation.fineStatus === FineStatus.PAYABLE ||
+            (operation.fineStatus === FineStatus.EXPIRED && operation.timePeriod === 2)),
+      )
       .map((operation) => this.mapOperation(operation)),
   );
   readonly source = this.operationsService.source;

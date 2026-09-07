@@ -4,7 +4,7 @@ import { AppApiClient } from '../api/app-api-client.service';
 import { OpsApiClient } from '../api/ops-api-client.service';
 import { OpsSessionService } from '../api/ops-session.service';
 import { OperationsService } from './operations.service';
-import { UnpaidFinesService, FineStatus } from './unpaid-fines.service';
+import { UnpaidFinesService, FineStatus, isAcknowledgedFine } from './unpaid-fines.service';
 import { WalletService } from './wallet.service';
 import { OperationType } from '../../shared/models/operation-type';
 import type { Operation } from '../../shared/models/operation';
@@ -19,6 +19,7 @@ const EXPIRED_FINE: Operation = {
   contractId: 7,
   fineNumber: 'FN-2026-001',
   fineStatus: FineStatus.EXPIRED,
+  timePeriod: 2,
 };
 
 describe('UnpaidFinesService stored data migration', () => {
@@ -152,5 +153,74 @@ describe('UnpaidFinesService acknowledgeExpired', () => {
     const result = await service.acknowledgeExpired('fine-1');
 
     expect(result.success).toBe(false);
+  });
+});
+
+describe('UnpaidFinesService fines listing rules', () => {
+  const baseFine: Operation = {
+    id: 'fine-1',
+    type: OperationType.UNPAID_FINES,
+    plate: '1234 ABC',
+    date: '05/06/2026',
+    amount: -35,
+    zone: null,
+    contractId: 7,
+    fineNumber: 'FN-2026-001',
+  };
+
+  function configure(fine: Operation) {
+    const operations = { operations: signal([fine]).asReadonly(), load: jasmine.createSpy('load').and.resolveTo() };
+    localStorage.clear();
+    TestBed.configureTestingModule({
+      providers: [
+        provideZonelessChangeDetection(),
+        { provide: WalletService, useValue: {} },
+        { provide: AppApiClient, useValue: {} },
+        { provide: OpsApiClient, useValue: {} },
+        { provide: OpsSessionService, useValue: { token: () => null } },
+        { provide: OperationsService, useValue: operations },
+      ],
+    });
+    return TestBed.inject(UnpaidFinesService);
+  }
+
+  it('keeps a payable fine (fineStatus 1) in the pending list', () => {
+    const service = configure({ ...baseFine, fineStatus: FineStatus.PAYABLE });
+    expect(service.fines().length).toBe(1);
+  });
+
+  it('keeps an expired fine within the pay deadline (fineStatus 2 + timePeriod 2)', () => {
+    const service = configure({ ...baseFine, fineStatus: FineStatus.EXPIRED, timePeriod: 2 });
+    expect(service.fines().length).toBe(1);
+  });
+
+  it('drops an acknowledged fine (fineStatus 2 + timePeriod 1) from the pending list', () => {
+    const service = configure({ ...baseFine, fineStatus: FineStatus.EXPIRED, timePeriod: 1 });
+    expect(service.fines().length).toBe(0);
+  });
+
+  it('excludes non-payable fines (fineStatus 3)', () => {
+    const service = configure({ ...baseFine, fineStatus: FineStatus.NOT_PAYABLE });
+    expect(service.fines().length).toBe(0);
+  });
+});
+
+describe('isAcknowledgedFine', () => {
+  const base = { type: OperationType.UNPAID_FINES, fineStatus: FineStatus.EXPIRED, timePeriod: 1 } as Operation;
+
+  it('is true when an unpaid fine is expired and moved to history', () => {
+    expect(isAcknowledgedFine(base)).toBe(true);
+  });
+
+  it('is false for an expired fine still within the pay deadline', () => {
+    expect(isAcknowledgedFine({ ...base, timePeriod: 2 })).toBe(false);
+  });
+
+  it('is false for payable fines', () => {
+    expect(isAcknowledgedFine({ ...base, fineStatus: FineStatus.PAYABLE, timePeriod: 2 })).toBe(false);
+  });
+
+  it('is false for paid fine operations', () => {
+    expect(isAcknowledgedFine({ ...base, type: OperationType.FINE_PAYMENT })).toBe(false);
   });
 });

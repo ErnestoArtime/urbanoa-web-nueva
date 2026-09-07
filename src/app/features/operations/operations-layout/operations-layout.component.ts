@@ -7,7 +7,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { DateRangeFilterComponent, type DateRange } from '../../../shared/components/date-range-filter/date-range-filter.component';
 import { OperationType, OPERATION_TYPE_LABELS } from '../../../shared/models/operation-type';
-import { UnpaidFinesService } from '../../../core/services/unpaid-fines.service';
+import { UnpaidFinesService, isAcknowledgedFine } from '../../../core/services/unpaid-fines.service';
 import { OperationsService, type ActiveParking } from '../../../core/services/operations.service';
 import { VehicleService } from '../../../core/services/vehicle.service';
 import { ParkingSessionService } from '../../../core/services/parking-session.service';
@@ -141,7 +141,7 @@ import { ParkingFlowStore } from '../../parking/parking-flow.store';
                   <app-operation-icon [type]="op.type" />
                   <div class="list-item-content">
                     <div class="list-item-title" [class.finish-op-title]="isFinishParking(op)">
-                      {{ OPERATION_TYPE_LABELS[op.type] | translate }}
+                      {{ operationLabel(op) | translate }}
                       @if (op.timePeriod === 2) {
                         <span class="badge badge-warning">{{ 'ops.active' | translate }}</span>
                       }
@@ -659,6 +659,11 @@ export class OperationsLayoutComponent implements OnInit {
     return op.type === OperationType.REFUND;
   }
 
+  operationLabel(op: Operation): string {
+    if (op.type === OperationType.UNPAID_FINES) return isAcknowledgedFine(op) ? 'ops.fineDetail.sanction' : 'ops.type.sanciones';
+    return OPERATION_TYPE_LABELS[op.type];
+  }
+
   isParking(op: Operation): boolean {
     return op.type === OperationType.PARKING || op.type === OperationType.PARKING_EXTENSION;
   }
@@ -669,7 +674,7 @@ export class OperationsLayoutComponent implements OnInit {
 
   private applyFilter(list: Operation[]): Operation[] {
     const { from, to } = this.rangeFilter();
-    const history = list.filter((op) => op.type !== OperationType.UNPAID_FINES);
+    const history = list.filter((op) => op.type !== OperationType.UNPAID_FINES || isAcknowledgedFine(op));
     const sorted = [...history].sort((a, b) => {
       const diff = this.toDateValue(b.date) - this.toDateValue(a.date);
       if (diff !== 0) return diff;
