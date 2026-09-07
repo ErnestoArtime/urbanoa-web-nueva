@@ -34,11 +34,9 @@ import { CitiesService } from '../../../core/services/cities.service';
               <div class="fine-payment-method">
                 <span>{{ 'ops.detail.paymentMethod' | translate }}</span>
                 <strong>{{ finePaymentMethodLabel() }}</strong>
-                @if (walletPaymentAmount() > 0) {
+                @if (walletPaymentAmount() > 0 && cardPaymentAmount() > 0) {
                   <span>{{ 'ops.detail.wallet' | translate }}</span>
                   <strong>−{{ formatFineAmount(walletPaymentAmount()) }} €</strong>
-                }
-                @if (cardPaymentAmount() > 0) {
                   <span>{{ cardPaymentLabel() }}</span>
                   <strong>−{{ formatFineAmount(cardPaymentAmount()) }} €</strong>
                 }
@@ -527,22 +525,18 @@ export class OperationsDetailComponent {
   readonly fineLocationSubtitle = computed(() => {
     const operation = this.op();
     if (!operation) return '';
-    return [operation.sectorName, operation.cityName].filter(Boolean).join(' · ');
+    return [operation.sectorName, this.citiesService.nameFor(operation)].filter(Boolean).join(' · ');
   });
   readonly fineCoordinates = computed(() => {
     const operation = this.op();
     if (!operation) return null;
-    return (
-      this.citiesService.coordinatesFor({
-        contractId: operation.contractId,
-        cityId: operation.cityId,
-        cityName: operation.cityName,
-        latitude: operation.latitude,
-        longitude: operation.longitude,
-      }) ??
-        // The APK currently uses this Zarautz point when a paid fine has no coordinates.
-        { latitude: 43.28441, longitude: -2.16432 }
-    );
+    return this.citiesService.coordinatesFor({
+      contractId: operation.contractId,
+      cityId: operation.cityId,
+      cityName: operation.cityName,
+      latitude: operation.latitude,
+      longitude: operation.longitude,
+    });
   });
   readonly detailRows = computed(() => {
     const o = this.op();

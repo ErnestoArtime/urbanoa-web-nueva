@@ -116,6 +116,11 @@ import { TranslationService } from '../../../core/services/translation.service';
               {{ 'ops.fineDetail.pay' | translate }} {{ fine.amount }}
             </button>
           }
+          @if (canMoveToHistory()) {
+            <button type="button" class="fine-understood-button" (click)="moveToHistory()" [disabled]="movingToHistory()">
+              {{ 'account.supportSuccess.button' | translate }}
+            </button>
+          }
         } @else {
           <p class="mt-2 text-muted">{{ 'ops.unpaidFines.notFound' | translate }}</p>
           <a routerLink="/app/operations/unpaid-fines" class="btn btn-primary btn-block mt-2">{{ 'ops.unpaidFines.back' | translate }}</a>
@@ -276,6 +281,23 @@ import { TranslationService } from '../../../core/services/translation.service';
         background: var(--color-border);
         margin: 0.2rem 0;
       }
+      .fine-understood-button {
+        display: block;
+        width: 100%;
+        margin: 1.25rem 0 0;
+        padding: 1rem 1.25rem;
+        border: 0;
+        border-radius: 999px;
+        color: #fff;
+        background: var(--color-primary-dark, #007b78);
+        font: inherit;
+        font-weight: var(--font-bold);
+        cursor: pointer;
+      }
+      .fine-understood-button:disabled {
+        opacity: 0.65;
+        cursor: wait;
+      }
     `,
   ],
 })
@@ -293,6 +315,8 @@ export class UnpaidFineDetailComponent implements AfterViewInit, OnDestroy {
   readonly fineId = this.route.snapshot.paramMap.get('id') ?? '';
   readonly fine = this.unpaidFinesService.getFine(this.fineId);
   readonly paid = signal(false);
+  readonly movingToHistory = signal(false);
+  readonly canMoveToHistory = computed(() => Boolean(this.fine && this.fine.timePeriod !== 1));
   readonly selectedCardId = signal(this.walletService.defaultCardId());
   readonly numericAmount = computed(() => {
     if (!this.fine) return 0;
@@ -363,6 +387,14 @@ export class UnpaidFineDetailComponent implements AfterViewInit, OnDestroy {
       this.capturedCardAmount.set(cardAmt);
       this.paid.set(true);
     }
+  }
+
+  async moveToHistory(): Promise<void> {
+    if (!this.fine || !this.canMoveToHistory() || this.movingToHistory()) return;
+    this.movingToHistory.set(true);
+    const moved = await this.unpaidFinesService.moveFineToHistory(this.fine);
+    this.movingToHistory.set(false);
+    if (moved) this.onBackToFines();
   }
 
   onBackToFines(): void {

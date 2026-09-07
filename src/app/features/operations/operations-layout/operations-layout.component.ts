@@ -643,6 +643,7 @@ export class OperationsLayoutComponent implements OnInit {
   }
 
   onExtend(parking: ActiveParking): void {
+    if (parking.extension !== 2) return;
     if (!this.parkingFlowStore.startExtension(parking)) return;
     void this.router.navigate(['/app/parking/time-steps']);
   }

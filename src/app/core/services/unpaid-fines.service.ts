@@ -7,6 +7,7 @@ import { OpsSessionService } from '../api/ops-session.service';
 import { OperationsService } from './operations.service';
 import { WalletService } from './wallet.service';
 import { formatOpsDate } from '../utils/ops-date';
+import { CitiesService } from './cities.service';
 
 export enum FineStatus {
   PAYABLE = 1,
@@ -43,6 +44,7 @@ export interface UnpaidFine {
   sectorName?: string;
   latitude?: number;
   longitude?: number;
+  timePeriod?: 1 | 2 | 3;
 }
 
 export interface FinePaymentResult {
@@ -52,6 +54,7 @@ export interface FinePaymentResult {
 
 @Injectable({ providedIn: 'root' })
 export class UnpaidFinesService {
+  private readonly citiesService = inject(CitiesService);
   private readonly walletService = inject(WalletService);
   private readonly operationsService = inject(OperationsService);
   private readonly api = inject(OpsApiClient);
@@ -59,7 +62,7 @@ export class UnpaidFinesService {
   readonly fines = computed(() =>
     this.operationsService
       .operations()
-      .filter((operation) => operation.type === OperationType.UNPAID_FINES)
+      .filter((operation) => operation.type === OperationType.UNPAID_FINES && operation.timePeriod !== 1)
       .map((operation) => this.mapOperation(operation)),
   );
   readonly source = this.operationsService.source;
@@ -102,6 +105,22 @@ export class UnpaidFinesService {
     return this.fines().find((fine) => fine.id === id);
   }
 
+  async moveFineToHistory(fine: UnpaidFine): Promise<boolean> {
+    const token = this.session.token();
+    if (!token || !fine.contractId || !fine.fineNumber) return false;
+    try {
+      await this.api.post<string>(
+        OPS_ENDPOINTS.fines.updateStatus,
+        { contractId: fine.contractId, fineNumber: fine.fineNumber },
+        { token },
+      );
+      await this.operationsService.load();
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   private mapOperation(operation: Operation): UnpaidFine {
     const amountValue = Math.abs(operation.amount);
     const originalAmountValue = operation.fineAmount;
@@ -110,7 +129,8 @@ export class UnpaidFinesService {
         ? Math.round(((originalAmountValue - amountValue) / originalAmountValue) * 100)
         : undefined;
     const street = [operation.fineStreet, operation.fineStreetNumber].filter(Boolean).join(' ');
-    const location = [operation.zoneName ?? operation.zone, operation.sectorName, street].filter(Boolean).join(' · ');
+    const cityName = this.citiesService.nameFor(operation);
+    const location = [operation.sectorName ?? operation.zone, cityName || street].filter(Boolean).join(' · ');
     const time = operation.startTime ?? operation.endTime;
     const date = time ? `${operation.date} | ${time}` : operation.date;
     return {
@@ -142,6 +162,7 @@ export class UnpaidFinesService {
       sectorName: operation.sectorName,
       latitude: operation.latitude,
       longitude: operation.longitude,
+      timePeriod: operation.timePeriod,
     };
   }
 
