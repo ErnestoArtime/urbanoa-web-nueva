@@ -2,6 +2,7 @@ import { computed, inject, Injectable, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { OpsLoginRequest, OpsLoginResponse, OpsRegisterRequest, OpsUserResponse } from '../api/ops-auth.types';
 import { OpsApiClient } from '../api/ops-api-client.service';
+import { OPS_APP_VERSION, OPS_OPERATING_SYSTEM } from '../api/ops-client.constants';
 import { OPS_ENDPOINTS } from '../api/ops-endpoints';
 import { OpsSessionService } from '../api/ops-session.service';
 import { readStorage, writeStorage } from '../storage/signal-storage';
@@ -42,8 +43,6 @@ export interface RegisterPayload {
 
 export type ResendMailType = 'register' | 'recover';
 
-const OPS_APP_VERSION = '4.0.0';
-const OPS_OPERATING_SYSTEM = 1;
 const DEVICE_TOKEN_KEY = 'urbanoa.deviceToken';
 
 function getOrCreateCloudToken(): string {

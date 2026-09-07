@@ -1,8 +1,9 @@
 import { Injectable, computed, inject } from '@angular/core';
 import { OperationType } from '../../shared/models/operation-type';
 import type { Operation } from '../../shared/models/operation';
-import { OPS_ENDPOINTS } from '../api/ops-endpoints';
 import { OpsApiClient } from '../api/ops-api-client.service';
+import { OPS_OPERATING_SYSTEM } from '../api/ops-client.constants';
+import { OPS_ENDPOINTS } from '../api/ops-endpoints';
 import { OpsSessionService } from '../api/ops-session.service';
 import { OperationsService } from './operations.service';
 import { WalletService } from './wallet.service';
@@ -98,7 +99,7 @@ export class UnpaidFinesService {
           quantity: Math.round(numericAmount * 100),
           date: this.opsDate(new Date()),
           cloudToken: '',
-          operatingSystem: 3,
+          operatingSystem: OPS_OPERATING_SYSTEM,
           payMethodId: Number.isInteger(payMethodId) ? payMethodId : 0,
         },
         { token },
