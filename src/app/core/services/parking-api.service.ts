@@ -1,8 +1,9 @@
 import { inject, Injectable } from '@angular/core';
-import { OPS_ENDPOINTS } from '../api/ops-endpoints';
 import { OpsApiClient } from '../api/ops-api-client.service';
-import { OpsSessionService } from '../api/ops-session.service';
 import { OpsApiError } from '../api/ops-api.types';
+import { OPS_OPERATING_SYSTEM } from '../api/ops-client.constants';
+import { OPS_ENDPOINTS } from '../api/ops-endpoints';
+import { OpsSessionService } from '../api/ops-session.service';
 import { formatOpsDate } from '../utils/ops-date';
 import { TranslationService } from './translation.service';
 
@@ -108,7 +109,7 @@ export class ParkingApiService {
           quantity: input.quantity,
           tariffType: input.tariffType,
           cloudToken: '',
-          operatingSystem: 1,
+          operatingSystem: OPS_OPERATING_SYSTEM,
           date: input.date,
           time: input.time,
           latitude: input.latitude,
@@ -196,7 +197,7 @@ export class ParkingApiService {
           groupId: input.groupId,
           ticketId: input.ticketId,
           cloudToken: '',
-          operatingSystem: 1,
+          operatingSystem: OPS_OPERATING_SYSTEM,
           date,
         },
         { token },
