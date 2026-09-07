@@ -142,6 +142,9 @@ import { ParkingFlowStore } from '../../parking/parking-flow.store';
                   <div class="list-item-content">
                     <div class="list-item-title" [class.finish-op-title]="isFinishParking(op)">
                       {{ OPERATION_TYPE_LABELS[op.type] | translate }}
+                      @if (op.timePeriod === 2) {
+                        <span class="badge badge-warning">{{ 'ops.active' | translate }}</span>
+                      }
                     </div>
                     <div class="list-item-subtitle">
                       {{ op.date }}{{ operationTime(op) ? ' · ' + operationTime(op) : '' }}{{ op.zone ? ' — ' + op.zone : '' }}
@@ -661,7 +664,7 @@ export class OperationsLayoutComponent implements OnInit {
   }
 
   operationTime(op: Operation): string {
-    return op.startTime ?? op.endTime ?? '';
+    return op.operationTime ?? op.startTime ?? op.endTime ?? '';
   }
 
   private applyFilter(list: Operation[]): Operation[] {

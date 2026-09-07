@@ -12,6 +12,7 @@ export interface Operation {
   plate: string | null;
   date: string;
   operationDate?: string;
+  operationTime?: string;
   amount: number;
   zone: string | null;
   relatedOperationId?: string;

@@ -21,7 +21,12 @@ import type { Operation } from '../../../shared/models/operation';
               @if (isFinishParking(op)) {
                 <div class="list-item-title">{{ 'ops.type.parkingEnd' | translate }}</div>
               } @else {
-                <div class="list-item-title">{{ OPERATION_TYPE_LABELS[op.type] | translate }}</div>
+                <div class="list-item-title">
+                  {{ OPERATION_TYPE_LABELS[op.type] | translate }}
+                  @if (op.timePeriod === 2) {
+                    <span class="badge badge-warning">{{ 'ops.active' | translate }}</span>
+                  }
+                </div>
               }
               <div class="list-item-subtitle">
                 {{ op.date }}{{ operationTime(op) ? ' · ' + operationTime(op) : '' }}{{ op.zone ? ' — ' + op.zone : '' }}
@@ -103,6 +108,6 @@ export class RecentOperationsCardComponent {
   }
 
   operationTime(op: Operation): string {
-    return op.startTime ?? op.endTime ?? '';
+    return op.operationTime ?? op.startTime ?? op.endTime ?? '';
   }
 }

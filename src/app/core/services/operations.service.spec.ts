@@ -45,6 +45,30 @@ describe('OperationsService stored data migration', () => {
     expect(api.post.calls.mostRecent().args[1]).toEqual(jasmine.objectContaining({ operationTypeList: jasmine.arrayContaining([7]) }));
   });
 
+  it('keeps the operation time separate from parking start and end times', async () => {
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
+    api.post.and.resolveTo([
+      {
+        operationNumber: 18,
+        operationType: OperationType.REFUND,
+        paymentAmount: 250,
+        opDate: '210100030926',
+        parkingStartDate: '090000030926',
+        parkingEndDate: '103000030926',
+        plate: '11111',
+      },
+    ]);
+    TestBed.overrideProvider(OpsApiClient, { useValue: api });
+    TestBed.overrideProvider(OpsSessionService, { useValue: { token: () => 'token' } });
+    const service = TestBed.inject(OperationsService);
+
+    await service.load();
+
+    expect(service.operations()[0]).toEqual(
+      jasmine.objectContaining({ operationTime: '21:01', startTime: '21:01', endTime: '10:30' }),
+    );
+  });
+
   it('uses the QueryUserOperationsAPI timePeriod field to identify active parking operations', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
     api.post.and.resolveTo([
@@ -158,8 +182,77 @@ describe('OperationsService stored data migration', () => {
     expect(api.post).toHaveBeenCalledTimes(1);
     expect(api.postOrNull).not.toHaveBeenCalled();
     expect(service.activeParkings()).toEqual([
-      jasmine.objectContaining({ id: 'operation-active-2', vehicleId: 'vehicle-a', tariffId: 5, canExtend: false, refundable: 0 }),
-      jasmine.objectContaining({ id: 'operation-active-1', vehicleId: 'vehicle-a', tariffId: 4, canExtend: true, refundable: 2 }),
+      jasmine.objectContaining({
+        id: 'operation-active-2',
+        vehicleId: 'vehicle-a',
+        tariffId: 5,
+        startTime: '09:00',
+        endTime: '17:30',
+        durationLabel: '510 min',
+        canExtend: false,
+        refundable: 0,
+      }),
+      jasmine.objectContaining({
+        id: 'operation-active-1',
+        vehicleId: 'vehicle-a',
+        tariffId: 4,
+        startTime: '09:00',
+        endTime: '17:00',
+        durationLabel: '480 min',
+        canExtend: true,
+        refundable: 2,
+      }),
+    ]);
+  });
+
+  it('consolidates an extension with its parking in the same sector and preserves omitted context', async () => {
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post', 'serverNow']);
+    api.serverNow.and.returnValue(new Date('2026-09-03T14:00:00Z'));
+    api.post.and.resolveTo([
+      {
+        contractId: 3,
+        operationNumber: 'base',
+        operationType: OperationType.PARKING,
+        paymentAmount: 100,
+        opDate: '120000030926',
+        plate: 'AAA111',
+        parkingStartDate: '090000030926',
+        parkingEndDate: '170000030926',
+        parkingDuration: 480,
+        timePeriod: 2,
+        ticketId: 4,
+        sectorId: 22002,
+        sectorDesc: 'Z2 AZUL',
+        pstreet: 'Kale Nagusia',
+      },
+      {
+        contractId: 3,
+        operationNumber: 'extension',
+        operationType: OperationType.PARKING_EXTENSION,
+        paymentAmount: 50,
+        opDate: '121000030926',
+        plate: 'AAA111',
+        parkingEndDate: '173000030926',
+        parkingDuration: 510,
+        timePeriod: 2,
+        sectorId: 22002,
+      },
+    ]);
+    TestBed.overrideProvider(OpsApiClient, { useValue: api });
+    TestBed.overrideProvider(OpsSessionService, { useValue: { token: () => 'token' } });
+    const service = TestBed.inject(OperationsService);
+
+    await service.loadParkingStatuses([{ id: 'vehicle-a', plate: 'AAA111' }]);
+
+    expect(service.activeParkings()).toEqual([
+      jasmine.objectContaining({
+        id: 'operation-extension',
+        tariffId: 4,
+        street: 'Kale Nagusia',
+        startTime: '09:00',
+        endTime: '17:30',
+        durationLabel: '510 min',
+      }),
     ]);
   });
 
@@ -294,5 +387,59 @@ describe('OperationsService stored data migration', () => {
 
     expect(api.postOrNull).not.toHaveBeenCalled();
     expect(service.activeParkings()).toEqual([jasmine.objectContaining({ plate: 'AAA111', contractId: 3 })]);
+  });
+
+  it('calculates the remaining time using Madrid timestamps and the server clock', async () => {
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post', 'serverNow']);
+    api.post.and.resolveTo([
+      {
+        contractId: 3,
+        operationNumber: 'madrid-time',
+        operationType: OperationType.PARKING,
+        paymentAmount: 100,
+        opDate: '160000030926',
+        plate: 'AAA111',
+        parkingStartDate: '150000030926',
+        parkingEndDate: '170000030926',
+        timePeriod: 2,
+      },
+    ]);
+    api.serverNow.and.returnValue(new Date('2026-09-03T14:00:00Z'));
+    TestBed.overrideProvider(OpsApiClient, { useValue: api });
+    TestBed.overrideProvider(OpsSessionService, { useValue: { token: () => 'token' } });
+    const service = TestBed.inject(OperationsService);
+
+    await service.loadParkingStatuses([{ id: 'vehicle-1', plate: 'AAA111' }]);
+
+    expect(service.activeParkings()[0].timeRemaining).toBe('01:00:00');
+  });
+
+  it('keeps the last active parking when a refresh fails temporarily', async () => {
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post', 'serverNow']);
+    api.serverNow.and.returnValue(new Date('2026-09-03T14:00:00Z'));
+    api.post.and.resolveTo([
+      {
+        contractId: 3,
+        operationNumber: 'still-active',
+        operationType: OperationType.PARKING,
+        paymentAmount: 100,
+        opDate: '160000030926',
+        plate: 'AAA111',
+        parkingEndDate: '170000030926',
+        timePeriod: 2,
+      },
+    ]);
+    TestBed.overrideProvider(OpsApiClient, { useValue: api });
+    TestBed.overrideProvider(OpsSessionService, { useValue: { token: () => 'token' } });
+    const service = TestBed.inject(OperationsService);
+    const vehicles = [{ id: 'vehicle-1', plate: 'AAA111' }];
+    await service.loadParkingStatuses(vehicles);
+
+    api.post.and.rejectWith(new Error('temporary network error'));
+    await service.loadParkingStatuses(vehicles);
+
+    expect(service.source()).toBe('error');
+    expect(service.activeSource()).toBe('error');
+    expect(service.activeParkings()).toEqual([jasmine.objectContaining({ id: 'operation-still-active', plate: 'AAA111' })]);
   });
 });

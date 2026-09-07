@@ -12,6 +12,7 @@ import { TranslationService } from '../../../core/services/translation.service';
 import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
 import { LocationMap } from '../../../shared/components/location-map/location-map';
 import { normalizeSectorColor } from '../../../shared/utils/sector-color';
+import { CitiesService } from '../../../core/services/cities.service';
 
 @Component({
   selector: 'app-operations-detail',
@@ -22,66 +23,68 @@ import { normalizeSectorColor } from '../../../shared/utils/sector-color';
       @if (op(); as operation) {
         @if (operation.type === types.FINE_PAYMENT) {
           <section class="fine-payment-detail">
-            <div class="fine-payment-kind">
-              <app-operation-icon [type]="operation.type" />
-              <strong>{{ 'ops.fineDetail.sanction' | translate }}</strong>
-            </div>
+            <article class="fine-payment-card card">
+              <div class="fine-payment-kind">
+                <app-operation-icon [type]="operation.type" />
+                <strong>{{ 'ops.fineDetail.sanction' | translate }}</strong>
+              </div>
 
-            <strong class="fine-payment-amount">{{ formatFineAmount(absoluteAmount()) }} €</strong>
+              <strong class="fine-payment-amount">{{ formatFineAmount(absoluteAmount()) }} €</strong>
 
-            <div class="fine-payment-method">
-              <span>{{ 'ops.detail.paymentMethod' | translate }}</span>
-              <strong>{{ finePaymentMethodLabel() }}</strong>
-              @if (walletPaymentAmount() > 0) {
-                <span>{{ 'ops.detail.wallet' | translate }}</span>
-                <strong>−{{ formatFineAmount(walletPaymentAmount()) }} €</strong>
+              <div class="fine-payment-method">
+                <span>{{ 'ops.detail.paymentMethod' | translate }}</span>
+                <strong>{{ finePaymentMethodLabel() }}</strong>
+                @if (walletPaymentAmount() > 0) {
+                  <span>{{ 'ops.detail.wallet' | translate }}</span>
+                  <strong>−{{ formatFineAmount(walletPaymentAmount()) }} €</strong>
+                }
+                @if (cardPaymentAmount() > 0) {
+                  <span>{{ cardPaymentLabel() }}</span>
+                  <strong>−{{ formatFineAmount(cardPaymentAmount()) }} €</strong>
+                }
+              </div>
+
+              <div class="fine-payment-info">
+                <div class="fine-payment-row">
+                  <span class="fine-payment-row-icon">#</span>
+                  <div>
+                    <span>{{ 'ops.fineDetail.fineNumber' | translate }}</span
+                    ><strong>{{ operation.fineNumber ?? operation.id }}</strong>
+                  </div>
+                </div>
+                <div class="fine-payment-row">
+                  <span class="fine-payment-row-icon"><app-icon name="vehicle" [stroke]="false" /></span>
+                  <div>
+                    <span>{{ 'ops.detail.plate' | translate }}</span
+                    ><strong>{{ operation.plate }}</strong>
+                  </div>
+                </div>
+                <div class="fine-payment-row">
+                  <span class="fine-payment-row-icon"><app-icon name="dateRange" [stroke]="false" /></span>
+                  <div>
+                    <span>{{ 'ops.detail.datetime' | translate }}</span
+                    ><strong>{{ dateTime(operation) }}</strong>
+                  </div>
+                </div>
+                <div class="fine-payment-row fine-payment-location">
+                  <span class="fine-payment-row-icon"><app-icon name="location" [stroke]="false" /></span>
+                  <div>
+                    <strong>{{ fineLocationTitle() }}</strong>
+                    @if (fineLocationSubtitle()) {
+                      <span>{{ fineLocationSubtitle() }}</span>
+                    }
+                  </div>
+                </div>
+              </div>
+
+              @if (fineCoordinates(); as coordinates) {
+                <app-location-map
+                  [latitude]="coordinates.latitude"
+                  [longitude]="coordinates.longitude"
+                  [label]="'ops.detail.fineMapAria' | translate"
+                />
               }
-              @if (cardPaymentAmount() > 0) {
-                <span>{{ cardPaymentLabel() }}</span>
-                <strong>−{{ formatFineAmount(cardPaymentAmount()) }} €</strong>
-              }
-            </div>
-
-            <div class="fine-payment-info">
-              <div class="fine-payment-row">
-                <span class="fine-payment-row-icon">#</span>
-                <div>
-                  <span>{{ 'ops.fineDetail.fineNumber' | translate }}</span
-                  ><strong>{{ operation.fineNumber ?? operation.id }}</strong>
-                </div>
-              </div>
-              <div class="fine-payment-row">
-                <span class="fine-payment-row-icon"><app-icon name="vehicle" [stroke]="false" /></span>
-                <div>
-                  <span>{{ 'ops.detail.plate' | translate }}</span
-                  ><strong>{{ operation.plate }}</strong>
-                </div>
-              </div>
-              <div class="fine-payment-row">
-                <span class="fine-payment-row-icon"><app-icon name="dateRange" [stroke]="false" /></span>
-                <div>
-                  <span>{{ 'ops.detail.datetime' | translate }}</span
-                  ><strong>{{ dateTime(operation) }}</strong>
-                </div>
-              </div>
-              <div class="fine-payment-row fine-payment-location">
-                <span class="fine-payment-row-icon"><app-icon name="location" [stroke]="false" /></span>
-                <div>
-                  <strong>{{ fineLocationTitle() }}</strong>
-                  @if (fineLocationSubtitle()) {
-                    <span>{{ fineLocationSubtitle() }}</span>
-                  }
-                </div>
-              </div>
-            </div>
-
-            @if (fineCoordinates(); as coordinates) {
-              <app-location-map
-                [latitude]="coordinates.latitude"
-                [longitude]="coordinates.longitude"
-                [label]="'ops.detail.fineMapAria' | translate"
-              />
-            }
+            </article>
           </section>
         } @else {
           <header class="detail-heading">
@@ -110,14 +113,14 @@ import { normalizeSectorColor } from '../../../shared/utils/sector-color';
                   <div>
                     <small>{{ 'ops.detail.start' | translate }}</small
                     ><strong>{{ startTime() }}</strong
-                    ><span>{{ operation.date }}</span>
+                    ><span>{{ operation.startDate ?? operation.date }}</span>
                   </div>
                   <i></i><b>{{ duration() }}</b
                   ><i></i>
                   <div>
                     <small>{{ 'ops.detail.end' | translate }}</small
                     ><strong>{{ endTime() }}</strong
-                    ><span>{{ operation.date }}</span>
+                    ><span>{{ operation.endDate ?? operation.date }}</span>
                   </div>
                 </div>
                 <div class="ticket-cut"></div>
@@ -177,9 +180,10 @@ import { normalizeSectorColor } from '../../../shared/utils/sector-color';
         padding: 1.4rem;
       }
       .fine-payment-detail {
-        max-width: 560px;
-        margin: 0 auto;
-        padding: 0.5rem 0 1.5rem;
+        width: 100%;
+      }
+      .fine-payment-card {
+        padding: 1.2rem 1.4rem;
       }
       .fine-payment-kind {
         display: flex;
@@ -258,6 +262,9 @@ import { normalizeSectorColor } from '../../../shared/utils/sector-color';
         }
         .fine-payment-detail {
           padding-top: 0;
+        }
+        .fine-payment-card {
+          padding: 1rem;
         }
       }
       .detail-heading {
@@ -459,11 +466,13 @@ export class OperationsDetailComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly service = inject(OperationsService);
   private readonly translationService = inject(TranslationService);
+  private readonly citiesService = inject(CitiesService);
   readonly types = OperationType;
   readonly id = toSignal(this.route.paramMap.pipe(map((p) => p.get('id') ?? '1')), { initialValue: '1' });
   constructor() {
     void this.service.loadDetail(this.id());
     void this.service.loadReceipt(this.id());
+    void this.citiesService.getCities().catch(() => undefined);
   }
   readonly op = computed(() => {
     this.service.operations();
@@ -484,9 +493,9 @@ export class OperationsDetailComponent {
     return labels[this.opType()] ?? 'ops.detail';
   });
   readonly isTicketOperation = computed(() => [OperationType.PARKING, OperationType.PARKING_EXTENSION].includes(this.opType()));
-  readonly startTime = () => this.op()?.startTime ?? (this.opType() === OperationType.PARKING ? '18:36' : '19:40');
-  readonly endTime = () => this.op()?.endTime ?? (this.opType() === OperationType.PARKING ? '19:40' : '20:10');
-  readonly duration = () => this.op()?.durationLabel ?? (this.opType() === OperationType.PARKING ? '1 h 4 min' : '30 min');
+  readonly startTime = () => this.op()?.startTime ?? '--:--';
+  readonly endTime = () => this.op()?.endTime ?? '--:--';
+  readonly duration = () => this.op()?.durationLabel ?? '—';
   readonly transactionId = computed(() => `8430${String(370 + Number(this.id()))}`);
   readonly absoluteAmount = computed(() => Math.abs(this.op()?.amount ?? 0));
   readonly walletPaymentAmount = computed(() => Math.abs(this.op()?.paymentBreakdown?.walletAmount ?? 0));
@@ -522,10 +531,18 @@ export class OperationsDetailComponent {
   });
   readonly fineCoordinates = computed(() => {
     const operation = this.op();
-    if (Number.isFinite(operation?.latitude) && Number.isFinite(operation?.longitude)) {
-      return { latitude: operation!.latitude!, longitude: operation!.longitude! };
-    }
-    return null;
+    if (!operation) return null;
+    return (
+      this.citiesService.coordinatesFor({
+        contractId: operation.contractId,
+        cityId: operation.cityId,
+        cityName: operation.cityName,
+        latitude: operation.latitude,
+        longitude: operation.longitude,
+      }) ??
+        // The APK currently uses this Zarautz point when a paid fine has no coordinates.
+        { latitude: 43.28441, longitude: -2.16432 }
+    );
   });
   readonly detailRows = computed(() => {
     const o = this.op();
@@ -586,8 +603,8 @@ export class OperationsDetailComponent {
     return amount > 0 ? '+' : amount < 0 ? '-' : '';
   }
 
-  dateTime(operation: { date: string; startTime?: string; endTime?: string }): string {
-    const time = operation.endTime ?? operation.startTime;
+  dateTime(operation: { date: string; operationTime?: string; startTime?: string; endTime?: string }): string {
+    const time = operation.operationTime ?? operation.endTime ?? operation.startTime;
     return time ? `${operation.date} · ${time}` : operation.date;
   }
 

@@ -33,6 +33,9 @@ export type ParkingTicketCardVariant = 'dashboard' | 'operations-current' | 'det
           <div class="ticket-location">
             <small>{{ 'dashboard.ticket.zone' | translate }}</small>
             <strong>{{ active.zone }}</strong>
+            @if (active.street) {
+              <span class="ticket-street"><b aria-hidden="true">i</b>{{ active.street }}</span>
+            }
           </div>
           @if (active.operationId; as opId) {
             <span class="ticket-op-id">{{ operationReference(opId) }}</span>
@@ -131,6 +134,22 @@ export type ParkingTicketCardVariant = 'dashboard' | 'operations-current' | 'det
         letter-spacing: 0.03em;
         line-height: 1;
         white-space: nowrap;
+      }
+      .ticket-street {
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+        color: var(--color-text-muted);
+        font-size: var(--text-xs);
+      }
+      .ticket-street b {
+        display: inline-grid;
+        place-items: center;
+        width: 1rem;
+        height: 1rem;
+        border: 1px solid currentColor;
+        border-radius: 50%;
+        font-size: 0.7rem;
       }
       .ticket-main-row {
         display: flex;

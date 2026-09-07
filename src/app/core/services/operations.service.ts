@@ -130,8 +130,10 @@ export class OperationsService {
     const token = this.session.token();
     if (!token) {
       this._operations.set([]);
+      this._activeParkings.set([]);
       this.lastError.set('No hay una sesión OPS activa');
       this.source.set('error');
+      this.activeSource.set('error');
       return;
     }
     const requestBody = {
@@ -147,7 +149,6 @@ export class OperationsService {
       this._operations.set(response.map((item) => this.mapRemoteOperation(item)));
       this.source.set('remote');
     } catch (error) {
-      this._operations.set([]);
       this.lastError.set(error instanceof Error ? error.message : 'Error desconocido al cargar las operaciones');
       const errorDetails =
         error instanceof OpsApiError
@@ -184,13 +185,20 @@ export class OperationsService {
 
   syncActiveParkingsFromOperations(vehicles: readonly { id: string; plate: string }[], contractId?: number): void {
     if (this.source() !== 'remote') {
-      this._activeParkings.set([]);
       this.activeSource.set('error');
       return;
     }
 
-    const parkings = this.activeParkingOperations()
+    const mergedByParking = new Map<string, Operation>();
+    this.activeParkingOperations()
       .filter((operation) => contractId === undefined || operation.contractId === contractId)
+      .sort((a, b) => this.operationTimestamp(a) - this.operationTimestamp(b))
+      .forEach((operation) => {
+        const key = this.activeParkingKey(operation);
+        const previous = mergedByParking.get(key);
+        mergedByParking.set(key, previous ? this.mergeDefinedOperation(previous, operation) : operation);
+      });
+    const parkings = [...mergedByParking.values()]
       .sort((a, b) => this.operationTimestamp(b) - this.operationTimestamp(a))
       .map((operation) => this.activeParkingFromOperation(operation, vehicles));
     this._activeParkings.set(parkings);
@@ -206,7 +214,8 @@ export class OperationsService {
     const plate = operation.plate ?? '';
     const vehicle = vehicles.find((item) => this.normalizePlate(item.plate) === this.normalizePlate(plate));
     const end = this.operationDateTime(operation.endDate ?? operation.date, operation.endTime);
-    const remainingSeconds = Math.max(0, Math.floor((end.getTime() - Date.now()) / 1000));
+    const now = this.api.serverNow ? this.api.serverNow() : new Date();
+    const remainingSeconds = Math.max(0, Math.floor((end.getTime() - now.getTime()) / 1000));
     const hours = String(Math.floor(remainingSeconds / 3600)).padStart(2, '0');
     const minutes = String(Math.floor((remainingSeconds % 3600) / 60)).padStart(2, '0');
     const seconds = String(remainingSeconds % 60).padStart(2, '0');
@@ -254,8 +263,20 @@ export class OperationsService {
   private operationDateTime(date: string, time?: string): Date {
     const [day, month, year] = date.split('/').map(Number);
     const [hours = 0, minutes = 0] = (time ?? '').split(':').map(Number);
-    const timestamp = new Date(year, month - 1, day, hours, minutes).getTime();
-    return new Date(Number.isNaN(timestamp) ? 0 : timestamp);
+    if (![day, month, year, hours, minutes].every(Number.isFinite)) return new Date(0);
+    const two = (value: number): string => String(value).padStart(2, '0');
+    return parseOpsDate(`${two(hours)}${two(minutes)}00${two(day)}${two(month)}${two(year % 100)}`);
+  }
+
+  private activeParkingKey(operation: Operation): string {
+    return [this.normalizePlate(operation.plate ?? ''), operation.contractId ?? '', operation.sectorId ?? ''].join('|');
+  }
+
+  private mergeDefinedOperation(base: Operation, update: Operation): Operation {
+    const values = Object.fromEntries(
+      Object.entries(update).filter(([, value]) => value !== undefined && value !== null && value !== ''),
+    ) as Partial<Operation>;
+    return { ...base, ...values };
   }
 
   async loadReceipt(id: string): Promise<unknown | null> {
@@ -309,6 +330,13 @@ export class OperationsService {
     const amount = remoteAmount / 100;
     const start = this.dateTimePart(item.parkingStartDate);
     const end = this.dateTimePart(item.parkingEndDate);
+    const operationTime = this.dateTimePart(item.opDate);
+    const startTime =
+      item.operationType === OperationType.PARKING_EXTENSION
+        ? start
+        : item.operationType === OperationType.PARKING
+          ? start ?? operationTime
+          : operationTime;
     const duration = item.parkingDuration ?? item.duration;
     const fineStatus = [1, 2, 3].includes(item.fineStatus ?? 0) ? (item.fineStatus as 1 | 2 | 3) : undefined;
     return {
@@ -317,9 +345,10 @@ export class OperationsService {
       plate: item.plate ?? null,
       date: this.datePart(item.opDate),
       operationDate: item.opDate,
+      operationTime,
       amount: [OperationType.TOP_UP, OperationType.REFUND].includes(item.operationType) ? amount : -Math.abs(amount),
       zone: item.sectorDesc ?? item.zoneDesc ?? null,
-      startTime: start ?? this.dateTimePart(item.opDate),
+      startTime,
       endTime: end,
       startDate: this.datePartOptional(item.parkingStartDate),
       endDate: this.datePartOptional(item.parkingEndDate),
