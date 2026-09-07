@@ -116,6 +116,11 @@ import { TranslationService } from '../../../core/services/translation.service';
               {{ 'ops.fineDetail.pay' | translate }} {{ fine.amount }}
             </button>
           }
+          @if (fine.status === fineStatus.EXPIRED) {
+            <button type="button" class="btn btn-primary btn-block mt-2" (click)="acknowledgeExpired()">
+              {{ 'ops.fineDetail.understood' | translate }}
+            </button>
+          }
         } @else {
           <p class="mt-2 text-muted">{{ 'ops.unpaidFines.notFound' | translate }}</p>
           <a routerLink="/app/operations/unpaid-fines" class="btn btn-primary btn-block mt-2">{{ 'ops.unpaidFines.back' | translate }}</a>
@@ -363,6 +368,13 @@ export class UnpaidFineDetailComponent implements AfterViewInit, OnDestroy {
       this.capturedCardAmount.set(cardAmt);
       this.paid.set(true);
     }
+  }
+
+  async acknowledgeExpired(): Promise<void> {
+    if (!this.fine) return;
+    const result = await this.unpaidFinesService.acknowledgeExpired(this.fineId);
+    if (!result.success) return;
+    void this.router.navigate(['/app/operations/unpaid-fines']);
   }
 
   onBackToFines(): void {

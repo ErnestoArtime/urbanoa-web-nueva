@@ -51,6 +51,10 @@ export interface FinePaymentResult {
   challengeUrl?: string;
 }
 
+export interface FineStatusUpdateResult {
+  success: boolean;
+}
+
 @Injectable({ providedIn: 'root' })
 export class UnpaidFinesService {
   private readonly walletService = inject(WalletService);
@@ -101,6 +105,28 @@ export class UnpaidFinesService {
 
   getFine(id: string): UnpaidFine | undefined {
     return this.fines().find((fine) => fine.id === id);
+  }
+
+  async acknowledgeExpired(id: string): Promise<FineStatusUpdateResult> {
+    const fine = this.fines().find((item) => item.id === id);
+    if (!fine || fine.status !== FineStatus.EXPIRED) return { success: false };
+
+    const token = this.session.token();
+    if (!token) return { success: false };
+    try {
+      await this.api.post<string>(
+        OPS_ENDPOINTS.fines.updateStatus,
+        {
+          contractId: fine.contractId,
+          fine: fine.fineNumber,
+        },
+        { token },
+      );
+      await this.operationsService.load();
+      return { success: true };
+    } catch {
+      return { success: false };
+    }
   }
 
   private mapOperation(operation: Operation): UnpaidFine {
