@@ -21,7 +21,7 @@ export interface DataResult<T> {
   error?: OpsApiError;
 }
 
-export type OpsApiErrorKind = 'transport' | 'http' | 'invalid-response' | 'backend';
+export type OpsApiErrorKind = 'transport' | 'timeout' | 'abort' | 'http' | 'invalid-response' | 'backend';
 
 export class OpsApiError extends Error {
   constructor(

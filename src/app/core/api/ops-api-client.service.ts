@@ -4,6 +4,8 @@ import { OpsApiEnvelope, OpsApiError } from './ops-api.types';
 import { OpsSessionService } from './ops-session.service';
 import { TranslationService } from '../services/translation.service';
 
+const SESSION_EXPIRED_ERROR_CODES = new Set([-23, -231]);
+
 interface OpsRequestOptions {
   body?: unknown;
   token?: string | null;
@@ -43,7 +45,11 @@ export class OpsApiClient {
   private async request<T>(method: 'GET' | 'POST', endpoint: string, options: OpsRequestOptions): Promise<T> {
     const controller = new AbortController();
     this.session?.registerRequest(controller);
-    const timeout = setTimeout(() => controller.abort(), options.timeoutMs ?? 15_000);
+    let timedOut = false;
+    const timeout = setTimeout(() => {
+      timedOut = true;
+      controller.abort(new DOMException('La solicitud agotó el tiempo de espera', 'TimeoutError'));
+    }, options.timeoutMs ?? 15_000);
     const headers: Record<string, string> = {
       Accept: 'application/json',
       'Content-Type': 'application/json',
@@ -85,7 +91,7 @@ export class OpsApiClient {
       }
 
       if (!payload.isSuccess) {
-        if (payload.error?.code === -23 && !endpoint.endsWith('LoginUserAPI')) {
+        if (payload.error && SESSION_EXPIRED_ERROR_CODES.has(payload.error.code) && !endpoint.endsWith('LoginUserAPI')) {
           window.dispatchEvent(new CustomEvent('urbanoa:session-expired'));
         }
         const message = this.localizedBackendMessage(payload.error, endpoint);
@@ -100,6 +106,11 @@ export class OpsApiClient {
       return payload.value;
     } catch (error) {
       if (error instanceof OpsApiError) throw error;
+      if (controller.signal.aborted) {
+        const kind = timedOut || (error instanceof DOMException && error.name === 'TimeoutError') ? 'timeout' : 'abort';
+        const detail = kind === 'timeout' ? 'la solicitud agotó el tiempo de espera' : 'la solicitud fue cancelada';
+        throw new OpsApiError(kind, endpoint, `${endpoint}: ${detail}`);
+      }
       const message = error instanceof Error ? error.message : 'Error de red desconocido';
       throw new OpsApiError('transport', endpoint, `${endpoint}: ${message}`);
     } finally {
