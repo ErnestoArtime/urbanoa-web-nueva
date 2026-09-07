@@ -1,6 +1,8 @@
 import { DecimalPipe } from '@angular/common';
 import { Component, computed, effect, input, output, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
+import { map } from 'rxjs/operators';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { WalletService } from '../../../core/services/wallet.service';
 import { OperationsService } from '../../../core/services/operations.service';
@@ -122,7 +124,14 @@ export class AccountRefundComponent {
   private readonly route = inject(ActivatedRoute);
   readonly walletService = inject(WalletService);
   private readonly operationsService = inject(OperationsService);
-  readonly selectedCardId = signal(this.route.snapshot.queryParamMap.get('cardId') ?? this.walletService.defaultCardId());
+  private readonly queryCardId = toSignal(this.route.queryParamMap.pipe(map((params) => params.get('cardId'))), {
+    initialValue: this.route.snapshot.queryParamMap.get('cardId'),
+  });
+  readonly selectedCardId = signal(this.queryCardId() ?? this.walletService.defaultCardId());
+  private readonly syncSelectedCard = effect(() => {
+    const cardId = this.queryCardId();
+    if (cardId) this.selectedCardId.set(cardId);
+  });
   readonly selectedCard = computed(
     () => this.walletService.cards().find((card) => card.id === this.selectedCardId()) ?? this.walletService.defaultCard(),
   );

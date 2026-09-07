@@ -1,8 +1,9 @@
 import { Injectable, computed, inject } from '@angular/core';
 import { OperationType } from '../../shared/models/operation-type';
 import type { Operation } from '../../shared/models/operation';
-import { OPS_ENDPOINTS } from '../api/ops-endpoints';
 import { OpsApiClient } from '../api/ops-api-client.service';
+import { OPS_OPERATING_SYSTEM } from '../api/ops-client.constants';
+import { OPS_ENDPOINTS } from '../api/ops-endpoints';
 import { OpsSessionService } from '../api/ops-session.service';
 import { OperationsService } from './operations.service';
 import { WalletService } from './wallet.service';
@@ -52,6 +53,14 @@ export interface FinePaymentResult {
   challengeUrl?: string;
 }
 
+export interface FineStatusUpdateResult {
+  success: boolean;
+}
+
+export function isAcknowledgedFine(operation: Operation): boolean {
+  return operation.type === OperationType.UNPAID_FINES && operation.fineStatus === FineStatus.EXPIRED && operation.timePeriod === 1;
+}
+
 @Injectable({ providedIn: 'root' })
 export class UnpaidFinesService {
   private readonly citiesService = inject(CitiesService);
@@ -62,7 +71,11 @@ export class UnpaidFinesService {
   readonly fines = computed(() =>
     this.operationsService
       .operations()
-      .filter((operation) => operation.type === OperationType.UNPAID_FINES && operation.timePeriod !== 1)
+      .filter(
+        (operation) =>
+          operation.type === OperationType.UNPAID_FINES &&
+          (operation.fineStatus === FineStatus.PAYABLE || (operation.fineStatus === FineStatus.EXPIRED && operation.timePeriod === 2)),
+      )
       .map((operation) => this.mapOperation(operation)),
   );
   readonly source = this.operationsService.source;
@@ -88,7 +101,7 @@ export class UnpaidFinesService {
           quantity: Math.round(numericAmount * 100),
           date: this.opsDate(new Date()),
           cloudToken: '',
-          operatingSystem: 3,
+          operatingSystem: OPS_OPERATING_SYSTEM,
           payMethodId: Number.isInteger(payMethodId) ? payMethodId : 0,
         },
         { token },
@@ -109,16 +122,18 @@ export class UnpaidFinesService {
     const token = this.session.token();
     if (!token || !fine.contractId || !fine.fineNumber) return false;
     try {
-      await this.api.post<string>(
-        OPS_ENDPOINTS.fines.updateStatus,
-        { contractId: fine.contractId, fineNumber: fine.fineNumber },
-        { token },
-      );
+      await this.api.post<string>(OPS_ENDPOINTS.fines.updateStatus, { contractId: fine.contractId, fine: fine.fineNumber }, { token });
       await this.operationsService.load();
       return true;
     } catch {
       return false;
     }
+  }
+
+  async acknowledgeExpired(id: string): Promise<FineStatusUpdateResult> {
+    const fine = this.fines().find((item) => item.id === id);
+    if (!fine || fine.status !== FineStatus.EXPIRED) return { success: false };
+    return { success: await this.moveFineToHistory(fine) };
   }
 
   private mapOperation(operation: Operation): UnpaidFine {

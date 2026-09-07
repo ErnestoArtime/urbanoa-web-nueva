@@ -1,10 +1,26 @@
 import { TestBed } from '@angular/core/testing';
-import { provideZonelessChangeDetection } from '@angular/core';
+import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { AppApiClient } from '../api/app-api-client.service';
 import { OpsApiClient } from '../api/ops-api-client.service';
 import { OpsSessionService } from '../api/ops-session.service';
-import { UnpaidFinesService } from './unpaid-fines.service';
+import { OperationsService } from './operations.service';
+import { UnpaidFinesService, FineStatus, isAcknowledgedFine } from './unpaid-fines.service';
 import { WalletService } from './wallet.service';
+import { OperationType } from '../../shared/models/operation-type';
+import type { Operation } from '../../shared/models/operation';
+
+const EXPIRED_FINE: Operation = {
+  id: 'fine-1',
+  type: OperationType.UNPAID_FINES,
+  plate: '1234 ABC',
+  date: '05/06/2026',
+  amount: -35,
+  zone: null,
+  contractId: 7,
+  fineNumber: 'FN-2026-001',
+  fineStatus: FineStatus.EXPIRED,
+  timePeriod: 2,
+};
 
 describe('UnpaidFinesService stored data migration', () => {
   beforeEach(() => {
@@ -30,5 +46,181 @@ describe('UnpaidFinesService stored data migration', () => {
 
     const service = TestBed.inject(UnpaidFinesService);
     expect(service.getFine('legacy-fine')).toBeUndefined();
+  });
+});
+
+describe('UnpaidFinesService acknowledgeExpired', () => {
+  it('calls UpdateFineStatusAPI and refreshes operations for an expired fine', async () => {
+    const api = { post: jasmine.createSpy('post').and.resolveTo('') };
+    const operations = {
+      operations: signal([EXPIRED_FINE]).asReadonly(),
+      load: jasmine.createSpy('load').and.resolveTo(),
+    };
+    localStorage.clear();
+    TestBed.configureTestingModule({
+      providers: [
+        provideZonelessChangeDetection(),
+        { provide: WalletService, useValue: {} },
+        { provide: AppApiClient, useValue: {} },
+        { provide: OpsApiClient, useValue: api },
+        { provide: OpsSessionService, useValue: { token: () => 'token' } },
+        { provide: OperationsService, useValue: operations },
+      ],
+    });
+
+    const service = TestBed.inject(UnpaidFinesService);
+    const result = await service.acknowledgeExpired('fine-1');
+
+    expect(api.post).toHaveBeenCalledOnceWith(
+      'OPSWebServicesAPI/UpdateFineStatusAPI',
+      { contractId: 7, fine: 'FN-2026-001' },
+      { token: 'token' },
+    );
+    expect(operations.load).toHaveBeenCalledTimes(1);
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects the acknowledge for a fine that is still payable', async () => {
+    const api = { post: jasmine.createSpy('post').and.resolveTo('') };
+    const operations = {
+      operations: signal([{ ...EXPIRED_FINE, fineStatus: FineStatus.PAYABLE }]).asReadonly(),
+      load: jasmine.createSpy('load').and.resolveTo(),
+    };
+    localStorage.clear();
+    TestBed.configureTestingModule({
+      providers: [
+        provideZonelessChangeDetection(),
+        { provide: WalletService, useValue: {} },
+        { provide: AppApiClient, useValue: {} },
+        { provide: OpsApiClient, useValue: api },
+        { provide: OpsSessionService, useValue: { token: () => 'token' } },
+        { provide: OperationsService, useValue: operations },
+      ],
+    });
+
+    const service = TestBed.inject(UnpaidFinesService);
+    const result = await service.acknowledgeExpired('fine-1');
+
+    expect(api.post).not.toHaveBeenCalled();
+    expect(operations.load).not.toHaveBeenCalled();
+    expect(result.success).toBe(false);
+  });
+
+  it('returns failure without calling the API when there is no session token', async () => {
+    const api = { post: jasmine.createSpy('post').and.resolveTo('') };
+    const operations = {
+      operations: signal([EXPIRED_FINE]).asReadonly(),
+      load: jasmine.createSpy('load').and.resolveTo(),
+    };
+    localStorage.clear();
+    TestBed.configureTestingModule({
+      providers: [
+        provideZonelessChangeDetection(),
+        { provide: WalletService, useValue: {} },
+        { provide: AppApiClient, useValue: {} },
+        { provide: OpsApiClient, useValue: api },
+        { provide: OpsSessionService, useValue: { token: () => null } },
+        { provide: OperationsService, useValue: operations },
+      ],
+    });
+
+    const service = TestBed.inject(UnpaidFinesService);
+    const result = await service.acknowledgeExpired('fine-1');
+
+    expect(api.post).not.toHaveBeenCalled();
+    expect(result.success).toBe(false);
+  });
+
+  it('returns failure when the API call fails', async () => {
+    const api = { post: jasmine.createSpy('post').and.rejectWith(new Error('network')) };
+    const operations = {
+      operations: signal([EXPIRED_FINE]).asReadonly(),
+      load: jasmine.createSpy('load').and.resolveTo(),
+    };
+    localStorage.clear();
+    TestBed.configureTestingModule({
+      providers: [
+        provideZonelessChangeDetection(),
+        { provide: WalletService, useValue: {} },
+        { provide: AppApiClient, useValue: {} },
+        { provide: OpsApiClient, useValue: api },
+        { provide: OpsSessionService, useValue: { token: () => 'token' } },
+        { provide: OperationsService, useValue: operations },
+      ],
+    });
+
+    const service = TestBed.inject(UnpaidFinesService);
+    const result = await service.acknowledgeExpired('fine-1');
+
+    expect(result.success).toBe(false);
+  });
+});
+
+describe('UnpaidFinesService fines listing rules', () => {
+  const baseFine: Operation = {
+    id: 'fine-1',
+    type: OperationType.UNPAID_FINES,
+    plate: '1234 ABC',
+    date: '05/06/2026',
+    amount: -35,
+    zone: null,
+    contractId: 7,
+    fineNumber: 'FN-2026-001',
+  };
+
+  function configure(fine: Operation) {
+    const operations = { operations: signal([fine]).asReadonly(), load: jasmine.createSpy('load').and.resolveTo() };
+    localStorage.clear();
+    TestBed.configureTestingModule({
+      providers: [
+        provideZonelessChangeDetection(),
+        { provide: WalletService, useValue: {} },
+        { provide: AppApiClient, useValue: {} },
+        { provide: OpsApiClient, useValue: {} },
+        { provide: OpsSessionService, useValue: { token: () => null } },
+        { provide: OperationsService, useValue: operations },
+      ],
+    });
+    return TestBed.inject(UnpaidFinesService);
+  }
+
+  it('keeps a payable fine (fineStatus 1) in the pending list', () => {
+    const service = configure({ ...baseFine, fineStatus: FineStatus.PAYABLE });
+    expect(service.fines().length).toBe(1);
+  });
+
+  it('keeps an expired fine within the pay deadline (fineStatus 2 + timePeriod 2)', () => {
+    const service = configure({ ...baseFine, fineStatus: FineStatus.EXPIRED, timePeriod: 2 });
+    expect(service.fines().length).toBe(1);
+  });
+
+  it('drops an acknowledged fine (fineStatus 2 + timePeriod 1) from the pending list', () => {
+    const service = configure({ ...baseFine, fineStatus: FineStatus.EXPIRED, timePeriod: 1 });
+    expect(service.fines().length).toBe(0);
+  });
+
+  it('excludes non-payable fines (fineStatus 3)', () => {
+    const service = configure({ ...baseFine, fineStatus: FineStatus.NOT_PAYABLE });
+    expect(service.fines().length).toBe(0);
+  });
+});
+
+describe('isAcknowledgedFine', () => {
+  const base = { type: OperationType.UNPAID_FINES, fineStatus: FineStatus.EXPIRED, timePeriod: 1 } as Operation;
+
+  it('is true when an unpaid fine is expired and moved to history', () => {
+    expect(isAcknowledgedFine(base)).toBe(true);
+  });
+
+  it('is false for an expired fine still within the pay deadline', () => {
+    expect(isAcknowledgedFine({ ...base, timePeriod: 2 })).toBe(false);
+  });
+
+  it('is false for payable fines', () => {
+    expect(isAcknowledgedFine({ ...base, fineStatus: FineStatus.PAYABLE, timePeriod: 2 })).toBe(false);
+  });
+
+  it('is false for paid fine operations', () => {
+    expect(isAcknowledgedFine({ ...base, type: OperationType.FINE_PAYMENT })).toBe(false);
   });
 });

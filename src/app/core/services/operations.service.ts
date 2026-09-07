@@ -347,7 +347,13 @@ export class OperationsService {
     const duration = item.parkingDuration ?? item.duration;
     const fineStatus = [1, 2, 3].includes(item.fineStatus ?? 0) ? (item.fineStatus as 1 | 2 | 3) : undefined;
     return {
-      id: String(item.operationNumber ?? item.opBaseId ?? `${item.operationType}-${item.opDate}-${item.plate ?? ''}`),
+      id: String(
+        item.operationNumber ??
+          item.opBaseId ??
+          (item.operationType === OperationType.UNPAID_FINES && item.fineNumber
+            ? `${item.operationType}-${item.fineNumber}`
+            : `${item.operationType}-${item.opDate}-${item.plate ?? ''}`),
+      ),
       type: (Object.values(OperationType).includes(item.operationType) ? item.operationType : OperationType.PARKING) as OperationType,
       plate: item.plate ?? null,
       date: this.datePart(item.opDate),

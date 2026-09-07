@@ -1,8 +1,10 @@
 import { DecimalPipe } from '@angular/common';
 import { Component, effect, input, output, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { RouterLink } from '@angular/router';
+import { map } from 'rxjs/operators';
 import { OperationsService } from '../../../core/services/operations.service';
 import { WalletService } from '../../../core/services/wallet.service';
 import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
@@ -173,9 +175,18 @@ export class AccountRechargeComponent {
   readonly rechargeAmounts = [1, 2, 5, 10, 20, 30, 40] as const;
   readonly done = signal(false);
   readonly saving = signal(false);
+  private readonly queryCardId = toSignal(this.route.queryParamMap.pipe(map((params) => params.get('cardId'))), {
+    initialValue: this.route.snapshot.queryParamMap.get('cardId'),
+  });
   readonly form = this.fb.nonNullable.group({
     amount: [1, [Validators.required, Validators.min(1)]],
     cardId: [this.initialCardId(), Validators.required],
+  });
+  private readonly syncSelectedCard = effect(() => {
+    const cardId = this.queryCardId();
+    if (cardId && this.walletService.cards().some((card) => card.id === cardId)) {
+      this.form.controls.cardId.setValue(cardId);
+    }
   });
 
   private readonly syncCard = effect(() => {
@@ -223,7 +234,7 @@ export class AccountRechargeComponent {
   }
 
   private initialCardId(): string {
-    const requested = this.route.snapshot.queryParamMap.get('cardId');
+    const requested = this.queryCardId();
     return requested && this.walletService.cards().some((card) => card.id === requested) ? requested : this.walletService.defaultCardId();
   }
 }

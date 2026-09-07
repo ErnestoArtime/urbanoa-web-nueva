@@ -444,6 +444,7 @@
   "ops.fineDetail.availableBalance": "uk_Saldo disponible",
   "ops.fineDetail.pay": "uk_Pagar",
   "ops.fineDetail.paid": "uk_Sanción pagada",
+  "ops.fineDetail.understood": "uk_Entendido",
   "layout.splitView.empty": "uk_Selecciona un elemento de la lista",
   "ops.inProgress": "uk_En curso",
   "ops.noActive": "uk_No hay operaciones en curso.",

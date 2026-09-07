@@ -438,6 +438,7 @@
   "ops.fineDetail.availableBalance": "Saldo disponible",
   "ops.fineDetail.pay": "Pagar",
   "ops.fineDetail.paid": "Sanción pagada",
+  "ops.fineDetail.understood": "Entendido",
   "layout.splitView.empty": "Selecciona un elemento de la lista",
   "ops.inProgress": "En curso",
   "ops.noActive": "No hay operaciones en curso.",

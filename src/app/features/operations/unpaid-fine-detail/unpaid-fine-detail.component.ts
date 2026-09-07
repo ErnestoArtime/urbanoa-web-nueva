@@ -116,9 +116,9 @@ import { TranslationService } from '../../../core/services/translation.service';
               {{ 'ops.fineDetail.pay' | translate }} {{ fine.amount }}
             </button>
           }
-          @if (canMoveToHistory()) {
-            <button type="button" class="fine-understood-button" (click)="moveToHistory()" [disabled]="movingToHistory()">
-              {{ 'account.supportSuccess.button' | translate }}
+          @if (fine.status === fineStatus.EXPIRED) {
+            <button type="button" class="btn btn-primary btn-block mt-2 fine-understood-button" (click)="acknowledgeExpired()">
+              {{ 'ops.fineDetail.understood' | translate }}
             </button>
           }
         } @else {
@@ -389,12 +389,11 @@ export class UnpaidFineDetailComponent implements AfterViewInit, OnDestroy {
     }
   }
 
-  async moveToHistory(): Promise<void> {
-    if (!this.fine || !this.canMoveToHistory() || this.movingToHistory()) return;
-    this.movingToHistory.set(true);
-    const moved = await this.unpaidFinesService.moveFineToHistory(this.fine);
-    this.movingToHistory.set(false);
-    if (moved) this.onBackToFines();
+  async acknowledgeExpired(): Promise<void> {
+    if (!this.fine) return;
+    const result = await this.unpaidFinesService.acknowledgeExpired(this.fineId);
+    if (!result.success) return;
+    void this.router.navigate(['/app/operations/unpaid-fines']);
   }
 
   onBackToFines(): void {
