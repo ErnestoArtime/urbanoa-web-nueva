@@ -88,6 +88,43 @@ describe('OperationsService stored data migration', () => {
     expect(service.hasActiveParkingOperations()).toBeTrue();
   });
 
+  it('gives unpaid fines without operationNumber a distinct id based on their fineNumber', async () => {
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
+    api.post.and.resolveTo([
+      {
+        operationNumber: null,
+        opBaseId: null,
+        operationType: OperationType.UNPAID_FINES,
+        fineNumber: '910051',
+        fineStatus: 2,
+        paymentAmount: 3000,
+        opDate: '150006070926',
+        plate: '1234567',
+        timePeriod: 2,
+      },
+      {
+        operationNumber: null,
+        opBaseId: null,
+        operationType: OperationType.UNPAID_FINES,
+        fineNumber: '910054',
+        fineStatus: 2,
+        paymentAmount: 3000,
+        opDate: '150006070926',
+        plate: '1234567',
+        timePeriod: 1,
+      },
+    ]);
+    TestBed.overrideProvider(OpsApiClient, { useValue: api });
+    TestBed.overrideProvider(OpsSessionService, { useValue: { token: () => 'token' } });
+    const service = TestBed.inject(OperationsService);
+
+    await service.load();
+
+    const ids = service.operations().map((operation) => operation.id);
+    expect(ids).toEqual(['104-910051', '104-910054']);
+    expect(new Set(ids).size).toBe(2);
+  });
+
   it('maps the QueryUserOperationsAPI refundable option', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
     api.post.and.resolveTo([
