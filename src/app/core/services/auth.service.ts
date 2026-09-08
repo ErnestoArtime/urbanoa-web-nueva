@@ -74,7 +74,7 @@ const EMPTY_USER: AuthUser = {
     city: '',
     province: '',
     postalCode: '',
-    country: 'ESPANA',
+    country: '',
   },
 };
 
@@ -258,7 +258,7 @@ export class AuthService {
           city: profile.addressCity ?? '',
           province: profile.addressProvince ?? '',
           postalCode: profile.addressPostalCode ?? '',
-          country: profile.addressCountry || 'ESPANA',
+          country: profile.addressCountry || '',
         },
         firstLogin: login.firstLogin === 1,
         userName: profile.userName,

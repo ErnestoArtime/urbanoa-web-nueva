@@ -132,7 +132,7 @@ export class UnpaidFinesService {
 
   async acknowledgeExpired(id: string): Promise<FineStatusUpdateResult> {
     const fine = this.fines().find((item) => item.id === id);
-    if (!fine || fine.status !== FineStatus.EXPIRED) return { success: false };
+    if (!fine || fine.status === FineStatus.PAYABLE) return { success: false };
     return { success: await this.moveFineToHistory(fine) };
   }
 

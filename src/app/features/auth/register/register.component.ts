@@ -95,9 +95,12 @@ function passwordsMatch(control: AbstractControl): ValidationErrors | null {
           <label class="terms-check"
             ><input type="checkbox" formControlName="terms" /><span
               >{{ 'auth.register.acceptPrefix' | translate }}
-              <a routerLink="/auth/web/terms">{{ 'auth.register.terms' | translate }}</a>
+              <strong
+                ><a routerLink="/auth/web/terms">{{ 'auth.register.terms' | translate }}</a></strong
+              >
               {{ 'auth.register.and' | translate }}
-              <a routerLink="/auth/web/privacy">{{ 'auth.register.privacy' | translate }}</a
+              <strong
+                ><a routerLink="/auth/web/privacy">{{ 'auth.register.privacy' | translate }}</a></strong
               >.</span
             ></label
           >

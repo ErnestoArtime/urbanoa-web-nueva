@@ -4,6 +4,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
 import { ResultModalComponent } from '../../../shared/components/result-modal/result-modal.component';
 import { VehicleService } from '../../../core/services/vehicle.service';
+import { OperationsService } from '../../../core/services/operations.service';
 
 @Component({
   selector: 'app-vehicle-add',
@@ -93,6 +94,7 @@ import { VehicleService } from '../../../core/services/vehicle.service';
 })
 export class VehicleAddComponent {
   private readonly vehicleService = inject(VehicleService);
+  private readonly operationsService = inject(OperationsService);
   private readonly router = inject(Router);
   readonly plate = signal('');
   readonly foreignPlate = signal(false);
@@ -122,7 +124,10 @@ export class VehicleAddComponent {
       label: this.foreignPlate() ? 'account.vehicle.foreignPlate' : undefined,
     });
     this.saving.set(false);
-    if (mutation.success) this.saved.set(true);
+    if (mutation.success) {
+      await this.operationsService.load();
+      this.saved.set(true);
+    }
   }
 
   goBack(): void {

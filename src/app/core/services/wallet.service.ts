@@ -331,10 +331,10 @@ export class WalletService {
     const digits = method.mask.replace(/\D/g, '');
     return {
       id: String(method.id),
-      brand: method.cardBrand || method.cardType || 'Tarjeta',
+      brand: method.cardBrand || method.cardType || '',
       last4: digits.slice(-4) || method.mask.slice(-4),
       expiryDate: method.expDate,
-      cardholderName: method.description || 'Tarjeta bancaria',
+      cardholderName: method.description || '',
     };
   }
 

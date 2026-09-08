@@ -116,7 +116,7 @@ import { TranslationService } from '../../../core/services/translation.service';
               {{ 'ops.fineDetail.pay' | translate }} {{ fine.amount }}
             </button>
           }
-          @if (fine.status === fineStatus.EXPIRED) {
+          @if (fine.status !== fineStatus.PAYABLE) {
             <button type="button" class="btn btn-primary btn-block mt-2 fine-understood-button" (click)="acknowledgeExpired()">
               {{ 'ops.fineDetail.understood' | translate }}
             </button>

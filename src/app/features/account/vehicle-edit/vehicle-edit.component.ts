@@ -7,6 +7,7 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
 import { VehicleService } from '../../../core/services/vehicle.service';
 import { ParkingSessionService } from '../../../core/services/parking-session.service';
 import { FOREIGN_PLATE_MAX_LENGTH, isValidPlate } from '../../../shared/utils/plate-validation';
+import { OperationsService } from '../../../core/services/operations.service';
 
 @Component({
   selector: 'app-vehicle-edit',
@@ -127,6 +128,7 @@ export class VehicleEditComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly vehicleService = inject(VehicleService);
+  private readonly operationsService = inject(OperationsService);
   private readonly parkingSessionService = inject(ParkingSessionService);
   private readonly paramMap = toSignal(this.route.paramMap, { initialValue: this.route.snapshot.paramMap });
   readonly id = computed(() => this.paramMap().get('id') ?? '');
@@ -177,7 +179,10 @@ export class VehicleEditComponent implements OnInit {
     this.saving.set(true);
     const mutation = await this.vehicleService.update(this.id(), { plate, isForeign: this.foreignPlate(), isDefault: this.favorite() });
     this.saving.set(false);
-    if (mutation.success) this.result.set('saved');
+    if (mutation.success) {
+      await this.operationsService.load();
+      this.result.set('saved');
+    }
   }
 
   remove(): void {
@@ -197,7 +202,10 @@ export class VehicleEditComponent implements OnInit {
     this.saving.set(true);
     const mutation = await this.vehicleService.remove(this.id());
     this.saving.set(false);
-    if (mutation.success) this.result.set('deleted');
+    if (mutation.success) {
+      await this.operationsService.load();
+      this.result.set('deleted');
+    }
   }
 
   goBack(): void {
