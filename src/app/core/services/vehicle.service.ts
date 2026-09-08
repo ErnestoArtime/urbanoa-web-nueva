@@ -93,6 +93,11 @@ export class VehicleService {
     return this.state().find((vehicle) => vehicle.id === id);
   }
 
+  hasPlate(plate: string): boolean {
+    const target = plate.replace(/\s/g, '').toUpperCase();
+    return this.state().some((vehicle) => vehicle.plate.replace(/\s/g, '').toUpperCase() === target);
+  }
+
   async add(input: Omit<Vehicle, 'id'>): Promise<VehicleMutationResult> {
     const plate = this.normalizePlate(input.plate);
     const result = await this.remoteMutation(OPS_ENDPOINTS.user.addPlate, { plate, favorite: input.isDefault ? 1 : 0 });

@@ -18,7 +18,7 @@ import { OperationsService } from '../../../core/services/operations.service';
           <label>{{ 'account.vehicleAdd.plate' | translate }} <span class="text-error">*</span></label
           ><input
             class="form-input"
-            [class.invalid]="plateError() || plateInvalid()"
+            [class.invalid]="plateError() || plateInvalid() || plateDuplicate()"
             [value]="plate()"
             (input)="setPlate($event)"
             [placeholder]="'account.vehicleAdd.plate' | translate"
@@ -29,6 +29,9 @@ import { OperationsService } from '../../../core/services/operations.service';
           }
           @if (plateInvalid()) {
             <p class="form-error">{{ 'account.vehicleAdd.plateInvalid' | translate }}</p>
+          }
+          @if (plateDuplicate()) {
+            <p class="form-error">{{ 'account.vehicleAdd.plateDuplicate' | translate }}</p>
           }
         </div>
         <label class="switch-row"
@@ -114,6 +117,7 @@ export class VehicleAddComponent {
   readonly foreignPlate = signal(false);
   readonly plateError = signal(false);
   readonly plateInvalid = signal(false);
+  readonly plateDuplicate = signal(false);
   readonly saved = signal(false);
   readonly saving = signal(false);
   readonly addFailed = signal(false);
@@ -125,6 +129,7 @@ export class VehicleAddComponent {
     if (this.plate().trim()) {
       this.plateError.set(false);
       this.plateInvalid.set(false);
+      this.plateDuplicate.set(false);
     }
   }
 
@@ -140,6 +145,10 @@ export class VehicleAddComponent {
     }
     if (!isValidPlate(plate, this.foreignPlate())) {
       this.plateInvalid.set(true);
+      return;
+    }
+    if (this.vehicleService.hasPlate(plate)) {
+      this.plateDuplicate.set(true);
       return;
     }
     this.saving.set(true);
