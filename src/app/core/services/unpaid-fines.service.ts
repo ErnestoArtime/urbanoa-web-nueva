@@ -53,6 +53,11 @@ export interface FinePaymentResult {
   challengeUrl?: string;
 }
 
+interface FinePaymentResponseDto {
+  operationId: number | null;
+  challengeUrl: string | null;
+}
+
 export interface FineStatusUpdateResult {
   success: boolean;
 }
@@ -93,7 +98,7 @@ export class UnpaidFinesService {
     if (!token) return { success: false };
     const payMethodId = Number(cardId || 0);
     try {
-      const response = await this.api.post<string>(
+      const response = await this.api.post<FinePaymentResponseDto | string>(
         OPS_ENDPOINTS.fines.confirmPayment,
         {
           contractId: fine.contractId,
@@ -106,7 +111,7 @@ export class UnpaidFinesService {
         },
         { token },
       );
-      const challengeUrl = /^https?:\/\//i.test(response?.trim()) ? response.trim() : undefined;
+      const challengeUrl = this.challengeUrl(response);
       if (!challengeUrl) await Promise.all([this.operationsService.load(), this.walletService.load()]);
       return { success: true, challengeUrl };
     } catch {
@@ -187,5 +192,15 @@ export class UnpaidFinesService {
 
   private opsDate(date: Date): string {
     return formatOpsDate(date);
+  }
+
+  private challengeUrl(value: unknown): string | undefined {
+    const candidate =
+      typeof value === 'string'
+        ? value.trim()
+        : value && typeof value === 'object' && typeof (value as Partial<FinePaymentResponseDto>).challengeUrl === 'string'
+          ? (value as Partial<FinePaymentResponseDto>).challengeUrl!.trim()
+          : '';
+    return /^https?:\/\//i.test(candidate) ? candidate : undefined;
   }
 }

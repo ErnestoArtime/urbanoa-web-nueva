@@ -224,3 +224,36 @@ describe('isAcknowledgedFine', () => {
     expect(isAcknowledgedFine({ ...base, type: OperationType.FINE_PAYMENT })).toBe(false);
   });
 });
+
+describe('UnpaidFinesService PSD2 confirmation', () => {
+  it('returns the challenge URL when ConfirmFinePaymentAPI returns the new object value', async () => {
+    const api = { post: jasmine.createSpy('post').and.resolveTo({ operationId: null, challengeUrl: 'https://paycomet.example/challenge/fine-1' }) };
+    const operations = {
+      operations: signal([{ ...EXPIRED_FINE, fineStatus: FineStatus.PAYABLE }]).asReadonly(),
+      load: jasmine.createSpy('load').and.resolveTo(),
+    };
+    const wallet = {
+      balance: () => 0,
+      cards: () => [{ id: '7', brand: 'VISA', last4: '1111' }],
+      load: jasmine.createSpy('load').and.resolveTo(),
+    };
+    localStorage.clear();
+    TestBed.configureTestingModule({
+      providers: [
+        provideZonelessChangeDetection(),
+        { provide: WalletService, useValue: wallet },
+        { provide: AppApiClient, useValue: {} },
+        { provide: OpsApiClient, useValue: api },
+        { provide: OpsSessionService, useValue: { token: () => 'token' } },
+        { provide: OperationsService, useValue: operations },
+      ],
+    });
+
+    const service = TestBed.inject(UnpaidFinesService);
+    const result = await service.payFine('fine-1', '7');
+
+    expect(result).toEqual({ success: true, challengeUrl: 'https://paycomet.example/challenge/fine-1' });
+    expect(operations.load).not.toHaveBeenCalled();
+    expect(wallet.load).not.toHaveBeenCalled();
+  });
+});
