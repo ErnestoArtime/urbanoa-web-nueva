@@ -62,7 +62,7 @@ interface UserApiPayload {
 }
 
 function emptyAddress(): UserAddress {
-  return { street: '', number: '', floor: '', door: '', stair: '', letter: '', city: '', province: '', postalCode: '', country: 'ESPANA' };
+  return { street: '', number: '', floor: '', door: '', stair: '', letter: '', city: '', province: '', postalCode: '', country: '' };
 }
 
 function readString(value: unknown): string {

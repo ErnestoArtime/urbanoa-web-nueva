@@ -135,6 +135,7 @@ import { ParkingFlowStore } from '../../parking/parking-flow.store';
                 <a
                   [routerLink]="['/app/operations/detail', op.id]"
                   class="list-item"
+                  [class.historic-fine-item]="isHistoricFine(op)"
                   routerLinkActive="active"
                   [routerLinkActiveOptions]="{ exact: true }"
                 >
@@ -142,6 +143,9 @@ import { ParkingFlowStore } from '../../parking/parking-flow.store';
                   <div class="list-item-content">
                     <div class="list-item-title" [class.finish-op-title]="isFinishParking(op)">
                       {{ operationLabel(op) | translate }}
+                      @if (isHistoricFine(op)) {
+                        <span class="historic-fine-badge">{{ 'ops.fineDetail.historic' | translate }}</span>
+                      }
                       @if (op.timePeriod === 2) {
                         <span class="badge badge-warning">{{ 'ops.active' | translate }}</span>
                       }
@@ -225,6 +229,20 @@ import { ParkingFlowStore } from '../../parking/parking-flow.store';
         background: rgba(93, 154, 150, 0.16);
         color: var(--color-primary-dark);
         box-shadow: inset 4px 0 0 var(--color-primary);
+      }
+      .historic-fine-item {
+        border-left: 4px solid var(--color-error);
+        background: var(--color-surface);
+      }
+      .historic-fine-badge {
+        display: inline-flex;
+        margin-left: 0.45rem;
+        padding: 0.12rem 0.4rem;
+        border-radius: 999px;
+        background: var(--color-error-bg);
+        color: var(--color-error);
+        font-size: var(--text-xs);
+        font-weight: var(--font-bold);
       }
       .operations-content-hidden {
         display: none;
@@ -663,6 +681,10 @@ export class OperationsLayoutComponent implements OnInit {
   operationLabel(op: Operation): string {
     if (op.type === OperationType.UNPAID_FINES) return isAcknowledgedFine(op) ? 'ops.fineDetail.sanction' : 'ops.type.sanciones';
     return OPERATION_TYPE_LABELS[op.type];
+  }
+
+  isHistoricFine(op: Operation): boolean {
+    return isAcknowledgedFine(op);
   }
 
   isParking(op: Operation): boolean {

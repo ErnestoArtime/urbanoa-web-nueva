@@ -8,6 +8,7 @@ export interface OperationPaymentBreakdown {
 
 export interface Operation {
   id: string;
+  operationNumber?: string;
   type: OperationType;
   plate: string | null;
   date: string;

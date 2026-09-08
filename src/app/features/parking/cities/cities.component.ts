@@ -51,22 +51,22 @@ const EMPTY_CITY: ParkingMunicipio = {
         <div class="municipios-panel">
           <div class="municipios-grid">
             @for (m of filteredMunicipios(); track m.id) {
-            <button type="button" class="municipio-card" [class.active]="selected().id === m.id" (click)="selected.set(m)">
-              <div class="municipio-img">
-                @if (m.imagePath || m.imagen) {
-                  <img [src]="'assets/municipios/' + m.imagen" [alt]="'parking.cities.viewOf' | translate: { name: m.nombre }" />
-                }
-                <span class="municipio-map-label">{{ m.nombre }}</span>
-              </div>
-              <div class="municipio-body">
-                <p class="municipio-name">{{ m.nombre }}</p>
-                <p class="municipio-provincia">{{ m.provincia }}</p>
-                <p class="municipio-zonas">{{ m.zonas }} {{ 'parking.zones' | translate }}</p>
-              </div>
-            </button>
-          } @empty {
-            <p class="empty-result">{{ 'parking.cities.empty' | translate }}</p>
-          }
+              <button type="button" class="municipio-card" [class.active]="selected().id === m.id" (click)="selected.set(m)">
+                <div class="municipio-img">
+                  @if (m.imagePath || m.imagen) {
+                    <img [src]="'assets/municipios/' + m.imagen" [alt]="'parking.cities.viewOf' | translate: { name: m.nombre }" />
+                  }
+                  <span class="municipio-map-label">{{ m.nombre }}</span>
+                </div>
+                <div class="municipio-body">
+                  <p class="municipio-name">{{ m.nombre }}</p>
+                  <p class="municipio-provincia">{{ m.provincia }}</p>
+                  <p class="municipio-zonas">{{ m.zonas }} {{ 'parking.zones' | translate }}</p>
+                </div>
+              </button>
+            } @empty {
+              <p class="empty-result">{{ 'parking.cities.empty' | translate }}</p>
+            }
           </div>
         </div>
         <aside class="municipio-detail">
@@ -401,7 +401,7 @@ export class ParkingCitiesComponent implements OnInit {
       const match = this.municipios().find((m) => m.id === preferredId || String(m.contractId) === preferredId);
       if (match) return match;
     }
-    return this.municipios().find((city) => city.id === 'durango' || city.contractId === 1) ?? this.municipios()[0] ?? EMPTY_CITY;
+    return this.municipios()[0] ?? EMPTY_CITY;
   }
 
   readonly search = signal('');

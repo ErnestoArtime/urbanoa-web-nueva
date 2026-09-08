@@ -5,6 +5,7 @@ import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/
 import { ResultModalComponent } from '../../../shared/components/result-modal/result-modal.component';
 import { VehicleService } from '../../../core/services/vehicle.service';
 import { FOREIGN_PLATE_MAX_LENGTH, isValidPlate } from '../../../shared/utils/plate-validation';
+import { OperationsService } from '../../../core/services/operations.service';
 
 @Component({
   selector: 'app-vehicle-add',
@@ -107,6 +108,7 @@ import { FOREIGN_PLATE_MAX_LENGTH, isValidPlate } from '../../../shared/utils/pl
 })
 export class VehicleAddComponent {
   private readonly vehicleService = inject(VehicleService);
+  private readonly operationsService = inject(OperationsService);
   private readonly router = inject(Router);
   readonly plate = signal('');
   readonly foreignPlate = signal(false);
@@ -149,6 +151,7 @@ export class VehicleAddComponent {
     });
     this.saving.set(false);
     if (mutation.success) {
+      await this.operationsService.load();
       this.saved.set(true);
     } else {
       this.addErrorMessage.set(mutation.error?.backendError ? mutation.error.message : null);

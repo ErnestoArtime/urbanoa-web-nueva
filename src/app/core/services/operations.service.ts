@@ -219,9 +219,11 @@ export class OperationsService {
   private activeParkingFromOperation(operation: Operation, vehicles: readonly { id: string; plate: string }[]): ActiveParking {
     const plate = operation.plate ?? '';
     const vehicle = vehicles.find((item) => this.normalizePlate(item.plate) === this.normalizePlate(plate));
+    const start = this.operationDateTime(operation.date, operation.startTime);
     const end = this.operationDateTime(operation.endDate ?? operation.date, operation.endTime);
     const now = this.api.serverNow ? this.api.serverNow() : new Date();
-    const remainingSeconds = Math.max(0, Math.floor((end.getTime() - now.getTime()) / 1000));
+    const countdownFrom = Math.max(now.getTime(), start.getTime());
+    const remainingSeconds = Math.max(0, Math.floor((end.getTime() - countdownFrom) / 1000));
     const hours = String(Math.floor(remainingSeconds / 3600)).padStart(2, '0');
     const minutes = String(Math.floor((remainingSeconds % 3600) / 60)).padStart(2, '0');
     const seconds = String(remainingSeconds % 60).padStart(2, '0');
@@ -354,6 +356,7 @@ export class OperationsService {
             ? `${item.operationType}-${item.fineNumber}`
             : `${item.operationType}-${item.opDate}-${item.plate ?? ''}`),
       ),
+      operationNumber: item.operationNumber == null ? undefined : String(item.operationNumber),
       type: (Object.values(OperationType).includes(item.operationType) ? item.operationType : OperationType.PARKING) as OperationType,
       plate: item.plate ?? null,
       date: this.datePart(item.opDate),
@@ -387,7 +390,7 @@ export class OperationsService {
       fineValidDate: this.datePartOptional(item.fineValidDate),
       fineAmount: item.fineAmount == null ? undefined : Math.abs(item.fineAmount) / 100,
       cityId: item.cityId,
-      cityName: item.cityName ?? undefined,
+      cityName: item.cityName ?? item.contractName ?? undefined,
       zoneId: item.zoneId,
       zoneName: item.zoneDesc ?? undefined,
       sectorId: item.sectorId,

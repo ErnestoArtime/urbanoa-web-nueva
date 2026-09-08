@@ -61,6 +61,33 @@ describe('OperationsService stored data migration', () => {
     expect(api.post.calls.mostRecent().args[1]).toEqual(jasmine.objectContaining({ operationTypeList: jasmine.arrayContaining([7]) }));
   });
 
+  it('keeps the municipality from contractName when the operation omits cityName', async () => {
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
+    api.post.and.resolveTo([
+      {
+        contractId: 3,
+        contractName: 'ZARAUTZ',
+        operationType: OperationType.UNPAID_FINES,
+        fineNumber: '910051',
+        fineStatus: 2,
+        timePeriod: 2,
+        amount: 3000,
+        zoneDesc: 'ZONA 1',
+        sectorDesc: 'Z1 ALTA ROTACION',
+        latitude: 0,
+        longitude: 0,
+        opDate: '150006070926',
+      },
+    ]);
+    TestBed.overrideProvider(OpsApiClient, { useValue: api });
+    TestBed.overrideProvider(OpsSessionService, { useValue: { token: () => 'token' } });
+    const service = TestBed.inject(OperationsService);
+
+    await service.load();
+
+    expect(service.operations()[0]).toEqual(jasmine.objectContaining({ cityName: 'ZARAUTZ', latitude: 0, longitude: 0 }));
+  });
+
   it('keeps the operation time separate from parking start and end times', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
     api.post.and.resolveTo([

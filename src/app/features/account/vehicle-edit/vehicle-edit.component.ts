@@ -6,6 +6,7 @@ import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/
 import { ResultModalComponent } from '../../../shared/components/result-modal/result-modal.component';
 import { VehicleService } from '../../../core/services/vehicle.service';
 import { ParkingSessionService } from '../../../core/services/parking-session.service';
+import { OperationsService } from '../../../core/services/operations.service';
 
 @Component({
   selector: 'app-vehicle-edit',
@@ -38,15 +39,6 @@ import { ParkingSessionService } from '../../../core/services/parking-session.se
           [message]="(state === 'saved' ? 'account.vehicleEdit.savedDetail' : 'account.vehicleEdit.deletedSuccess') | translate"
           [primaryText]="'account.vehicle.backToVehicles' | translate"
           (primaryAction)="goBack()"
-        />
-      }
-      @if (deleteFailed()) {
-        <app-result-modal
-          type="error"
-          [title]="'account.vehicleEdit.deleteErrorTitle' | translate"
-          [message]="deleteErrorMessage() ?? ('account.vehicleEdit.deleteErrorDetail' | translate)"
-          [primaryText]="'common.accept' | translate"
-          (primaryAction)="deleteFailed.set(false)"
         />
       }
       @if (confirmDelete()) {
@@ -114,6 +106,7 @@ export class VehicleEditComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly vehicleService = inject(VehicleService);
+  private readonly operationsService = inject(OperationsService);
   private readonly parkingSessionService = inject(ParkingSessionService);
   private readonly paramMap = toSignal(this.route.paramMap, { initialValue: this.route.snapshot.paramMap });
   readonly id = computed(() => this.paramMap().get('id') ?? '');
@@ -159,7 +152,10 @@ export class VehicleEditComponent implements OnInit {
     this.saving.set(true);
     const mutation = await this.vehicleService.update(this.id(), { plate, isForeign: current?.isForeign ?? false, isDefault: this.favorite() });
     this.saving.set(false);
-    if (mutation.success) this.result.set('saved');
+    if (mutation.success) {
+      await this.operationsService.load();
+      this.result.set('saved');
+    }
   }
 
   remove(): void {
@@ -181,6 +177,7 @@ export class VehicleEditComponent implements OnInit {
     this.saving.set(false);
     if (mutation.success) {
       this.deletedId = this.id();
+      await this.operationsService.load();
       this.result.set('deleted');
     } else {
       this.deleteErrorMessage.set(mutation.error?.backendError ? mutation.error.message : null);
