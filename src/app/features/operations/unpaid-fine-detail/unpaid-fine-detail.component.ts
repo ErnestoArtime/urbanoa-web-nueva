@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, ElementRef, OnDestroy, ViewChild, computed, inject, signal } from '@angular/core';
+import { Component, ElementRef, afterRenderEffect, viewChild, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { DecimalPipe } from '@angular/common';
 import { FineStatus, UnpaidFinesService } from '../../../core/services/unpaid-fines.service';
@@ -7,6 +7,9 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
 import { ResultModalComponent } from '../../../shared/components/result-modal/result-modal.component';
 import { TranslationService } from '../../../core/services/translation.service';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
+import { distinctUntilChanged, map } from 'rxjs/operators';
+import { OperationsService } from '../../../core/services/operations.service';
 
 @Component({
   selector: 'app-unpaid-fine-detail',
@@ -301,9 +304,9 @@ import { TranslationService } from '../../../core/services/translation.service';
     `,
   ],
 })
-export class UnpaidFineDetailComponent implements AfterViewInit, OnDestroy {
-  @ViewChild('fineTicketCard') private fineTicketCard?: ElementRef<HTMLElement>;
-  @ViewChild('fineTicketCut') private fineTicketCut?: ElementRef<HTMLElement>;
+export class UnpaidFineDetailComponent {
+  private readonly fineTicketCard = viewChild<ElementRef<HTMLElement>>('fineTicketCard');
+  private readonly fineTicketCut = viewChild<ElementRef<HTMLElement>>('fineTicketCut');
 
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -312,8 +315,13 @@ export class UnpaidFineDetailComponent implements AfterViewInit, OnDestroy {
   readonly walletService = inject(WalletService);
   readonly fineStatus = FineStatus;
 
-  readonly fineId = this.route.snapshot.paramMap.get('id') ?? '';
-  readonly fine = this.unpaidFinesService.getFine(this.fineId);
+  private readonly params = toSignal(this.route.paramMap);
+  get fineId(): string {
+    return this.params()?.get('id') ?? '';
+  }
+  get fine() {
+    return this.unpaidFinesService.getFine(this.fineId);
+  }
   readonly paid = signal(false);
   readonly movingToHistory = signal(false);
   readonly canMoveToHistory = computed(() => Boolean(this.fine && this.fine.timePeriod !== 1));
@@ -327,38 +335,46 @@ export class UnpaidFineDetailComponent implements AfterViewInit, OnDestroy {
 
   readonly capturedWalletAmount = signal(0);
   readonly capturedCardAmount = signal(0);
-  private ticketResizeObserver?: ResizeObserver;
+  private readonly paidFine = signal<{ plate: string; location: string } | undefined>(undefined);
 
-  ngAfterViewInit(): void {
-    const card = this.fineTicketCard?.nativeElement;
-    const cut = this.fineTicketCut?.nativeElement;
-    if (!card || !cut) return;
-
-    const updateCutPosition = () => {
-      const cardRect = card.getBoundingClientRect();
-      const cutRect = cut.getBoundingClientRect();
-      const cutCenter = cutRect.top - cardRect.top + cutRect.height / 2;
-      card.style.setProperty('--ticket-cut-y', `${cutCenter}px`);
-    };
-
-    updateCutPosition();
-    if (typeof ResizeObserver !== 'undefined') {
-      this.ticketResizeObserver = new ResizeObserver(updateCutPosition);
-      this.ticketResizeObserver.observe(card);
-      this.ticketResizeObserver.observe(cut);
-    }
-  }
-
-  ngOnDestroy(): void {
-    this.ticketResizeObserver?.disconnect();
+  constructor() {
+    afterRenderEffect((onCleanup) => {
+      const card = this.fineTicketCard()?.nativeElement;
+      const cut = this.fineTicketCut()?.nativeElement;
+      if (!card || !cut) return;
+      const updateCutPosition = () => {
+        const cardRect = card.getBoundingClientRect();
+        const cutRect = cut.getBoundingClientRect();
+        card.style.setProperty('--ticket-cut-y', `${cutRect.top - cardRect.top + cutRect.height / 2}px`);
+      };
+      updateCutPosition();
+      if (typeof ResizeObserver !== 'undefined') {
+        const observer = new ResizeObserver(updateCutPosition);
+        observer.observe(card);
+        observer.observe(cut);
+        onCleanup(() => observer.disconnect());
+      }
+    });
+    const operationsService = inject(OperationsService);
+    this.route.paramMap
+      .pipe(
+        map((params) => params.get('id') ?? ''),
+        distinctUntilChanged(),
+        takeUntilDestroyed(),
+      )
+      .subscribe((id) => {
+        this.paid.set(false);
+        this.selectedCardId.set(this.walletService.defaultCardId());
+        if (id) void operationsService.loadDetail(id);
+      });
   }
 
   readonly successMessage = computed(() => {
     const wallet = this.capturedWalletAmount();
     const card = this.capturedCardAmount();
     const params = {
-      plate: this.fine?.plate ?? '',
-      location: this.fine?.location ?? '',
+      plate: this.paidFine()?.plate ?? '',
+      location: this.paidFine()?.location ?? '',
       wallet: wallet.toFixed(2).replace('.', ','),
       card: card.toFixed(2).replace('.', ','),
     };
@@ -374,15 +390,18 @@ export class UnpaidFineDetailComponent implements AfterViewInit, OnDestroy {
   };
 
   async pay(): Promise<void> {
-    if (!this.fine) return;
+    const fine = this.fine;
+    if (!fine) return;
     const walletAmt = this.walletAmount();
     const cardAmt = this.cardAmount();
-    const result = await this.unpaidFinesService.payFine(this.fineId, this.selectedCardId());
+    const result = await this.unpaidFinesService.payFine(fine.id, this.selectedCardId());
+    if (this.fineId !== fine.id) return;
     if (result.challengeUrl) {
       window.location.assign(result.challengeUrl);
       return;
     }
     if (result.success) {
+      this.paidFine.set(fine);
       this.capturedWalletAmount.set(walletAmt);
       this.capturedCardAmount.set(cardAmt);
       this.paid.set(true);

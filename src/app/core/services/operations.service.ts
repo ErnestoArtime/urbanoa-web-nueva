@@ -93,6 +93,7 @@ export class OperationsService {
   private readonly _activeLoading = signal(false);
   private readonly operationsLoadsInFlight = new Map<string, Promise<void>>();
   private activeLoadingRequests = 0;
+  private lastLoadParameters: [string?, string?, number[]?] = [];
 
   readonly operations = this._operations.asReadonly();
   readonly activeParkings = this._activeParkings.asReadonly();
@@ -117,6 +118,7 @@ export class OperationsService {
   readonly lastError = signal<string | null>(null);
 
   load(dateStart?: string, dateEnd?: string, operationTypeList = [1, 2, 3, 4, 5, 7, 101, 102, 103, 104]): Promise<void> {
+    this.lastLoadParameters = [dateStart, dateEnd, operationTypeList];
     const year = new Date().getFullYear();
     const effectiveStart = dateStart ?? `${year}-01-01`;
     const effectiveEnd = dateEnd ?? `${year}-12-31`;
@@ -168,9 +170,8 @@ export class OperationsService {
   }
 
   async loadDetail(id: string): Promise<Operation | undefined> {
-    const cached = this.getOperationById(id);
-    if (cached) return cached;
-    await this.load();
+    if (!id) return undefined;
+    await this.load(...this.lastLoadParameters);
     return this.getOperationById(id);
   }
 

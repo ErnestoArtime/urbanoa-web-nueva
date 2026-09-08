@@ -1,8 +1,8 @@
 import { Component, computed, inject } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
-import { map } from 'rxjs/operators';
+import { distinctUntilChanged, map } from 'rxjs/operators';
 import { OperationsService } from '../../../core/services/operations.service';
 import { isAcknowledgedFine } from '../../../core/services/unpaid-fines.service';
 import { OperationType } from '../../../shared/models/operation-type';
@@ -470,8 +470,15 @@ export class OperationsDetailComponent {
   private readonly citiesService = inject(CitiesService);
   readonly id = toSignal(this.route.paramMap.pipe(map((p) => p.get('id') ?? '')), { initialValue: '' });
   constructor() {
-    void this.service.loadDetail(this.id());
-    void this.service.loadReceipt(this.id());
+    this.route.paramMap
+      .pipe(
+        map((params) => params.get('id') ?? ''),
+        distinctUntilChanged(),
+        takeUntilDestroyed(),
+      )
+      .subscribe((id) => {
+        if (id) void this.service.loadDetail(id);
+      });
     void this.citiesService.getCities().catch(() => undefined);
   }
   readonly op = computed(() => {
@@ -537,7 +544,7 @@ export class OperationsDetailComponent {
   });
   readonly fineCoordinates = computed(() => {
     const operation = this.op();
-    if (!operation) return null;
+    if (!operation || operation.type !== OperationType.FINE_PAYMENT) return null;
     return this.citiesService.coordinatesFor({
       contractId: operation.contractId,
       cityId: operation.cityId,
