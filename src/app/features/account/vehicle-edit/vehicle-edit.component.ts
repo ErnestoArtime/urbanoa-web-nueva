@@ -6,7 +6,6 @@ import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/
 import { ResultModalComponent } from '../../../shared/components/result-modal/result-modal.component';
 import { VehicleService } from '../../../core/services/vehicle.service';
 import { ParkingSessionService } from '../../../core/services/parking-session.service';
-import { FOREIGN_PLATE_MAX_LENGTH, isValidPlate } from '../../../shared/utils/plate-validation';
 import { OperationsService } from '../../../core/services/operations.service';
 
 @Component({
@@ -18,23 +17,8 @@ import { OperationsService } from '../../../core/services/operations.service';
       <div class="card">
         <div class="form-group">
           <label>{{ 'account.vehicleEdit.plate' | translate }}</label
-          ><input
-            class="form-input"
-            [class.invalid]="plateError()"
-            [value]="plate()"
-            (input)="setPlate($event)"
-            [attr.maxlength]="foreignPlate() ? FOREIGN_PLATE_MAX_LENGTH : null"
-          />
-          @if (plateError()) {
-            <p class="form-error">
-              {{ (plate().trim() ? 'account.vehicleAdd.plateInvalid' : 'account.vehicleAdd.plateRequired') | translate }}
-            </p>
-          }
+          ><input class="form-input" [value]="plate()" readonly />
         </div>
-        <label class="switch-row"
-          ><span>{{ 'account.vehicleEdit.foreignPlate' | translate }}</span
-          ><input type="checkbox" [checked]="foreignPlate()" (change)="foreignPlate.set(checked($event))" /><span class="switch"></span
-        ></label>
         <label class="switch-row"
           ><span>{{ 'account.vehicleEdit.favorite' | translate }}</span
           ><input type="checkbox" [checked]="favorite()" (change)="favorite.set(checked($event))" /><span class="switch"></span
@@ -87,14 +71,6 @@ import { OperationsService } from '../../../core/services/operations.service';
         padding: 0.65rem 0;
         cursor: pointer;
       }
-      .form-input.invalid {
-        border-color: var(--color-error);
-      }
-      .form-error {
-        margin-top: 0.35rem;
-        color: var(--color-error);
-        font-size: var(--text-xs);
-      }
       .switch {
         position: relative;
         width: 44px;
@@ -134,10 +110,7 @@ export class VehicleEditComponent implements OnInit {
   readonly id = computed(() => this.paramMap().get('id') ?? '');
   private readonly vehicle = computed(() => this.vehicleService.getById(this.id()));
   readonly plate = signal('');
-  readonly foreignPlate = signal(false);
   readonly favorite = signal(false);
-  readonly FOREIGN_PLATE_MAX_LENGTH = FOREIGN_PLATE_MAX_LENGTH;
-  readonly plateError = signal(false);
   readonly result = signal<'saved' | 'deleted' | null>(null);
   readonly confirmDelete = signal(false);
   readonly blockedDelete = signal(false);
@@ -147,9 +120,7 @@ export class VehicleEditComponent implements OnInit {
     effect(() => {
       const vehicle = this.vehicle();
       this.plate.set(vehicle?.plate ?? '');
-      this.foreignPlate.set(vehicle?.isForeign ?? !isValidPlate(vehicle?.plate ?? '', false));
       this.favorite.set(vehicle?.isDefault ?? false);
-      this.plateError.set(false);
       this.result.set(null);
       this.confirmDelete.set(false);
       this.blockedDelete.set(false);
@@ -161,23 +132,15 @@ export class VehicleEditComponent implements OnInit {
     if (vehicle) await this.parkingSessionService.loadParkingStatuses([vehicle]);
   }
 
-  setPlate(event: Event): void {
-    this.plate.set((event.target as HTMLInputElement).value.toUpperCase());
-    if (this.plate().trim()) this.plateError.set(false);
-  }
-
   checked(event: Event): boolean {
     return (event.target as HTMLInputElement).checked;
   }
 
   async save(): Promise<void> {
+    const current = this.vehicle();
     const plate = this.plate().trim();
-    if (!isValidPlate(plate, this.foreignPlate())) {
-      this.plateError.set(true);
-      return;
-    }
     this.saving.set(true);
-    const mutation = await this.vehicleService.update(this.id(), { plate, isForeign: this.foreignPlate(), isDefault: this.favorite() });
+    const mutation = await this.vehicleService.update(this.id(), { plate, isForeign: current?.isForeign ?? false, isDefault: this.favorite() });
     this.saving.set(false);
     if (mutation.success) {
       await this.operationsService.load();
