@@ -383,6 +383,7 @@
   "account.vehicleAdd.plate": "Matrícula",
   "account.vehicleAdd.plateRequired": "La matrícula es obligatoria",
   "account.vehicleAdd.plateInvalid": "Introduce una matrícula válida",
+  "account.vehicleAdd.plateDuplicate": "Esa matrícula ya está añadida a tu cuenta",
   "account.vehicleAdd.foreignPlate": "Matrícula extranjera",
   "account.vehicleAdd.favorite": "Marcar como vehículo favorito",
   "account.vehicleAdd.addErrorTitle": "No se pudo añadir el vehículo",

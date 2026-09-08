@@ -3,11 +3,13 @@ const OLD_PLATE_PATTERN =
 const NEW_PLATE_PATTERN = /^[0-9]{4}[BCDFGHJKLMNPRSTVWXYZ]{3}$/;
 const FOREIGN_PLATE_PATTERN = /^[A-Z0-9-]+$/;
 
+export const FOREIGN_PLATE_MIN_LENGTH = 4;
 export const FOREIGN_PLATE_MAX_LENGTH = 10;
 
 export function isValidPlate(value: string, foreign: boolean): boolean {
   const plate = value.replace(/\s/g, '').toUpperCase();
   if (!plate) return false;
-  if (foreign) return plate.length <= FOREIGN_PLATE_MAX_LENGTH && FOREIGN_PLATE_PATTERN.test(plate);
+  if (foreign)
+    return plate.length >= FOREIGN_PLATE_MIN_LENGTH && plate.length <= FOREIGN_PLATE_MAX_LENGTH && FOREIGN_PLATE_PATTERN.test(plate);
   return OLD_PLATE_PATTERN.test(plate) || NEW_PLATE_PATTERN.test(plate);
 }

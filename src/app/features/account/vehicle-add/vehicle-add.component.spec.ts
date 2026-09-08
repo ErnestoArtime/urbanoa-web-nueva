@@ -8,12 +8,13 @@ import { TranslationService } from '../../../core/services/translation.service';
 import { OpsApiError } from '../../../core/api/ops-api.types';
 
 describe('VehicleAddComponent', () => {
-  let vehicleService: { add: jasmine.Spy };
+  let vehicleService: { add: jasmine.Spy; hasPlate: jasmine.Spy };
 
   beforeEach(() => {
     localStorage.clear();
     vehicleService = {
       add: jasmine.createSpy('add'),
+      hasPlate: jasmine.createSpy('hasPlate').and.returnValue(false),
     };
     TestBed.configureTestingModule({
       imports: [VehicleAddComponent],
@@ -75,6 +76,17 @@ describe('VehicleAddComponent', () => {
     expect(vehicleService.add).not.toHaveBeenCalled();
   });
 
+  it('rejects a foreign plate shorter than four characters', async () => {
+    const fixture = TestBed.createComponent(VehicleAddComponent);
+    fixture.componentInstance.plate.set('ABC');
+    fixture.componentInstance.foreignPlate.set(true);
+
+    await fixture.componentInstance.save();
+
+    expect(fixture.componentInstance.plateInvalid()).toBeTrue();
+    expect(vehicleService.add).not.toHaveBeenCalled();
+  });
+
   it('accepts a foreign plate with hyphens up to ten characters', async () => {
     const fixture = TestBed.createComponent(VehicleAddComponent);
     fixture.componentInstance.plate.set('AB-12-CD');
@@ -96,6 +108,18 @@ describe('VehicleAddComponent', () => {
 
     expect(fixture.componentInstance.saved()).toBeTrue();
     expect(fixture.componentInstance.addFailed()).toBeFalse();
+  });
+
+  it('rejects the plate when it is already added to the account', async () => {
+    const fixture = TestBed.createComponent(VehicleAddComponent);
+    fixture.componentInstance.plate.set('1234 BCD');
+    vehicleService.hasPlate.and.returnValue(true);
+
+    await fixture.componentInstance.save();
+
+    expect(fixture.componentInstance.plateDuplicate()).toBeTrue();
+    expect(fixture.componentInstance.saved()).toBeFalse();
+    expect(vehicleService.add).not.toHaveBeenCalled();
   });
 
   it('shows the localized backend error message when the API fails', async () => {
