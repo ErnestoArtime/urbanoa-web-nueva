@@ -13,29 +13,40 @@ import { ParkingSessionService } from '../../../core/services/parking-session.se
   template: `
     <div class="page account-static-page">
       <app-detail-panel-header backRoute="/app/account/vehicles" [title]="'account.vehicleEdit.title' | translate" [backDesktop]="true" />
-      <div class="card">
-        <div class="form-group">
-          <label>{{ 'account.vehicleEdit.plate' | translate }}</label
-          ><input class="form-input" [value]="plate()" readonly />
+      @if (result() !== 'deleted') {
+        <div class="card">
+          <div class="form-group">
+            <label>{{ 'account.vehicleEdit.plate' | translate }}</label
+            ><input class="form-input" [value]="plate()" readonly />
+          </div>
+          <label class="switch-row"
+            ><span>{{ 'account.vehicleEdit.favorite' | translate }}</span
+            ><input type="checkbox" [checked]="favorite()" (change)="favorite.set(checked($event))" /><span class="switch"></span
+          ></label>
+          <button type="button" class="btn btn-primary btn-block mt-2" [disabled]="saving()" (click)="save()">
+            {{ 'account.vehicleEdit.save' | translate }}
+          </button>
+          <button type="button" class="btn btn-danger btn-block mt-1" [disabled]="saving()" (click)="remove()">
+            {{ 'account.vehicleEdit.delete' | translate }}
+          </button>
         </div>
-        <label class="switch-row"
-          ><span>{{ 'account.vehicleEdit.favorite' | translate }}</span
-          ><input type="checkbox" [checked]="favorite()" (change)="favorite.set(checked($event))" /><span class="switch"></span
-        ></label>
-        <button type="button" class="btn btn-primary btn-block mt-2" [disabled]="saving()" (click)="save()">
-          {{ 'account.vehicleEdit.save' | translate }}
-        </button>
-        <button type="button" class="btn btn-danger btn-block mt-1" [disabled]="saving()" (click)="remove()">
-          {{ 'account.vehicleEdit.delete' | translate }}
-        </button>
-      </div>
+      }
       @if (result(); as state) {
         <app-result-modal
           type="success"
           [title]="(state === 'saved' ? 'account.vehicleEdit.savedTitle' : 'account.vehicleEdit.deletedTitle') | translate"
-          [message]="(state === 'saved' ? 'account.vehicleEdit.savedDetail' : 'account.vehicleEdit.deletedDetail') | translate"
+          [message]="(state === 'saved' ? 'account.vehicleEdit.savedDetail' : 'account.vehicleEdit.deletedSuccess') | translate"
           [primaryText]="'account.vehicle.backToVehicles' | translate"
           (primaryAction)="goBack()"
+        />
+      }
+      @if (deleteFailed()) {
+        <app-result-modal
+          type="error"
+          [title]="'account.vehicleEdit.deleteErrorTitle' | translate"
+          [message]="deleteErrorMessage() ?? ('account.vehicleEdit.deleteErrorDetail' | translate)"
+          [primaryText]="'common.accept' | translate"
+          (primaryAction)="deleteFailed.set(false)"
         />
       }
       @if (confirmDelete()) {
@@ -110,18 +121,26 @@ export class VehicleEditComponent implements OnInit {
   readonly plate = signal('');
   readonly favorite = signal(false);
   readonly result = signal<'saved' | 'deleted' | null>(null);
+  readonly deleteFailed = signal(false);
+  readonly deleteErrorMessage = signal<string | null>(null);
   readonly confirmDelete = signal(false);
   readonly blockedDelete = signal(false);
   readonly saving = signal(false);
+  private deletedId: string | null = null;
 
   constructor() {
     effect(() => {
       const vehicle = this.vehicle();
+      const keepDeleted = this.deletedId === this.id();
       this.plate.set(vehicle?.plate ?? '');
       this.favorite.set(vehicle?.isDefault ?? false);
-      this.result.set(null);
       this.confirmDelete.set(false);
       this.blockedDelete.set(false);
+      if (keepDeleted) return;
+      this.deletedId = null;
+      this.result.set(null);
+      this.deleteFailed.set(false);
+      this.deleteErrorMessage.set(null);
     });
   }
 
@@ -160,7 +179,13 @@ export class VehicleEditComponent implements OnInit {
     this.saving.set(true);
     const mutation = await this.vehicleService.remove(this.id());
     this.saving.set(false);
-    if (mutation.success) this.result.set('deleted');
+    if (mutation.success) {
+      this.deletedId = this.id();
+      this.result.set('deleted');
+    } else {
+      this.deleteErrorMessage.set(mutation.error?.backendError ? mutation.error.message : null);
+      this.deleteFailed.set(true);
+    }
   }
 
   goBack(): void {
