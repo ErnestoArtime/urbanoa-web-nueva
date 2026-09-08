@@ -739,7 +739,13 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
     }
     const vehicle = this.selectedVehicle();
     if (vehicle) this.store.selectVehicle(vehicle.id, vehicle.plate);
-    this.map = L.map(this.mapContainer.nativeElement, { zoomControl: false }).setView(this.cityCenter(), 15);
+    const center = this.cityCenter();
+    if (!center) {
+      this.mapError.set(true);
+      this.mapLoading.set(false);
+      return;
+    }
+    this.map = L.map(this.mapContainer.nativeElement, { zoomControl: false }).setView(center, 15);
     this.map.on('movestart', () => this.showParkingBehaviorHelp.set(false));
     L.control.zoom({ position: 'topright' }).addTo(this.map);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -828,9 +834,9 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
     });
   }
 
-  private cityCenter(): L.LatLngExpression {
+  private cityCenter(): L.LatLngExpression | null {
     const coordinates = this.citiesService.coordinatesFor(this.selected);
-    return coordinates ? [coordinates.latitude, coordinates.longitude] : [43.283891, -2.168643];
+    return coordinates ? [coordinates.latitude, coordinates.longitude] : null;
   }
 
   private async loadRealZones(): Promise<void> {

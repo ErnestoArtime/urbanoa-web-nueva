@@ -56,46 +56,6 @@ export interface CityCoordinatesInput {
   longitude?: number;
 }
 
-const CONTRACT_IDS: Record<string, number> = {
-  durango: 1,
-  zarautz: 3,
-  tolosa: 5,
-  bergara: 23,
-  arrasate: 61,
-  soria: 73,
-  deba: 79,
-  mutriku: 81,
-};
-
-const CITY_CENTERS: Record<number, { latitude: number; longitude: number }> = {
-  1: { latitude: 43.168126, longitude: -2.632122 },
-  3: { latitude: 43.283891, longitude: -2.168643 },
-  5: { latitude: 43.136874, longitude: -2.07578 },
-  23: { latitude: 43.119115, longitude: -2.414244 },
-  61: { latitude: 43.065894125, longitude: -2.490005041 },
-  73: { latitude: 41.766359417, longitude: -2.47352316 },
-  79: { latitude: 43.29448, longitude: -2.35403 },
-  81: { latitude: 43.3060587, longitude: -2.3872368 },
-};
-
-const ZARAUTZ_FALLBACK: ParkingMunicipio = {
-  id: 'zarautz',
-  nombre: 'Zarautz',
-  provincia: 'Gipuzkoa',
-  zonas: 0,
-  imagen: 'zarautz.jpg',
-  contractId: CONTRACT_IDS['zarautz'],
-  description1: 'Zarautz',
-  address: '',
-  email: '',
-  imagePath: '',
-  longitude: CITY_CENTERS[CONTRACT_IDS['zarautz']].longitude,
-  latitude: CITY_CENTERS[CONTRACT_IDS['zarautz']].latitude,
-  phone: '',
-  radius: '',
-  zones: [],
-};
-
 @Injectable({ providedIn: 'root' })
 export class CitiesService {
   private readonly api = inject(OpsApiClient);
@@ -107,8 +67,6 @@ export class CitiesService {
     const value = await this.api.get<ContractsApiValue>(OPS_ENDPOINTS.parking.contracts);
     if (!Array.isArray(value.contractlist)) throw new Error('QueryContractsAPI no devolvió contractlist');
     const cities = value.contractlist.map((item) => this.toMunicipio(item));
-    // Older API deployments may omit Zarautz from QueryContractsAPI.
-    if (!cities.some((city) => city.contractId === CONTRACT_IDS['zarautz'])) cities.push(ZARAUTZ_FALLBACK);
     const enriched = await Promise.all(
       cities.map(async (city) => {
         const zones = new Map<number, string>();
@@ -142,23 +100,22 @@ export class CitiesService {
   contractIdFor(identifier: string): number {
     const numericId = Number(identifier);
     if (Number.isFinite(numericId)) return numericId;
-    return this.state().find((city) => city.id === identifier)?.contractId ?? CONTRACT_IDS[identifier.toLocaleLowerCase('es')] ?? 0;
+    return this.state().find((city) => city.id === identifier)?.contractId ?? 0;
   }
 
   knownContractIds(): number[] {
-    return [...new Set(Object.values(CONTRACT_IDS))];
+    return [...new Set(this.state().map((city) => city.contractId))];
   }
 
   nameFor(input: CityCoordinatesInput): string {
     if (input.cityName?.trim()) return input.cityName.trim();
     const city = this.state().find((item) => item.contractId === input.contractId);
     if (city) return city.nombre;
-    const knownName = Object.entries(CONTRACT_IDS).find(([, id]) => id === input.contractId)?.[0];
-    return knownName ? knownName.charAt(0).toUpperCase() + knownName.slice(1) : '';
+    return '';
   }
 
   selectableCities(cities: readonly ParkingMunicipio[] = this.state()): ParkingMunicipio[] {
-    return cities.filter((city) => city.contractId > 0 && (city.zones.length > 0 || city.contractId === CONTRACT_IDS['zarautz']));
+    return cities.filter((city) => city.contractId > 0 && city.zones.length > 0);
   }
 
   coordinatesFor(input: CityCoordinatesInput): { latitude: number; longitude: number } | null {
@@ -174,8 +131,7 @@ export class CitiesService {
     if (city && this.validCoordinates(city.latitude, city.longitude)) {
       return { latitude: city.latitude, longitude: city.longitude };
     }
-    const contractId = input.contractId ?? city?.contractId ?? (input.cityName ? CONTRACT_IDS[this.slug(input.cityName)] : undefined);
-    return contractId ? (CITY_CENTERS[contractId] ?? null) : null;
+    return null;
   }
 
   private toMunicipio(item: ContractApiItem): ParkingMunicipio {

@@ -156,7 +156,7 @@ export class ParkingStreetsComponent implements OnInit {
   readonly dataSource = signal<'loading' | 'remote' | 'error'>('loading');
   readonly cityId = this.route.snapshot.queryParamMap.get('city') ?? this.route.snapshot.queryParamMap.get('municipio') ?? '';
   readonly cityName = this.route.snapshot.queryParamMap.get('cityName') ?? '';
-  readonly selectedCityName = this.cityName || this.cityLabel(this.cityId);
+  readonly selectedCityName = this.cityName;
   readonly plate = this.route.snapshot.queryParamMap.get('plate') ?? this.flowStore.vm().plate ?? '';
   readonly vehicleId = this.route.snapshot.queryParamMap.get('vehicleId') ?? this.flowStore.vm().vehicleId ?? '';
   readonly filteredStreets = computed(() => {
@@ -210,27 +210,5 @@ export class ParkingStreetsComponent implements OnInit {
       latitude: this.route.snapshot.queryParamMap.get('latitude') ?? '',
       longitude: this.route.snapshot.queryParamMap.get('longitude') ?? '',
     };
-  }
-
-  private cityLabel(identifier: string): string {
-    const labels: Record<string, string> = {
-      '1': 'Durango',
-      '3': 'Zarautz',
-      '5': 'Tolosa',
-      '23': 'Bergara',
-      '61': 'Arrasate',
-      '73': 'Soria',
-      '79': 'Deba',
-      '81': 'Mutriku',
-      arrasate: 'Arrasate',
-      bergara: 'Bergara',
-      deba: 'Deba',
-      durango: 'Durango',
-      mutriku: 'Mutriku',
-      soria: 'Soria',
-      tolosa: 'Tolosa',
-      zarautz: 'Zarautz',
-    };
-    return labels[identifier.toLocaleLowerCase('es')] ?? identifier;
   }
 }

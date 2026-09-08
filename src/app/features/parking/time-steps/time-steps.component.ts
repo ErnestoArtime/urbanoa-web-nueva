@@ -402,10 +402,15 @@ export class ParkingTimeStepsComponent implements OnInit {
     const q = this.query();
     this.loading.set(true);
     this.error.set(false);
+    if (!q.tariffId || !q.tariffPrice) {
+      this.error.set(true);
+      this.loading.set(false);
+      return;
+    }
     const hourlyPrice = this.parsePrice(q.tariffPrice);
     try {
       const generatedSteps = await this.timeStepsService.queryTimeSteps({
-        tariffId: q.tariffId || '1',
+        tariffId: q.tariffId,
         tariffPrice: hourlyPrice,
         contractId: Number(q.cityId || 0),
         sectorId: Number(q.sectorId || 0),
@@ -477,8 +482,8 @@ export class ParkingTimeStepsComponent implements OnInit {
   }
 
   private parsePrice(tariffPrice: string | undefined): number {
-    const parsed = Number((tariffPrice?.match(/[\d,.]+/)?.[0] ?? '0.60').replace(',', '.'));
-    return Number.isFinite(parsed) && parsed > 0 ? parsed : 0.6;
+    const parsed = Number((tariffPrice?.match(/[\d,.]+/)?.[0] ?? '').replace(',', '.'));
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
   }
   private isZarautz(): boolean {
     return [this.query().city, this.query().cityName].some((value) => value?.trim().toLocaleLowerCase('es') === 'zarautz');

@@ -4,11 +4,11 @@ import { OpsApiClient } from '../api/ops-api-client.service';
 import { CitiesService } from './cities.service';
 
 describe('CitiesService', () => {
-  it('resolves missing municipality names by contract without inventing unknown cities', () => {
+  it('does not invent municipality names when the backend omits them', () => {
     TestBed.configureTestingModule({ providers: [provideZonelessChangeDetection(), { provide: OpsApiClient, useValue: {} }] });
     const service = TestBed.inject(CitiesService);
-    expect(service.nameFor({ contractId: 3 })).toBe('Zarautz');
-    expect(service.nameFor({ contractId: 1 })).toBe('Durango');
+    expect(service.nameFor({ contractId: 3 })).toBe('');
+    expect(service.nameFor({ contractId: 1 })).toBe('');
     expect(service.nameFor({ contractId: 3, cityName: '  Nombre recibido  ' })).toBe('Nombre recibido');
     expect(service.nameFor({ contractId: 999 })).toBe('');
   });
@@ -116,13 +116,10 @@ describe('CitiesService', () => {
     expect(service.selectableCities(result.data).map((city) => city.id)).toEqual(['zarautz']);
   });
 
-  it('provides the known city center when OPS omits operation coordinates', () => {
+  it('does not provide coordinates when OPS omits operation coordinates', () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'post']);
     TestBed.configureTestingModule({ providers: [provideZonelessChangeDetection(), { provide: OpsApiClient, useValue: api }] });
 
-    expect(TestBed.inject(CitiesService).coordinatesFor({ contractId: 3, latitude: 0, longitude: 0 })).toEqual({
-      latitude: 43.283891,
-      longitude: -2.168643,
-    });
+    expect(TestBed.inject(CitiesService).coordinatesFor({ contractId: 3, latitude: 0, longitude: 0 })).toBeNull();
   });
 });

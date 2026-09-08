@@ -582,7 +582,7 @@ export class ParkingWizardLayoutComponent implements OnInit {
     const urlParams = this.router.parseUrl(this.url()).queryParams as Record<string, string>;
     const s = this.store.vm();
     const cityIdentifier = urlParams['city'] || urlParams['municipio'] || s.city || '';
-    const cityName = s.cityName || urlParams['cityName'] || this.cityLabel(cityIdentifier);
+    const cityName = s.cityName || urlParams['cityName'] || '';
     return {
       ...urlParams,
       ...(cityName ? { cityName } : {}),
@@ -597,28 +597,6 @@ export class ParkingWizardLayoutComponent implements OnInit {
 
   async ngOnInit(): Promise<void> {
     if (this.vehicleService.source() !== 'remote') await this.vehicleService.load();
-  }
-
-  private cityLabel(identifier: string): string {
-    const labels: Record<string, string> = {
-      '1': 'Durango',
-      '3': 'Zarautz',
-      '5': 'Tolosa',
-      '23': 'Bergara',
-      '61': 'Arrasate',
-      '73': 'Soria',
-      '79': 'Deba',
-      '81': 'Mutriku',
-      arrasate: 'Arrasate',
-      bergara: 'Bergara',
-      deba: 'Deba',
-      durango: 'Durango',
-      mutriku: 'Mutriku',
-      soria: 'Soria',
-      tolosa: 'Tolosa',
-      zarautz: 'Zarautz',
-    };
-    return labels[identifier.toLocaleLowerCase('es')] ?? identifier;
   }
 
   toggleVehiclePicker(): void {
