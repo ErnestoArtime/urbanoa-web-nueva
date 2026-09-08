@@ -8,6 +8,7 @@ import { ParkingSessionService } from '../../core/services/parking-session.servi
 import type { UnparkingQuoteResult } from '../../core/services/parking-api.service';
 import { NavigationToCarService } from '../../core/services/navigation-to-car.service';
 import { OperationType } from '../../shared/models/operation-type';
+import { isAcknowledgedFine } from '../../core/services/unpaid-fines.service';
 import { ParkingTicketCardComponent } from '../../shared/components/parking-ticket-card/parking-ticket-card.component';
 import { WalletSummaryCardComponent } from './components/wallet-summary-card.component';
 import { VehicleSummaryCardComponent } from './components/vehicle-summary-card.component';
@@ -412,8 +413,12 @@ export class HomeComponent {
   readonly recentOps = computed(() => {
     const list = this.operationsService
       .operations()
-      .filter((op) => op.type !== OperationType.UNPAID_FINES)
-      .sort((a, b) => this.toDateValue(b.date) - this.toDateValue(a.date));
+      .filter((op) => op.type !== OperationType.UNPAID_FINES || isAcknowledgedFine(op))
+      .sort((a, b) => {
+        const dateDiff = this.toDateValue(b.date) - this.toDateValue(a.date);
+        if (dateDiff !== 0) return dateDiff;
+        return (b.operationTime ?? b.startTime ?? b.endTime ?? '').localeCompare(a.operationTime ?? a.startTime ?? a.endTime ?? '');
+      });
     return list.slice(0, 3);
   });
   readonly initialLoading = computed(() => this.dashboardApi.source() === 'idle');

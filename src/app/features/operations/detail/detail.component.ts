@@ -152,10 +152,12 @@ import { CitiesService } from '../../../core/services/cities.service';
             </div>
           } @else {
             <article class="info-detail card">
-              <div class="transaction">
-                <span>{{ 'ops.detail.transactionId' | translate }}</span
-                ><strong>{{ transactionId() }}</strong>
-              </div>
+              @if (transactionId()) {
+                <div class="transaction">
+                  <span>{{ 'ops.detail.transactionId' | translate }}</span
+                  ><strong>{{ transactionId() }}</strong>
+                </div>
+              }
               @for (row of detailRows(); track row.label) {
                 <div class="info-row">
                   <span class="row-icon"><app-icon [name]="row.icon" [stroke]="false" /> </span>
@@ -466,7 +468,7 @@ export class OperationsDetailComponent {
   private readonly service = inject(OperationsService);
   private readonly translationService = inject(TranslationService);
   private readonly citiesService = inject(CitiesService);
-  readonly id = toSignal(this.route.paramMap.pipe(map((p) => p.get('id') ?? '1')), { initialValue: '1' });
+  readonly id = toSignal(this.route.paramMap.pipe(map((p) => p.get('id') ?? '')), { initialValue: '' });
   constructor() {
     void this.service.loadDetail(this.id());
     void this.service.loadReceipt(this.id());
@@ -500,7 +502,7 @@ export class OperationsDetailComponent {
   readonly startTime = () => this.op()?.startTime ?? '--:--';
   readonly endTime = () => this.op()?.endTime ?? '--:--';
   readonly duration = () => this.op()?.durationLabel ?? '—';
-  readonly transactionId = computed(() => `8430${String(370 + Number(this.id()))}`);
+  readonly transactionId = computed(() => this.op()?.operationNumber ?? '');
   readonly absoluteAmount = computed(() => Math.abs(this.op()?.amount ?? 0));
   readonly walletPaymentAmount = computed(() => Math.abs(this.op()?.paymentBreakdown?.walletAmount ?? 0));
   readonly cardPaymentAmount = computed(() => Math.abs(this.op()?.paymentBreakdown?.cardAmount ?? 0));
@@ -553,15 +555,15 @@ export class OperationsDetailComponent {
     const money = 'wallet' as const;
     if (o.type === OperationType.REFUND)
       return [
-        { label: 'ops.detail.plate', value: o.plate ?? '5678 DEF', icon: car, positive: undefined },
+        ...(o.plate ? [{ label: 'ops.detail.plate', value: o.plate, icon: car, positive: undefined }] : []),
         { label: 'ops.detail.datetime', value: this.dateTime(o), icon: calendar, positive: undefined },
-        { label: 'ops.detail.totalTime', value: o.durationLabel ?? '5 h 45 min', icon: clock, positive: undefined },
+        ...(o.durationLabel ? [{ label: 'ops.detail.totalTime', value: o.durationLabel, icon: clock, positive: undefined }] : []),
         { label: 'ops.detail.refund', value: `+${this.absoluteAmount().toFixed(2).replace('.', ',')} €`, icon: money, positive: true },
       ];
     if (o.type === OperationType.TOP_UP)
       return [
         { label: 'ops.detail.datetime', value: this.dateTime(o), icon: calendar, positive: undefined },
-        { label: 'ops.detail.paymentMethod', value: 'Visa •••• 1234', icon: money, positive: undefined },
+        ...(o.cardLabel ? [{ label: 'ops.detail.paymentMethod', value: o.cardLabel, icon: money, positive: undefined }] : []),
         { label: 'ops.detail.recharge', value: `+${this.absoluteAmount().toFixed(2).replace('.', ',')} €`, icon: money, positive: true },
       ];
     if (o.type === OperationType.FINE_PAYMENT)
