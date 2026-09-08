@@ -2,6 +2,7 @@ import { Injectable, computed, inject } from '@angular/core';
 import { OperationType } from '../../shared/models/operation-type';
 import type { Operation } from '../../shared/models/operation';
 import { OpsApiClient } from '../api/ops-api-client.service';
+import { OpsApiError } from '../api/ops-api.types';
 import { OPS_OPERATING_SYSTEM } from '../api/ops-client.constants';
 import { OPS_ENDPOINTS } from '../api/ops-endpoints';
 import { OpsSessionService } from '../api/ops-session.service';
@@ -51,10 +52,12 @@ export interface UnpaidFine {
 export interface FinePaymentResult {
   success: boolean;
   challengeUrl?: string;
+  error?: OpsApiError;
 }
 
 export interface FineStatusUpdateResult {
   success: boolean;
+  error?: OpsApiError;
 }
 
 export function isAcknowledgedFine(operation: Operation): boolean {
@@ -109,8 +112,8 @@ export class UnpaidFinesService {
       const challengeUrl = /^https?:\/\//i.test(response?.trim()) ? response.trim() : undefined;
       if (!challengeUrl) await Promise.all([this.operationsService.load(), this.walletService.load()]);
       return { success: true, challengeUrl };
-    } catch {
-      return { success: false };
+    } catch (error) {
+      return { success: false, error: this.toApiError(error) };
     }
   }
 
@@ -118,22 +121,27 @@ export class UnpaidFinesService {
     return this.fines().find((fine) => fine.id === id);
   }
 
-  async moveFineToHistory(fine: UnpaidFine): Promise<boolean> {
+  async moveFineToHistory(fine: UnpaidFine): Promise<FineStatusUpdateResult> {
     const token = this.session.token();
-    if (!token || !fine.contractId || !fine.fineNumber) return false;
+    if (!token || !fine.contractId || !fine.fineNumber) return { success: false };
     try {
       await this.api.post<string>(OPS_ENDPOINTS.fines.updateStatus, { contractId: fine.contractId, fine: fine.fineNumber }, { token });
       await this.operationsService.load();
-      return true;
-    } catch {
-      return false;
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: this.toApiError(error) };
     }
   }
 
   async acknowledgeExpired(id: string): Promise<FineStatusUpdateResult> {
     const fine = this.fines().find((item) => item.id === id);
     if (!fine || fine.status === FineStatus.PAYABLE) return { success: false };
-    return { success: await this.moveFineToHistory(fine) };
+    return this.moveFineToHistory(fine);
+  }
+
+  private toApiError(error: unknown, endpoint?: string): OpsApiError {
+    if (error instanceof OpsApiError) return error;
+    return new OpsApiError('transport', endpoint ?? 'fines', error instanceof Error ? error.message : 'Error desconocido');
   }
 
   private mapOperation(operation: Operation): UnpaidFine {

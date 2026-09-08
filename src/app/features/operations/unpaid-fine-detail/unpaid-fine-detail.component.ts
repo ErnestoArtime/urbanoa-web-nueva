@@ -7,12 +7,30 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
 import { ResultModalComponent } from '../../../shared/components/result-modal/result-modal.component';
 import { TranslationService } from '../../../core/services/translation.service';
+import { OpsApiError } from '../../../core/api/ops-api.types';
+import { apiErrorKey } from '../../../core/http/api-error-key';
 
 @Component({
   selector: 'app-unpaid-fine-detail',
   imports: [RouterLink, DecimalPipe, TranslatePipe, DetailPanelHeaderComponent, ResultModalComponent],
   template: `
-    @if (!paid()) {
+    @if (errorMessage(); as error) {
+      <app-result-modal
+        type="error"
+        [title]="'ops.fineDetail.errorTitle' | translate"
+        [message]="error"
+        [primaryText]="'common.close' | translate"
+        (primaryAction)="dismissError()"
+      />
+    } @else if (acknowledged()) {
+      <app-result-modal
+        type="success"
+        [title]="'ops.fineDetail.acknowledgedTitle' | translate"
+        [message]="'ops.fineDetail.acknowledgedMessage' | translate"
+        [primaryText]="'ops.unpaidFines.back' | translate"
+        (primaryAction)="onBackToFines()"
+      />
+    } @else if (!paid()) {
       <div class="page">
         <app-detail-panel-header [title]="'ops.fineDetail.title' | translate" backRoute="/app/operations/unpaid-fines" />
         @if (fine) {
@@ -117,7 +135,12 @@ import { TranslationService } from '../../../core/services/translation.service';
             </button>
           }
           @if (fine.status !== fineStatus.PAYABLE) {
-            <button type="button" class="btn btn-primary btn-block mt-2 fine-understood-button" (click)="acknowledgeExpired()">
+            <button
+              type="button"
+              class="btn btn-primary btn-block mt-2 fine-understood-button"
+              (click)="acknowledgeExpired()"
+              [disabled]="movingToHistory()"
+            >
               {{ 'ops.fineDetail.understood' | translate }}
             </button>
           }
@@ -315,6 +338,8 @@ export class UnpaidFineDetailComponent implements AfterViewInit, OnDestroy {
   readonly fineId = this.route.snapshot.paramMap.get('id') ?? '';
   readonly fine = this.unpaidFinesService.getFine(this.fineId);
   readonly paid = signal(false);
+  readonly acknowledged = signal(false);
+  readonly errorMessage = signal<string | null>(null);
   readonly movingToHistory = signal(false);
   readonly canMoveToHistory = computed(() => Boolean(this.fine && this.fine.timePeriod !== 1));
   readonly selectedCardId = signal(this.walletService.defaultCardId());
@@ -386,17 +411,41 @@ export class UnpaidFineDetailComponent implements AfterViewInit, OnDestroy {
       this.capturedWalletAmount.set(walletAmt);
       this.capturedCardAmount.set(cardAmt);
       this.paid.set(true);
+      return;
     }
+    this.errorMessage.set(this.failureMessage('ops.fineDetail.payFailed', result.error));
   }
 
   async acknowledgeExpired(): Promise<void> {
     if (!this.fine) return;
-    const result = await this.unpaidFinesService.acknowledgeExpired(this.fineId);
-    if (!result.success) return;
-    void this.router.navigate(['/app/operations/unpaid-fines']);
+    this.movingToHistory.set(true);
+    try {
+      const result = await this.unpaidFinesService.acknowledgeExpired(this.fineId);
+      if (result.success) {
+        this.acknowledged.set(true);
+        return;
+      }
+      this.errorMessage.set(this.failureMessage('ops.fineDetail.actionFailed', result.error));
+    } finally {
+      this.movingToHistory.set(false);
+    }
   }
 
   onBackToFines(): void {
     void this.router.navigate(['/app/operations/unpaid-fines']);
+  }
+
+  dismissError(): void {
+    this.errorMessage.set(null);
+  }
+
+  private failureMessage(key: string, error?: OpsApiError): string {
+    return this.translationService.translate(key, { message: this.localizedError(error) });
+  }
+
+  private localizedError(error?: OpsApiError): string {
+    if (!error) return this.translationService.translate('errors.server');
+    if (error.backendError) return error.message;
+    return this.translationService.translate(apiErrorKey(error));
   }
 }

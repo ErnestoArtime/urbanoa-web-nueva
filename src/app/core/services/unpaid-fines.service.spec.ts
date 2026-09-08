@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { AppApiClient } from '../api/app-api-client.service';
 import { OpsApiClient } from '../api/ops-api-client.service';
+import { OpsApiError } from '../api/ops-api.types';
 import { OpsSessionService } from '../api/ops-session.service';
 import { OperationsService } from './operations.service';
 import { UnpaidFinesService, FineStatus, isAcknowledgedFine } from './unpaid-fines.service';
@@ -153,6 +154,42 @@ describe('UnpaidFinesService acknowledgeExpired', () => {
     const result = await service.acknowledgeExpired('fine-1');
 
     expect(result.success).toBe(false);
+    expect(result.error).toBeInstanceOf(Error);
+  });
+
+  it('returns failure with a backend error when the API reports one', async () => {
+    const api = {
+      post: jasmine
+        .createSpy('post')
+        .and.rejectWith(
+          new OpsApiError('backend', 'OPSWebServicesAPI/UpdateFineStatusAPI', 'Error al archivar la sanción', 200, {
+            code: -21,
+            type: 2,
+            message_ES: 'No se pudo archivar la sanción',
+          }),
+        ),
+    };
+    const operations = {
+      operations: signal([EXPIRED_FINE]).asReadonly(),
+      load: jasmine.createSpy('load').and.resolveTo(),
+    };
+    localStorage.clear();
+    TestBed.configureTestingModule({
+      providers: [
+        provideZonelessChangeDetection(),
+        { provide: WalletService, useValue: {} },
+        { provide: AppApiClient, useValue: {} },
+        { provide: OpsApiClient, useValue: api },
+        { provide: OpsSessionService, useValue: { token: () => 'token' } },
+        { provide: OperationsService, useValue: operations },
+      ],
+    });
+
+    const service = TestBed.inject(UnpaidFinesService);
+    const result = await service.acknowledgeExpired('fine-1');
+
+    expect(result.success).toBe(false);
+    expect(result.error?.backendError?.message_ES).toBe('No se pudo archivar la sanción');
   });
 });
 
