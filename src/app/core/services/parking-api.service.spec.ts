@@ -24,6 +24,8 @@ function serviceWith(api: jasmine.SpyObj<OpsApiClient>): ParkingApiService {
 }
 
 describe('ParkingApiService', () => {
+  beforeEach(() => localStorage.clear());
+
   it('uses the exact APK contract to confirm parking', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
     api.post.and.resolveTo({ operationId: 8431063, challengeUrl: null });
