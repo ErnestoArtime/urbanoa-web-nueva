@@ -137,10 +137,8 @@ export class VehicleEditComponent implements OnInit {
   }
 
   async save(): Promise<void> {
-    const current = this.vehicle();
-    const plate = this.plate().trim();
     this.saving.set(true);
-    const mutation = await this.vehicleService.update(this.id(), { plate, isForeign: current?.isForeign ?? false, isDefault: this.favorite() });
+    const mutation = await this.vehicleService.update(this.id(), { isDefault: this.favorite() });
     this.saving.set(false);
     if (mutation.success) {
       await this.operationsService.load();

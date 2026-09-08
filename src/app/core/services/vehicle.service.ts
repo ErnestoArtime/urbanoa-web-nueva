@@ -106,32 +106,20 @@ export class VehicleService {
     return result;
   }
 
-  async update(id: string, changes: Partial<Omit<Vehicle, 'id'>>): Promise<VehicleMutationResult> {
+  async update(id: string, changes: Pick<Vehicle, 'isDefault'>): Promise<VehicleMutationResult> {
     const current = this.getById(id);
     if (!current) return { success: false, source: 'error' };
 
-    const nextPlate = this.normalizePlate(changes.plate ?? current.plate);
     const nextIsDefault = changes.isDefault ?? current.isDefault;
-    const plateChanged = nextPlate !== current.plate;
     const favoriteChanged = nextIsDefault !== current.isDefault;
     let result: VehicleMutationResult = { success: true, source: 'remote' };
 
-    if (plateChanged) {
-      result = await this.remoteMutation(OPS_ENDPOINTS.user.removePlate, { plate: current.plate });
-      if (result.success) {
-        result = await this.remoteMutation(OPS_ENDPOINTS.user.addPlate, { plate: nextPlate, favorite: nextIsDefault ? 1 : 0 });
-      }
+    if (favoriteChanged) {
+      result = await this.remoteMutation(OPS_ENDPOINTS.user.updatePlate, { plate: current.plate, favorite: nextIsDefault ? 1 : 0 });
       if (!result.success) return result;
     }
 
-    if (!plateChanged && favoriteChanged) {
-      result = await this.remoteMutation(OPS_ENDPOINTS.user.updatePlate, { plate: nextPlate, favorite: nextIsDefault ? 1 : 0 });
-      if (!result.success) return result;
-    }
-
-    this.state.update((vehicles) =>
-      vehicles.map((vehicle) => (vehicle.id === id ? { ...vehicle, ...changes, plate: nextPlate, isDefault: nextIsDefault } : vehicle)),
-    );
+    this.state.update((vehicles) => vehicles.map((vehicle) => (vehicle.id === id ? { ...vehicle, isDefault: nextIsDefault } : vehicle)));
     this.persist();
 
     await this.refreshFromServer();
