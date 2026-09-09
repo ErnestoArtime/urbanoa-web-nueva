@@ -249,29 +249,23 @@ describe('VehicleService', () => {
     expect(result.source).toBe('remote');
   });
 
-  it('preserves the current favorite status when renaming a non-default plate', async () => {
+  it('never changes a plate through the vehicle update operation', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'getOrNull', 'post']);
-    api.getOrNull.and.resolveTo({
-      plates: [
-        { plate: '1234 ABC', favorite: true },
-        { plate: '5678 XYZ', favorite: false },
-      ],
-    });
+    api.getOrNull.and.resolveTo({ plates: [{ plate: '5678 XYZ', favorite: false }] });
     api.post.and.resolveTo('OK');
     const service = serviceWith(api);
     TestBed.inject(OpsSessionService).setToken('token');
     await service.load();
-    const nonFavorite = service.vehicles().find((v) => !v.isDefault)!;
     api.post.calls.reset();
 
-    await service.update(nonFavorite.id, { plate: '9999 ZZZ' });
+    const vehicle = service.vehicles()[0];
+    const result = await service.update(vehicle.id, { isDefault: true });
 
-    expect(api.post.calls.argsFor(0)).toEqual(['OPSWebServicesAPI/RemoveUserPlateAPI', { plate: '5678 XYZ' }, { token: 'token' }]);
-    expect(api.post.calls.argsFor(1)).toEqual([
-      'OPSWebServicesAPI/AddUserPlateAPI',
-      { plate: '9999 ZZZ', favorite: 0 },
-      { token: 'token' },
-    ]);
+    expect(api.post).toHaveBeenCalledWith('OPSWebServicesAPI/UpdateUserPlateAPI', { plate: '5678 XYZ', favorite: 1 }, { token: 'token' });
+    expect(api.post).not.toHaveBeenCalledWith('OPSWebServicesAPI/RemoveUserPlateAPI', jasmine.anything(), jasmine.anything());
+    expect(api.post).not.toHaveBeenCalledWith('OPSWebServicesAPI/AddUserPlateAPI', jasmine.anything(), jasmine.anything());
+    expect(service.vehicles()[0].plate).toBe('5678 XYZ');
+    expect(result.success).toBeTrue();
   });
 
   it('marks a favorite via a single UpdateUserPlateAPI call and refreshes the list from QueryUserPlatesAPI', async () => {
@@ -280,8 +274,8 @@ describe('VehicleService', () => {
       { plate: '5678 XYZ', favorite: false },
     ];
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'getOrNull', 'post']);
-    api.getOrNull.and.callFake(<T,>(): Promise<T | null> => Promise.resolve({ plates } as T));
-    api.post.and.callFake(<T,>(_endpoint: string, body: unknown): Promise<T> => {
+    api.getOrNull.and.callFake(<T>(): Promise<T | null> => Promise.resolve({ plates } as T));
+    api.post.and.callFake(<T>(_endpoint: string, body: unknown): Promise<T> => {
       const plateBody = body as { plate?: string; favorite?: number };
       if (plateBody?.plate) {
         plates = plates.map((p) => ({ ...p, favorite: p.plate === plateBody.plate && plateBody.favorite === 1 }));
@@ -315,8 +309,8 @@ describe('VehicleService', () => {
       { plate: '5678 XYZ', favorite: false },
     ];
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'getOrNull', 'post']);
-    api.getOrNull.and.callFake(<T,>(): Promise<T | null> => Promise.resolve({ plates } as T));
-    api.post.and.callFake(<T,>(_endpoint: string, body: unknown): Promise<T> => {
+    api.getOrNull.and.callFake(<T>(): Promise<T | null> => Promise.resolve({ plates } as T));
+    api.post.and.callFake(<T>(_endpoint: string, body: unknown): Promise<T> => {
       const plateBody = body as { plate?: string; favorite?: number };
       if (plateBody?.plate) {
         plates = plates.map((p) => ({ ...p, favorite: p.plate === plateBody.plate && plateBody.favorite === 1 }));
@@ -329,11 +323,7 @@ describe('VehicleService', () => {
     const nonFavorite = service.vehicles().find((v) => !v.isDefault)!;
     api.post.calls.reset();
 
-    const result = await service.update(nonFavorite.id, {
-      plate: nonFavorite.plate,
-      isForeign: false,
-      isDefault: true,
-    });
+    const result = await service.update(nonFavorite.id, { isDefault: true });
 
     expect(api.post).toHaveBeenCalledWith('OPSWebServicesAPI/UpdateUserPlateAPI', { plate: '5678 XYZ', favorite: 1 }, { token: 'token' });
     expect(api.post).not.toHaveBeenCalledWith(

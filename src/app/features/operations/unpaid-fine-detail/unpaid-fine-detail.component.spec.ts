@@ -1,8 +1,14 @@
-import { provideZonelessChangeDetection } from '@angular/core';
+import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ActivatedRoute, provideRouter } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
+import { BehaviorSubject } from 'rxjs';
 import { OpsApiError } from '../../../core/api/ops-api.types';
-import { FineStatus, UnpaidFine, UnpaidFinesService } from '../../../core/services/unpaid-fines.service';
+import { OperationsService } from '../../../core/services/operations.service';
+import {
+  FineStatus,
+  UnpaidFine,
+  UnpaidFinesService,
+} from '../../../core/services/unpaid-fines.service';
 import { TranslationService } from '../../../core/services/translation.service';
 import { WalletService } from '../../../core/services/wallet.service';
 import { UnpaidFineDetailComponent } from './unpaid-fine-detail.component';
@@ -28,13 +34,17 @@ describe('UnpaidFineDetailComponent', () => {
     status: FineStatus.EXPIRED,
   };
 
+  function routeParamMap(id: string) {
+    return new BehaviorSubject(convertToParamMap({ id }));
+  }
+
   function configure(fine: UnpaidFine, service: Partial<UnpaidFinesService>) {
     const wallet = {
       balance: () => 100,
       cards: () => [] as { id: string }[],
       defaultCardId: () => '',
     };
-    translate = jasmine.createSpy('translate').and.callFake((key: string, params?: Record<string, string>) => {
+    translate = jasmine.createSpy('translate').and.callFake((key: string, params?: Record<string, unknown>) => {
       if (params && 'message' in params) return `${key}: ${String(params['message'])}`;
       return key;
     });
@@ -44,18 +54,23 @@ describe('UnpaidFineDetailComponent', () => {
       providers: [
         provideZonelessChangeDetection(),
         provideRouter([]),
+        { provide: ActivatedRoute, useValue: { paramMap: routeParamMap(fine.id) } },
         {
-          provide: ActivatedRoute,
-          useValue: { snapshot: { paramMap: { get: (key: string) => (key === 'id' ? fine.id : null) } } },
+          provide: OperationsService,
+          useValue: { loadDetail: jasmine.createSpy('loadDetail').and.resolveTo(undefined) },
         },
         {
           provide: UnpaidFinesService,
-          useValue: { getFine: () => fine, payFine: service.payFine, acknowledgeExpired: service.acknowledgeExpired },
+          useValue: {
+            getFine: () => fine,
+            payFine: service.payFine,
+            acknowledgeExpired: service.acknowledgeExpired,
+          },
         },
         { provide: WalletService, useValue: wallet },
         { provide: TranslationService, useValue: { translate } },
       ],
-    });
+    }).compileComponents();
 
     fixture = TestBed.createComponent(UnpaidFineDetailComponent);
     fixture.detectChanges();
@@ -127,5 +142,47 @@ describe('UnpaidFineDetailComponent', () => {
     fixture.detectChanges();
 
     expect(fixture.componentInstance.errorMessage()).toBeNull();
+  });
+
+  it('updates the selection and amounts when the route or loaded data changes', async () => {
+    const params = new BehaviorSubject(convertToParamMap({ id: 'first' }));
+    const fines = signal<UnpaidFine[]>([]);
+    const loadDetail = jasmine.createSpy('loadDetail').and.resolveTo(undefined);
+    await TestBed.configureTestingModule({
+      imports: [UnpaidFineDetailComponent],
+      providers: [
+        provideZonelessChangeDetection(),
+        provideRouter([]),
+        { provide: ActivatedRoute, useValue: { paramMap: params } },
+        { provide: OperationsService, useValue: { loadDetail } },
+        { provide: UnpaidFinesService, useValue: { getFine: (id: string) => fines().find((fine) => fine.id === id) } },
+        { provide: WalletService, useValue: { defaultCardId: () => '', balance: signal(50), cards: signal([]) } },
+        { provide: TranslationService, useValue: { translate: (key: string) => key } },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(UnpaidFineDetailComponent);
+    await fixture.whenStable();
+    const fine: UnpaidFine = {
+      id: 'first',
+      fineNumber: 'first',
+      plate: '1234ABC',
+      date: '08/09/2026',
+      amount: '30,00 €',
+      amountValue: 30,
+      status: FineStatus.PAYABLE,
+      location: 'Zone',
+      contractId: 1,
+    };
+    fines.set([fine, { ...fine, id: 'second', plate: '5678DEF', amountValue: 60 }]);
+    await fixture.whenStable();
+    expect(fixture.componentInstance.numericAmount()).toBe(30);
+    expect(fixture.nativeElement.textContent).toContain('1234ABC');
+    params.next(convertToParamMap({ id: 'second' }));
+    await fixture.whenStable();
+    expect(fixture.componentInstance.numericAmount()).toBe(60);
+    expect(fixture.nativeElement.textContent).toContain('5678DEF');
+    expect(fixture.nativeElement.textContent).not.toContain('1234ABC');
+    expect(fixture.nativeElement.querySelector('app-location-map')).toBeNull();
+    expect(loadDetail.calls.allArgs()).toEqual([['first'], ['second']]);
   });
 });

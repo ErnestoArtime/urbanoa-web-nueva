@@ -8,6 +8,20 @@ import { WalletService } from './wallet.service';
 import { OperationType } from '../../shared/models/operation-type';
 
 describe('OperationsService stored data migration', () => {
+  it('refreshes cached details using the current history filters', async () => {
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
+    api.post.and.resolveTo([{ operationNumber: 17, operationType: 7, paymentAmount: 500, opDate: '120000260825' }]);
+    TestBed.overrideProvider(OpsApiClient, { useValue: api });
+    TestBed.overrideProvider(OpsSessionService, { useValue: { token: () => 'token' } });
+    const service = TestBed.inject(OperationsService);
+    await service.load('2025-01-01', '2025-12-31', [7]);
+    const filters = api.post.calls.mostRecent().args[1];
+    api.post.and.resolveTo([{ operationNumber: 17, operationType: 7, paymentAmount: 700, opDate: '120000260825' }]);
+    expect((await service.loadDetail('17'))?.amount).toBe(-7);
+    expect(api.post).toHaveBeenCalledTimes(2);
+    expect(api.post.calls.mostRecent().args[1]).toEqual(filters);
+  });
+
   beforeEach(() => {
     localStorage.clear();
     TestBed.configureTestingModule({
