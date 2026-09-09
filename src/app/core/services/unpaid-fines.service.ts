@@ -130,7 +130,7 @@ export class UnpaidFinesService {
     const token = this.session.token();
     if (!token || !fine.contractId || !fine.fineNumber) return { success: false };
     try {
-      await this.api.post<string>(OPS_ENDPOINTS.fines.updateStatus, { contractId: fine.contractId, fine: fine.fineNumber }, { token });
+      await this.api.post<string>(OPS_ENDPOINTS.fines.updateStatus, { contractId: fine.contractId, fineNumber: fine.fineNumber }, { token });
       await this.operationsService.load();
       return { success: true };
     } catch (error) {
