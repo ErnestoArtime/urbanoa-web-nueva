@@ -9,7 +9,7 @@ import { ParkingSessionService } from '../../../core/services/parking-session.se
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { LucideCarFront } from '@lucide/angular';
 import { OpsApiClient } from '../../../core/api/ops-api-client.service';
-import { formatOpsTime, parseOpsDate } from '../../../core/utils/ops-date';
+import { formatOpsCalendarDate, formatOpsTime, parseOpsDate } from '../../../core/utils/ops-date';
 
 @Component({
   selector: 'app-parking-time-steps',
@@ -41,6 +41,7 @@ import { formatOpsTime, parseOpsDate } from '../../../core/utils/ops-date';
         <div>
           <small>{{ 'parking.timeSteps.start' | translate }}</small
           ><strong>{{ startTime() }}</strong>
+          <span class="time-day-label">{{ startDayLabel() | translate }}</span>
         </div>
         <span class="line"></span>
         <div class="duration-pill">{{ selectedStep().timeFormatted }}</div>
@@ -48,6 +49,7 @@ import { formatOpsTime, parseOpsDate } from '../../../core/utils/ops-date';
         <div>
           <small>{{ 'parking.timeSteps.end' | translate }}</small
           ><strong>{{ endTime() }}</strong>
+          <span class="time-day-label">{{ endDayLabel() | translate }}</span>
         </div>
       </div>
 
@@ -171,6 +173,10 @@ import { formatOpsTime, parseOpsDate } from '../../../core/utils/ops-date';
       }
       .time-line small {
         color: var(--color-text-muted);
+      }
+      .time-line .time-day-label {
+        color: var(--color-text-muted);
+        font-size: var(--text-xs);
       }
       .time-line strong {
         font-size: var(--text-lg);
@@ -402,7 +408,8 @@ export class ParkingTimeStepsComponent implements OnInit {
     const q = this.query();
     this.loading.set(true);
     this.error.set(false);
-    if (!q.tariffId || !q.tariffPrice) {
+    // Extensions carry the ticket identifier; OPS supplies their durations and prices.
+    if (!q.tariffId) {
       this.error.set(true);
       this.loading.set(false);
       return;
@@ -443,8 +450,18 @@ export class ParkingTimeStepsComponent implements OnInit {
   startTime(): string {
     return this.stepTime(this.selectedStep().startDatetimeRaw, this.startedAt);
   }
+  startDayLabel(): string {
+    const start = this.stepDate(this.selectedStep().startDatetimeRaw, this.startedAt);
+    return this.relativeDayLabel(start, start);
+  }
   endTime(): string {
     return this.stepTime(this.selectedStep().datetimeRaw, new Date(this.startedAt.getTime() + this.selectedStep().time * 60000));
+  }
+  endDayLabel(): string {
+    const step = this.selectedStep();
+    const start = this.stepDate(step.startDatetimeRaw, this.startedAt);
+    const end = this.stepDate(step.datetimeRaw, new Date(this.startedAt.getTime() + step.time * 60000));
+    return this.relativeDayLabel(end, start);
   }
   amountFormatted(): string {
     return `${this.selectedStep().amount.toFixed(2).replace('.', ',')} €`;
@@ -493,7 +510,17 @@ export class ParkingTimeStepsComponent implements OnInit {
   }
 
   private stepTime(raw: string, fallback: Date): string {
-    if (!/^\d{12}$/.test(raw)) return this.formatTime(fallback);
-    return this.formatTime(parseOpsDate(raw));
+    return this.formatTime(this.stepDate(raw, fallback));
+  }
+
+  private stepDate(raw: string, fallback: Date): Date {
+    return /^\d{12}$/.test(raw) ? parseOpsDate(raw) : fallback;
+  }
+
+  private relativeDayLabel(date: Date, reference: Date): string {
+    const calendarDate = formatOpsCalendarDate(date);
+    if (calendarDate === formatOpsCalendarDate(reference)) return 'ops.today';
+    if (calendarDate === formatOpsCalendarDate(new Date(reference.getTime() + 86_400_000))) return 'ops.tomorrow';
+    return calendarDate;
   }
 }
