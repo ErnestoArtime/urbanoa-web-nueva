@@ -46,11 +46,12 @@ describe('OperationsService stored data migration', () => {
     expect(service.operations()).toEqual([]);
   });
 
-  it('counts active parking and extensions plus only payable fines', async () => {
+  it('counts displayed active parkings plus only payable fines', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
     api.post.and.resolveTo([
-      { operationNumber: 1, operationType: 1, timePeriod: 2, opDate: '120000070926' },
-      { operationNumber: 2, operationType: 2, timePeriod: 2, opDate: '130000070926' },
+      { operationNumber: 1, operationType: 1, timePeriod: 2, opDate: '120000070926', plate: 'AAA111', contractId: 3, sectorId: 10 },
+      { operationNumber: 2, operationType: 2, timePeriod: 2, opDate: '130000070926', plate: 'AAA111', contractId: 3, sectorId: 10 },
+      { operationNumber: 9, operationType: 1, timePeriod: 2, opDate: '130000070926', plate: 'BBB222', contractId: 3, sectorId: 11 },
       { operationNumber: 3, operationType: 1, timePeriod: 1, opDate: '110000070926' },
       { operationNumber: 4, operationType: 2, timePeriod: 3, opDate: '140000070926' },
       ...[1, 2, 3, undefined].map((fineStatus, i) => ({ operationNumber: 5 + i, operationType: 104, fineStatus, opDate: '120000070926' })),
@@ -59,6 +60,10 @@ describe('OperationsService stored data migration', () => {
     TestBed.overrideProvider(OpsSessionService, { useValue: { token: () => 'token' } });
     const service = TestBed.inject(OperationsService);
     await service.load();
+    service.syncActiveParkingsFromOperations([
+      { id: 'vehicle-a', plate: 'AAA111' },
+      { id: 'vehicle-b', plate: 'BBB222' },
+    ]);
     expect(service.operationsBadgeCount()).toBe(3);
   });
 
@@ -446,6 +451,31 @@ describe('OperationsService stored data migration', () => {
         refundable: 2,
       }),
     ]);
+  });
+
+  it('labels an active parking that ends the following day as tomorrow', async () => {
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post', 'serverNow']);
+    api.serverNow.and.returnValue(new Date('2026-09-10T17:30:00Z'));
+    api.post.and.resolveTo([
+      {
+        contractId: 3,
+        operationNumber: 'overnight',
+        operationType: OperationType.PARKING,
+        paymentAmount: 100,
+        opDate: '193300100926',
+        plate: 'AAA111',
+        parkingStartDate: '193300100926',
+        parkingEndDate: '093300110926',
+        timePeriod: 2,
+      },
+    ]);
+    TestBed.overrideProvider(OpsApiClient, { useValue: api });
+    TestBed.overrideProvider(OpsSessionService, { useValue: { token: () => 'token' } });
+    const service = TestBed.inject(OperationsService);
+
+    await service.loadParkingStatuses([{ id: 'vehicle-1', plate: 'AAA111' }]);
+
+    expect(service.activeParkings()[0]).toEqual(jasmine.objectContaining({ startDayLabel: 'ops.today', endDayLabel: 'ops.tomorrow' }));
   });
 
   it('filters active operations by contract without calling QueryParkingStatusAPI', async () => {

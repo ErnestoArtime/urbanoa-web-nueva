@@ -62,9 +62,11 @@ export interface ActiveParking {
   vehicleId: string;
   zone: string;
   startTime: string;
+  startDayLabel?: string;
   durationLabel: string;
   timeRemaining: string;
   endTime: string;
+  endDayLabel?: string;
   latitude?: number;
   longitude?: number;
   street?: string;
@@ -108,7 +110,7 @@ export class OperationsService {
   readonly hasActiveParkingOperations = computed(() => this.activeParkingOperations().length > 0);
   readonly operationsBadgeCount = computed(
     () =>
-      this.activeParkingOperations().length +
+      this._activeParkings().length +
       this._operations().filter((operation) => operation.type === OperationType.UNPAID_FINES && operation.fineStatus === 1).length,
   );
   readonly activeLoading = this._activeLoading.asReadonly();
@@ -220,7 +222,7 @@ export class OperationsService {
   private activeParkingFromOperation(operation: Operation, vehicles: readonly { id: string; plate: string }[]): ActiveParking {
     const plate = operation.plate ?? '';
     const vehicle = vehicles.find((item) => this.normalizePlate(item.plate) === this.normalizePlate(plate));
-    const start = this.operationDateTime(operation.date, operation.startTime);
+    const start = this.operationDateTime(operation.startDate ?? operation.date, operation.startTime);
     const end = this.operationDateTime(operation.endDate ?? operation.date, operation.endTime);
     const now = this.api.serverNow ? this.api.serverNow() : new Date();
     const countdownFrom = Math.max(now.getTime(), start.getTime());
@@ -234,9 +236,11 @@ export class OperationsService {
       vehicleId: vehicle?.id ?? plate,
       zone: operation.sectorName || operation.zoneName || operation.zone || '',
       startTime: operation.startTime ?? '',
+      startDayLabel: this.relativeDayLabel(start, now),
       durationLabel: operation.durationLabel ?? '0 min',
       timeRemaining: `${hours}:${minutes}:${seconds}`,
       endTime: operation.endTime ?? '',
+      endDayLabel: this.relativeDayLabel(end, now),
       latitude: operation.latitude,
       longitude: operation.longitude,
       street: operation.street,
@@ -276,6 +280,14 @@ export class OperationsService {
     if (![day, month, year, hours, minutes].every(Number.isFinite)) return new Date(0);
     const two = (value: number): string => String(value).padStart(2, '0');
     return parseOpsDate(`${two(hours)}${two(minutes)}00${two(day)}${two(month)}${two(year % 100)}`);
+  }
+
+  private relativeDayLabel(date: Date, now: Date): string {
+    if (Number.isNaN(date.getTime())) return '';
+    const calendarDate = formatOpsCalendarDate(date);
+    if (calendarDate === formatOpsCalendarDate(now)) return 'ops.today';
+    if (calendarDate === formatOpsCalendarDate(new Date(now.getTime() + 86_400_000))) return 'ops.tomorrow';
+    return calendarDate;
   }
 
   private activeParkingKey(operation: Operation): string {

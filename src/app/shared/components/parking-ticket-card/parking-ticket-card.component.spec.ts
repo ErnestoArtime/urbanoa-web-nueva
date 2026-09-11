@@ -2,6 +2,7 @@ import { provideZonelessChangeDetection } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import type { ActiveParking } from '../../../core/services/operations.service';
+import { TranslationService } from '../../../core/services/translation.service';
 import { ParkingTicketCardComponent } from './parking-ticket-card.component';
 
 describe('ParkingTicketCardComponent', () => {
@@ -20,7 +21,16 @@ describe('ParkingTicketCardComponent', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
       imports: [ParkingTicketCardComponent],
-      providers: [provideZonelessChangeDetection(), provideRouter([])],
+      providers: [
+        provideZonelessChangeDetection(),
+        provideRouter([]),
+        {
+          provide: TranslationService,
+          useValue: {
+            translate: (key: string) => ({ 'ops.today': 'Hoy', 'ops.tomorrow': 'Mañana' })[key as 'ops.today' | 'ops.tomorrow'] ?? key,
+          },
+        },
+      ],
     });
   });
 
@@ -50,6 +60,25 @@ describe('ParkingTicketCardComponent', () => {
 
     const ticket = fixture.nativeElement.querySelector('.parking-ticket-card') as HTMLElement;
     expect(ticket.style.getPropertyValue('--ticket-header-color')).toBe('#1E88E5');
+  });
+
+  it('shows the start and end day labels and uses a location icon for the street', async () => {
+    const fixture = TestBed.createComponent(ParkingTicketCardComponent);
+    fixture.componentRef.setInput('parking', {
+      ...parking(undefined),
+      street: 'Kale Nagusia',
+      startDayLabel: 'ops.today',
+      endDayLabel: 'ops.tomorrow',
+    });
+
+    await fixture.whenStable();
+
+    const dayLabels = Array.from(fixture.nativeElement.querySelectorAll('.ticket-day-label') as NodeListOf<Element>).map((element) =>
+      element.textContent?.trim(),
+    );
+    expect(dayLabels).toEqual(['Hoy', 'Mañana']);
+    expect(fixture.nativeElement.querySelector('.ticket-street b')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.ticket-street svg')).not.toBeNull();
   });
 
   it('keeps extension enabled independently of hidden unparking', async () => {

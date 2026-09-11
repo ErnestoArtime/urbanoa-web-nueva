@@ -157,6 +157,7 @@
   "ops.clear": "Limpiar",
   "ops.empty": "Selecciona una operación para ver el detalle",
   "ops.today": "Hoy",
+  "ops.tomorrow": "Mañana",
   "ops.thisWeek": "Esta semana",
   "ops.thisMonth": "Este mes",
   "ops.type.parking": "Estacionamiento",

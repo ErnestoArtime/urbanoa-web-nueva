@@ -155,6 +155,7 @@
   "ops.clear": "uk_Limpiar",
   "ops.empty": "uk_Selecciona una operación para ver el detalle",
   "ops.today": "uk_Hoy",
+  "ops.tomorrow": "uk_Mañana",
   "ops.thisWeek": "uk_Esta semana",
   "ops.thisMonth": "uk_Este mes",
   "ops.type.parking": "uk_Estacionamiento",

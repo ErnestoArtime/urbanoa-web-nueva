@@ -79,11 +79,7 @@ export class UnpaidFinesService {
   readonly fines = computed(() =>
     this.operationsService
       .operations()
-      .filter(
-        (operation) =>
-          operation.type === OperationType.UNPAID_FINES &&
-          (operation.fineStatus === FineStatus.PAYABLE || (operation.fineStatus === FineStatus.EXPIRED && operation.timePeriod === 2)),
-      )
+      .filter((operation) => operation.type === OperationType.UNPAID_FINES && operation.fineStatus === FineStatus.PAYABLE)
       .map((operation) => this.mapOperation(operation)),
   );
   readonly source = this.operationsService.source;
@@ -130,7 +126,11 @@ export class UnpaidFinesService {
     const token = this.session.token();
     if (!token || !fine.contractId || !fine.fineNumber) return { success: false };
     try {
-      await this.api.post<string>(OPS_ENDPOINTS.fines.updateStatus, { contractId: fine.contractId, fineNumber: fine.fineNumber }, { token });
+      await this.api.post<string>(
+        OPS_ENDPOINTS.fines.updateStatus,
+        { contractId: fine.contractId, fineNumber: fine.fineNumber },
+        { token },
+      );
       await this.operationsService.load();
       return { success: true };
     } catch (error) {
@@ -139,9 +139,10 @@ export class UnpaidFinesService {
   }
 
   async acknowledgeExpired(id: string): Promise<FineStatusUpdateResult> {
-    const fine = this.fines().find((item) => item.id === id);
-    if (!fine || fine.status === FineStatus.PAYABLE) return { success: false };
-    return this.moveFineToHistory(fine);
+    const operation = this.operationsService
+      .operations()
+      .find((item) => item.id === id && item.type === OperationType.UNPAID_FINES && item.fineStatus === FineStatus.EXPIRED);
+    return operation ? this.moveFineToHistory(this.mapOperation(operation)) : { success: false };
   }
 
   private toApiError(error: unknown, endpoint?: string): OpsApiError {

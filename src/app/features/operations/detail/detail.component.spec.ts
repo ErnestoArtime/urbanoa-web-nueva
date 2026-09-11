@@ -80,4 +80,13 @@ describe('OperationsDetailComponent navigation', () => {
     await fixture.whenStable();
     expect(fixture.nativeElement.querySelector('app-location-map')).toBeNull();
   });
+
+  it('does not replace zero fine coordinates with the municipality map', async () => {
+    operations.update((items) => items.map((op) => ({ ...op, type: OperationType.FINE_PAYMENT, latitude: 0, longitude: 0 })));
+    const fixture = TestBed.createComponent(OperationsDetailComponent);
+
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('app-location-map')).toBeNull();
+  });
 });

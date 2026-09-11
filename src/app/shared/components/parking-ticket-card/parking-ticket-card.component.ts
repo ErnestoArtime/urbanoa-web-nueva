@@ -1,6 +1,6 @@
 import { Component, computed, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { LucideCarFront, LucideNavigation, LucideTimerReset } from '@lucide/angular';
+import { LucideCarFront, LucideMapPin, LucideNavigation, LucideTimerReset } from '@lucide/angular';
 import type { ActiveParking } from '../../../core/services/operations.service';
 import { TranslatePipe } from '../../pipes/translate.pipe';
 import { normalizeSectorColor } from '../../utils/sector-color';
@@ -10,7 +10,7 @@ export type ParkingTicketCardVariant = 'dashboard' | 'operations-current' | 'det
 @Component({
   selector: 'app-parking-ticket-card',
   standalone: true,
-  imports: [RouterLink, TranslatePipe, LucideCarFront, LucideNavigation, LucideTimerReset],
+  imports: [RouterLink, TranslatePipe, LucideCarFront, LucideMapPin, LucideNavigation, LucideTimerReset],
   template: `
     @if (parking(); as active) {
       <article
@@ -34,7 +34,7 @@ export type ParkingTicketCardVariant = 'dashboard' | 'operations-current' | 'det
             <small>{{ 'dashboard.ticket.zone' | translate }}</small>
             <strong>{{ active.zone }}</strong>
             @if (active.street) {
-              <span class="ticket-street"><b aria-hidden="true">i</b>{{ active.street }}</span>
+              <span class="ticket-street"><svg lucideMapPin aria-hidden="true" size="14" strokeWidth="2"></svg>{{ active.street }}</span>
             }
           </div>
           @if (active.operationId; as opId) {
@@ -46,11 +46,17 @@ export type ParkingTicketCardVariant = 'dashboard' | 'operations-current' | 'det
           <div>
             <small>{{ 'dashboard.ticket.start' | translate }}</small>
             <strong>{{ active.startTime }}</strong>
+            @if (active.startDayLabel; as startDayLabel) {
+              <span class="ticket-day-label">{{ startDayLabel | translate }}</span>
+            }
           </div>
           <p>{{ active.durationLabel }}</p>
           <div>
             <small>{{ 'dashboard.ticket.end' | translate }}</small>
             <strong>{{ active.endTime }}</strong>
+            @if (active.endDayLabel; as endDayLabel) {
+              <span class="ticket-day-label">{{ endDayLabel | translate }}</span>
+            }
           </div>
         </div>
 
@@ -137,14 +143,8 @@ export type ParkingTicketCardVariant = 'dashboard' | 'operations-current' | 'det
         color: var(--color-text-muted);
         font-size: var(--text-xs);
       }
-      .ticket-street b {
-        display: inline-grid;
-        place-items: center;
-        width: 1rem;
-        height: 1rem;
-        border: 1px solid currentColor;
-        border-radius: 50%;
-        font-size: 0.7rem;
+      .ticket-street svg {
+        flex: none;
       }
       .ticket-main-row {
         display: flex;
@@ -198,7 +198,8 @@ export type ParkingTicketCardVariant = 'dashboard' | 'operations-current' | 'det
       }
       .ticket-timer,
       .ticket-location small,
-      .ticket-time-row small {
+      .ticket-time-row small,
+      .ticket-day-label {
         color: var(--color-text-muted);
         font-size: var(--text-xs);
       }

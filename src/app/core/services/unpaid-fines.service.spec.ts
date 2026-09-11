@@ -74,7 +74,7 @@ describe('UnpaidFinesService acknowledgeExpired', () => {
 
     expect(api.post).toHaveBeenCalledOnceWith(
       'OPSWebServicesAPI/UpdateFineStatusAPI',
-      { contractId: 7, fine: 'FN-2026-001' },
+      { contractId: 7, fineNumber: 'FN-2026-001' },
       { token: 'token' },
     );
     expect(operations.load).toHaveBeenCalledTimes(1);
@@ -159,15 +159,13 @@ describe('UnpaidFinesService acknowledgeExpired', () => {
 
   it('returns failure with a backend error when the API reports one', async () => {
     const api = {
-      post: jasmine
-        .createSpy('post')
-        .and.rejectWith(
-          new OpsApiError('backend', 'OPSWebServicesAPI/UpdateFineStatusAPI', 'Error al archivar la sanción', 200, {
-            code: -21,
-            type: 2,
-            message_ES: 'No se pudo archivar la sanción',
-          }),
-        ),
+      post: jasmine.createSpy('post').and.rejectWith(
+        new OpsApiError('backend', 'OPSWebServicesAPI/UpdateFineStatusAPI', 'Error al archivar la sanción', 200, {
+          code: -21,
+          type: 2,
+          message_ES: 'No se pudo archivar la sanción',
+        }),
+      ),
     };
     const operations = {
       operations: signal([EXPIRED_FINE]).asReadonly(),
@@ -226,9 +224,9 @@ describe('UnpaidFinesService fines listing rules', () => {
     expect(service.fines().length).toBe(1);
   });
 
-  it('keeps an expired fine within the pay deadline (fineStatus 2 + timePeriod 2)', () => {
+  it('excludes an expired fine even when timePeriod is 2', () => {
     const service = configure({ ...baseFine, fineStatus: FineStatus.EXPIRED, timePeriod: 2 });
-    expect(service.fines().length).toBe(1);
+    expect(service.fines().length).toBe(0);
   });
 
   it('drops an acknowledged fine (fineStatus 2 + timePeriod 1) from the pending list', () => {
@@ -264,7 +262,9 @@ describe('isAcknowledgedFine', () => {
 
 describe('UnpaidFinesService PSD2 confirmation', () => {
   it('returns the challenge URL when ConfirmFinePaymentAPI returns the new object value', async () => {
-    const api = { post: jasmine.createSpy('post').and.resolveTo({ operationId: null, challengeUrl: 'https://paycomet.example/challenge/fine-1' }) };
+    const api = {
+      post: jasmine.createSpy('post').and.resolveTo({ operationId: null, challengeUrl: 'https://paycomet.example/challenge/fine-1' }),
+    };
     const operations = {
       operations: signal([{ ...EXPIRED_FINE, fineStatus: FineStatus.PAYABLE }]).asReadonly(),
       load: jasmine.createSpy('load').and.resolveTo(),

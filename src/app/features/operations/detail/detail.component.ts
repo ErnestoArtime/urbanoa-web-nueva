@@ -545,13 +545,16 @@ export class OperationsDetailComponent {
   readonly fineCoordinates = computed(() => {
     const operation = this.op();
     if (!operation || operation.type !== OperationType.FINE_PAYMENT) return null;
-    return this.citiesService.coordinatesFor({
-      contractId: operation.contractId,
-      cityId: operation.cityId,
-      cityName: operation.cityName,
-      latitude: operation.latitude,
-      longitude: operation.longitude,
-    });
+    const { latitude, longitude } = operation;
+    if (
+      !Number.isFinite(latitude) ||
+      !Number.isFinite(longitude) ||
+      Math.abs(latitude!) > 90 ||
+      Math.abs(longitude!) > 180 ||
+      (latitude === 0 && longitude === 0)
+    )
+      return null;
+    return { latitude: latitude!, longitude: longitude! };
   });
   readonly detailRows = computed(() => {
     const o = this.op();
