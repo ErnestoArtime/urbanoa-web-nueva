@@ -1,6 +1,9 @@
-import { Component, computed, inject, OnInit } from '@angular/core';
+import { Component, computed, inject, OnInit, DestroyRef, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { ParkingFlowStore } from '../parking-flow.store';
+import { Operation } from '../../../shared/models/operation';
+import { normalizeSectorColor } from '../../../shared/utils/sector-color';
+import { parseOpsDate, opsRelativeDayLabel } from '../../../core/utils/ops-date';
+import { TranslationService } from '../../../core/services/translation.service';
 import { ParkingFlowQuery, readParkingFlowQuery } from '../parking-flow.model';
 import { AppIconComponent } from '../../../shared/icons/app-icon.component';
 import { OperationIconComponent } from '../../../shared/components/operation-icon/operation-icon.component';
@@ -16,12 +19,13 @@ import { WalletService } from '../../../core/services/wallet.service';
   template: `
     <div class="page success-page">
       <div class="success-content text-center">
+        @if (receipt()) {
         <div class="success-mark"><span>✓</span><app-icon name="parkingSlip" [stroke]="false" /></div>
         <h1 class="page-title">{{ (isExtension() ? 'parking.extension.success.title' : 'parking.success.title') | translate }}</h1>
         <p class="page-subtitle">{{ (isExtension() ? 'parking.extension.success.subtitle' : 'parking.success.subtitle') | translate }}</p>
         <div class="success-ticket-shell">
           <article class="success-ticket">
-            <div class="ticket-accent"></div>
+            <div class="ticket-accent" [style.background]="sectorColor()"></div>
             <div class="ticket-head">
               <app-operation-icon [type]="parkingType()" />
               <div>
@@ -33,14 +37,14 @@ import { WalletService } from '../../../core/services/wallet.service';
               <div>
                 <small>{{ 'parking.success.start' | translate }}</small
                 ><strong>{{ startTime() }}</strong
-                ><span>{{ 'parking.success.today' | translate }}</span>
+                ><span>{{ startDayLabel() }}</span>
               </div>
-              <i></i><b>{{ query().duration }}</b
+              <i></i><b>{{ query().duration }}<small>{{ countdown() }}</small></b
               ><i></i>
               <div>
                 <small>{{ 'parking.success.end' | translate }}</small
                 ><strong>{{ query().endTime }}</strong
-                ><span>{{ 'parking.success.today' | translate }}</span>
+                ><span>{{ endDayLabel() }}</span>
               </div>
             </div>
             <div class="ticket-cut"><div class="ticket-cut-line"></div></div>
@@ -50,6 +54,11 @@ import { WalletService } from '../../../core/services/wallet.service';
             </div>
           </article>
         </div>
+        } @else {
+          <h1 class="page-title">{{ 'parking.success.receiptPending' | translate }}</h1>
+          <p role="status">{{ 'parking.success.receiptPendingDetail' | translate }}</p>
+          <button class="btn btn-secondary" [disabled]="loadingReceipt()" (click)="loadReceipt()">{{ 'common.retry' | translate }}</button>
+        }
         <div class="actions">
           <a routerLink="/app/home" class="btn btn-primary btn-block">{{ 'parking.success.goHome' | translate }}</a>
           <a routerLink="/app/parking" [queryParams]="{ city: query().city }" class="btn btn-ghost btn-block">{{
@@ -140,7 +149,7 @@ import { WalletService } from '../../../core/services/wallet.service';
       .ticket-accent {
         height: 14px;
         border-radius: 16px 16px 0 0;
-        background: #248cda;
+        background: var(--color-primary);
       }
       .ticket-head {
         display: flex;
@@ -182,6 +191,8 @@ import { WalletService } from '../../../core/services/wallet.service';
         background: var(--color-border);
       }
       .ticket-times b {
+        display: grid;
+        gap: 0.25rem;
         padding: 0.5rem 0.7rem;
         border: 1px solid var(--color-border);
         border-radius: 10px;
@@ -227,26 +238,89 @@ import { WalletService } from '../../../core/services/wallet.service';
 })
 export class ParkingSuccessComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
-  private readonly store = inject(ParkingFlowStore);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly translations = inject(TranslationService);
   private readonly operations = inject(OperationsService);
   private readonly vehicles = inject(VehicleService);
   private readonly wallet = inject(WalletService);
   private readonly initialQuery = readParkingFlowQuery(this.route);
-  readonly query = computed(() =>
-    this.store.hasMinimumParkingData() ? ({ ...this.initialQuery, ...this.store.fromStore() } as ParkingFlowQuery) : this.initialQuery,
-  );
+  readonly receipt = signal<Operation | null>(null);
+  readonly loadingReceipt = signal(false);
+  readonly now = signal(Date.now());
+  readonly sectorColor = computed(() => normalizeSectorColor(this.receipt()?.sectorColor));
+  readonly query = computed(() => {
+    const receipt = this.receipt();
+    return { ...this.initialQuery,
+      plate: receipt?.plate ?? '', zone: receipt?.sectorName || receipt?.zone || '',
+      cityName: receipt?.cityName || receipt?.contractName || '',
+      startTime: receipt?.startTime || '', endTime: receipt?.endTime || '',
+      duration: receipt?.durationLabel || '',
+      amount: receipt ? new Intl.NumberFormat(this.locale(), { style: 'currency', currency: 'EUR' }).format(Math.abs(receipt.amount)) : '',
+    } as ParkingFlowQuery;
+  });
   readonly isExtension = computed(() => this.query().mode === 'extension');
   readonly parkingType = computed(() => (this.isExtension() ? OperationType.PARKING_EXTENSION : OperationType.PARKING));
 
   async ngOnInit(): Promise<void> {
-    await Promise.all([this.operations.load(), this.wallet.load()]);
-    this.operations.syncActiveParkingsFromOperations(this.vehicles.vehicles());
+    const timer = setInterval(() => this.now.set(Date.now()), 1000);
+    this.destroyRef.onDestroy(() => clearInterval(timer));
+    await this.loadReceipt();
   }
 
-  startTime(): string {
-    if (this.query().startTime) return this.query().startTime;
-    const [hours, minutes] = (this.query().endTime || '00:00').split(':').map(Number);
-    const start = (hours * 60 + minutes - Number(this.query().minutes || 0) + 24 * 60) % (24 * 60);
-    return `${String(Math.floor(start / 60)).padStart(2, '0')}:${String(start % 60).padStart(2, '0')}`;
+  async loadReceipt(): Promise<void> {
+    if (this.loadingReceipt()) return;
+    this.loadingReceipt.set(true);
+    try {
+      await Promise.all([this.operations.load(), this.wallet.load()]);
+      const id = this.initialQuery['operationId'];
+      const matches = this.operations.operations().filter(operation =>
+        !!id && (operation.id === id || operation.operationNumber === id) && operation.type === this.parkingType() &&
+        (!this.initialQuery.cityId || operation.contractId === Number(this.initialQuery.cityId)));
+      this.receipt.set(this.operations.source() === 'remote' && matches.length === 1 ? matches[0] : null);
+      this.operations.syncActiveParkingsFromOperations(this.vehicles.vehicles());
+    } catch {
+      this.receipt.set(null);
+    } finally {
+      this.loadingReceipt.set(false);
+    }
   }
+
+  startTime(): string { return this.receipt()?.startTime || ''; }
+
+  startDayLabel(): string {
+    return this.dayLabel(this.parkingDate('start'));
+  }
+
+  endDayLabel(): string {
+    return this.dayLabel(this.parkingDate('end'));
+  }
+
+  readonly countdown = computed(() => {
+    const start = this.parkingDate('start');
+    const end = this.parkingDate('end');
+    if (!start || !end) return '';
+    if (this.now() < start.getTime()) return this.translations.translate('parking.success.startsLater');
+    const remaining = Math.max(0, Math.ceil((end.getTime() - this.now()) / 1000));
+    return [Math.floor(remaining / 3600), Math.floor(remaining % 3600 / 60), remaining % 60]
+      .map(value => String(value).padStart(2, '0')).join(':');
+  });
+
+  private parkingDate(part: 'start' | 'end'): Date | null {
+    const receipt = this.receipt();
+    const day = part === 'start' ? receipt?.startDate : receipt?.endDate;
+    const time = part === 'start' ? receipt?.startTime : receipt?.endTime;
+    if (!day || !time) return null;
+    const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(day);
+    const date = match ? parseOpsDate(`${time.replace(':', '')}00${match[1]}${match[2]}${match[3].slice(-2)}`) : parseOpsDate(day);
+    return Number.isFinite(date.getTime()) ? date : null;
+  }
+
+  private dayLabel(date: Date | null): string {
+    if (!date) return '';
+    const label = opsRelativeDayLabel(date, new Date(this.now()));
+    return label.startsWith('ops.') ? this.translations.translate(label)
+      : new Intl.DateTimeFormat(this.locale(), { timeZone: 'Europe/Madrid', day: 'numeric', month: 'short', year: 'numeric' }).format(date);
+  }
+
+  private locale(): string { return this.translations.currentLang$() === 'uk' ? 'en-GB' : this.translations.currentLang$(); }
 }

@@ -65,4 +65,6 @@ export const canAccessParkingLocationStep = makeGuard('location');
 export const canAccessParkingTicketStep = makeGuard('ticket');
 export const canAccessParkingTimeStep = makeGuard('time');
 export const canAccessParkingConfirmStep = makeGuard('confirm');
-export const canAccessParkingSuccessStep = makeGuard('success');
+// A receipt must survive reload without the wizard's transient form state.
+// The success component validates the operation ID against authenticated remote data.
+export const canAccessParkingSuccessStep: CanActivateFn = () => true;

@@ -16,6 +16,7 @@ import { Operation } from '../../../shared/models/operation';
 import { OperationType } from '../../../shared/models/operation-type';
 import { parseOpsDate } from '../../../core/utils/ops-date';
 import { ResultModalComponent } from '../../../shared/components/result-modal/result-modal.component';
+import { isCardUsable } from '../../../core/utils/card-expiry';
 
 @Component({
   selector: 'app-parking-confirm',
@@ -64,19 +65,20 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
       </div>
 
       <app-payment-summary [wallet]="wallet()" [totalAmount]="totalAmount()">
-        <section class="payment-selector" [class.empty-payment]="requiresCard() && !walletService.cards().length">
+        <section class="payment-selector" [class.empty-payment]="requiresCard() && !usableCards().length">
           <p class="wallet-priority">
             {{ 'payment.walletPriority' | translate: { balance: walletService.balance().toFixed(2).replace('.', ',') } }}
           </p>
-          @if (requiresCard() && walletService.cards().length > 1) {
+          @if (requiresCard() && usableCards().length > 1) {
             <p class="card-needed">{{ 'payment.chooseCard' | translate: { amount: cardAmount().toFixed(2).replace('.', ',') } }}</p>
             @for (card of walletService.cards(); track card.id) {
-              <label class="payment-option" [class.selected]="selectedCard().id === card.id">
+              <label class="payment-option" [class.selected]="selectedCard().id === card.id" [class.disabled]="!isCardUsable(card)">
                 <input
                   type="radio"
                   name="parking-payment"
                   [value]="card.id"
                   [checked]="selectedCard().id === card.id"
+                  [disabled]="!isCardUsable(card)"
                   (change)="selectedCardId.set(card.id)"
                 />
                 <span>{{ card.brand }} •••• {{ card.last4 }}</span
@@ -268,8 +270,10 @@ export class ParkingConfirmComponent implements OnInit {
     this.store.hasMinimumParkingData() ? ({ ...this.initialQuery, ...this.store.fromStore() } as ParkingFlowQuery) : this.initialQuery,
   );
   readonly selectedCardId = signal(this.walletService.defaultCardId());
+  readonly isCardUsable = isCardUsable;
+  readonly usableCards = computed(() => this.walletService.cards().filter((card) => isCardUsable(card)));
   readonly selectedCard = computed(
-    () => this.walletService.cards().find((card) => card.id === this.selectedCardId()) ?? this.walletService.mainCard,
+    () => this.usableCards().find((card) => card.id === this.selectedCardId()) ?? this.walletService.mainCard,
   );
   readonly wallet = computed(() => ({
     balance: this.walletService.balance(),
@@ -300,7 +304,7 @@ export class ParkingConfirmComponent implements OnInit {
   async onSwipeComplete(): Promise<void> {
     if (this.confirmationPending || this.walletService.loading() || this.walletManagerOpen()) return;
     const amount = this.totalAmount();
-    const cards = this.walletService.cards();
+    const cards = this.usableCards();
     if (this.requiresCard() && !cards.length) {
       this.paymentAlertOpen.set(true);
       this.swipePay.reset();
