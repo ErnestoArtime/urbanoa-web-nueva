@@ -581,7 +581,6 @@ export class ParkingWizardLayoutComponent implements OnInit {
   readonly query = computed(() => {
     const urlParams = this.router.parseUrl(this.url()).queryParams as Record<string, string>;
     const s = this.store.vm();
-    const cityIdentifier = urlParams['city'] || urlParams['municipio'] || s.city || '';
     const cityName = s.cityName || urlParams['cityName'] || '';
     return {
       ...urlParams,
@@ -607,10 +606,12 @@ export class ParkingWizardLayoutComponent implements OnInit {
     this.vehiclePickerOpen.set(false);
     if (!this.canChangeVehicle() || !this.store.selectVehicle(vehicle.id, vehicle.plate)) return;
 
+    const current = this.router.parseUrl(this.url()).queryParams as Record<string, string>;
+    const queryParams = { ...current, ...this.store.toQueryParams() };
     const returnToTickets = this.currentStep() > 0;
     void this.router.navigate(returnToTickets ? ['/app/parking/tickets'] : [], {
       relativeTo: returnToTickets ? undefined : this.route,
-      queryParams: this.store.toQueryParams(),
+      queryParams,
     });
   }
 

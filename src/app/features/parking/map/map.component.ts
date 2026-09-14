@@ -36,7 +36,9 @@ interface MapParkingZone {
           <h1>{{ 'parking.map.title' | translate }}</h1>
           <span>{{ 'parking.map.subtitle' | translate }}</span>
         </div>
-        <a routerLink="/app/parking/cities" class="btn btn-secondary">{{ 'parking.map.searchMunicipio' | translate }}</a>
+        <a routerLink="/app/parking/cities" [queryParams]="vehicleQueryParams()" class="btn btn-secondary">{{
+          'parking.map.searchMunicipio' | translate
+        }}</a>
       </header>
       @if (flowError()) {
         <p class="flow-warning">{{ 'parking.flow.missingData' | translate }}</p>
@@ -710,7 +712,17 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
 
   vehicleQueryParams(): Record<string, string> {
     const vehicle = this.selectedVehicle();
-    return vehicle ? { vehicleId: vehicle.id, plate: vehicle.plate } : {};
+    const params: Record<string, string> = {};
+    if (this.selected.id) {
+      params['city'] = this.selected.id;
+      params['cityId'] = String(this.selected.contractId);
+      params['cityName'] = this.selected.nombre;
+    }
+    if (vehicle) {
+      params['vehicleId'] = vehicle.id;
+      params['plate'] = vehicle.plate;
+    }
+    return params;
   }
 
   async ngAfterViewInit(): Promise<void> {

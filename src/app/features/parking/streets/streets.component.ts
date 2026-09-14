@@ -154,11 +154,27 @@ export class ParkingStreetsComponent implements OnInit {
   readonly search = signal('');
   readonly loading = signal(true);
   readonly dataSource = signal<'loading' | 'remote' | 'error'>('loading');
-  readonly cityId = this.route.snapshot.queryParamMap.get('city') ?? this.route.snapshot.queryParamMap.get('municipio') ?? '';
-  readonly cityName = this.route.snapshot.queryParamMap.get('cityName') ?? '';
-  readonly selectedCityName = this.cityName;
-  readonly plate = this.route.snapshot.queryParamMap.get('plate') ?? this.flowStore.vm().plate ?? '';
-  readonly vehicleId = this.route.snapshot.queryParamMap.get('vehicleId') ?? this.flowStore.vm().vehicleId ?? '';
+  get cityId(): string {
+    return (
+      this.route.snapshot.queryParamMap.get('city') ??
+      this.route.snapshot.queryParamMap.get('municipio') ??
+      this.flowStore.vm().city ??
+      this.flowStore.vm().cityId ??
+      ''
+    );
+  }
+  get cityName(): string {
+    return this.route.snapshot.queryParamMap.get('cityName') ?? this.flowStore.vm().cityName ?? '';
+  }
+  get selectedCityName(): string {
+    return this.cityName;
+  }
+  get plate(): string {
+    return this.flowStore.vm().plate ?? this.route.snapshot.queryParamMap.get('plate') ?? '';
+  }
+  get vehicleId(): string {
+    return this.flowStore.vm().vehicleId ?? this.route.snapshot.queryParamMap.get('vehicleId') ?? '';
+  }
   readonly filteredStreets = computed(() => {
     const term = this.search().trim().toLocaleLowerCase('es');
     return term
@@ -169,6 +185,13 @@ export class ParkingStreetsComponent implements OnInit {
   });
 
   async ngOnInit(): Promise<void> {
+    if (this.cityId || this.cityName) {
+      this.flowStore.update({
+        city: this.cityId,
+        cityId: String(this.citiesService.contractIdFor(this.cityId) || ''),
+        cityName: this.cityName,
+      });
+    }
     await this.loadStreets();
   }
 

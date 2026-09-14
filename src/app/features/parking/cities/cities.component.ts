@@ -51,7 +51,7 @@ const EMPTY_CITY: ParkingMunicipio = {
         <div class="municipios-panel">
           <div class="municipios-grid">
             @for (m of filteredMunicipios(); track m.id) {
-              <button type="button" class="municipio-card" [class.active]="selected().id === m.id" (click)="selected.set(m)">
+              <button type="button" class="municipio-card" [class.active]="selected().id === m.id" (click)="selectCity(m)">
                 <div class="municipio-img">
                   @if (m.imagePath || m.imagen) {
                     <img [src]="'assets/municipios/' + m.imagen" [alt]="'parking.cities.viewOf' | translate: { name: m.nombre }" />
@@ -101,7 +101,14 @@ const EMPTY_CITY: ParkingMunicipio = {
             >
             <a
               routerLink="/app/parking/streets"
-              [queryParams]="{ municipio: selected().id, vehicleId: vehicleId, plate: vehiclePlate }"
+              [queryParams]="{
+                municipio: selected().id,
+                city: selected().id,
+                cityId: selected().contractId,
+                cityName: selected().nombre,
+                vehicleId: vehicleId,
+                plate: vehiclePlate,
+              }"
               class="btn btn-secondary btn-block"
               >{{ 'parking.cities.viewStreets' | translate }}</a
             >
@@ -377,8 +384,12 @@ export class ParkingCitiesComponent implements OnInit {
   private readonly citiesService = inject(CitiesService);
   readonly flowStore = inject(ParkingFlowStore);
   readonly route = inject(ActivatedRoute);
-  readonly vehicleId = this.route.snapshot.queryParamMap.get('vehicleId') ?? this.flowStore.vm().vehicleId ?? '';
-  readonly vehiclePlate = this.route.snapshot.queryParamMap.get('plate') ?? this.flowStore.vm().plate ?? '';
+  get vehicleId(): string {
+    return this.flowStore.vm().vehicleId ?? this.route.snapshot.queryParamMap.get('vehicleId') ?? '';
+  }
+  get vehiclePlate(): string {
+    return this.flowStore.vm().plate ?? this.route.snapshot.queryParamMap.get('plate') ?? '';
+  }
   readonly municipios = signal<ParkingMunicipio[]>([]);
   readonly selected = signal(this.defaultCity());
   readonly dataSource = signal<'loading' | 'remote' | 'error'>('loading');
@@ -395,7 +406,28 @@ export class ParkingCitiesComponent implements OnInit {
     }
   }
 
+  selectCity(city: ParkingMunicipio): void {
+    this.selected.set(city);
+    this.flowStore.update({ city: city.id, cityId: String(city.contractId), cityName: city.nombre });
+  }
+
+  private currentCityMatch(): ParkingMunicipio | null {
+    const params = this.route.snapshot.queryParamMap;
+    const store = this.flowStore.vm();
+    const id = params.get('city') ?? params.get('municipio') ?? store.city ?? '';
+    const contractId = params.get('cityId') ?? store.cityId ?? '';
+    const name = params.get('cityName') ?? store.cityName ?? '';
+    if (!id && !contractId && !name) return null;
+    return (
+      this.municipios().find(
+        (m) => (id && m.id === id) || (contractId && String(m.contractId) === contractId) || (name && m.nombre === name),
+      ) ?? null
+    );
+  }
+
   private defaultCity(): ParkingMunicipio {
+    const current = this.currentCityMatch();
+    if (current) return current;
     const preferredId = this.locationSettings.settings().preferredCityId;
     if (preferredId) {
       const match = this.municipios().find((m) => m.id === preferredId || String(m.contractId) === preferredId);

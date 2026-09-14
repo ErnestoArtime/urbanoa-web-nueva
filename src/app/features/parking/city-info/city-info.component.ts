@@ -96,8 +96,12 @@ export class ParkingCityInfoComponent implements OnInit {
   readonly flowStore = inject(ParkingFlowStore);
   readonly municipio = signal<ParkingMunicipio | null>(null);
   readonly error = signal(false);
-  readonly vehicleId = this.route.snapshot.queryParamMap.get('vehicleId') ?? this.flowStore.vm().vehicleId ?? '';
-  readonly vehiclePlate = this.route.snapshot.queryParamMap.get('plate') ?? this.flowStore.vm().plate ?? '';
+  get vehicleId(): string {
+    return this.flowStore.vm().vehicleId ?? this.route.snapshot.queryParamMap.get('vehicleId') ?? '';
+  }
+  get vehiclePlate(): string {
+    return this.flowStore.vm().plate ?? this.route.snapshot.queryParamMap.get('plate') ?? '';
+  }
 
   mapsUrl(address: string): string {
     return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
