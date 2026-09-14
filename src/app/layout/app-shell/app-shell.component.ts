@@ -28,7 +28,7 @@ const TITLE_KEYS: Record<string, string> = {
   '/app/parking/ticket': 'parking.title',
   '/app/parking/time-steps': 'parking.extend',
   '/app/parking/confirm': 'parking.confirmStart',
-  '/app/parking/success': 'parking.success',
+  '/app/parking/success': 'parking.wizard.step5.label',
   '/app/operations/detail': 'ops.detail',
   '/app/operations/unpaid-fines': 'ops.sanciones',
   '/app/operations/unpaid-fine-detail': 'ops.detail',

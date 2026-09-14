@@ -86,11 +86,11 @@ export type ResultType = 'success' | 'error' | 'warning' | 'confirmation' | 'del
           <p class="result-message">{{ msg }}</p>
         }
         <div class="result-actions">
-          <button type="button" class="btn btn-primary btn-block" (click)="primaryAction.emit()">
+          <button type="button" class="btn btn-primary btn-block" [disabled]="busy()" (click)="primaryAction.emit()">
             {{ primaryText() }}
           </button>
           @if (secondaryText(); as text) {
-            <button type="button" class="btn btn-ghost btn-block mt-1" (click)="secondaryAction.emit()">
+            <button type="button" class="btn btn-ghost btn-block mt-1" [disabled]="busy()" (click)="secondaryAction.emit()">
               {{ text }}
             </button>
           }
@@ -164,6 +164,7 @@ export type ResultType = 'success' | 'error' | 'warning' | 'confirmation' | 'del
   ],
 })
 export class ResultModalComponent {
+  readonly busy = input(false);
   readonly type = input.required<ResultType>();
   readonly title = input.required<string>();
   readonly message = input<string>();
