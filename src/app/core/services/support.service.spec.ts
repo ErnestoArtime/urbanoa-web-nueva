@@ -8,6 +8,29 @@ import { SupportService } from './support.service';
 import { UserService } from './user.service';
 
 describe('SupportService', () => {
+  it('reconstructs replies, normalizes OPS dates and retains attachment-only responses', async () => {
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
+    const base = { contractId: 1, type: 1, subtype: 1, status: 1, read: 1 };
+    api.post.and.resolveTo({ feedback: [
+      { ...base, id: 14, baseId: 12, read: 0, date: '130000260826', message: 'Reply', response: '', files: [{ filename: 'answer.pdf', direction: 1, payload: 'JVBERi0=', path: 'C:\\private\\answer.pdf' }] },
+      { ...base, id: 12, date: '120000260826', message: 'Original' },
+    ] });
+    TestBed.configureTestingModule({ providers: [provideZonelessChangeDetection(),
+      { provide: OpsApiClient, useValue: api }, { provide: OpsSessionService, useValue: { token: () => 'token' } },
+      { provide: CitiesService, useValue: { nameFor: () => 'City' } },
+      { provide: UserService, useValue: {} },
+    ] });
+    const service = TestBed.inject(SupportService);
+    await service.load();
+    expect(service.threads().length).toBe(1);
+    expect(service.getById('12')?.messages.map(message => message.body)).toEqual(['Original', 'Reply', '']);
+    expect(service.getById('12')?.messages[0].createdAt).toBe('2026-08-26T10:00:00.000Z');
+    expect(service.getById('12')?.messages[2].attachments?.[0].dataUrl).toBe('data:application/pdf;base64,JVBERi0=');
+    expect(service.getById('14')?.id).toBe('12');
+    await service.markAsRead('14');
+    expect(api.post).toHaveBeenCalledWith(OPS_ENDPOINTS.support.update, { id: 14, contractId: 1, read: 1 }, { token: 'token' });
+    expect(service.getById('12')?.unread).toBeFalse();
+  });
   it('loads support conversations from QueryUserFeedbackAPI', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
     api.post.and.resolveTo({
@@ -36,6 +59,50 @@ describe('SupportService', () => {
     );
     expect(OPS_ENDPOINTS.support.query).toBe('OPSWebServicesAPI/QueryUserFeedbackAPI');
     expect(service.threads()[0]).toEqual(jasmine.objectContaining({ id: '12', plate: '1234567', unread: true }));
+  });
+
+  it('maps Swagger FileInfo attachments into the conversation messages', async () => {
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
+    api.post.and.resolveTo({
+      feedback: [
+        {
+          id: 13,
+          contractId: 1,
+          date: '120000260826',
+          dateSent: '130000260826',
+          type: 1,
+          subtype: 1,
+          message: 'Con foto',
+          status: 2,
+          read: 1,
+          response: 'Recibido',
+          files: [
+            { filename: 'evidencia.png', payload: 'aGVsbG8=', direction: 0 },
+            { filename: 'respuesta.pdf', url: 'https://example.test/respuesta.pdf', direction: 1 },
+          ],
+        },
+      ],
+    });
+    TestBed.configureTestingModule({
+      providers: [
+        provideZonelessChangeDetection(),
+        { provide: OpsApiClient, useValue: api },
+        { provide: OpsSessionService, useValue: { token: () => 'token' } },
+        { provide: CitiesService, useValue: { contractIdFor: () => 1, nameFor: () => 'Durango' } },
+        { provide: UserService, useValue: { user: signal({ email: 'user@example.com' }), load: jasmine.createSpy() } },
+      ],
+    });
+
+    const service = TestBed.inject(SupportService);
+    await service.load();
+    const messages = service.threads()[0].messages;
+
+    expect(messages[0].attachments?.[0]).toEqual(
+      jasmine.objectContaining({ name: 'evidencia.png', type: 'image/png', dataUrl: 'data:image/png;base64,aGVsbG8=' }),
+    );
+    expect(messages[1].attachments?.[0]).toEqual(
+      jasmine.objectContaining({ name: 'respuesta.pdf', type: 'application/pdf', dataUrl: 'https://example.test/respuesta.pdf' }),
+    );
   });
 
   it('allows feedback without a plate because only contractId is required by Swagger', async () => {
@@ -74,7 +141,7 @@ describe('SupportService', () => {
 
   it('sends feedback using the contract expected by the APK', async () => {
     jasmine.clock().install();
-    jasmine.clock().mockDate(new Date(2026, 7, 27, 2, 27, 47));
+    jasmine.clock().mockDate(new Date('2026-08-27T00:27:47Z'));
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
     api.post.and.resolveTo('123');
 

@@ -1,15 +1,14 @@
-import { DatePipe } from '@angular/common';
 import { Component, computed, inject } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { LucideHeadphones, LucideImage, LucideMessageSquareReply, LucideUserRound } from '@lucide/angular';
-import { SupportService } from '../../../core/services/support.service';
+import { SupportAttachment, SupportMessage, SupportService } from '../../../core/services/support.service';
 import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { TranslationService } from '../../../core/services/translation.service';
 
 @Component({
   selector: 'app-account-support-detail',
   imports: [
-    DatePipe,
     RouterLink,
     LucideHeadphones,
     LucideImage,
@@ -44,11 +43,11 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
               <div class="message-bubble">
                 <div class="message-author">
                   <strong>{{ (message.author === 'support' ? 'account.support.agent' : 'account.support.you') | translate }}</strong>
-                  <time [attr.datetime]="message.createdAt">{{ message.createdAt | date: 'dd/MM/yyyy · HH:mm' }}</time>
+                  <time [attr.datetime]="message.createdAt || null">{{ messageDate(message.createdAt) }}</time>
                 </div>
                 <p>{{ message.body }}</p>
-                @if (message.attachment; as attachment) {
-                  <a class="message-attachment" [href]="attachment.dataUrl" target="_blank" rel="noopener">
+                @for (attachment of attachmentsFor(message); track $index) {
+                  <a class="message-attachment" [href]="attachment.dataUrl" [attr.download]="attachment.dataUrl.startsWith('data:') ? attachment.name : null" target="_blank" rel="noopener">
                     @if (attachment.type.startsWith('image/')) {
                       <img [src]="attachment.dataUrl" [alt]="attachment.name" />
                     } @else {
@@ -230,10 +229,18 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
   `,
 })
 export class AccountSupportDetailComponent {
+  private readonly translations = inject(TranslationService);
   private readonly route = inject(ActivatedRoute);
   readonly support = inject(SupportService);
   private readonly threadId = this.route.snapshot.paramMap.get('id') ?? '';
-  readonly thread = computed(() => this.support.threads().find((item) => item.id === this.threadId));
+  readonly thread = computed(() => this.support.getById(this.threadId));
+
+  messageDate(value: string): string {
+    const date = new Date(value);
+    if (!Number.isFinite(date.getTime())) return '';
+    const lang = this.translations.currentLang$();
+    return new Intl.DateTimeFormat(lang === 'uk' ? 'en-GB' : lang, { timeZone: 'Europe/Madrid', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(date);
+  }
 
   constructor() {
     void this.initialize();
@@ -254,6 +261,10 @@ export class AccountSupportDetailComponent {
 
   statusKey(): string {
     return `account.support.status.${this.thread()?.status ?? 'submitted'}`;
+  }
+
+  attachmentsFor(message: SupportMessage): SupportAttachment[] {
+    return message.attachments ?? (message.attachment ? [message.attachment] : []);
   }
 
   referenceId(id: string): string {
