@@ -279,16 +279,18 @@ export class SupportService {
     };
   }
 
-  private mapRemoteThread(item: RemoteFeedbackDto): SupportThread {
+  private mapRemoteThread(item: RemoteFeedbackDto, replyRecord = false): SupportThread {
     const remoteAttachments = (item.files ?? [])
       .map((file) => ({ direction: file.direction, attachment: this.mapRemoteFile(file) }))
       .filter((item): item is { direction: number | null | undefined; attachment: SupportAttachment } => item.attachment !== null);
-    const userFiles = remoteAttachments.filter((file) => file.direction !== 1).map((file) => file.attachment);
+    const userFiles = replyRecord ? [] : remoteAttachments.filter((file) => file.direction !== 1).map((file) => file.attachment);
     const supportFiles = remoteAttachments.filter((file) => file.direction === 1).map((file) => file.attachment);
     const date = this.normalizedDate(item.date);
     const responseDate = this.normalizedDate(item.dateSent || item.date);
     const userMessage = this.messageWithAttachments(`${item.id}-user`, 'user', item.message ?? '', date, userFiles);
-    const supportMessage = item.response || supportFiles.length
+    const supportMessage = replyRecord
+      ? this.messageWithAttachments(`${item.id}-support`, 'support', item.response ?? '', responseDate, supportFiles)
+      : item.response || supportFiles.length
       ? this.messageWithAttachments(`${item.id}-support`, 'support', item.response ?? '', responseDate, supportFiles)
       : null;
     return {
@@ -332,7 +334,7 @@ export class SupportService {
     return [...groups.entries()].map(([id, records]) => {
       for (const record of records) this.aliases.set(String(record.id), String(id));
       this.unreadMembers.set(String(id), records.filter(record => record.read === 0).map(record => record.id));
-      const mapped = records.map(record => this.mapRemoteThread(record));
+      const mapped = records.map(record => this.mapRemoteThread(record, record.baseId != null));
       mapped.sort((a, b) => a.updatedAt.localeCompare(b.updatedAt));
       const root = mapped.find(thread => thread.id === String(id)) ?? mapped[0];
       const latest = mapped[mapped.length - 1];
