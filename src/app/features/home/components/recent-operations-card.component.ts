@@ -33,7 +33,7 @@ import { isAcknowledgedFine } from '../../../core/services/unpaid-fines.service'
                 </div>
               }
               <div class="list-item-subtitle">
-                {{ op.date }}{{ operationTime(op) ? ' · ' + operationTime(op) : '' }}{{ op.zone ? ' — ' + op.zone : '' }}
+                {{ op.zone }}
               </div>
               @if (op.plate) {
                 <div class="operation-meta">
@@ -44,9 +44,15 @@ import { isAcknowledgedFine } from '../../../core/services/unpaid-fines.service'
                 </div>
               }
             </div>
-            <span [class]="op.amount > 0 ? 'operation-amount operation-amount-credit' : 'operation-amount operation-amount-debit'">
-              {{ op.amount > 0 ? '+' : '' }}{{ op.amount | number: '1.2-2' }} €
-            </span>
+            <div class="operation-price-date">
+              <span class="operation-date">{{ op.date }}</span>
+              @if (operationTime(op)) {
+                <span class="operation-time">{{ operationTime(op) }}</span>
+              }
+              <span [class]="op.amount > 0 ? 'operation-amount operation-amount-credit' : 'operation-amount operation-amount-debit'">
+                {{ op.amount > 0 ? '+' : '' }}{{ op.amount | number: '1.2-2' }} €
+              </span>
+            </div>
           </a>
         }
       </ul>
@@ -66,6 +72,19 @@ import { isAcknowledgedFine } from '../../../core/services/unpaid-fines.service'
       .operation-history-card .operation-meta {
         color: var(--color-text-muted);
         font-size: var(--text-xs);
+      }
+      .operation-history-card .operation-price-date {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 0.2rem;
+        flex-shrink: 0;
+      }
+      .operation-history-card .operation-date,
+      .operation-history-card .operation-time {
+        color: var(--color-text-muted);
+        font-size: var(--text-xs);
+        white-space: nowrap;
       }
       .operation-history-card .operation-amount {
         display: inline-flex;

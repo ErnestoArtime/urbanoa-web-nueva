@@ -13,6 +13,7 @@ import { OPS_ENDPOINTS } from '../../../core/api/ops-endpoints';
 import { UserService } from '../../../core/services/user.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { formatOpsDate } from '../../../core/utils/ops-date';
+import { ReportArtifactService } from '../../../core/services/report-artifact.service';
 
 type ReportRange = 'last7' | 'last14' | 'last30' | 'last6m' | 'last12m' | 'last5y';
 type ReportFilterKey = 'parks' | 'extends' | 'refunds' | 'recharges' | 'balanceRefunds' | 'fines';
@@ -259,6 +260,7 @@ export class ReportComponent {
   private readonly session = inject(OpsSessionService);
   private readonly userService = inject(UserService);
   private readonly authService = inject(AuthService);
+  private readonly reportArtifact = inject(ReportArtifactService);
 
   readonly form = this.fb.nonNullable.group({
     customDates: [false],
@@ -333,7 +335,7 @@ export class ReportComponent {
   }
 
   async generateReport(): Promise<void> {
-    if (this.dateRangeError()) return;
+    if (this.dateRangeError() || this.isGenerating()) return;
     this.isGenerating.set(true);
     this.reportError.set(false);
     const viewer = globalThis.open('', '_blank');
@@ -357,10 +359,9 @@ export class ReportComponent {
         { token },
       );
       const pdf = this.base64Pdf(content);
-      const url = URL.createObjectURL(pdf);
+      const url = this.reportArtifact.set(pdf);
       if (viewer) viewer.location.href = url;
       else globalThis.open(url, '_blank');
-      setTimeout(() => URL.revokeObjectURL(url), 60_000);
       completed = true;
     } catch {
       viewer?.close();

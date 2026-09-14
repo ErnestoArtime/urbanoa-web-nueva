@@ -4,7 +4,7 @@ import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
 import { distinctUntilChanged, map } from 'rxjs/operators';
 import { OperationsService } from '../../../core/services/operations.service';
-import { isAcknowledgedFine } from '../../../core/services/unpaid-fines.service';
+import { isHistoricalUnpaidFine } from '../../../core/services/unpaid-fines.service';
 import { OperationType } from '../../../shared/models/operation-type';
 import { OperationIconComponent } from '../../../shared/components/operation-icon/operation-icon.component';
 import { AppIconComponent } from '../../../shared/icons/app-icon.component';
@@ -32,18 +32,22 @@ import { CitiesService } from '../../../core/services/cities.service';
 
               <strong class="fine-payment-amount">{{ formatFineAmount(absoluteAmount()) }} €</strong>
 
-              @if (isAcknowledgedFineDetail() && operation.fineValidDate) {
-                <div class="fine-payment-status">
-                  <span class="fine-payment-row-icon"><app-icon name="schedule" [stroke]="false" /></span>
-                  <div>
-                    <span>{{ 'ops.fineDetail.earlyPaymentEnd' | translate }}</span>
-                    <strong>{{ operation.fineValidDate }}</strong>
+              @if (isAcknowledgedFineDetail()) {
+                @if (operation.fineStatus === 2 && operation.fineValidDate) {
+                  <div class="fine-payment-status">
+                    <span class="fine-payment-row-icon"><app-icon name="schedule" [stroke]="false" /></span>
+                    <div>
+                      <span>{{ 'ops.fineDetail.earlyPaymentEnd' | translate }}</span>
+                      <strong>{{ operation.fineValidDate }}</strong>
+                    </div>
                   </div>
-                </div>
-                <div class="fine-payment-status-message">
-                  <span class="fine-payment-row-icon">!</span>
-                  <p>{{ 'ops.fineDetail.statusMessage.2' | translate }}</p>
-                </div>
+                }
+                @if (operation.fineStatus === 2 || operation.fineStatus === 3) {
+                  <div class="fine-payment-status-message">
+                    <span class="fine-payment-row-icon">!</span>
+                    <p>{{ ('ops.fineDetail.statusMessage.' + operation.fineStatus) | translate }}</p>
+                  </div>
+                }
               }
 
               @if (!isAcknowledgedFineDetail()) {
@@ -133,7 +137,7 @@ import { CitiesService } from '../../../core/services/cities.service';
                 </div>
               </div>
               <div class="top-up-row">
-                <span class="top-up-row-icon"><app-icon name="operationTopUp" [stroke]="false" /></span>
+                <span class="top-up-row-icon"><app-icon name="coins" [stroke]="false" /></span>
                 <div>
                   <span>{{ 'ops.detail.amount' | translate }}</span>
                   <strong class="positive">+{{ formatFineAmount(absoluteAmount()) }} €</strong>
@@ -589,12 +593,12 @@ export class OperationsDetailComponent {
   readonly opType = computed(() => this.op()?.type ?? OperationType.PARKING);
   readonly isFinePaymentDetail = computed(() => {
     const operation = this.op();
-    return (operation?.type === OperationType.FINE_PAYMENT || (operation !== undefined && isAcknowledgedFine(operation))) ?? false;
+    return (operation?.type === OperationType.FINE_PAYMENT || (operation !== undefined && isHistoricalUnpaidFine(operation))) ?? false;
   });
   readonly ticketHeaderColor = computed(() => normalizeSectorColor(this.op()?.sectorColor));
   readonly detailTitle = computed(() => {
     const operation = this.op();
-    if (operation !== undefined && isAcknowledgedFine(operation)) return 'ops.fineDetail.sanction';
+    if (operation !== undefined && isHistoricalUnpaidFine(operation)) return 'ops.fineDetail.sanction';
     const labels: Partial<Record<OperationType, string>> = {
       [OperationType.PARKING]: 'ops.detail.parkingDetail',
       [OperationType.PARKING_EXTENSION]: 'ops.detail.extension',
@@ -610,7 +614,7 @@ export class OperationsDetailComponent {
   readonly isTopUpOperation = computed(() => this.opType() === OperationType.TOP_UP);
   readonly isAcknowledgedFineDetail = computed(() => {
     const operation = this.op();
-    return operation !== undefined && isAcknowledgedFine(operation);
+    return operation !== undefined && isHistoricalUnpaidFine(operation);
   });
   readonly startTime = () => this.op()?.startTime ?? '--:--';
   readonly endTime = () => this.op()?.endTime ?? '--:--';
@@ -642,7 +646,7 @@ export class OperationsDetailComponent {
     if (this.cardPaymentAmount() > 0) return this.cardPaymentLabel();
     return this.translationService.translate('ops.detail.wallet');
   });
-  readonly topUpPaymentMethod = computed(() => this.op()?.cardLabel || this.translationService.translate('ops.detail.wallet'));
+  readonly topUpPaymentMethod = computed(() => this.op()?.cardLabel || '');
   readonly balanceAfterTopUp = computed(() => {
     const balance = this.op()?.newBalance;
     return balance == null ? '—' : `${balance.toFixed(2).replace('.', ',')} €`;
@@ -698,7 +702,7 @@ export class OperationsDetailComponent {
         { label: 'ops.detail.total', value: `${this.absoluteAmount().toFixed(2).replace('.', ',')} €`, icon: money, positive: undefined },
       ];
     return [
-      { label: 'ops.detail.datetime', value: o.date, icon: calendar, positive: undefined },
+      { label: 'ops.detail.datetime', value: this.dateTime(o), icon: calendar, positive: undefined },
       ...(o.cardLabel ? [{ label: 'ops.detail.paymentMethod', value: o.cardLabel, icon: money, positive: undefined }] : []),
       {
         label: 'ops.detail.balanceRefund',

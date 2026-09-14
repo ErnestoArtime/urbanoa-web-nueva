@@ -10,6 +10,19 @@ import { OperationType } from '../../../shared/models/operation-type';
 import { Operation } from '../../../shared/models/operation';
 
 describe('OperationsDetailComponent navigation', () => {
+  it('does not invent a payment method for top-ups', async () => {
+    operations.update(items => items.map(op => ({ ...op, type: OperationType.TOP_UP })));
+    const fixture = TestBed.createComponent(OperationsDetailComponent);
+    await fixture.whenStable();
+    expect(fixture.componentInstance.topUpPaymentMethod()).toBe('');
+  });
+
+  it('includes the operation time in balance refunds', async () => {
+    operations.update(items => items.map(op => ({ ...op, type: OperationType.BALANCE_REFUND, operationTime: '18:51' })));
+    const fixture = TestBed.createComponent(OperationsDetailComponent);
+    await fixture.whenStable();
+    expect(fixture.componentInstance.detailRows()[0].value).toContain('18:51');
+  });
   const params = new BehaviorSubject(convertToParamMap({ id: 'first' }));
   const operations = signal<Operation[]>([]);
   const loadDetail = jasmine.createSpy('loadDetail').and.resolveTo(undefined);
