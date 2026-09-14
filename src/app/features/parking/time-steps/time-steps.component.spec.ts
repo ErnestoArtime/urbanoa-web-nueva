@@ -88,7 +88,7 @@ describe('ParkingTimeStepsComponent extension', () => {
 
     await component.ngOnInit();
 
-    expect(component.endTime()).toBe('13:30');
+    expect(component.endTime()).toBe('01:13');
     expect(component.endDayLabel()).toBe('ops.tomorrow');
   });
 
