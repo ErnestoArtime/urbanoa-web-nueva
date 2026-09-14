@@ -15,6 +15,7 @@ export interface Operation {
   operationDate?: string;
   operationTime?: string;
   amount: number;
+  newBalance?: number;
   zone: string | null;
   relatedOperationId?: string;
   cardId?: string;

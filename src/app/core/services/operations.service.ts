@@ -5,7 +5,7 @@ import { OPS_ENDPOINTS } from '../api/ops-endpoints';
 import { OpsApiClient } from '../api/ops-api-client.service';
 import { OpsApiError } from '../api/ops-api.types';
 import { OpsSessionService } from '../api/ops-session.service';
-import { formatOpsCalendarDate, formatOpsDate, formatOpsTime, parseOpsDate } from '../utils/ops-date';
+import { formatOpsCalendarDate, formatOpsDate, formatOpsTime, parseOpsDate, opsRelativeDayLabel } from '../utils/ops-date';
 
 interface OperationResponseDto {
   contractId?: number;
@@ -28,6 +28,7 @@ interface OperationResponseDto {
   idPaymentMethod2?: number | null;
   descPaymentMethod2?: string | null;
   amountPaymentMethod2?: number | null;
+  newBalance?: number | null;
   zoneId?: number;
   sectorId?: number;
   sectorColor?: string | null;
@@ -283,11 +284,7 @@ export class OperationsService {
   }
 
   private relativeDayLabel(date: Date, now: Date): string {
-    if (Number.isNaN(date.getTime())) return '';
-    const calendarDate = formatOpsCalendarDate(date);
-    if (calendarDate === formatOpsCalendarDate(now)) return 'ops.today';
-    if (calendarDate === formatOpsCalendarDate(new Date(now.getTime() + 86_400_000))) return 'ops.tomorrow';
-    return calendarDate;
+    return opsRelativeDayLabel(date, now);
   }
 
   private activeParkingKey(operation: Operation): string {
@@ -376,6 +373,7 @@ export class OperationsService {
       operationDate: item.opDate,
       operationTime,
       amount: [OperationType.TOP_UP, OperationType.REFUND].includes(item.operationType) ? amount : -Math.abs(amount),
+      newBalance: item.newBalance == null ? undefined : item.newBalance / 100,
       zone: item.sectorDesc ?? item.zoneDesc ?? null,
       startTime,
       endTime: end,
@@ -400,7 +398,7 @@ export class OperationsService {
       fineStatus,
       fineStreet: item.fineStreet ?? item.fstreet ?? undefined,
       fineStreetNumber: item.fineStreetNumber ?? item.fstrnum ?? undefined,
-      fineValidDate: this.datePartOptional(item.fineValidDate),
+      fineValidDate: this.dateTimeLabel(item.fineValidDate),
       fineAmount: item.fineAmount == null ? undefined : Math.abs(item.fineAmount) / 100,
       cityId: item.cityId,
       cityName: item.cityName ?? item.contractName ?? undefined,

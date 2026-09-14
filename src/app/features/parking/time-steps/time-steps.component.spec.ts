@@ -78,6 +78,7 @@ describe('ParkingTimeStepsComponent extension', () => {
   });
 
   it('identifies an end time on the next calendar day as tomorrow', async () => {
+    api.serverNow.and.returnValue(new Date('2026-09-10T18:43:00Z'));
     api.post.and.resolveTo({
       dateInitial: '204300100926',
       tariffType: 6,
@@ -88,6 +89,18 @@ describe('ParkingTimeStepsComponent extension', () => {
     await component.ngOnInit();
 
     expect(component.endTime()).toBe('13:30');
+    expect(component.endDayLabel()).toBe('ops.tomorrow');
+  });
+
+  it('uses today rather than a future ticket start as the day reference', async () => {
+    api.serverNow.and.returnValue(new Date('2026-09-10T18:43:00Z'));
+    api.post.and.resolveTo({
+      dateInitial: '090000110926',
+      steps: [{ time: 60, quantity: 150, datetime: '100000110926' }],
+    });
+    const component = TestBed.runInInjectionContext(() => new ParkingTimeStepsComponent());
+    await component.ngOnInit();
+    expect(component.startDayLabel()).toBe('ops.tomorrow');
     expect(component.endDayLabel()).toBe('ops.tomorrow');
   });
 });

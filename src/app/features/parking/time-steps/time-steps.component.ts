@@ -9,7 +9,7 @@ import { ParkingSessionService } from '../../../core/services/parking-session.se
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { LucideCarFront } from '@lucide/angular';
 import { OpsApiClient } from '../../../core/api/ops-api-client.service';
-import { formatOpsCalendarDate, formatOpsTime, parseOpsDate } from '../../../core/utils/ops-date';
+import { opsRelativeDayLabel, formatOpsTime, parseOpsDate } from '../../../core/utils/ops-date';
 
 @Component({
   selector: 'app-parking-time-steps',
@@ -452,16 +452,15 @@ export class ParkingTimeStepsComponent implements OnInit {
   }
   startDayLabel(): string {
     const start = this.stepDate(this.selectedStep().startDatetimeRaw, this.startedAt);
-    return this.relativeDayLabel(start, start);
+    return opsRelativeDayLabel(start, this.api.serverNow());
   }
   endTime(): string {
     return this.stepTime(this.selectedStep().datetimeRaw, new Date(this.startedAt.getTime() + this.selectedStep().time * 60000));
   }
   endDayLabel(): string {
     const step = this.selectedStep();
-    const start = this.stepDate(step.startDatetimeRaw, this.startedAt);
     const end = this.stepDate(step.datetimeRaw, new Date(this.startedAt.getTime() + step.time * 60000));
-    return this.relativeDayLabel(end, start);
+    return opsRelativeDayLabel(end, this.api.serverNow());
   }
   amountFormatted(): string {
     return `${this.selectedStep().amount.toFixed(2).replace('.', ',')} €`;
@@ -517,10 +516,4 @@ export class ParkingTimeStepsComponent implements OnInit {
     return /^\d{12}$/.test(raw) ? parseOpsDate(raw) : fallback;
   }
 
-  private relativeDayLabel(date: Date, reference: Date): string {
-    const calendarDate = formatOpsCalendarDate(date);
-    if (calendarDate === formatOpsCalendarDate(reference)) return 'ops.today';
-    if (calendarDate === formatOpsCalendarDate(new Date(reference.getTime() + 86_400_000))) return 'ops.tomorrow';
-    return calendarDate;
-  }
 }

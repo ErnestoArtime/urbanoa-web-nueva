@@ -22,7 +22,7 @@ import { CitiesService } from '../../../core/services/cities.service';
     <div class="page operation-detail-page">
       <app-detail-panel-header [title]="detailTitle() | translate" backRoute="/app/operations" />
       @if (op(); as operation) {
-        @if (isFinePaymentDetail()) {
+          @if (isFinePaymentDetail()) {
           <section class="fine-payment-detail">
             <article class="fine-payment-card card">
               <div class="fine-payment-kind">
@@ -32,16 +32,32 @@ import { CitiesService } from '../../../core/services/cities.service';
 
               <strong class="fine-payment-amount">{{ formatFineAmount(absoluteAmount()) }} €</strong>
 
-              <div class="fine-payment-method">
-                <span>{{ 'ops.detail.paymentMethod' | translate }}</span>
-                <strong>{{ finePaymentMethodLabel() }}</strong>
-                @if (walletPaymentAmount() > 0 && cardPaymentAmount() > 0) {
-                  <span>{{ 'ops.detail.wallet' | translate }}</span>
-                  <strong>−{{ formatFineAmount(walletPaymentAmount()) }} €</strong>
-                  <span>{{ cardPaymentLabel() }}</span>
-                  <strong>−{{ formatFineAmount(cardPaymentAmount()) }} €</strong>
-                }
-              </div>
+              @if (isAcknowledgedFineDetail() && operation.fineValidDate) {
+                <div class="fine-payment-status">
+                  <span class="fine-payment-row-icon"><app-icon name="schedule" [stroke]="false" /></span>
+                  <div>
+                    <span>{{ 'ops.fineDetail.earlyPaymentEnd' | translate }}</span>
+                    <strong>{{ operation.fineValidDate }}</strong>
+                  </div>
+                </div>
+                <div class="fine-payment-status-message">
+                  <span class="fine-payment-row-icon">!</span>
+                  <p>{{ 'ops.fineDetail.statusMessage.2' | translate }}</p>
+                </div>
+              }
+
+              @if (!isAcknowledgedFineDetail()) {
+                <div class="fine-payment-method">
+                  <span>{{ 'ops.detail.paymentMethod' | translate }}</span>
+                  <strong>{{ finePaymentMethodLabel() }}</strong>
+                  @if (walletPaymentAmount() > 0 && cardPaymentAmount() > 0) {
+                    <span>{{ 'ops.detail.wallet' | translate }}</span>
+                    <strong>−{{ formatFineAmount(walletPaymentAmount()) }} €</strong>
+                    <span>{{ cardPaymentLabel() }}</span>
+                    <strong>−{{ formatFineAmount(cardPaymentAmount()) }} €</strong>
+                  }
+                </div>
+              }
 
               <div class="fine-payment-info">
                 <div class="fine-payment-row">
@@ -93,7 +109,45 @@ import { CitiesService } from '../../../core/services/cities.service';
               <h1>{{ detailTitle() | translate }}</h1>
             </div>
           </header>
-          @if (isTicketOperation()) {
+          @if (isTopUpOperation()) {
+            <article class="top-up-detail card">
+              <div class="top-up-row top-up-operation-id">
+                <span class="top-up-row-icon">#</span>
+                <div>
+                  <span>{{ 'ops.detail.operationId' | translate }}</span>
+                  <strong>{{ transactionId() || operation.id }}</strong>
+                </div>
+              </div>
+              <div class="top-up-row">
+                <span class="top-up-row-icon"><app-icon name="card" [stroke]="false" /></span>
+                <div>
+                  <span>{{ 'ops.detail.paymentMethod' | translate }}</span>
+                  <strong>{{ topUpPaymentMethod() }}</strong>
+                </div>
+              </div>
+              <div class="top-up-row">
+                <span class="top-up-row-icon"><app-icon name="dateRange" [stroke]="false" /></span>
+                <div>
+                  <span>{{ 'ops.detail.datetime' | translate }}</span>
+                  <strong>{{ dateTime(operation) }}</strong>
+                </div>
+              </div>
+              <div class="top-up-row">
+                <span class="top-up-row-icon"><app-icon name="operationTopUp" [stroke]="false" /></span>
+                <div>
+                  <span>{{ 'ops.detail.amount' | translate }}</span>
+                  <strong class="positive">+{{ formatFineAmount(absoluteAmount()) }} €</strong>
+                </div>
+              </div>
+              <div class="top-up-row">
+                <span class="top-up-row-icon"><app-icon name="wallet" [stroke]="false" /></span>
+                <div>
+                  <span>{{ 'ops.detail.balanceAfterTopUp' | translate }}</span>
+                  <strong>{{ balanceAfterTopUp() }}</strong>
+                </div>
+              </div>
+            </article>
+          } @else if (isTicketOperation()) {
             <div class="ticket-shell">
               <article class="ticket-card" [style.--ticket-header-color]="ticketHeaderColor()">
                 <div class="ticket-accent"></div>
@@ -216,6 +270,53 @@ import { CitiesService } from '../../../core/services/cities.service';
       .fine-payment-info {
         display: grid;
         gap: 0.2rem;
+      }
+      .fine-payment-status,
+      .fine-payment-status-message {
+        display: grid;
+        grid-template-columns: 28px minmax(0, 1fr);
+        align-items: start;
+        gap: 0.75rem;
+        margin: 0.45rem 0 1rem;
+      }
+      .fine-payment-status > div {
+        display: flex;
+        flex-direction: column;
+        gap: 0.12rem;
+      }
+      .fine-payment-status-message p {
+        margin: 0;
+        line-height: 1.45;
+      }
+      .top-up-detail {
+        padding: 0.5rem 1.4rem;
+      }
+      .top-up-row {
+        display: grid;
+        grid-template-columns: 28px minmax(0, 1fr);
+        align-items: center;
+        gap: 0.9rem;
+        min-height: 68px;
+        padding: 0.8rem 0;
+        border-bottom: 1px solid var(--color-border);
+      }
+      .top-up-row:last-child { border-bottom: 0; }
+      .top-up-row > div {
+        display: flex;
+        flex-direction: column;
+        gap: 0.12rem;
+      }
+      .top-up-row span { color: var(--color-text-muted); }
+      .top-up-row strong { font-weight: var(--font-medium); }
+      .top-up-row .positive { color: var(--color-primary); }
+      .top-up-row-icon {
+        display: grid;
+        place-items: center;
+        width: 28px;
+        height: 28px;
+        color: var(--color-text);
+        font-size: var(--text-xl);
+        font-weight: var(--font-bold);
       }
       .fine-payment-row {
         display: grid;
@@ -506,6 +607,11 @@ export class OperationsDetailComponent {
     return labels[this.opType()] ?? 'ops.detail';
   });
   readonly isTicketOperation = computed(() => [OperationType.PARKING, OperationType.PARKING_EXTENSION].includes(this.opType()));
+  readonly isTopUpOperation = computed(() => this.opType() === OperationType.TOP_UP);
+  readonly isAcknowledgedFineDetail = computed(() => {
+    const operation = this.op();
+    return operation !== undefined && isAcknowledgedFine(operation);
+  });
   readonly startTime = () => this.op()?.startTime ?? '--:--';
   readonly endTime = () => this.op()?.endTime ?? '--:--';
   readonly duration = () => this.op()?.durationLabel ?? '—';
@@ -535,6 +641,11 @@ export class OperationsDetailComponent {
     if (this.walletPaymentAmount() > 0 && this.cardPaymentAmount() > 0) return this.translationService.translate('payment.mixed');
     if (this.cardPaymentAmount() > 0) return this.cardPaymentLabel();
     return this.translationService.translate('ops.detail.wallet');
+  });
+  readonly topUpPaymentMethod = computed(() => this.op()?.cardLabel || this.translationService.translate('ops.detail.wallet'));
+  readonly balanceAfterTopUp = computed(() => {
+    const balance = this.op()?.newBalance;
+    return balance == null ? '—' : `${balance.toFixed(2).replace('.', ',')} €`;
   });
   readonly fineLocationTitle = computed(() => this.op()?.zoneName || this.op()?.zone || '—');
   readonly fineLocationSubtitle = computed(() => {

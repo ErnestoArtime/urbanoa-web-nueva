@@ -58,3 +58,16 @@ export function formatOpsTime(date: Date): string {
 export function formatOpsCalendarDate(date: Date): string {
   return new Intl.DateTimeFormat('es-ES', { timeZone: OPS_TIME_ZONE, day: '2-digit', month: '2-digit', year: 'numeric' }).format(date);
 }
+
+/** Day labels use Madrid calendar days, including 23/25-hour DST days. */
+export function opsRelativeDayLabel(date: Date, now: Date): string {
+  if (!Number.isFinite(date.getTime()) || !Number.isFinite(now.getTime())) return '';
+  const dayNumber = (value: Date): number => {
+    const p = parts(value);
+    return Date.UTC(p['year'], p['month'] - 1, p['day']) / 86_400_000;
+  };
+  const difference = dayNumber(date) - dayNumber(now);
+  if (difference === 0) return 'ops.today';
+  if (difference === 1) return 'ops.tomorrow';
+  return formatOpsCalendarDate(date);
+}
