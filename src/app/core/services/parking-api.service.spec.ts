@@ -112,11 +112,21 @@ describe('ParkingApiService', () => {
       longitude: 0,
       street: '',
       payMethodId: 7,
+      reference: '8431063',
     });
 
     expect(api.post).toHaveBeenCalledOnceWith(
       'OPSWebServicesAPI/ConfirmParkingOperationAPI',
-      jasmine.objectContaining({ contractId: 3, plate: '1234ABC', sector: 22002, quantity: 250, time: 90, latitude: 0, longitude: 0 }),
+      jasmine.objectContaining({
+        contractId: 3,
+        plate: '1234ABC',
+        sector: 22002,
+        quantity: 250,
+        time: 90,
+        latitude: 0,
+        longitude: 0,
+        reference: '8431063',
+      }),
       { token: 'token', timeoutMs: 60_000 },
     );
   });

@@ -19,6 +19,8 @@ export interface ConfirmParkingInput {
   longitude: number;
   street: string;
   payMethodId: number;
+  /** Base operation reference: links an extension to the first parking (APK opBaseId). */
+  reference?: string;
 }
 
 export interface ParkingApiResult {
@@ -114,7 +116,7 @@ export class ParkingApiService {
           time: input.time,
           latitude: input.latitude,
           longitude: input.longitude,
-          reference: '',
+          reference: input.reference ?? '',
           spaceId: '',
           streetname: input.street,
           streetno: '',

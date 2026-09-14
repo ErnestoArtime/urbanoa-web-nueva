@@ -14,6 +14,8 @@ export interface ExtensionParkingContext {
   street?: string;
   latitude?: number;
   longitude?: number;
+  /** Base operation id of the chain (APK opBaseId), sent as confirm reference. */
+  opBaseId?: string;
 }
 
 export interface ParkingFlowState {
@@ -43,6 +45,7 @@ export interface ParkingFlowState {
   startTime: string;
   endTime: string;
   mode: 'parking' | 'extension';
+  opBaseId: string;
   selectedStep: ParkingTimeStep | null;
   paymentSummary: ParkingPaymentSummary | null;
 }
@@ -103,6 +106,7 @@ export class ParkingFlowStore {
       tariffId: String(parking.tariffId),
       latitude: parking.latitude == null ? '' : String(parking.latitude),
       longitude: parking.longitude == null ? '' : String(parking.longitude),
+      opBaseId: parking.opBaseId ?? '',
       mode: 'extension',
     });
     return true;
@@ -160,6 +164,7 @@ export class ParkingFlowStore {
       startTime: s.startTime ?? '',
       endTime: s.endTime ?? '',
       mode: s.mode ?? 'parking',
+      opBaseId: s.opBaseId ?? '',
     };
   }
 
@@ -198,6 +203,7 @@ export class ParkingFlowStore {
       startTime: params['startTime'] ?? '',
       endTime: params['endTime'] ?? '',
       mode: params['mode'] === 'extension' ? 'extension' : 'parking',
+      opBaseId: params['opBaseId'] ?? '',
     });
   }
 
@@ -230,6 +236,7 @@ export class ParkingFlowStore {
     if (s.startTime) result['startTime'] = s.startTime;
     if (s.endTime) result['endTime'] = s.endTime;
     if (s.mode) result['mode'] = s.mode;
+    if (s.opBaseId) result['opBaseId'] = s.opBaseId;
     return result;
   }
 }

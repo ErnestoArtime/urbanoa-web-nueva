@@ -332,6 +332,7 @@ export class ParkingConfirmComponent implements OnInit {
       longitude: Number(this.query().longitude || 0),
       street: this.query().street,
       payMethodId: Number(this.selectedCardId() || 0),
+      reference: this.query().mode === 'extension' ? this.query().opBaseId || '' : '',
     };
     const result =
       this.query().mode === 'extension'

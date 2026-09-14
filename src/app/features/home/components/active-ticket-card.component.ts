@@ -1,9 +1,10 @@
-import { Component, computed, input, output } from '@angular/core';
+import { Component, OnDestroy, computed, input, output, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { LucideCarFront, LucideNavigation, LucideTimerReset } from '@lucide/angular';
 import type { ActiveParking } from '../../../core/services/operations.service';
 import { normalizeSectorColor } from '../../../shared/utils/sector-color';
+import { formatCountdown, liveCountdownSeconds, parseCountdownToSeconds } from '../../../core/utils/parking-countdown';
 
 @Component({
   selector: 'app-active-ticket-card',
@@ -23,7 +24,7 @@ import { normalizeSectorColor } from '../../../shared/utils/sector-color';
             </div>
             <div>
               <p class="ticket-plate">{{ active.plate }}</p>
-              <p class="ticket-timer">{{ active.timeRemaining }}</p>
+              <p class="ticket-timer">{{ liveTimeRemaining(active) }}</p>
             </div>
             <div class="ticket-location">
               <small>{{ 'dashboard.ticket.zone' | translate }}</small
@@ -257,19 +258,44 @@ import { normalizeSectorColor } from '../../../shared/utils/sector-color';
     `,
   ],
 })
-export class ActiveTicketCardComponent {
+export class ActiveTicketCardComponent implements OnDestroy {
   readonly ticket = input<ActiveParking | null>(null);
   readonly unpark = output<void>();
   readonly extend = output<void>();
   readonly goToCar = output<ActiveParking>();
   readonly ticketHeaderColor = computed(() => normalizeSectorColor(this.ticket()?.sectorColor));
+  /** Ticks every second so the countdown stays live like the APK timer. */
+  private readonly tick = signal(0);
+  private readonly timer = setInterval(() => this.tick.update((value) => value + 1), 1000);
+  private baseline: { id: string; seconds: number; at: number } | null = null;
+
+  ngOnDestroy(): void {
+    clearInterval(this.timer);
+  }
+
+  /** Live seconds left, rebased whenever the backend snapshot moves. */
+  liveRemainingSeconds(ticket: ActiveParking): number {
+    this.tick();
+    const now = Date.now();
+    const snapshot = parseCountdownToSeconds(ticket.timeRemaining);
+    const base = this.baseline;
+    if (!base || base.id !== ticket.id || Math.abs(snapshot - liveCountdownSeconds(base.seconds, base.at, now)) > 2) {
+      this.baseline = { id: ticket.id, seconds: snapshot, at: now };
+      return snapshot;
+    }
+    return liveCountdownSeconds(base.seconds, base.at, now);
+  }
+
+  liveTimeRemaining(ticket: ActiveParking): string {
+    return formatCountdown(this.liveRemainingSeconds(ticket));
+  }
 
   hasCoordinates(ticket: ActiveParking): boolean {
     return Number.isFinite(ticket.latitude) && Number.isFinite(ticket.longitude);
   }
 
   ticketProgress(ticket: ActiveParking): string {
-    const remaining = this.parseDurationSeconds(ticket.timeRemaining);
+    const remaining = this.liveRemainingSeconds(ticket);
     const total = this.parseDurationSeconds(ticket.durationLabel);
     if (!remaining || !total || remaining > total) return '28';
     const percent = Math.round((remaining / total) * 100);

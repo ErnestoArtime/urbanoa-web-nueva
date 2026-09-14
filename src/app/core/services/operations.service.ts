@@ -80,6 +80,8 @@ export interface ActiveParking {
   sectorId?: number;
   sectorColor?: string;
   operationDate?: string;
+  /** Base operation id of the chain (APK opBaseId): links extensions to the first parking. */
+  opBaseId?: string;
   /** Mirrors the APK parking-status `extension` flag. */
   canExtend?: boolean;
   extension?: 0 | 1 | 2;
@@ -247,6 +249,7 @@ export class OperationsService {
       street: operation.street,
       operationId: operation.id,
       operationDate: operation.operationDate,
+      opBaseId: operation.relatedOperationId ?? operation.operationNumber,
       paymentBreakdown: operation.paymentBreakdown,
       cardId: operation.cardId,
       cardLabel: operation.cardLabel,

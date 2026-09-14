@@ -95,6 +95,7 @@ describe('ParkingFlowStore', () => {
       street: 'Kale Nagusia',
       latitude: 43.28,
       longitude: -2.17,
+      opBaseId: '8431063',
     });
 
     expect(store.hasLocationData()).toBeTrue();
@@ -113,6 +114,7 @@ describe('ParkingFlowStore', () => {
         latitude: '43.28',
         longitude: '-2.17',
         mode: 'extension',
+        opBaseId: '8431063',
       }),
     );
   });

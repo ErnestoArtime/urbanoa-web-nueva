@@ -24,6 +24,7 @@ export interface ParkingFlowQuery extends Record<string, string | undefined> {
   startTime: string;
   endTime: string;
   mode: string;
+  opBaseId: string;
   paymentWalletAmount?: string;
   paymentCardAmount?: string;
   paymentCardId?: string;

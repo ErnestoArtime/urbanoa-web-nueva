@@ -118,6 +118,7 @@ describe('ParkingConfirmComponent', () => {
               longitude: '-2.1',
               street: 'Kale Nagusia',
               ticketId: '4',
+              opBaseId: '8431063',
             }),
           },
         },
@@ -150,6 +151,7 @@ describe('ParkingConfirmComponent', () => {
         latitude: 0,
         longitude: 0,
         street: '',
+        reference: '8431063',
       }),
     );
   });
