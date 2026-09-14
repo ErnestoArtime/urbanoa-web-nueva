@@ -1,4 +1,9 @@
 {
+  "ops.lastWeek": "La semaine dernière",
+  "ops.lastMonth": "Le mois dernier",
+  "ops.thisYear": "Cette année",
+  "parking.unparking.noRights": "La plaque ne dispose pas des droits pour terminer le stationnement.",
+  "parking.unparking.quoteError": "Impossible de calculer la fin du stationnement.",
   "app.title": "fr_ArinPark",
   "nav.home": "fr_Inicio",
   "nav.park": "fr_Aparcar",

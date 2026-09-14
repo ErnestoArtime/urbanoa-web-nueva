@@ -1,4 +1,9 @@
 {
+  "ops.lastWeek": "Last week",
+  "ops.lastMonth": "Last month",
+  "ops.thisYear": "This year",
+  "parking.unparking.noRights": "The licence plate is not eligible to end the parking session.",
+  "parking.unparking.quoteError": "Could not calculate the end of the parking session.",
   "app.title": "uk_ArinPark",
   "nav.home": "uk_Inicio",
   "nav.park": "uk_Aparcar",

@@ -1,4 +1,9 @@
 {
+  "ops.lastWeek": "Aurreko astea",
+  "ops.lastMonth": "Aurreko hilabetea",
+  "ops.thisYear": "Aurten",
+  "parking.unparking.noRights": "Matrikulak ez du aparkaldia amaitzeko eskubiderik.",
+  "parking.unparking.quoteError": "Ezin izan da aparkaldiaren amaiera kalkulatu.",
   "app.title": "eu_ArinPark",
   "nav.home": "eu_Inicio",
   "nav.park": "eu_Aparcar",

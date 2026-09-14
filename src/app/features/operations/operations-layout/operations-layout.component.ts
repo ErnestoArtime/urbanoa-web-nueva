@@ -19,6 +19,8 @@ import { SplitViewComponent } from '../../../layout/split-view/split-view.compon
 import { ResultModalComponent } from '../../../shared/components/result-modal/result-modal.component';
 import { ParkingTicketCardComponent } from '../../../shared/components/parking-ticket-card/parking-ticket-card.component';
 import { ParkingFlowStore } from '../../parking/parking-flow.store';
+import { OpsApiClient } from '../../../core/api/ops-api-client.service';
+import { OPERATION_PERIODS, operationPeriod } from '../operation-period';
 
 @Component({
   selector: 'app-operations-layout',
@@ -130,9 +132,11 @@ import { ParkingFlowStore } from '../../parking/parking-flow.store';
 
           <ul class="list history-list">
             @for (group of groupedHistory(); track group.label) {
-              <li class="history-group-label">{{ group.label | translate }}</li>
+              <li class="history-group">
+              <h2 class="history-group-label">{{ group.label | translate }}</h2>
+              <ul class="history-group-items">
               @for (op of group.items; track op.id) {
-                <a
+                <li><a
                   [routerLink]="['/app/operations/detail', op.id]"
                   class="list-item"
                   [class.historic-fine-item]="isHistoricFine(op)"
@@ -151,7 +155,7 @@ import { ParkingFlowStore } from '../../parking/parking-flow.store';
                       }
                     </div>
                     <div class="list-item-subtitle">
-                      {{ op.date }}{{ operationTime(op) ? ' · ' + operationTime(op) : '' }}{{ op.zone ? ' — ' + op.zone : '' }}
+                      {{ op.zone }}
                     </div>
                     @if (op.plate) {
                       <div class="operation-meta">
@@ -162,11 +166,17 @@ import { ParkingFlowStore } from '../../parking/parking-flow.store';
                       </div>
                     }
                   </div>
+                  <div class="operation-price-date">
+                  <span class="operation-date">{{ op.date }}</span>
+                  @if (operationTime(op)) { <span class="operation-time">{{ operationTime(op) }}</span> }
                   <span [class]="op.amount > 0 ? 'operation-amount operation-amount-credit' : 'operation-amount operation-amount-debit'">
                     {{ op.amount > 0 ? '+' : '' }}{{ op.amount | number: '1.2-2' }} €
                   </span>
-                </a>
+                  </div>
+                </a></li>
               }
+              </ul>
+              </li>
             }
             @if (groupedHistory().length === 0) {
               <li class="list-item" style="justify-content:center;color:var(--color-muted)">
@@ -372,20 +382,40 @@ import { ParkingFlowStore } from '../../parking/parking-flow.store';
       }
       .history-list {
         margin: 0;
-        overflow: hidden;
+        overflow: visible;
         border: 1px solid var(--color-border);
         border-radius: var(--radius-md);
         background: var(--color-surface);
       }
       .history-group-label {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        margin: 0;
         list-style: none;
         padding: 0.65rem 0.8rem 0.4rem;
         color: var(--color-text-muted);
         font-size: var(--text-xs);
         font-weight: var(--font-extra);
-        text-transform: uppercase;
         letter-spacing: 0.05em;
         background: var(--color-background);
+      }
+      .history-group, .history-group-items, .history-group-items > li {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+      .operation-price-date {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 0.2rem;
+        flex-shrink: 0;
+      }
+      .operation-date, .operation-time {
+        color: var(--color-text-muted);
+        font-size: var(--text-xs);
+        white-space: nowrap;
       }
       .finish-op-title {
         color: var(--color-primary-dark);
@@ -563,6 +593,7 @@ import { ParkingFlowStore } from '../../parking/parking-flow.store';
   ],
 })
 export class OperationsLayoutComponent implements OnInit {
+  private readonly api = inject(OpsApiClient);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   readonly operationsService = inject(OperationsService);
@@ -701,8 +732,8 @@ export class OperationsLayoutComponent implements OnInit {
     const sorted = [...history].sort((a, b) => {
       const diff = this.toDateValue(b.date) - this.toDateValue(a.date);
       if (diff !== 0) return diff;
-      const aTime = a.startTime ?? a.endTime ?? '';
-      const bTime = b.startTime ?? b.endTime ?? '';
+      const aTime = this.operationTime(a);
+      const bTime = this.operationTime(b);
       return bTime.localeCompare(aTime);
     });
 
@@ -719,40 +750,12 @@ export class OperationsLayoutComponent implements OnInit {
   }
 
   private groupByPeriod(list: Operation[]): { label: string; items: Operation[] }[] {
-    const now = new Date();
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const startOfYesterday = new Date(startOfToday);
-    startOfYesterday.setDate(startOfYesterday.getDate() - 1);
-    const startOfWeek = new Date(startOfToday);
-    const day = (startOfWeek.getDay() + 6) % 7;
-    startOfWeek.setDate(startOfWeek.getDate() - day);
-
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-
-    const groups: Record<string, Operation[]> = {
-      'ops.today': [],
-      'ops.yesterday': [],
-      'ops.thisWeek': [],
-      'ops.thisMonth': [],
-      'ops.previous': [],
-    };
-
+    const now = this.api.serverNow();
+    const groups = new Map<string, Operation[]>(OPERATION_PERIODS.map(label => [label, []]));
     for (const op of list) {
-      const d = this.parseDate(op.date);
-      if (d >= startOfToday) {
-        groups['ops.today'].push(op);
-      } else if (d >= startOfYesterday) {
-        groups['ops.yesterday'].push(op);
-      } else if (d >= startOfWeek) {
-        groups['ops.thisWeek'].push(op);
-      } else if (d >= startOfMonth) {
-        groups['ops.thisMonth'].push(op);
-      } else {
-        groups['ops.previous'].push(op);
-      }
+      groups.get(operationPeriod(op.date, now))!.push(op);
     }
-
-    return Object.entries(groups)
+    return [...groups.entries()]
       .filter(([, items]) => items.length > 0)
       .map(([label, items]) => ({ label, items }));
   }
