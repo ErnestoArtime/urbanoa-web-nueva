@@ -9,6 +9,7 @@
     "prebuild": "npm run i18n:check",
     "build": "ng build",
     "i18n:check": "node scripts/i18n-excel.mjs audit --config i18n-excel.config.json --allow-unused --check",
+    "i18n:parity": "node scripts/check-parity-translations.mjs",
     "i18n:audit": "node scripts/i18n-excel.mjs audit --config i18n-excel.config.json --excel docs/traducciones_agrupadas_urbanoa.xlsx",
     "i18n:sync": "node scripts/i18n-excel.mjs sync --config i18n-excel.config.json",
     "i18n:prune": "node scripts/i18n-excel.mjs prune --config i18n-excel.config.json",
