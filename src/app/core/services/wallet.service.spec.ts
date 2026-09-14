@@ -84,6 +84,7 @@ describe('WalletService', () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'post']);
     api.post.and.resolveTo({ payMethodId: 7, amountRecharged: 250, newBalance: 1500, order: 'order-123', challengeUrl: null });
     const service = serviceWith(api);
+    service.cards.set([{ id: '7', brand: 'Visa', last4: '1234', expiryDate: '12/99', cardholderName: 'Test' }]);
     TestBed.inject(OpsSessionService).setToken('token');
 
     const result = await service.recharge(2.5, '7');
@@ -115,6 +116,19 @@ describe('WalletService', () => {
     expect(service.balance()).toBe(7.5);
   });
 
+  for (const response of [{ result: 1 }, { result: -9, refundAmount: 500 }, { result: 1, refundAmount: '' }]) {
+    it(`rejects an unconfirmed refund response ${JSON.stringify(response)}`, async () => {
+      const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'post']);
+      api.post.and.resolveTo(response);
+      const service = serviceWith(api);
+      TestBed.inject(OpsSessionService).setToken('token');
+      service.balance.set(10);
+      const result = await service.refund(5);
+      expect(result.success).toBeFalse();
+      expect(service.balance()).toBe(10);
+    });
+  }
+
   it('rejects recharge when login is postponed', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'post']);
     const service = serviceWith(api);
@@ -124,5 +138,26 @@ describe('WalletService', () => {
     expect(api.post).not.toHaveBeenCalled();
     expect(result.source).toBe('error');
     expect(service.balance()).toBe(0);
+  });
+
+  it('preserves an explicitly confirmed zero refund', async () => {
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'post']);
+    api.post.and.resolveTo({ result: 1, refundAmount: '0' });
+    const service = serviceWith(api);
+    TestBed.inject(OpsSessionService).setToken('token');
+    service.balance.set(10);
+    expect(await service.refund(5)).toEqual({ success: true, source: 'remote', amount: 0 });
+    expect(service.balance()).toBe(10);
+  });
+
+  it('rejects expired and unknown cards at the service boundary', async () => {
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'post']);
+    const service = serviceWith(api);
+    TestBed.inject(OpsSessionService).setToken('token');
+    service.cards.set([{ id: '1', brand: 'Visa', last4: '1234', expiryDate: '01/20', cardholderName: 'Test' },
+      { id: '2', brand: 'Visa', last4: '5678', expiryDate: '12/99', cardholderName: 'Test' }]);
+    expect((await service.recharge(5, '1')).success).toBeFalse();
+    expect((await service.recharge(5, '3')).success).toBeFalse();
+    expect(api.post).not.toHaveBeenCalled();
   });
 });

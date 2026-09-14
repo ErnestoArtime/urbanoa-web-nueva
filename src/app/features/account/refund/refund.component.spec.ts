@@ -1,14 +1,10 @@
 import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ActivatedRoute, convertToParamMap } from '@angular/router';
-import { BehaviorSubject } from 'rxjs';
 import { OperationsService } from '../../../core/services/operations.service';
 import { WalletService } from '../../../core/services/wallet.service';
 import { AccountRefundComponent } from './refund.component';
 
 describe('AccountRefundComponent', () => {
-  let queryParamMap$: BehaviorSubject<ReturnType<typeof convertToParamMap>>;
-
   function mount(): ReturnType<typeof TestBed.createComponent<AccountRefundComponent>> {
     const fixture = TestBed.createComponent(AccountRefundComponent);
     fixture.detectChanges();
@@ -16,7 +12,6 @@ describe('AccountRefundComponent', () => {
   }
 
   beforeEach(() => {
-    queryParamMap$ = new BehaviorSubject(convertToParamMap({ cardId: 'card-4021' }));
     TestBed.configureTestingModule({
       providers: [
         provideZonelessChangeDetection(),
@@ -25,6 +20,8 @@ describe('AccountRefundComponent', () => {
           useValue: {
             source: signal('remote'),
             balance: signal(2),
+            refund: jasmine.createSpy().and.resolveTo({ success: true, amount: 1 }),
+            load: jasmine.createSpy().and.resolveTo(),
             cards: signal([
               { id: 'card-4021', brand: 'VISA', last4: '4021', expiryDate: '2027/05', cardholderName: 'Test' },
               { id: 'card-2403', brand: 'VISA', last4: '2403', expiryDate: '2027/05', cardholderName: 'test2' },
@@ -34,23 +31,33 @@ describe('AccountRefundComponent', () => {
           },
         },
         { provide: OperationsService, useValue: { load: jasmine.createSpy().and.resolveTo() } },
-        {
-          provide: ActivatedRoute,
-          useValue: { snapshot: { queryParamMap: queryParamMap$.value }, queryParamMap: queryParamMap$.asObservable() },
-        },
       ],
     });
     TestBed.overrideComponent(AccountRefundComponent, { set: { template: '' } });
   });
 
-  it('selects the card from the query and updates when cardId changes on the same route', () => {
+  it('requests a refund from the remote balance contract without a fake card selector', async () => {
     const fixture = mount();
 
-    expect(fixture.componentInstance.selectedCardId()).toBe('card-4021');
+    fixture.componentInstance.requestRefund();
+    await Promise.resolve();
+    expect(fixture.componentInstance.refundQuote()).toBe(2);
+  });
 
-    queryParamMap$.next(convertToParamMap({ cardId: 'card-2403' }));
-    fixture.detectChanges();
-
-    expect(fixture.componentInstance.selectedCardId()).toBe('card-2403');
+  it('keeps confirmation locked through refresh and reloads the remote wallet', async () => {
+    const fixture = TestBed.createComponent(AccountRefundComponent);
+    const wallet = TestBed.inject(WalletService);
+    let finish!: () => void;
+    const operations = TestBed.inject(OperationsService);
+    (operations.load as jasmine.Spy).and.returnValue(new Promise<void>(resolve => finish = resolve));
+    fixture.componentInstance.refundQuote.set(2);
+    const pending = fixture.componentInstance.confirmRefund();
+    await Promise.resolve();
+    await fixture.componentInstance.confirmRefund();
+    expect(wallet.refund).toHaveBeenCalledTimes(1);
+    finish();
+    await pending;
+    expect(wallet.load).toHaveBeenCalledTimes(1);
+    expect(fixture.componentInstance.refundedAmount()).toBe(1);
   });
 });

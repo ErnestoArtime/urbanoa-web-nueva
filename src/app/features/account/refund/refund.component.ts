@@ -1,8 +1,5 @@
 import { DecimalPipe } from '@angular/common';
-import { Component, computed, effect, input, output, inject, signal } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute } from '@angular/router';
-import { map } from 'rxjs/operators';
+import { Component, input, output, inject, signal } from '@angular/core';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { WalletService } from '../../../core/services/wallet.service';
 import { OperationsService } from '../../../core/services/operations.service';
@@ -19,8 +16,8 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
       } @else {
         <h2>{{ 'account.refund.title' | translate }}</h2>
       }
-      @if (walletService.source() === 'error') {
-        <p class="data-notice" role="alert">No se pudo conectar con el servicio de pagos.</p>
+      @if (failed() || walletService.source() === 'error') {
+        <p class="data-notice" role="alert">{{ 'account.refund.error' | translate }}</p>
       }
       <div class="card refund-summary">
         <p class="text-muted">{{ 'account.refund.availableBalance' | translate }}</p>
@@ -28,28 +25,11 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
         <p class="refund-explanation">
           {{ 'account.refund.explanation' | translate }}
         </p>
-        <section class="refund-card-selector">
-          <strong>{{ 'account.refund.destinationCard' | translate }}</strong>
-          @for (card of walletService.cards(); track card.id) {
-            <label class="payment-card-option" [class.selected]="selectedCardId() === card.id">
-              <input
-                type="radio"
-                name="refund-card"
-                [value]="card.id"
-                [checked]="selectedCardId() === card.id"
-                (change)="selectedCardId.set(card.id)"
-              />
-              <span>{{ card.brand }} •••• {{ card.last4 }}</span>
-              <small>{{ card.cardholderName }} · {{ card.expiryDate }}</small>
-            </label>
-          } @empty {
-            <p class="text-muted">{{ 'account.refund.noCard' | translate }}</p>
-          }
-        </section>
+        <p class="refund-destination">{{ 'account.refund.destinationManaged' | translate }}</p>
         <button
           type="button"
           class="btn btn-primary btn-block"
-          [disabled]="requesting() || walletService.balance() <= 0 || !selectedCard()"
+          [disabled]="requesting() || walletService.balance() <= 0"
           (click)="requestRefund()"
         >
           {{ (requesting() ? 'account.refund.calculating' : 'account.refund.request') | translate }}
@@ -62,8 +42,9 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
           [message]="'account.refund.confirmDetail' | translate: { amount: formatAmount(amount) }"
           [primaryText]="'account.refund.confirm' | translate"
           [secondaryText]="'common.cancel' | translate"
+          [busy]="requesting()"
           (primaryAction)="confirmRefund()"
-          (secondaryAction)="refundQuote.set(null)"
+          (secondaryAction)="cancelRefund()"
         />
       }
       @if (done()) {
@@ -106,11 +87,11 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
         font-size: var(--text-sm);
         line-height: 1.5;
       }
-      .refund-card-selector {
-        display: grid;
-        gap: 0.55rem;
-      }
-      .refund-card-selector > strong {
+      .refund-destination {
+        padding: 0.75rem;
+        border-radius: var(--radius-md);
+        background: var(--color-active);
+        color: var(--color-text-muted);
         font-size: var(--text-sm);
       }
     `,
@@ -121,50 +102,43 @@ export class AccountRefundComponent {
   readonly embedded = input(false);
   readonly back = output<void>();
 
-  private readonly route = inject(ActivatedRoute);
   readonly walletService = inject(WalletService);
   private readonly operationsService = inject(OperationsService);
-  private readonly queryCardId = toSignal(this.route.queryParamMap.pipe(map((params) => params.get('cardId'))), {
-    initialValue: this.route.snapshot.queryParamMap.get('cardId'),
-  });
-  readonly selectedCardId = signal(this.queryCardId() ?? this.walletService.defaultCardId());
-  private readonly syncSelectedCard = effect(() => {
-    const cardId = this.queryCardId();
-    if (cardId) this.selectedCardId.set(cardId);
-  });
-  readonly selectedCard = computed(
-    () => this.walletService.cards().find((card) => card.id === this.selectedCardId()) ?? this.walletService.defaultCard(),
-  );
   readonly requesting = signal(false);
   readonly refundQuote = signal<number | null>(null);
   readonly refundedAmount = signal(0);
   readonly done = signal(false);
-
-  private readonly syncCard = effect(() => {
-    if (this.cardId()) this.selectedCardId.set(this.cardId());
-  });
-
+  readonly failed = signal(false);
   requestRefund(): void {
-    if (this.requesting() || this.walletService.balance() <= 0 || !this.selectedCard()) return;
-    this.requesting.set(true);
-    queueMicrotask(() => {
-      this.refundQuote.set(this.walletService.balance());
-      this.requesting.set(false);
-    });
+    if (this.requesting() || this.walletService.balance() <= 0) return;
+    this.failed.set(false);
+    this.refundQuote.set(this.walletService.balance());
+  }
+  cancelRefund(): void {
+    if (!this.requesting()) this.refundQuote.set(null);
   }
   async confirmRefund(): Promise<void> {
     const amount = this.refundQuote();
-    const card = this.selectedCard();
-    if (!amount || !card || this.requesting()) return;
+    if (!amount || this.requesting()) return;
     this.requesting.set(true);
-    const result = await this.walletService.refund(amount);
-    this.requesting.set(false);
-    if (!result.success) return;
-    const refunded = result.amount ?? amount;
-    await this.operationsService.load();
-    this.refundedAmount.set(refunded);
-    this.refundQuote.set(null);
-    this.done.set(true);
+    this.failed.set(false);
+    try {
+      const result = await this.walletService.refund(amount);
+      this.refundQuote.set(null);
+      if (!result.success || result.amount == null) {
+        this.failed.set(true);
+        await this.walletService.load();
+        return;
+      }
+      this.refundedAmount.set(result.amount);
+      await Promise.all([this.operationsService.load(), this.walletService.load()]);
+      this.done.set(true);
+    } catch {
+      this.refundQuote.set(null);
+      this.failed.set(true);
+    } finally {
+      this.requesting.set(false);
+    }
   }
   formatAmount(amount: number): string {
     return amount.toFixed(2).replace('.', ',');

@@ -10,6 +10,7 @@ import { WalletService } from '../../../core/services/wallet.service';
 import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
 import { ResultModalComponent } from '../../../shared/components/result-modal/result-modal.component';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { isCardUsable } from '../../../core/utils/card-expiry';
 
 @Component({
   selector: 'app-account-recharge',
@@ -24,7 +25,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
       @if (walletService.source() === 'error') {
         <p class="data-notice" role="alert">No se pudo conectar con el servicio de pagos.</p>
       }
-      @if (walletService.cards().length === 0) {
+      @if (!usableCards().length) {
         <div class="card empty-recharge-state">
           <p class="card-title">{{ 'dashboard.cardEmptyTitle' | translate }}</p>
           <p class="text-muted">{{ 'dashboard.cardEmptyDetail' | translate }}</p>
@@ -58,8 +59,8 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
             <legend>{{ 'account.recharge.cardForRecharge' | translate }}</legend>
             <div role="radiogroup" [attr.aria-label]="'account.recharge.cardForRecharge' | translate">
               @for (card of walletService.cards(); track card.id) {
-                <label class="payment-card-option" [class.selected]="selectedCardId() === card.id">
-                  <input type="radio" formControlName="cardId" [value]="card.id" />
+                <label class="payment-card-option" [class.selected]="selectedCardId() === card.id" [class.disabled]="!isCardUsable(card)">
+                  <input type="radio" formControlName="cardId" [value]="card.id" [disabled]="!isCardUsable(card)" />
                   <span
                     ><strong>{{ card.brand }} •••• {{ card.last4 }}</strong
                     ><small>{{ card.cardholderName }} · {{ 'account.recharge.expires' | translate }} {{ card.expiryDate }}</small></span
@@ -175,6 +176,8 @@ export class AccountRechargeComponent {
   readonly rechargeAmounts = [1, 2, 5, 10, 20, 30, 40] as const;
   readonly done = signal(false);
   readonly saving = signal(false);
+  readonly isCardUsable = isCardUsable;
+  readonly usableCards = () => this.walletService.cards().filter((card) => isCardUsable(card));
   private readonly queryCardId = toSignal(this.route.queryParamMap.pipe(map((params) => params.get('cardId'))), {
     initialValue: this.route.snapshot.queryParamMap.get('cardId'),
   });
@@ -184,13 +187,13 @@ export class AccountRechargeComponent {
   });
   private readonly syncSelectedCard = effect(() => {
     const cardId = this.queryCardId();
-    if (cardId && this.walletService.cards().some((card) => card.id === cardId)) {
+    if (cardId && this.usableCards().some((card) => card.id === cardId)) {
       this.form.controls.cardId.setValue(cardId);
     }
   });
 
   private readonly syncCard = effect(() => {
-    if (this.cardId()) this.form.controls.cardId.setValue(this.cardId());
+    if (this.usableCards().some(card => card.id === this.cardId())) this.form.controls.cardId.setValue(this.cardId());
   });
 
   selectedAmount(): number {
@@ -211,7 +214,11 @@ export class AccountRechargeComponent {
 
   async confirm(): Promise<void> {
     if (this.done() || this.saving()) return;
-    if (!this.walletService.cards().length) return;
+    if (!this.usableCards().some(card => card.id === this.selectedCardId())) {
+      this.form.controls.cardId.setErrors({ unavailable: true });
+      this.form.controls.cardId.markAsTouched();
+      return;
+    }
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
@@ -235,6 +242,6 @@ export class AccountRechargeComponent {
 
   private initialCardId(): string {
     const requested = this.queryCardId();
-    return requested && this.walletService.cards().some((card) => card.id === requested) ? requested : this.walletService.defaultCardId();
+    return requested && this.usableCards().some((card) => card.id === requested) ? requested : (this.walletService.defaultCard?.()?.id ?? this.walletService.defaultCardId());
   }
 }

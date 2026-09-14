@@ -7,6 +7,17 @@ import { WalletService } from '../../../core/services/wallet.service';
 import { AccountRechargeComponent } from './recharge.component';
 
 describe('AccountRechargeComponent', () => {
+  it('rejects a selected expired card even when another card is usable', async () => {
+    const wallet = TestBed.inject(WalletService);
+    wallet.cards.update(cards => cards.map((card, index) => index === 0 ? { ...card, expiryDate: '01/20' } : card));
+    const recharge = jasmine.createSpy().and.resolveTo({ success: false });
+    Object.assign(wallet, { recharge });
+    const fixture = TestBed.createComponent(AccountRechargeComponent);
+    await fixture.whenStable();
+    fixture.componentInstance.form.controls.cardId.setValue('card-4021');
+    await fixture.componentInstance.confirm();
+    expect(recharge).not.toHaveBeenCalled();
+  });
   let queryParamMap$: BehaviorSubject<ReturnType<typeof convertToParamMap>>;
 
   function mount(): ReturnType<typeof TestBed.createComponent<AccountRechargeComponent>> {
