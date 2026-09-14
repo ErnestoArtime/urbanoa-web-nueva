@@ -39,7 +39,7 @@ import { WalletService } from '../../../core/services/wallet.service';
                 ><strong>{{ startTime() }}</strong
                 ><span>{{ startDayLabel() }}</span>
               </div>
-              <i></i><b>{{ query().duration }}<small>{{ countdown() }}</small></b
+              <i></i><b>{{ query().duration }}<small class="countdown">{{ countdown() }}</small></b
               ><i></i>
               <div>
                 <small>{{ 'parking.success.end' | translate }}</small
@@ -196,6 +196,11 @@ import { WalletService } from '../../../core/services/wallet.service';
         padding: 0.5rem 0.7rem;
         border: 1px solid var(--color-border);
         border-radius: 10px;
+      }
+      .ticket-times .countdown {
+        color: var(--color-text-muted);
+        font-size: var(--text-xs);
+        font-weight: var(--font-normal);
       }
       .ticket-cut {
         position: relative;
