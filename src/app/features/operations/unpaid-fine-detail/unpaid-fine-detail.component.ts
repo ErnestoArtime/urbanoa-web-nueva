@@ -1,7 +1,7 @@
 import { Component, ElementRef, afterRenderEffect, viewChild, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { DecimalPipe } from '@angular/common';
-import { FineStatus, UnpaidFinesService } from '../../../core/services/unpaid-fines.service';
+import { canMoveFineToHistory, FineStatus, UnpaidFinesService } from '../../../core/services/unpaid-fines.service';
 import { WalletService } from '../../../core/services/wallet.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
@@ -10,8 +10,10 @@ import { TranslationService } from '../../../core/services/translation.service';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { distinctUntilChanged, map } from 'rxjs/operators';
 import { OperationsService } from '../../../core/services/operations.service';
+import { OperationType } from '../../../shared/models/operation-type';
 import { OpsApiError } from '../../../core/api/ops-api.types';
 import { apiErrorKey } from '../../../core/http/api-error-key';
+import { isCardUsable } from '../../../core/utils/card-expiry';
 
 @Component({
   selector: 'app-unpaid-fine-detail',
@@ -50,6 +52,11 @@ import { apiErrorKey } from '../../../core/http/api-error-key';
             <aside class="fine-status-banner" [class.expired]="fine.status === fineStatus.EXPIRED">
               <strong>{{ 'ops.fineDetail.status.' + fine.status | translate }}</strong>
               <p>{{ 'ops.fineDetail.statusMessage.' + fine.status | translate }}</p>
+              @if (fine.status === fineStatus.EXPIRED && fine.earlyPaymentDeadline) {
+                <p class="fine-status-deadline">
+                  <strong>{{ 'ops.fineDetail.earlyPaymentEnd' | translate }}:</strong> {{ fine.earlyPaymentDeadline }}
+                </p>
+              }
             </aside>
           }
           <div class="fine-ticket-shell mt-2">
@@ -114,11 +121,12 @@ import { apiErrorKey } from '../../../core/http/api-error-key';
               <fieldset class="payment-card-selector">
                 <legend>{{ 'ops.fineDetail.cardForPayment' | translate }}</legend>
                 @for (card of walletService.cards(); track card.id) {
-                  <label class="payment-card-option" [class.selected]="selectedCardId() === card.id"
+                  <label class="payment-card-option" [class.selected]="selectedCardId() === card.id" [class.disabled]="!isCardUsable(card)"
                     ><input
                       type="radio"
                       name="fine-card"
                       [checked]="selectedCardId() === card.id"
+                      [disabled]="!isCardUsable(card)"
                       (change)="selectedCardId.set(card.id)"
                     /><span
                       ><strong>{{ card.brand }} •••• {{ card.last4 }}</strong
@@ -137,7 +145,7 @@ import { apiErrorKey } from '../../../core/http/api-error-key';
               {{ 'ops.fineDetail.pay' | translate }} {{ fine.amount }}
             </button>
           }
-          @if (fine.status !== fineStatus.PAYABLE) {
+          @if (fine.status !== fineStatus.PAYABLE && canMoveToHistory()) {
             <button
               type="button"
               class="btn btn-primary btn-block mt-2 fine-understood-button"
@@ -349,8 +357,13 @@ export class UnpaidFineDetailComponent {
   readonly acknowledged = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly movingToHistory = signal(false);
-  readonly canMoveToHistory = computed(() => Boolean(this.fine && this.fine.timePeriod !== 1));
+  readonly canMoveToHistory = computed(() => {
+    const fine = this.fine;
+    return Boolean(fine && canMoveFineToHistory({ type: OperationType.UNPAID_FINES, fineStatus: fine.status, timePeriod: fine.timePeriod }));
+  });
   readonly selectedCardId = signal(this.walletService.defaultCardId());
+  readonly isCardUsable = isCardUsable;
+  readonly usableCards = computed(() => this.walletService.cards().filter((card) => isCardUsable(card)));
   readonly numericAmount = computed(() => {
     if (!this.fine) return 0;
     return this.fine.amountValue;
@@ -413,7 +426,7 @@ export class UnpaidFineDetailComponent {
 
   readonly insufficientFunds = () => {
     if (!this.fine) return false;
-    return this.walletService.balance() < this.numericAmount();
+    return this.walletService.balance() < this.numericAmount() || !this.usableCards().length;
   };
 
   async pay(): Promise<void> {

@@ -69,6 +69,18 @@ export function isAcknowledgedFine(operation: Operation): boolean {
   return operation.type === OperationType.UNPAID_FINES && operation.fineStatus === FineStatus.EXPIRED && operation.timePeriod === 1;
 }
 
+export function isHistoricalUnpaidFine(operation: Operation): boolean {
+  return operation.type === OperationType.UNPAID_FINES && operation.timePeriod === 1 && operation.fineStatus !== FineStatus.PAYABLE;
+}
+
+export function canMoveFineToHistory(operation: Pick<Operation, 'type' | 'fineStatus' | 'timePeriod'>): boolean {
+  return (
+    operation.type === OperationType.UNPAID_FINES &&
+    (operation.fineStatus === FineStatus.EXPIRED || operation.fineStatus === FineStatus.NOT_PAYABLE) &&
+    operation.timePeriod !== 1
+  );
+}
+
 @Injectable({ providedIn: 'root' })
 export class UnpaidFinesService {
   private readonly citiesService = inject(CitiesService);
@@ -79,7 +91,7 @@ export class UnpaidFinesService {
   readonly fines = computed(() =>
     this.operationsService
       .operations()
-      .filter((operation) => operation.type === OperationType.UNPAID_FINES && operation.fineStatus === FineStatus.PAYABLE)
+      .filter((operation) => operation.type === OperationType.UNPAID_FINES && !isHistoricalUnpaidFine(operation))
       .map((operation) => this.mapOperation(operation)),
   );
   readonly source = this.operationsService.source;
@@ -91,7 +103,8 @@ export class UnpaidFinesService {
     const numericAmount = fine.amountValue;
     const walletAmount = Math.min(this.walletService.balance(), numericAmount);
     const cardAmount = numericAmount - walletAmount;
-    if (cardAmount > 0 && !this.walletService.cards().some((card) => card.id === cardId)) return { success: false };
+    const usableCards = this.walletService.usableCards?.() ?? this.walletService.cards();
+    if (cardAmount > 0 && !usableCards.some((card) => card.id === cardId)) return { success: false };
 
     const token = this.session.token();
     if (!token) return { success: false };
@@ -141,7 +154,7 @@ export class UnpaidFinesService {
   async acknowledgeExpired(id: string): Promise<FineStatusUpdateResult> {
     const operation = this.operationsService
       .operations()
-      .find((item) => item.id === id && item.type === OperationType.UNPAID_FINES && item.fineStatus === FineStatus.EXPIRED);
+      .find((item) => item.id === id && canMoveFineToHistory(item));
     return operation ? this.moveFineToHistory(this.mapOperation(operation)) : { success: false };
   }
 

@@ -224,9 +224,9 @@ describe('UnpaidFinesService fines listing rules', () => {
     expect(service.fines().length).toBe(1);
   });
 
-  it('excludes an expired fine even when timePeriod is 2', () => {
+  it('keeps an expired fine in the pending list while it is not historical', () => {
     const service = configure({ ...baseFine, fineStatus: FineStatus.EXPIRED, timePeriod: 2 });
-    expect(service.fines().length).toBe(0);
+    expect(service.fines().length).toBe(1);
   });
 
   it('drops an acknowledged fine (fineStatus 2 + timePeriod 1) from the pending list', () => {
@@ -234,9 +234,9 @@ describe('UnpaidFinesService fines listing rules', () => {
     expect(service.fines().length).toBe(0);
   });
 
-  it('excludes non-payable fines (fineStatus 3)', () => {
+  it('keeps a non-payable fine in the pending list while it is not historical', () => {
     const service = configure({ ...baseFine, fineStatus: FineStatus.NOT_PAYABLE });
-    expect(service.fines().length).toBe(0);
+    expect(service.fines().length).toBe(1);
   });
 });
 
