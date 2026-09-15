@@ -32,7 +32,7 @@ describe('Parking success authoritative receipt', () => {
     fixture.componentInstance.now.set(new Date('2026-09-11T23:00:00Z').getTime());
     expect(fixture.componentInstance.countdown()).toBe('00:00:00');
     fixture.componentInstance.now.set(new Date('2026-09-09T23:00:00Z').getTime());
-    expect(fixture.componentInstance.countdown()).toContain('parking.success.startsLater');
+    expect(fixture.componentInstance.countdown()).toBe('02:00:00');
     operations.operations.set([]);
     await fixture.componentInstance.loadReceipt();
     expect(fixture.componentInstance.receipt()).toBeNull();

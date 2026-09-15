@@ -304,8 +304,8 @@ export class ParkingSuccessComponent implements OnInit {
     const start = this.parkingDate('start');
     const end = this.parkingDate('end');
     if (!start || !end) return '';
-    if (this.now() < start.getTime()) return this.translations.translate('parking.success.startsLater');
-    const remaining = Math.max(0, Math.ceil((end.getTime() - this.now()) / 1000));
+    const countdownFrom = Math.max(this.now(), start.getTime());
+    const remaining = Math.max(0, Math.ceil((end.getTime() - countdownFrom) / 1000));
     return [Math.floor(remaining / 3600), Math.floor(remaining % 3600 / 60), remaining % 60]
       .map(value => String(value).padStart(2, '0')).join(':');
   });
