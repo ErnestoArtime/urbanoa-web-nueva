@@ -478,6 +478,41 @@ describe('OperationsService stored data migration', () => {
     expect(service.activeParkings()[0]).toEqual(jasmine.objectContaining({ startDayLabel: 'ops.today', endDayLabel: 'ops.tomorrow' }));
   });
 
+  it('keeps the transaction timestamp separate from a future parking validity interval', async () => {
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post', 'serverNow']);
+    api.serverNow.and.returnValue(new Date('2026-09-14T20:50:00Z'));
+    api.post.and.resolveTo([
+      {
+        contractId: 3,
+        operationNumber: 'new-parking',
+        operationType: OperationType.PARKING,
+        paymentAmount: 203,
+        opDate: '224700140926',
+        parkingStartDate: '090000150926',
+        parkingEndDate: '102500150926',
+        parkingDuration: 85,
+        plate: '1234CBZ',
+        timePeriod: 2,
+      },
+    ]);
+    TestBed.overrideProvider(OpsApiClient, { useValue: api });
+    TestBed.overrideProvider(OpsSessionService, { useValue: { token: () => 'token' } });
+    const service = TestBed.inject(OperationsService);
+
+    await service.loadParkingStatuses([{ id: 'vehicle-new', plate: '1234CBZ' }]);
+
+    expect(service.operations()[0]).toEqual(jasmine.objectContaining({
+      operationTime: '22:47',
+      startDate: '15/09/2026',
+      endDate: '15/09/2026',
+      startTime: '09:00',
+      endTime: '10:25',
+    }));
+    expect(service.activeParkings()[0]).toEqual(
+      jasmine.objectContaining({ startTime: '09:00', endTime: '10:25', startDayLabel: 'ops.tomorrow', endDayLabel: 'ops.tomorrow' }),
+    );
+  });
+
   it('filters active operations by contract without calling QueryParkingStatusAPI', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post', 'postOrNull']);
     api.post.and.resolveTo([
