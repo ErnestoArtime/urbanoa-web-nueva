@@ -41,7 +41,7 @@ import { isCardUsable } from '../../../core/utils/card-expiry';
         <form [formGroup]="form" (ngSubmit)="confirm()" novalidate>
           <div class="card">
             <p class="text-muted">
-              {{ 'account.recharge.currentBalance' | translate }} <strong>{{ walletService.balance() }} €</strong>
+              {{ 'account.recharge.currentBalance' | translate }} <strong>{{ walletService.balance() | number: '1.2-2' }} €</strong>
             </p>
             <fieldset class="recharge-options">
               <legend>{{ 'account.recharge.amountQuestion' | translate }}</legend>
@@ -74,7 +74,7 @@ import { isCardUsable } from '../../../core/utils/card-expiry';
           </fieldset>
           <div class="card mt-1">
             <p>
-              {{ 'account.recharge.balanceAfter' | translate }} <strong>{{ walletService.balance() + selectedAmount() }} €</strong>
+              {{ 'account.recharge.balanceAfter' | translate }} <strong>{{ balanceAfterRecharge() | number: '1.2-2' }} €</strong>
             </p>
           </div>
           <button type="submit" class="btn btn-primary btn-block mt-2" [disabled]="saving()">
@@ -198,6 +198,12 @@ export class AccountRechargeComponent {
 
   selectedAmount(): number {
     return Number(this.form.controls.amount.value) || 0;
+  }
+
+  balanceAfterRecharge(): number {
+    const balanceInCents = Math.round(this.walletService.balance() * 100);
+    const amountInCents = Math.round(this.selectedAmount() * 100);
+    return (balanceInCents + amountInCents) / 100;
   }
 
   selectedCardId(): string {

@@ -64,4 +64,13 @@ describe('AccountRechargeComponent', () => {
 
     expect(fixture.componentInstance.selectedCardId()).toBe('card-2403');
   });
+
+  it('calculates the projected balance using cents and keeps two decimal places', () => {
+    const fixture = mount();
+    TestBed.inject(WalletService).balance.set(22.989999999999995);
+
+    fixture.componentInstance.form.controls.amount.setValue(40);
+
+    expect(fixture.componentInstance.balanceAfterRecharge()).toBe(62.99);
+  });
 });
