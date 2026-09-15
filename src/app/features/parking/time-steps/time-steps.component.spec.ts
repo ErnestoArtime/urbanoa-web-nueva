@@ -88,7 +88,28 @@ describe('ParkingTimeStepsComponent extension', () => {
 
     await component.ngOnInit();
 
-    expect(component.endTime()).toBe('01:13');
+    expect(component.endTime()).toBe('13:30');
+    expect(component.endDayLabel()).toBe('ops.tomorrow');
+  });
+
+  it('uses each server step datetime when the tariff carries remaining minutes to the next opening', async () => {
+    api.serverNow.and.returnValue(new Date('2026-09-14T15:23:00Z'));
+    api.post.and.resolveTo({
+      dateInitial: '172300140926',
+      tariffType: 6,
+      steps: [
+        { time: 155, quantity: 517, datetime: '195800140926' },
+        { time: 160, quantity: 533, datetime: '090300150926' },
+      ],
+    });
+    const component = TestBed.runInInjectionContext(() => new ParkingTimeStepsComponent());
+
+    await component.ngOnInit();
+
+    expect(component.endTime()).toBe('19:58');
+    expect(component.endDayLabel()).toBe('ops.today');
+    component.changeTime(1);
+    expect(component.endTime()).toBe('09:03');
     expect(component.endDayLabel()).toBe('ops.tomorrow');
   });
 

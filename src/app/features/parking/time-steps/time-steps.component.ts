@@ -456,13 +456,13 @@ export class ParkingTimeStepsComponent implements OnInit {
   }
   endTime(): string {
     const step = this.selectedStep();
-    const start = this.stepDate(step.startDatetimeRaw, this.startedAt);
-    return this.formatTime(new Date(start.getTime() + step.time * 60_000));
+    const fallback = new Date(this.startedAt.getTime() + step.time * 60_000);
+    return this.stepTime(step.datetimeRaw, fallback);
   }
   endDayLabel(): string {
     const step = this.selectedStep();
-    const start = this.stepDate(step.startDatetimeRaw, this.startedAt);
-    return opsRelativeDayLabel(new Date(start.getTime() + step.time * 60_000), this.api.serverNow());
+    const fallback = new Date(this.startedAt.getTime() + step.time * 60_000);
+    return opsRelativeDayLabel(this.stepDate(step.datetimeRaw, fallback), this.api.serverNow());
   }
   amountFormatted(): string {
     return `${this.selectedStep().amount.toFixed(2).replace('.', ',')} €`;
