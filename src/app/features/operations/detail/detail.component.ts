@@ -659,7 +659,7 @@ export class OperationsDetailComponent {
   });
   readonly fineCoordinates = computed(() => {
     const operation = this.op();
-    if (!operation || operation.type !== OperationType.FINE_PAYMENT) return null;
+    if (!operation || !this.isFinePaymentDetail()) return null;
     const { latitude, longitude } = operation;
     if (
       !Number.isFinite(latitude) ||

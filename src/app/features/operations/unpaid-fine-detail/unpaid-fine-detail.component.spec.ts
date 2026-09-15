@@ -89,6 +89,15 @@ describe('UnpaidFineDetailComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('ops.fineDetail.payFailed: La tarjeta ha sido rechazada');
   });
 
+  it('shows the fine location map when the API provides valid coordinates', () => {
+    configure(
+      { ...payableFine, latitude: 43.286409, longitude: -2.176894 },
+      { payFine: jasmine.createSpy('payFine').and.resolveTo({ success: false }) },
+    );
+
+    expect(fixture.nativeElement.querySelector('app-location-map')).not.toBeNull();
+  });
+
   it('shows a generic message when the pay error has no backend payload', async () => {
     const transportError = new OpsApiError('transport', 'OPSWebServicesAPI/ConfirmPaymentAPI', 'connection lost');
     configure(payableFine, { payFine: jasmine.createSpy('payFine').and.resolveTo({ success: false, error: transportError }) });

@@ -14,10 +14,11 @@ import { OperationType } from '../../../shared/models/operation-type';
 import { OpsApiError } from '../../../core/api/ops-api.types';
 import { apiErrorKey } from '../../../core/http/api-error-key';
 import { isCardUsable } from '../../../core/utils/card-expiry';
+import { LocationMap } from '../../../shared/components/location-map/location-map';
 
 @Component({
   selector: 'app-unpaid-fine-detail',
-  imports: [RouterLink, DecimalPipe, TranslatePipe, DetailPanelHeaderComponent, ResultModalComponent],
+  imports: [RouterLink, DecimalPipe, TranslatePipe, DetailPanelHeaderComponent, ResultModalComponent, LocationMap],
   template: `
     @if (errorMessage(); as error) {
       <app-result-modal
@@ -96,6 +97,13 @@ import { isCardUsable } from '../../../core/utils/card-expiry';
                   </p>
                 }
               </div>
+              @if (fineCoordinates(); as coordinates) {
+                <app-location-map
+                  [latitude]="coordinates.latitude"
+                  [longitude]="coordinates.longitude"
+                  [label]="'ops.detail.fineMapAria' | translate"
+                />
+              }
               <div #fineTicketCut class="fine-ticket-cut" aria-hidden="true">
                 <div class="fine-ticket-cut-line"></div>
               </div>
@@ -367,6 +375,20 @@ export class UnpaidFineDetailComponent {
   readonly numericAmount = computed(() => {
     if (!this.fine) return 0;
     return this.fine.amountValue;
+  });
+  readonly fineCoordinates = computed(() => {
+    const fine = this.fine;
+    if (!fine) return null;
+    const { latitude, longitude } = fine;
+    if (
+      !Number.isFinite(latitude) ||
+      !Number.isFinite(longitude) ||
+      Math.abs(latitude!) > 90 ||
+      Math.abs(longitude!) > 180 ||
+      (latitude === 0 && longitude === 0)
+    )
+      return null;
+    return { latitude: latitude!, longitude: longitude! };
   });
   readonly walletAmount = computed(() => Math.min(this.walletService.balance(), this.numericAmount()));
   readonly cardAmount = computed(() => Math.max(0, this.numericAmount() - this.walletAmount()));
