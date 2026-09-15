@@ -66,6 +66,8 @@ export interface ActiveParking {
   startDayLabel?: string;
   durationLabel: string;
   timeRemaining: string;
+  /** Absolute instant when the local countdown may begin. */
+  countdownStartsAt?: number;
   endTime: string;
   endDayLabel?: string;
   latitude?: number;
@@ -242,6 +244,7 @@ export class OperationsService {
       startDayLabel: this.relativeDayLabel(start, now),
       durationLabel: operation.durationLabel ?? '0 min',
       timeRemaining: `${hours}:${minutes}:${seconds}`,
+      countdownStartsAt: start.getTime(),
       endTime: operation.endTime ?? '',
       endDayLabel: this.relativeDayLabel(end, now),
       latitude: operation.latitude,

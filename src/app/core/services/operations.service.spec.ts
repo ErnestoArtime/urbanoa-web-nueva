@@ -509,7 +509,13 @@ describe('OperationsService stored data migration', () => {
       endTime: '10:25',
     }));
     expect(service.activeParkings()[0]).toEqual(
-      jasmine.objectContaining({ startTime: '09:00', endTime: '10:25', startDayLabel: 'ops.tomorrow', endDayLabel: 'ops.tomorrow' }),
+      jasmine.objectContaining({
+        startTime: '09:00',
+        endTime: '10:25',
+        startDayLabel: 'ops.tomorrow',
+        endDayLabel: 'ops.tomorrow',
+        countdownStartsAt: new Date('2026-09-15T07:00:00Z').getTime(),
+      }),
     );
   });
 
