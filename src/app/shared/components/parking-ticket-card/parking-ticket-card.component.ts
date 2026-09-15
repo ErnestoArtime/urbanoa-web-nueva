@@ -286,7 +286,7 @@ export class ParkingTicketCardComponent implements OnDestroy {
   /** Ticks every second so the countdown stays live like the APK timer. */
   private readonly tick = signal(0);
   private readonly timer = setInterval(() => this.tick.update((value) => value + 1), 1000);
-  private baseline: { id: string; seconds: number; at: number } | null = null;
+  private baseline: { id: string; snapshot: number; seconds: number; at: number } | null = null;
 
   ngOnDestroy(): void {
     clearInterval(this.timer);
@@ -298,8 +298,13 @@ export class ParkingTicketCardComponent implements OnDestroy {
     const now = Date.now();
     const snapshot = parseCountdownToSeconds(active.timeRemaining);
     const base = this.baseline;
-    if (!base || base.id !== active.id || Math.abs(snapshot - liveCountdownSeconds(base.seconds, base.at, now)) > 2) {
-      this.baseline = { id: active.id, seconds: snapshot, at: now };
+    const startsAt = active.countdownStartsAt;
+    if (startsAt !== undefined && Number.isFinite(startsAt) && now < startsAt) {
+      this.baseline = { id: active.id, snapshot, seconds: snapshot, at: startsAt };
+      return snapshot;
+    }
+    if (!base || base.id !== active.id || base.snapshot !== snapshot) {
+      this.baseline = { id: active.id, snapshot, seconds: snapshot, at: now };
       return snapshot;
     }
     return liveCountdownSeconds(base.seconds, base.at, now);

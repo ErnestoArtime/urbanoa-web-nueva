@@ -81,6 +81,28 @@ describe('ParkingTicketCardComponent', () => {
     expect(fixture.nativeElement.querySelector('.ticket-street svg')).not.toBeNull();
   });
 
+  it('keeps the full duration stable until a future parking actually starts', () => {
+    const fixture = TestBed.createComponent(ParkingTicketCardComponent);
+    const now = spyOn(Date, 'now').and.returnValue(1_000);
+    const futureParking = {
+      ...parking(undefined),
+      timeRemaining: '02:00:00',
+      countdownStartsAt: 10_000,
+    } as ActiveParking;
+
+    expect(fixture.componentInstance.liveTimeRemaining(futureParking)).toBe('02:00:00');
+    now.and.returnValue(2_000);
+    expect(fixture.componentInstance.liveTimeRemaining(futureParking)).toBe('02:00:00');
+    now.and.returnValue(10_000);
+    expect(fixture.componentInstance.liveTimeRemaining(futureParking)).toBe('02:00:00');
+    now.and.returnValue(11_000);
+    expect(fixture.componentInstance.liveTimeRemaining(futureParking)).toBe('01:59:59');
+    now.and.returnValue(13_000);
+    expect(fixture.componentInstance.liveTimeRemaining(futureParking)).toBe('01:59:57');
+
+    fixture.destroy();
+  });
+
   it('keeps extension enabled independently of hidden unparking', async () => {
     const fixture = TestBed.createComponent(ParkingTicketCardComponent);
     fixture.componentRef.setInput('parking', { ...parking(0), extension: 2 });
