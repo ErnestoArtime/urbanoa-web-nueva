@@ -43,7 +43,9 @@ export interface ParkingFlowState {
   minutes: string;
   amount: string;
   startTime: string;
+  startDayLabel: string;
   endTime: string;
+  endDayLabel: string;
   mode: 'parking' | 'extension';
   opBaseId: string;
   selectedStep: ParkingTimeStep | null;
@@ -77,7 +79,9 @@ export class ParkingFlowStore {
       minutes: undefined,
       amount: undefined,
       startTime: undefined,
+      startDayLabel: undefined,
       endTime: undefined,
+      endDayLabel: undefined,
       mode: 'parking',
       selectedStep: undefined,
       paymentSummary: undefined,
@@ -162,7 +166,9 @@ export class ParkingFlowStore {
       minutes: s.minutes ?? '',
       amount: s.amount ?? '',
       startTime: s.startTime ?? '',
+      startDayLabel: s.startDayLabel ?? '',
       endTime: s.endTime ?? '',
+      endDayLabel: s.endDayLabel ?? '',
       mode: s.mode ?? 'parking',
       opBaseId: s.opBaseId ?? '',
     };
@@ -201,7 +207,9 @@ export class ParkingFlowStore {
       minutes: params['minutes'] ?? '',
       amount: params['amount'] ?? '',
       startTime: params['startTime'] ?? '',
+      startDayLabel: params['startDayLabel'] ?? '',
       endTime: params['endTime'] ?? '',
+      endDayLabel: params['endDayLabel'] ?? '',
       mode: params['mode'] === 'extension' ? 'extension' : 'parking',
       opBaseId: params['opBaseId'] ?? '',
     });
@@ -234,7 +242,9 @@ export class ParkingFlowStore {
     if (s.minutes) result['minutes'] = s.minutes;
     if (s.amount) result['amount'] = s.amount;
     if (s.startTime) result['startTime'] = s.startTime;
+    if (s.startDayLabel) result['startDayLabel'] = s.startDayLabel;
     if (s.endTime) result['endTime'] = s.endTime;
+    if (s.endDayLabel) result['endDayLabel'] = s.endDayLabel;
     if (s.mode) result['mode'] = s.mode;
     if (s.opBaseId) result['opBaseId'] = s.opBaseId;
     return result;

@@ -17,6 +17,7 @@ import { OperationType } from '../../../shared/models/operation-type';
 import { parseOpsDate } from '../../../core/utils/ops-date';
 import { ResultModalComponent } from '../../../shared/components/result-modal/result-modal.component';
 import { isCardUsable } from '../../../core/utils/card-expiry';
+import { TranslationService } from '../../../core/services/translation.service';
 
 @Component({
   selector: 'app-parking-confirm',
@@ -52,7 +53,15 @@ import { isCardUsable } from '../../../core/utils/card-expiry';
         </p>
         <p>
           <span>{{ 'parking.confirm.duration' | translate }}</span
-          ><strong>{{ query().duration }} · hasta {{ query().endTime }}</strong>
+          ><strong
+            >{{ query().duration }}
+            @if (query().startDayLabel; as startDayLabel) {
+              · desde {{ dayLabel(startDayLabel) }} ({{ query().startTime }})
+            }
+            @if (query().endDayLabel; as endDayLabel) {
+              · hasta {{ dayLabel(endDayLabel) }} ({{ query().endTime }})
+            }</strong
+          >
         </p>
         <p>
           <span>{{ 'parking.confirm.tariff' | translate }}</span
@@ -264,6 +273,7 @@ export class ParkingConfirmComponent implements OnInit {
   private readonly parkingApi = inject(ParkingApiService);
   private readonly ticketStore = inject(ParkingTicketStoreService);
   private readonly operations = inject(OperationsService);
+  private readonly translations = inject(TranslationService);
   @ViewChild(SwipeToPayComponent) swipePay!: SwipeToPayComponent;
   private readonly initialQuery = readParkingFlowQuery(this.route);
   readonly query = computed(() =>
@@ -291,6 +301,11 @@ export class ParkingConfirmComponent implements OnInit {
   });
   readonly cardAmount = computed(() => Math.max(0, this.totalAmount() - this.walletService.balance()));
   readonly requiresCard = computed(() => this.cardAmount() > 0);
+
+  dayLabel(value?: string): string {
+    if (!value) return '';
+    return value.startsWith('ops.') ? this.translations.translate(value) : value;
+  }
 
   async ngOnInit(): Promise<void> {
     if (!this.walletService.loading()) await this.walletService.load();

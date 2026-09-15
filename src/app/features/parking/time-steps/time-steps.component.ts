@@ -482,7 +482,9 @@ export class ParkingTimeStepsComponent implements OnInit {
       minutes: String(step.time),
       amount: this.amountFormatted(),
       startTime: this.startTime(),
+      startDayLabel: this.startDayLabel(),
       endTime: this.endTime(),
+      endDayLabel: this.endDayLabel(),
       tariffType: String(step.tariffType),
     };
   }
@@ -494,7 +496,9 @@ export class ParkingTimeStepsComponent implements OnInit {
       minutes: String(step.time),
       amount: this.amountFormatted(),
       startTime: this.startTime(),
+      startDayLabel: this.startDayLabel(),
       endTime: this.endTime(),
+      endDayLabel: this.endDayLabel(),
       tariffType: String(step.tariffType),
     });
   }

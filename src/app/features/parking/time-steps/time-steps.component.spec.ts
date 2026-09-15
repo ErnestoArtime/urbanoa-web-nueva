@@ -56,7 +56,16 @@ describe('ParkingTimeStepsComponent extension', () => {
     component.changeTime(-1);
     expect(component.amountFormatted()).toBe('0,75 €');
     component.onContinue();
-    expect(store.vm()).toEqual(jasmine.objectContaining({ mode: 'extension', minutes: '30', amount: '0,75 €', tariffType: '6' }));
+    expect(store.vm()).toEqual(
+      jasmine.objectContaining({
+        mode: 'extension',
+        minutes: '30',
+        amount: '0,75 €',
+        tariffType: '6',
+        startDayLabel: 'ops.today',
+        endDayLabel: 'ops.today',
+      }),
+    );
   });
 
   it('does not invent a tariff when its identifier is absent', async () => {
