@@ -265,17 +265,23 @@ export class ParkingApiService {
     return {
       data: (response.ticketlist ?? []).map((ticket) => {
         const minAmountCents = this.amountInCents(ticket.minAmount);
+        const schedule = this.normalizeTariffText(ticket.schedule) ?? '';
+        const behaviorText = this.normalizeTariffText(ticket.ticketBehText);
+        const minAmountText =
+          typeof ticket.minAmount === 'string'
+            ? this.normalizeTariffText(ticket.minAmount.replace(/<br\s*\/?>/gi, ' · '))
+            : undefined;
         return {
           id: String(ticket.ticketId),
           name: ticket.ticketDesc,
-          desc: ticket.ticketBehText || ticket.schedule,
+          desc: behaviorText || schedule,
           price:
-            typeof ticket.minAmount === 'string' && ticket.minAmount.trim()
-              ? ticket.minAmount.replace(/<br\s*\/?>/gi, ' · ')
+            minAmountText?.trim()
+              ? minAmountText
               : `${(minAmountCents / 100).toFixed(2).replace('.', ',')} €`,
-          schedule: ticket.schedule,
+          schedule,
           maxTime: ticket.maxTime,
-          minAmount: typeof ticket.minAmount === 'string' ? ticket.minAmount.replace(/<br\s*\/?>/gi, ' · ') : undefined,
+          minAmount: minAmountText,
           minAmountCents,
           zoneId: ticket.zoneId,
           sectorId: ticket.sectorId,
@@ -316,6 +322,13 @@ export class ParkingApiService {
     const match = value.match(/[\d]+(?:[,.][\d]+)?/);
     if (!match) return 0;
     return Math.round(Number(match[0].replace(',', '.')) * 100);
+  }
+
+  private normalizeTariffText(value: string | undefined): string | undefined {
+    if (!value) return value;
+    return value.replace(/\b(lunes|martes|miércoles|miercoles|jueves|viernes|sábado|sabado|domingo)\b/giu, (day) =>
+      day.charAt(0).toLocaleUpperCase('es-ES') + day.slice(1).toLocaleLowerCase('es-ES'),
+    );
   }
 
   private challengeUrl(value: unknown): string | undefined {

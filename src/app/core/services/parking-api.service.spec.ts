@@ -162,8 +162,9 @@ describe('ParkingApiService', () => {
         {
           ticketId: 4,
           ticketDesc: 'Rotación',
-          minAmount: '0 € - 20,00 €',
+          minAmount: 'Lunes - sábado 0 € - 2,50 € - Domingo - Festivos 0 € - 20,00 €',
           schedule: 'Todos los días 9:00 - 20:00',
+          ticketBehText: 'Lunes - sábado 0 € - 2,50 € - Domingo - Festivos 0 € - 20,00 €',
           sectorId: 22002,
         },
       ],
@@ -183,7 +184,12 @@ describe('ParkingApiService', () => {
       { contractId: 3, plate: '1234567', date: '183423260826', zone: 22002, language: 'ES' },
       { token: 'token' },
     );
-    expect(result.data[0]).toEqual(jasmine.objectContaining({ id: '4', minAmount: '0 € - 20,00 €', sectorId: 22002 }));
+    expect(result.data[0]).toEqual(jasmine.objectContaining({
+      id: '4',
+      desc: 'Lunes - Sábado 0 € - 2,50 € - Domingo - Festivos 0 € - 20,00 €',
+      minAmount: 'Lunes - Sábado 0 € - 2,50 € - Domingo - Festivos 0 € - 20,00 €',
+      sectorId: 22002,
+    }));
   });
 
   it('always sends a non-empty map version and the complete sector location', async () => {
