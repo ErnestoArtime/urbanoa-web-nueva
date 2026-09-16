@@ -105,6 +105,8 @@
   "parking.timeSteps.vehicle": "Matrícula",
   "parking.timeSteps.estimatedPrice": "Importe estimado",
   "parking.timeSteps.continue": "Continuar",
+  "parking.timeSteps.loadError": "No se pudieron obtener los tramos de tiempo para esta tarifa.",
+  "parking.timeSteps.noExtensionAvailable": "Este aparcamiento ya no se puede ampliar.",
   "parking.tickets.loading": "Cargando tarifas...",
   "parking.tickets.back": "‹ Volver al mapa",
   "parking.tickets.title": "Tarifa y Zona",

@@ -105,6 +105,8 @@
   "parking.timeSteps.vehicle": "Plate number",
   "parking.timeSteps.estimatedPrice": "Estimated amount",
   "parking.timeSteps.continue": "Continue",
+  "parking.timeSteps.loadError": "The available time options for this rate could not be loaded.",
+  "parking.timeSteps.noExtensionAvailable": "This parking session can no longer be extended.",
   "parking.tickets.loading": "Loading rates…",
   "parking.tickets.back": "uk_‹ Volver al mapa",
   "parking.tickets.title": "Rate and zone",

@@ -105,6 +105,8 @@
   "parking.timeSteps.vehicle": "Matrícula",
   "parking.timeSteps.estimatedPrice": "Montant estimé",
   "parking.timeSteps.continue": "Continuar",
+  "parking.timeSteps.loadError": "Impossible d’obtenir les créneaux de temps pour ce tarif.",
+  "parking.timeSteps.noExtensionAvailable": "Ce stationnement ne peut plus être prolongé.",
   "parking.tickets.loading": "Chargement des tarifs…",
   "parking.tickets.back": "fr_‹ Volver al mapa",
   "parking.tickets.title": "Tarif et zone",

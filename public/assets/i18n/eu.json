@@ -105,6 +105,8 @@
   "parking.timeSteps.vehicle": "Matrikula",
   "parking.timeSteps.estimatedPrice": "Zenbateko zenbatetsia",
   "parking.timeSteps.continue": "Jarraitu",
+  "parking.timeSteps.loadError": "Ezin izan dira tarifa honetarako denbora-tarteak eskuratu.",
+  "parking.timeSteps.noExtensionAvailable": "Aparkaldi hau ezin da gehiago luzatu.",
   "parking.tickets.loading": "Tarifak kargatzen...",
   "parking.tickets.back": "eu_‹ Volver al mapa",
   "parking.tickets.title": "Tarifa eta eremua",

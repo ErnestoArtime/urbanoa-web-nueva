@@ -3,7 +3,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { LoaderComponent } from '../../../shared/components/loader/loader.component';
 import { ParkingFlowStore } from '../parking-flow.store';
 import { ParkingFlowQuery, readParkingFlowQuery } from '../parking-flow.model';
-import { ParkingTimeStepsService } from '../parking-time-steps.service';
+import { NoParkingTimeAvailableError, ParkingTimeStepsService } from '../parking-time-steps.service';
 import type { ParkingTimeStep } from '../models/parking-time-step.model';
 import { ParkingSessionService } from '../../../core/services/parking-session.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
@@ -37,23 +37,23 @@ import { opsRelativeDayLabel, formatOpsTime, parseOpsDate } from '../../../core/
         </div>
       </div>
 
-      <div class="time-line card">
-        <div>
-          <small>{{ 'parking.timeSteps.start' | translate }}</small
-          ><strong>{{ startTime() }}</strong>
-          <span class="time-day-label">{{ startDayLabel() | translate }}</span>
-        </div>
-        <span class="line"></span>
-        <div class="duration-pill">{{ selectedStep().timeFormatted }}</div>
-        <span class="line"></span>
-        <div>
-          <small>{{ 'parking.timeSteps.end' | translate }}</small
-          ><strong>{{ endTime() }}</strong>
-          <span class="time-day-label">{{ endDayLabel() | translate }}</span>
-        </div>
-      </div>
-
       @if (steps().length > 0) {
+        <div class="time-line card">
+          <div>
+            <small>{{ 'parking.timeSteps.start' | translate }}</small
+            ><strong>{{ startTime() }}</strong>
+            <span class="time-day-label">{{ startDayLabel() | translate }}</span>
+          </div>
+          <span class="line"></span>
+          <div class="duration-pill">{{ selectedStep().timeFormatted }}</div>
+          <span class="line"></span>
+          <div>
+            <small>{{ 'parking.timeSteps.end' | translate }}</small
+            ><strong>{{ endTime() }}</strong>
+            <span class="time-day-label">{{ endDayLabel() | translate }}</span>
+          </div>
+        </div>
+
         <section class="time-selector" [attr.aria-label]="'parking.timeSteps.title' | translate">
           <button
             type="button"
@@ -91,10 +91,13 @@ import { opsRelativeDayLabel, formatOpsTime, parseOpsDate } from '../../../core/
         </div>
       }
       @if (!loading() && error()) {
-        <p class="card" role="alert">No se pudieron obtener los tramos de tiempo para esta tarifa.</p>
+        <p class="card" role="alert">{{ 'parking.timeSteps.loadError' | translate }}</p>
+      }
+      @if (!loading() && noExtensionAvailable()) {
+        <p class="card no-extension-message" role="status">{{ 'parking.timeSteps.noExtensionAvailable' | translate }}</p>
       }
 
-      @if (steps().length > 0) {
+      @if (canContinue()) {
         <div class="price-card card">
           <span>{{ 'parking.timeSteps.estimatedPrice' | translate }}</span>
           <strong>{{ amountFormatted() }}</strong>
@@ -277,6 +280,12 @@ import { opsRelativeDayLabel, formatOpsTime, parseOpsDate } from '../../../core/
         font-size: var(--text-xl);
         color: var(--color-primary);
       }
+      .no-extension-message {
+        border-color: var(--color-warning);
+        background: #fff7e8;
+        color: var(--color-warning);
+        font-weight: var(--font-bold);
+      }
       @media (min-width: 960px) and (max-height: 950px) {
         .flow-page {
           padding-top: 1rem;
@@ -387,6 +396,8 @@ export class ParkingTimeStepsComponent implements OnInit {
   readonly selectedIndex = computed(() => this.steps().findIndex((s) => s.time === this.selectedStep().time));
   readonly loading = signal(true);
   readonly error = signal(false);
+  readonly noExtensionAvailable = signal(false);
+  readonly canContinue = computed(() => this.steps().length > 0 && this.selectedStep().time > 0);
   private readonly startedAt = this.api.serverNow();
 
   private currentlyLoadedPlate = '';
@@ -408,6 +419,7 @@ export class ParkingTimeStepsComponent implements OnInit {
     const q = this.query();
     this.loading.set(true);
     this.error.set(false);
+    this.noExtensionAvailable.set(false);
     // Extensions carry the ticket identifier; OPS supplies their durations and prices.
     if (!q.tariffId) {
       this.error.set(true);
@@ -430,9 +442,10 @@ export class ParkingTimeStepsComponent implements OnInit {
       const oneHourIndex = generatedSteps.findIndex((step) => step.time === 60);
       const defaultIndex = oneHourIndex >= 0 ? oneHourIndex : 0;
       if (generatedSteps[defaultIndex]) this.selectedStep.set(generatedSteps[defaultIndex]);
-    } catch {
+    } catch (error) {
       this.steps.set([]);
-      this.error.set(true);
+      if (error instanceof NoParkingTimeAvailableError) this.noExtensionAvailable.set(true);
+      else this.error.set(true);
     } finally {
       this.loading.set(false);
     }
@@ -490,6 +503,7 @@ export class ParkingTimeStepsComponent implements OnInit {
   }
 
   onContinue(): void {
+    if (!this.canContinue()) return;
     const step = this.selectedStep();
     this.store.update({
       duration: step.timeFormatted,
@@ -521,5 +535,4 @@ export class ParkingTimeStepsComponent implements OnInit {
   private stepDate(raw: string, fallback: Date): Date {
     return /^\d{12}$/.test(raw) ? parseOpsDate(raw) : fallback;
   }
-
 }

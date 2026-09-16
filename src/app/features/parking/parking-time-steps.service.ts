@@ -5,6 +5,14 @@ import { OpsSessionService } from '../../core/api/ops-session.service';
 import { OpsApiError } from '../../core/api/ops-api.types';
 import type { ParkingTimeStep, ParkingTimeStepInput } from './models/parking-time-step.model';
 import { formatOpsDate } from '../../core/utils/ops-date';
+import { formatParkingDuration } from '../../core/utils/parking-duration';
+
+export class NoParkingTimeAvailableError extends Error {
+  constructor() {
+    super('No quedan tramos de tiempo disponibles para ampliar el aparcamiento');
+    this.name = 'NoParkingTimeAvailableError';
+  }
+}
 
 interface ParkingTimeStepsResponseDto {
   result?: number;
@@ -61,18 +69,20 @@ export class ParkingTimeStepsService {
         },
         { token },
       );
-      const mapped = (response.steps ?? []).map((step) => ({
-        tariffType: response.tariffType ?? 0,
-        time: step.time,
-        quantity: step.quantity,
-        timeFormatted: this.durationLabel(step.time),
-        hourMinute: `${Math.floor(step.time / 60)}:${String(step.time % 60).padStart(2, '0')}`,
-        dayDescriptor: 'hoy',
-        datetimeRaw: step.datetime,
-        startDatetimeRaw: response.dateInitial,
-        amount: step.quantity / 100,
-      }));
-      if (!mapped.length) throw new Error('El servicio no devolvió tramos de tiempo');
+      const mapped = (response.steps ?? [])
+        .filter((step) => Number.isFinite(step.time) && step.time > 0)
+        .map((step) => ({
+          tariffType: response.tariffType ?? 0,
+          time: step.time,
+          quantity: step.quantity,
+          timeFormatted: formatParkingDuration(step.time),
+          hourMinute: `${Math.floor(step.time / 60)}:${String(step.time % 60).padStart(2, '0')}`,
+          dayDescriptor: 'hoy',
+          datetimeRaw: step.datetime,
+          startDatetimeRaw: response.dateInitial,
+          amount: step.quantity / 100,
+        }));
+      if (!mapped.length) throw new NoParkingTimeAvailableError();
       this.steps.set(mapped);
       this.source.set('remote');
       return mapped;
@@ -80,12 +90,6 @@ export class ParkingTimeStepsService {
       this.source.set('error');
       throw error;
     }
-  }
-
-  private durationLabel(minutes: number): string {
-    const hours = Math.floor(minutes / 60);
-    const remainder = minutes % 60;
-    return hours === 0 ? `${minutes} min` : remainder === 0 ? `${hours} h` : `${hours} h ${remainder} min`;
   }
 
   private opsDate(date: Date): string {

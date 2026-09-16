@@ -76,14 +76,30 @@ describe('ParkingTimeStepsComponent extension', () => {
     expect(component.error()).toBeTrue();
   });
 
-  it('shows an error when the server returns no available durations', async () => {
+  it('explains that the parking can no longer be extended when no duration remains', async () => {
     api.post.and.resolveTo({ dateInitial: '120000090926', steps: [] });
     const component = TestBed.runInInjectionContext(() => new ParkingTimeStepsComponent());
     await component.ngOnInit();
     expect(api.post).toHaveBeenCalledTimes(1);
     expect(component.steps()).toEqual([]);
-    expect(component.error()).toBeTrue();
+    expect(component.error()).toBeFalse();
+    expect(component.noExtensionAvailable()).toBeTrue();
+    expect(component.canContinue()).toBeFalse();
     expect(component.loading()).toBeFalse();
+  });
+
+  it('removes a terminal zero-minute step and does not allow continuing', async () => {
+    api.post.and.resolveTo({
+      dateInitial: '120000090926',
+      steps: [{ time: 0, quantity: 0, datetime: '120000090926' }],
+    });
+    const component = TestBed.runInInjectionContext(() => new ParkingTimeStepsComponent());
+
+    await component.ngOnInit();
+
+    expect(component.steps()).toEqual([]);
+    expect(component.noExtensionAvailable()).toBeTrue();
+    expect(component.canContinue()).toBeFalse();
   });
 
   it('identifies an end time on the next calendar day as tomorrow', async () => {
