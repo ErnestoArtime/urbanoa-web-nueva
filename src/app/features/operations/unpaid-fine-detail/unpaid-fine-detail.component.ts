@@ -1,4 +1,4 @@
-import { Component, ElementRef, afterRenderEffect, viewChild, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { DecimalPipe } from '@angular/common';
 import { canMoveFineToHistory, FineStatus, UnpaidFinesService } from '../../../core/services/unpaid-fines.service';
@@ -15,10 +15,13 @@ import { OpsApiError } from '../../../core/api/ops-api.types';
 import { apiErrorKey } from '../../../core/http/api-error-key';
 import { isCardUsable } from '../../../core/utils/card-expiry';
 import { LocationMap } from '../../../shared/components/location-map/location-map';
+import { AppIconComponent } from '../../../shared/icons/app-icon.component';
+import { OperationIconComponent } from '../../../shared/components/operation-icon/operation-icon.component';
+import { formatFineDate } from '../../../shared/utils/fine-date';
 
 @Component({
   selector: 'app-unpaid-fine-detail',
-  imports: [RouterLink, DecimalPipe, TranslatePipe, DetailPanelHeaderComponent, ResultModalComponent, LocationMap],
+  imports: [RouterLink, DecimalPipe, TranslatePipe, DetailPanelHeaderComponent, ResultModalComponent, LocationMap, AppIconComponent, OperationIconComponent],
   template: `
     @if (errorMessage(); as error) {
       <app-result-modal
@@ -37,132 +40,87 @@ import { LocationMap } from '../../../shared/components/location-map/location-ma
         (primaryAction)="onBackToFines()"
       />
     } @else if (!paid()) {
-      <div class="page">
+      <div class="page fine-detail-page">
         <app-detail-panel-header [title]="'ops.fineDetail.title' | translate" backRoute="/app/operations/unpaid-fines" />
         @if (fine) {
-          @if (fine.status === fineStatus.PAYABLE && fine.discountPercent) {
-            <aside class="early-payment-banner">
-              <span class="discount-badge">−{{ fine.discountPercent }}%</span>
-              <div>
-                <strong>{{ 'ops.fineDetail.earlyPayment.title' | translate }}</strong>
-                <p>{{ 'ops.fineDetail.earlyPayment.description' | translate: { date: fine.earlyPaymentDeadline ?? '' } }}</p>
+          <div class="fine-detail-scroll">
+            <section class="fine-detail-intro">
+              <div class="fine-detail-kind">
+                <app-operation-icon [type]="operationType.UNPAID_FINES" />
+                <strong>{{ 'ops.fineDetail.sanction' | translate }}</strong>
               </div>
-            </aside>
-          }
-          @if (fine.status !== fineStatus.PAYABLE) {
-            <aside class="fine-status-banner" [class.expired]="fine.status === fineStatus.EXPIRED">
-              <strong>{{ 'ops.fineDetail.status.' + fine.status | translate }}</strong>
-              <p>{{ 'ops.fineDetail.statusMessage.' + fine.status | translate }}</p>
-              @if (fine.status === fineStatus.EXPIRED && fine.earlyPaymentDeadline) {
-                <p class="fine-status-deadline">
-                  <strong>{{ 'ops.fineDetail.earlyPaymentEnd' | translate }}:</strong> {{ fine.earlyPaymentDeadline }}
-                </p>
+              <strong class="fine-detail-amount">{{ fine.amount }}</strong>
+            </section>
+            @if (fine.status === fineStatus.PAYABLE && fine.earlyPaymentDeadline) {
+              <div class="fine-detail-row">
+                <span class="fine-detail-row-icon"><app-icon name="schedule" [stroke]="false" /></span>
+                <div><span>{{ 'ops.fineDetail.earlyPaymentEnd' | translate }}</span><strong>{{ displayDate(fine.earlyPaymentDeadline) }}</strong></div>
+              </div>
+            }
+            @if (fine.status !== fineStatus.PAYABLE) {
+              @if (fine.earlyPaymentDeadline) {
+                <div class="fine-detail-row">
+                  <span class="fine-detail-row-icon"><app-icon name="schedule" [stroke]="false" /></span>
+                  <div><span>{{ 'ops.fineDetail.earlyPaymentEnd' | translate }}</span><strong>{{ displayDate(fine.earlyPaymentDeadline) }}</strong></div>
+                </div>
               }
-            </aside>
-          }
-          <div class="fine-ticket-shell mt-2">
-            <article #fineTicketCard class="fine-ticket-card">
-              <div class="fine-ticket-accent"></div>
-              <div class="fine-ticket-body">
-                <p>
-                  <strong>{{ 'ops.fineDetail.plate' | translate }}</strong> {{ fine.plate }}
-                </p>
-                <p class="mt-1">
-                  <strong>{{ 'ops.fineDetail.fineNumber' | translate }}</strong> {{ fine.fineNumber }}
-                </p>
-                @if (fine.article) {
-                  <p class="mt-1">
-                    <strong>{{ 'ops.fineDetail.article' | translate }}</strong> {{ fine.article }}
-                  </p>
-                }
-                @if (fine.vehicleMake || fine.vehicleColor) {
-                  <p class="mt-1">
-                    <strong>{{ 'ops.fineDetail.vehicle' | translate }}</strong> {{ fine.vehicleMake }} {{ fine.vehicleColor }}
-                  </p>
-                }
-                <p class="mt-1">
-                  <strong>{{ 'ops.fineDetail.location' | translate }}</strong> {{ fine.location }}
-                </p>
-                <p class="mt-1">
-                  <strong>{{ 'ops.fineDetail.date' | translate }}</strong> {{ fine.date }}
-                </p>
-                @if (fine.processingDate) {
-                  <p class="mt-1">
-                    <strong>{{ 'ops.fineDetail.processingDate' | translate }}</strong> {{ fine.processingDate }}
-                  </p>
-                }
-                @if (fine.contractName) {
-                  <p class="mt-1">
-                    <strong>{{ 'ops.fineDetail.contract' | translate }}</strong> {{ fine.contractName }}
-                  </p>
-                }
+              <div class="fine-detail-message">
+                <span class="fine-detail-row-icon"><app-icon name="warning" [stroke]="false" /></span>
+                <p>{{ 'ops.fineDetail.statusMessage.' + fine.status | translate }}</p>
               </div>
-              @if (fineCoordinates(); as coordinates) {
-                <app-location-map
-                  [latitude]="coordinates.latitude"
-                  [longitude]="coordinates.longitude"
-                  [label]="'ops.detail.fineMapAria' | translate"
-                />
-              }
-              <div #fineTicketCut class="fine-ticket-cut" aria-hidden="true">
-                <div class="fine-ticket-cut-line"></div>
-              </div>
-              <div class="fine-ticket-total">
-                <strong>{{ 'ops.fineDetail.amount' | translate }}</strong>
-                <div class="amount-stack">
-                  @if (fine.originalAmount) {
-                    <del>{{ fine.originalAmount }}</del>
-                  }
-                  <span>{{ fine.amount }}</span>
+            }
+            <section class="fine-detail-info" aria-label="Detalle de la sanción">
+              <div class="fine-detail-row"><span class="fine-detail-row-icon">#</span><div><span>{{ 'ops.fineDetail.fineNumber' | translate }}</span><strong>{{ fine.fineNumber }}</strong></div></div>
+              <div class="fine-detail-row"><span class="fine-detail-row-icon"><app-icon name="vehicle" [stroke]="false" /></span><div><span>{{ 'ops.fineDetail.plate' | translate }}</span><strong>{{ fine.plate }}</strong></div></div>
+              <div class="fine-detail-row"><span class="fine-detail-row-icon"><app-icon name="dateRange" [stroke]="false" /></span><div><span>{{ 'ops.detail.datetime' | translate }}</span><strong>{{ displayDate(fine.date) }}</strong></div></div>
+              <div class="fine-detail-row"><span class="fine-detail-row-icon"><app-icon name="location" [stroke]="false" /></span><div><span>{{ fine.zoneName || ('ops.fineDetail.location' | translate) }}</span><strong>{{ fine.location }}</strong></div></div>
+            </section>
+            @if (fineCoordinates(); as coordinates) {
+              <app-location-map
+                [latitude]="coordinates.latitude"
+                [longitude]="coordinates.longitude"
+                [label]="'ops.detail.fineMapAria' | translate"
+              />
+            }
+            @if (fine.status === fineStatus.PAYABLE) {
+              <div class="mt-2 card payment-breakdown-card">
+                <div class="payment-breakdown-row">
+                  <span class="payment-breakdown-label">{{ 'ops.fineDetail.availableBalance' | translate }}</span>
+                  <span class="payment-breakdown-value">{{ walletService.balance() | number: '1.2-2' }} €</span>
                 </div>
               </div>
-            </article>
-          </div>
-          @if (fine.status === fineStatus.PAYABLE) {
-            <div class="mt-2 card payment-breakdown-card">
-              <div class="payment-breakdown-row">
-                <span class="payment-breakdown-label">{{ 'ops.fineDetail.availableBalance' | translate }}</span>
-                <span class="payment-breakdown-value">{{ walletService.balance() | number: '1.2-2' }} €</span>
-              </div>
-            </div>
-            @if (insufficientFunds()) {
-              <fieldset class="payment-card-selector">
-                <legend>{{ 'ops.fineDetail.cardForPayment' | translate }}</legend>
-                @for (card of walletService.cards(); track card.id) {
-                  <label class="payment-card-option" [class.selected]="selectedCardId() === card.id" [class.disabled]="!isCardUsable(card)"
-                    ><input
-                      type="radio"
-                      name="fine-card"
-                      [checked]="selectedCardId() === card.id"
-                      [disabled]="!isCardUsable(card)"
-                      (change)="selectedCardId.set(card.id)"
-                    /><span
-                      ><strong>{{ card.brand }} •••• {{ card.last4 }}</strong
-                      ><small>{{ 'ops.fineDetail.expires' | translate: { date: card.expiryDate } }}</small></span
-                    ></label
-                  >
-                }
-              </fieldset>
+              @if (insufficientFunds()) {
+                <fieldset class="payment-card-selector">
+                  <legend>{{ 'ops.fineDetail.cardForPayment' | translate }}</legend>
+                  @for (card of walletService.cards(); track card.id) {
+                    <label class="payment-card-option" [class.selected]="selectedCardId() === card.id" [class.disabled]="!isCardUsable(card)"
+                      ><input
+                        type="radio"
+                        name="fine-card"
+                        [checked]="selectedCardId() === card.id"
+                        [disabled]="!isCardUsable(card)"
+                        (change)="selectedCardId.set(card.id)"
+                      /><span
+                        ><strong>{{ card.brand }} •••• {{ card.last4 }}</strong
+                        ><small>{{ 'ops.fineDetail.expires' | translate: { date: card.expiryDate } }}</small></span
+                      ></label
+                    >
+                  }
+                </fieldset>
+              }
             }
-            <button
-              type="button"
-              class="btn btn-primary btn-block mt-2"
-              (click)="pay()"
-              [disabled]="insufficientFunds() && !selectedCardId()"
-            >
-              {{ 'ops.fineDetail.pay' | translate }} {{ fine.amount }}
-            </button>
-          }
-          @if (fine.status !== fineStatus.PAYABLE && canMoveToHistory()) {
-            <button
-              type="button"
-              class="btn btn-primary btn-block mt-2 fine-understood-button"
-              (click)="acknowledgeExpired()"
-              [disabled]="movingToHistory()"
-            >
-              {{ 'ops.fineDetail.understood' | translate }}
-            </button>
-          }
+          </div>
+          <footer class="fine-detail-footer">
+            @if (fine.status === fineStatus.PAYABLE) {
+              <button type="button" class="btn btn-primary btn-block" (click)="pay()" [disabled]="insufficientFunds() && !selectedCardId()">
+                {{ 'ops.fineDetail.pay' | translate }} {{ fine.amount }}
+              </button>
+            } @else if (canMoveToHistory()) {
+              <button type="button" class="btn btn-primary btn-block fine-understood-button" (click)="acknowledgeExpired()" [disabled]="movingToHistory()">
+                {{ 'ops.fineDetail.understood' | translate }}
+              </button>
+            }
+          </footer>
         } @else {
           <p class="mt-2 text-muted">{{ 'ops.unpaidFines.notFound' | translate }}</p>
           <a routerLink="/app/operations/unpaid-fines" class="btn btn-primary btn-block mt-2">{{ 'ops.unpaidFines.back' | translate }}</a>
@@ -180,120 +138,101 @@ import { LocationMap } from '../../../shared/components/location-map/location-ma
   `,
   styles: [
     `
-      .fine-ticket-shell {
-        border-radius: 16px;
-        filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.14));
-      }
-      .early-payment-banner {
-        display: flex;
-        align-items: center;
-        gap: 0.8rem;
-        margin-top: 1rem;
-        padding: 0.8rem 0.9rem;
-        border: 1px solid color-mix(in srgb, var(--color-primary) 28%, transparent);
-        border-radius: var(--radius-lg);
-        background: var(--color-active);
-      }
-      .fine-status-banner {
-        margin-top: 1rem;
-        padding: 0.85rem 1rem;
-        border: 1px solid var(--color-border);
-        border-radius: var(--radius-lg);
-        background: var(--color-active);
-      }
-      .fine-status-banner.expired {
-        color: var(--color-error);
-        background: var(--color-error-bg);
-      }
-      .fine-status-banner p {
-        margin: 0.25rem 0 0;
-        font-size: var(--text-sm);
-      }
-      .early-payment-banner strong {
+      :host {
         display: block;
-        color: var(--color-primary-dark);
-        font-size: var(--text-sm);
+        height: 100%;
+        min-height: 0;
       }
-      .early-payment-banner p {
-        margin: 0.15rem 0 0;
-        color: var(--color-text-muted);
-        font-size: var(--text-xs);
-      }
-      .discount-badge {
-        flex: 0 0 auto;
-        padding: 0.45rem 0.55rem;
-        border-radius: 12px;
-        color: #fff;
-        background: var(--color-primary);
-        font-weight: var(--font-bold);
-      }
-      .fine-ticket-card {
-        --ticket-notch-r: 10px;
-        --ticket-cut-y: 50%;
-        position: relative;
+      .fine-detail-page {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        min-height: 0;
+        padding: 0;
         overflow: hidden;
-        border: 1px solid var(--color-border);
-        border-radius: 16px;
-        background: var(--color-surface);
-        box-shadow: none;
-        -webkit-mask:
-          radial-gradient(circle at 0 var(--ticket-cut-y), transparent 0 var(--ticket-notch-r), #000 calc(var(--ticket-notch-r) + 1px)) left
-            top / 51% 100% no-repeat,
-          radial-gradient(circle at 100% var(--ticket-cut-y), transparent 0 var(--ticket-notch-r), #000 calc(var(--ticket-notch-r) + 1px))
-            right top / 51% 100% no-repeat;
-        mask:
-          radial-gradient(circle at 0 var(--ticket-cut-y), transparent 0 var(--ticket-notch-r), #000 calc(var(--ticket-notch-r) + 1px)) left
-            top / 51% 100% no-repeat,
-          radial-gradient(circle at 100% var(--ticket-cut-y), transparent 0 var(--ticket-notch-r), #000 calc(var(--ticket-notch-r) + 1px))
-            right top / 51% 100% no-repeat;
       }
-      .fine-ticket-accent {
-        height: 10px;
-        border-radius: 16px 16px 0 0;
-        background: linear-gradient(90deg, #8f84f3 0%, #7971de 48%, #7469d2 100%);
+      .fine-detail-page app-detail-panel-header {
+        flex: 0 0 auto;
       }
-      .fine-ticket-body {
-        padding: 1rem 1.2rem 0.6rem;
+      .fine-detail-scroll {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto;
+        padding: 0.4rem 1.4rem 1.5rem;
       }
-      .fine-ticket-body p {
+      .fine-detail-intro {
+        padding: 0.9rem 0 1.1rem;
+      }
+      .fine-detail-kind {
         display: flex;
-        justify-content: space-between;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+      }
+      .fine-detail-amount {
+        display: block;
+        color: #813832;
+        font-size: clamp(2rem, 8vw, 2.5rem);
+        line-height: 1;
+      }
+      .fine-detail-row {
+        display: grid;
+        grid-template-columns: 40px minmax(0, 1fr);
         gap: 1rem;
+        align-items: start;
+        padding: 0.75rem 0;
+      }
+      .fine-detail-row-icon {
+        display: grid;
+        width: 30px;
+        height: 30px;
+        place-items: center;
+        color: var(--color-text-muted);
+        font-size: 1.6rem;
+        line-height: 1;
+      }
+      .fine-detail-row > div {
+        display: flex;
+        flex-direction: column;
+        gap: 0.15rem;
+        min-width: 0;
+      }
+      .fine-detail-row span:not(.fine-detail-row-icon) {
         color: var(--color-text-muted);
       }
-      .fine-ticket-body strong {
-        color: var(--color-text);
+      .fine-detail-row strong {
+        font-size: var(--text-base);
+        font-weight: var(--font-normal);
+        line-height: 1.45;
+        overflow-wrap: anywhere;
       }
-      .fine-ticket-cut {
-        position: relative;
-        height: 20px;
-        display: flex;
-        align-items: center;
+      .fine-detail-message {
+        display: grid;
+        grid-template-columns: 40px minmax(0, 1fr);
+        gap: 1rem;
+        align-items: start;
+        padding: 0.8rem 0 1rem;
+        color: var(--color-error);
       }
-      .fine-ticket-cut-line {
-        flex: 1;
-        height: 0;
-        margin: 0 calc(var(--ticket-notch-r) + 5px);
-        border-top: 3px dashed rgba(149, 156, 146, 0.62);
+      .fine-detail-message p {
+        margin: 0;
+        line-height: 1.5;
       }
-      .fine-ticket-total {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 0.75rem 1.2rem 1rem;
+      .fine-detail-message .fine-detail-row-icon {
+        color: var(--color-error);
       }
-      .fine-ticket-total span {
-        font-size: var(--text-xl);
-        font-weight: var(--font-bold);
+      .fine-detail-footer {
+        position: sticky;
+        bottom: 0;
+        z-index: 20;
+        flex: 0 0 auto;
+        padding: 0.75rem 1.4rem calc(0.75rem + env(safe-area-inset-bottom));
+        border-top: 1px solid var(--color-border);
+        background: var(--color-surface);
+        box-shadow: 0 -8px 20px rgba(30, 43, 35, 0.08);
       }
-      .amount-stack {
-        display: flex;
-        align-items: baseline;
-        gap: 0.55rem;
-      }
-      .amount-stack del {
-        color: var(--color-text-muted);
-        font-size: var(--text-sm);
+      .fine-detail-footer .btn {
+        margin: 0;
       }
       .payment-breakdown-card {
         padding: 0.75rem;
@@ -344,15 +283,13 @@ import { LocationMap } from '../../../shared/components/location-map/location-ma
   ],
 })
 export class UnpaidFineDetailComponent {
-  private readonly fineTicketCard = viewChild<ElementRef<HTMLElement>>('fineTicketCard');
-  private readonly fineTicketCut = viewChild<ElementRef<HTMLElement>>('fineTicketCut');
-
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly unpaidFinesService = inject(UnpaidFinesService);
   private readonly translationService = inject(TranslationService);
   readonly walletService = inject(WalletService);
   readonly fineStatus = FineStatus;
+  readonly operationType = OperationType;
 
   private readonly params = toSignal(this.route.paramMap);
   get fineId(): string {
@@ -398,23 +335,6 @@ export class UnpaidFineDetailComponent {
   private readonly paidFine = signal<{ plate: string; location: string } | undefined>(undefined);
 
   constructor() {
-    afterRenderEffect((onCleanup) => {
-      const card = this.fineTicketCard()?.nativeElement;
-      const cut = this.fineTicketCut()?.nativeElement;
-      if (!card || !cut) return;
-      const updateCutPosition = () => {
-        const cardRect = card.getBoundingClientRect();
-        const cutRect = cut.getBoundingClientRect();
-        card.style.setProperty('--ticket-cut-y', `${cutRect.top - cardRect.top + cutRect.height / 2}px`);
-      };
-      updateCutPosition();
-      if (typeof ResizeObserver !== 'undefined') {
-        const observer = new ResizeObserver(updateCutPosition);
-        observer.observe(card);
-        observer.observe(cut);
-        onCleanup(() => observer.disconnect());
-      }
-    });
     const operationsService = inject(OperationsService);
     this.route.paramMap
       .pipe(
@@ -430,6 +350,8 @@ export class UnpaidFineDetailComponent {
         if (id) void operationsService.loadDetail(id);
       });
   }
+
+  readonly displayDate = formatFineDate;
 
   readonly successMessage = computed(() => {
     const wallet = this.capturedWalletAmount();

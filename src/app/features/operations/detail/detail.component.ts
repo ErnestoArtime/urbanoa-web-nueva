@@ -44,7 +44,7 @@ import { CitiesService } from '../../../core/services/cities.service';
                 }
                 @if (operation.fineStatus === 2 || operation.fineStatus === 3) {
                   <div class="fine-payment-status-message">
-                    <span class="fine-payment-row-icon">!</span>
+                    <span class="fine-payment-row-icon"><app-icon name="warning" [stroke]="false" /></span>
                     <p>{{ ('ops.fineDetail.statusMessage.' + operation.fineStatus) | translate }}</p>
                   </div>
                 }

@@ -5,6 +5,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { OperationIconComponent } from '../../../shared/components/operation-icon/operation-icon.component';
 import { AppIconComponent } from '../../../shared/icons/app-icon.component';
 import { OperationType } from '../../../shared/models/operation-type';
+import { formatFineDate } from '../../../shared/utils/fine-date';
 
 @Component({
   selector: 'app-unpaid-fines',
@@ -35,7 +36,7 @@ import { OperationType } from '../../../shared/models/operation-type';
                 </div>
                 <div class="fine-list-date">
                   <app-icon name="dateRange" [size]="24" [stroke]="false" />
-                  <span>{{ fine.date }}</span>
+                  <span>{{ displayDate(fine.date) }}</span>
                 </div>
               </a>
             </li>
@@ -179,4 +180,5 @@ export class UnpaidFinesComponent {
   private readonly unpaidFinesService = inject(UnpaidFinesService);
   readonly fines = this.unpaidFinesService.fines;
   readonly operationType = OperationType;
+  readonly displayDate = formatFineDate;
 }
