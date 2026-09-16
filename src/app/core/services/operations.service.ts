@@ -6,6 +6,7 @@ import { OpsApiClient } from '../api/ops-api-client.service';
 import { OpsApiError } from '../api/ops-api.types';
 import { OpsSessionService } from '../api/ops-session.service';
 import { formatOpsCalendarDate, formatOpsDate, formatOpsTime, parseOpsDate, opsRelativeDayLabel } from '../utils/ops-date';
+import { formatParkingDuration } from '../utils/parking-duration';
 
 interface OperationResponseDto {
   contractId?: number;
@@ -203,16 +204,11 @@ export class OperationsService {
       return;
     }
 
-    const mergedByParking = new Map<string, Operation>();
-    this.activeParkingOperations()
+    const allOperations = this._operations();
+    const activeOperations = this.activeParkingOperations()
       .filter((operation) => contractId === undefined || operation.contractId === contractId)
-      .sort((a, b) => this.operationTimestamp(a) - this.operationTimestamp(b))
-      .forEach((operation) => {
-        const key = this.activeParkingKey(operation);
-        const previous = mergedByParking.get(key);
-        mergedByParking.set(key, previous ? this.mergeDefinedOperation(previous, operation) : operation);
-      });
-    const parkings = [...mergedByParking.values()]
+      .map((operation) => this.enrichExtensionContext(operation, allOperations));
+    const parkings = activeOperations
       .sort((a, b) => this.operationTimestamp(b) - this.operationTimestamp(a))
       .map((operation) => this.activeParkingFromOperation(operation, vehicles));
     this._activeParkings.set(parkings);
@@ -220,8 +216,7 @@ export class OperationsService {
   }
 
   private upsertActiveParking(parking: ActiveParking): void {
-    const plate = this.normalizePlate(parking.plate);
-    this._activeParkings.update((current) => [...current.filter((item) => this.normalizePlate(item.plate) !== plate), parking]);
+    this._activeParkings.update((current) => [...current.filter((item) => item.id !== parking.id), parking]);
   }
 
   private activeParkingFromOperation(operation: Operation, vehicles: readonly { id: string; plate: string }[]): ActiveParking {
@@ -293,15 +288,48 @@ export class OperationsService {
     return opsRelativeDayLabel(date, now);
   }
 
-  private activeParkingKey(operation: Operation): string {
-    return [this.normalizePlate(operation.plate ?? ''), operation.contractId ?? '', operation.sectorId ?? ''].join('|');
-  }
+  private enrichExtensionContext(operation: Operation, allOperations: readonly Operation[]): Operation {
+    if (operation.type !== OperationType.PARKING_EXTENSION) return operation;
 
-  private mergeDefinedOperation(base: Operation, update: Operation): Operation {
-    const values = Object.fromEntries(
-      Object.entries(update).filter(([, value]) => value !== undefined && value !== null && value !== ''),
-    ) as Partial<Operation>;
-    return { ...base, ...values };
+    const relatedId = operation.relatedOperationId;
+    const candidates = allOperations
+      .filter(
+        (candidate) =>
+          candidate.type === OperationType.PARKING &&
+          this.normalizePlate(candidate.plate ?? '') === this.normalizePlate(operation.plate ?? '') &&
+          (operation.contractId === undefined || candidate.contractId === operation.contractId),
+      )
+      .sort((left, right) => this.operationTimestamp(right) - this.operationTimestamp(left));
+    const base =
+      candidates.find((candidate) => relatedId && (candidate.id === relatedId || candidate.operationNumber === relatedId)) ??
+      candidates.find(
+        (candidate) =>
+          (operation.sectorId === undefined || candidate.sectorId === operation.sectorId) &&
+          this.operationTimestamp(candidate) <= this.operationTimestamp(operation),
+      );
+    if (!base) return operation;
+
+    return {
+      ...operation,
+      startTime: operation.startTime ?? base.startTime,
+      startDate: operation.startDate ?? base.startDate,
+      endTime: operation.endTime ?? base.endTime,
+      endDate: operation.endDate ?? base.endDate,
+      durationLabel: operation.durationLabel ?? base.durationLabel,
+      zone: operation.zone ?? base.zone,
+      cityId: operation.cityId ?? base.cityId,
+      cityName: operation.cityName ?? base.cityName,
+      zoneId: operation.zoneId ?? base.zoneId,
+      zoneName: operation.zoneName ?? base.zoneName,
+      sectorId: operation.sectorId ?? base.sectorId,
+      sectorName: operation.sectorName ?? base.sectorName,
+      sectorColor: operation.sectorColor ?? base.sectorColor,
+      street: operation.street ?? base.street,
+      latitude: operation.latitude ?? base.latitude,
+      longitude: operation.longitude ?? base.longitude,
+      ticketId: operation.ticketId ?? base.ticketId,
+      ticketName: operation.ticketName ?? base.ticketName,
+    };
   }
 
   async loadReceipt(id: string): Promise<unknown | null> {
@@ -385,7 +413,7 @@ export class OperationsService {
       endTime: end,
       startDate: this.datePartOptional(item.parkingStartDate),
       endDate: this.datePartOptional(item.parkingEndDate),
-      durationLabel: duration ? `${duration} min` : undefined,
+      durationLabel: duration == null ? undefined : formatParkingDuration(duration),
       relatedOperationId: item.opBaseId ? String(item.opBaseId) : undefined,
       cardId: item.idPaymentMethod2 ? String(item.idPaymentMethod2) : undefined,
       cardLabel: item.descPaymentMethod2 ?? undefined,

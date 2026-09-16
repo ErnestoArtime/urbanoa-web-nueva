@@ -73,8 +73,8 @@ export type ParkingTicketCardVariant = 'dashboard' | 'operations-current' | 'det
                 {{ 'dashboard.unpark' | translate }}
               </button>
             }
-            @if (active.extension === 1 || active.extension === 2) {
-              <button type="button" class="btn btn-primary btn-sm" [disabled]="active.extension !== 2" (click)="extendTime.emit(active)">
+            @if (active.extension === 2) {
+              <button type="button" class="btn btn-primary btn-sm" (click)="extendTime.emit(active)">
                 <svg lucideTimerReset class="action-btn-icon" size="19" strokeWidth="2"></svg>
                 {{ 'dashboard.extendTime' | translate }}
               </button>

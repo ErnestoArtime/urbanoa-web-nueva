@@ -285,7 +285,7 @@ describe('OperationsService stored data migration', () => {
         tariffId: 5,
         startTime: '09:00',
         endTime: '17:30',
-        durationLabel: '510 min',
+        durationLabel: '8 h 30 min',
         canExtend: false,
         refundable: 0,
       }),
@@ -295,14 +295,14 @@ describe('OperationsService stored data migration', () => {
         tariffId: 4,
         startTime: '09:00',
         endTime: '17:00',
-        durationLabel: '480 min',
+        durationLabel: '8 h',
         canExtend: true,
         refundable: 2,
       }),
     ]);
   });
 
-  it('consolidates an extension with its parking in the same sector and preserves omitted context', async () => {
+  it('keeps an extension separate from its parking and preserves omitted context', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post', 'serverNow']);
     api.serverNow.and.returnValue(new Date('2026-09-03T14:00:00Z'));
     api.post.and.resolveTo([
@@ -321,6 +321,7 @@ describe('OperationsService stored data migration', () => {
         sectorId: 22002,
         sectorDesc: 'Z2 AZUL',
         pstreet: 'Kale Nagusia',
+        extension: 1,
       },
       {
         contractId: 3,
@@ -333,6 +334,8 @@ describe('OperationsService stored data migration', () => {
         parkingDuration: 510,
         timePeriod: 2,
         sectorId: 22002,
+        opBaseId: 'base',
+        extension: 2,
       },
     ]);
     TestBed.overrideProvider(OpsApiClient, { useValue: api });
@@ -348,8 +351,11 @@ describe('OperationsService stored data migration', () => {
         street: 'Kale Nagusia',
         startTime: '09:00',
         endTime: '17:30',
-        durationLabel: '510 min',
+        durationLabel: '8 h 30 min',
+        extension: 2,
+        opBaseId: 'base',
       }),
+      jasmine.objectContaining({ id: 'operation-base', durationLabel: '8 h', extension: 1 }),
     ]);
   });
 
@@ -412,7 +418,7 @@ describe('OperationsService stored data migration', () => {
     await service.load();
     await service.loadDashboardParkingStatuses([{ id: 'vehicle-1', plate: 'AAA111' }]);
 
-    expect(service.activeParkings()).toEqual([jasmine.objectContaining({ durationLabel: '180 min' })]);
+    expect(service.activeParkings()).toEqual([jasmine.objectContaining({ durationLabel: '3 h' })]);
   });
 
   it('keeps an active parking when QueryUserOperationsAPI marks it active', async () => {
@@ -446,7 +452,7 @@ describe('OperationsService stored data migration', () => {
       jasmine.objectContaining({
         id: 'operation-9876543',
         plate: 'AAA111',
-        durationLabel: '180 min',
+        durationLabel: '3 h',
         contractId: 3,
         refundable: 2,
       }),
@@ -501,13 +507,15 @@ describe('OperationsService stored data migration', () => {
 
     await service.loadParkingStatuses([{ id: 'vehicle-new', plate: '1234CBZ' }]);
 
-    expect(service.operations()[0]).toEqual(jasmine.objectContaining({
-      operationTime: '22:47',
-      startDate: '15/09/2026',
-      endDate: '15/09/2026',
-      startTime: '09:00',
-      endTime: '10:25',
-    }));
+    expect(service.operations()[0]).toEqual(
+      jasmine.objectContaining({
+        operationTime: '22:47',
+        startDate: '15/09/2026',
+        endDate: '15/09/2026',
+        startTime: '09:00',
+        endTime: '10:25',
+      }),
+    );
     expect(service.activeParkings()[0]).toEqual(
       jasmine.objectContaining({
         startTime: '09:00',

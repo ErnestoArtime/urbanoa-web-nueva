@@ -34,14 +34,15 @@ describe('ParkingTicketCardComponent', () => {
     });
   });
 
-  it('shows disabled actions when both flags are 1', async () => {
+  it('keeps unparking disabled and hides extension when both flags are 1', async () => {
     const fixture = TestBed.createComponent(ParkingTicketCardComponent);
     fixture.componentRef.setInput('parking', { ...parking(1), extension: 1 });
 
     await fixture.whenStable();
 
     expect(fixture.nativeElement.querySelector('.btn-danger')).not.toBeNull();
-    expect(fixture.nativeElement.querySelector('.btn-primary')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.btn-danger').disabled).toBeTrue();
+    expect(fixture.nativeElement.querySelector('.btn-primary')).toBeNull();
   });
 
   it('hides actions when their flags are absent', async () => {
@@ -122,9 +123,9 @@ describe('ParkingTicketCardComponent', () => {
         const unpark = fixture.nativeElement.querySelector('.btn-danger') as HTMLButtonElement | null;
         const extend = fixture.nativeElement.querySelector('.btn-primary') as HTMLButtonElement | null;
         expect(!!unpark).toBe(refundable !== 0);
-        expect(!!extend).toBe(extension !== 0);
+        expect(!!extend).toBe(extension === 2);
         if (unpark) expect(unpark.disabled).toBe(refundable !== 2);
-        if (extend) expect(extend.disabled).toBe(extension !== 2);
+        if (extend) expect(extend.disabled).toBeFalse();
       });
     }
   }
