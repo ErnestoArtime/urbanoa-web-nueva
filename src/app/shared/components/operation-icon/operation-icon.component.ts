@@ -28,6 +28,9 @@ import { OperationType } from '../../models/operation-type';
         @case (types.FINE_PAYMENT) {
           <svg lucideReceiptText></svg>
         }
+        @case (types.UNPAID_FINES) {
+          <svg lucideReceiptText></svg>
+        }
         @case (types.TOP_UP) {
           <svg lucideBanknoteArrowUp></svg>
         }
