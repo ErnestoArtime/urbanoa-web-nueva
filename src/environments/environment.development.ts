@@ -9,4 +9,6 @@ export const environment = {
   externalContentBaseUrl: '/external-content',
   externalContentOrigin: 'https://arinpark.gerteksa.eus',
   storeUrl: 'https://play.google.com/store/apps/details?id=com.gerteksa.r.c.mugipark',
+  // Leave empty to keep the current Leaflet/OpenStreetMap fallback.
+  googleMapsApiKey: '',
 };

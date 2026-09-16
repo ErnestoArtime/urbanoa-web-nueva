@@ -14,6 +14,13 @@ import { TranslationService } from '../../../core/services/translation.service';
 import { MapLocationControlComponent, type MapLocationState } from './map-location-control.component';
 import { CitiesService, type ParkingMunicipio } from '../../../core/services/cities.service';
 import { ParkingApiService } from '../../../core/services/parking-api.service';
+import { GoogleMapsLoaderService } from '../../../core/services/google-maps-loader.service';
+import { URBANOA_GOOGLE_MAP_STYLE } from '../../../shared/maps/google-map-style';
+
+interface MapPoint {
+  lat: number;
+  lng: number;
+}
 
 interface MapParkingZone {
   zoneId: number;
@@ -21,7 +28,8 @@ interface MapParkingZone {
   name: string;
   color: string;
   points: L.LatLngTuple[];
-  layer: L.Polygon;
+  leafletLayer?: L.Polygon;
+  googleLayer?: google.maps.Polygon;
 }
 
 @Component({
@@ -636,12 +644,17 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
   private readonly translationService = inject(TranslationService);
   private readonly citiesService = inject(CitiesService);
   private readonly parkingApi = inject(ParkingApiService);
+  private readonly googleMapsLoader = inject(GoogleMapsLoaderService);
   private readonly query: ParkingFlowQuery = readParkingFlowQuery(this.route);
-  private map?: L.Map;
+  private leafletMap?: L.Map;
+  private googleMap?: google.maps.Map;
   private zoneLayer?: L.FeatureGroup;
   private resizeObserver?: ResizeObserver;
   private resizeFrame?: number;
-  private locationMarker?: L.CircleMarker;
+  private leafletLocationMarker?: L.CircleMarker;
+  private googleLocationMarker?: google.maps.Circle;
+  private googleInfoWindow?: google.maps.InfoWindow;
+  private destroyed = false;
   private readonly zones: MapParkingZone[] = [];
   private highlightedZone?: MapParkingZone;
   private readonly selectedState = signal<ParkingMunicipio>(EMPTY_CITY);
@@ -757,24 +770,24 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
       this.mapLoading.set(false);
       return;
     }
-    this.map = L.map(this.mapContainer.nativeElement, { zoomControl: false }).setView(center, 15);
-    this.map.on('movestart', () => this.showParkingBehaviorHelp.set(false));
-    L.control.zoom({ position: 'topright' }).addTo(this.map);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: '&copy; OpenStreetMap contributors',
-    }).addTo(this.map);
+    const googleMaps = await this.googleMapsLoader.load();
+    if (this.destroyed) return;
+    if (googleMaps) this.initializeGoogleMap(googleMaps, center);
+    else this.initializeLeafletMap(center);
     this.resizeObserver = new ResizeObserver(() => this.scheduleMapResize());
     this.resizeObserver.observe(this.mapContainer.nativeElement);
-    this.map.on('moveend', () => this.selectZoneAtMapCenter());
     this.scheduleMapResize();
     void this.loadRealZones();
   }
 
   ngOnDestroy(): void {
+    this.destroyed = true;
     this.resizeObserver?.disconnect();
     if (this.resizeFrame !== undefined) cancelAnimationFrame(this.resizeFrame);
-    this.map?.remove();
+    this.leafletMap?.remove();
+    this.googleLocationMarker?.setMap(null);
+    if (this.googleMap) google.maps.event.clearInstanceListeners(this.googleMap);
+    for (const zone of this.zones) if (zone.googleLayer) google.maps.event.clearInstanceListeners(zone.googleLayer);
   }
 
   async locateUser(): Promise<void> {
@@ -786,16 +799,36 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
       return;
     }
     const { lastLatitude, lastLongitude } = this.locationSettings.settings();
-    if (lastLatitude === undefined || lastLongitude === undefined || !this.map) {
+    if (lastLatitude === undefined || lastLongitude === undefined || (!this.leafletMap && !this.googleMap)) {
       this.locationState.set('unavailable');
       return;
     }
-    const point: L.LatLngExpression = [lastLatitude, lastLongitude];
-    this.locationMarker?.remove();
-    this.locationMarker = L.circleMarker(point, { radius: 9, color: '#fff', weight: 3, fillColor: '#16765d', fillOpacity: 1 }).addTo(
-      this.map,
-    );
-    this.map.flyTo(point, 17, { duration: 0.8 });
+    if (this.leafletMap) {
+      const point: L.LatLngExpression = [lastLatitude, lastLongitude];
+      this.leafletLocationMarker?.remove();
+      this.leafletLocationMarker = L.circleMarker(point, {
+        radius: 9,
+        color: '#fff',
+        weight: 3,
+        fillColor: '#16765d',
+        fillOpacity: 1,
+      }).addTo(this.leafletMap);
+      this.leafletMap.flyTo(point, 17, { duration: 0.8 });
+    } else if (this.googleMap) {
+      const center = { lat: lastLatitude, lng: lastLongitude };
+      this.googleLocationMarker?.setMap(null);
+      this.googleLocationMarker = new google.maps.Circle({
+        map: this.googleMap,
+        center,
+        radius: 7,
+        strokeColor: '#ffffff',
+        strokeWeight: 3,
+        fillColor: '#16765d',
+        fillOpacity: 1,
+      });
+      this.googleMap.panTo(center);
+      this.googleMap.setZoom(17);
+    }
     this.locationState.set('located');
   }
 
@@ -803,13 +836,14 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
     if (this.resizeFrame !== undefined) cancelAnimationFrame(this.resizeFrame);
     this.resizeFrame = requestAnimationFrame(() => {
       this.resizeFrame = undefined;
-      this.map?.invalidateSize({ pan: false });
+      this.leafletMap?.invalidateSize({ pan: false });
+      if (this.googleMap) google.maps.event.trigger(this.googleMap, 'resize');
     });
   }
 
   startParking(): void {
     const zone = this.selectedZone();
-    const center = this.map?.getCenter();
+    const center = this.mapCenter();
     const vehicle = this.selectedVehicle();
     if (!zone || !center || !vehicle || !this.canStartParking()) return;
     this.store.update({
@@ -851,12 +885,49 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
     return coordinates ? [coordinates.latitude, coordinates.longitude] : null;
   }
 
+  private initializeLeafletMap(center: L.LatLngExpression): void {
+    this.leafletMap = L.map(this.mapContainer.nativeElement, { zoomControl: false }).setView(center, 15);
+    this.leafletMap.on('movestart', () => this.showParkingBehaviorHelp.set(false));
+    L.control.zoom({ position: 'topright' }).addTo(this.leafletMap);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors',
+    }).addTo(this.leafletMap);
+    this.leafletMap.on('moveend', () => this.selectZoneAtMapCenter());
+  }
+
+  private initializeGoogleMap(googleMaps: typeof google.maps, center: L.LatLngExpression): void {
+    const [lat, lng] = center as L.LatLngTuple;
+    this.googleMap = new googleMaps.Map(this.mapContainer.nativeElement, {
+      center: { lat, lng },
+      zoom: 15,
+      styles: URBANOA_GOOGLE_MAP_STYLE,
+      zoomControl: true,
+      zoomControlOptions: { position: googleMaps.ControlPosition.RIGHT_TOP },
+      streetViewControl: false,
+      mapTypeControl: false,
+      fullscreenControl: false,
+    });
+    this.googleInfoWindow = new googleMaps.InfoWindow();
+    this.googleMap.addListener('dragstart', () => this.showParkingBehaviorHelp.set(false));
+    this.googleMap.addListener('idle', () => this.selectZoneAtMapCenter());
+  }
+
+  private mapCenter(): MapPoint | null {
+    const leafletCenter = this.leafletMap?.getCenter();
+    if (leafletCenter) return { lat: leafletCenter.lat, lng: leafletCenter.lng };
+    const googleCenter = this.googleMap?.getCenter();
+    return googleCenter ? { lat: googleCenter.lat(), lng: googleCenter.lng() } : null;
+  }
+
   private async loadRealZones(): Promise<void> {
     try {
       const response = await this.parkingApi.mapStretches(this.selected.contractId);
       if (!response.data?.trim()) throw new Error('QueryMapStretchesAPI no devolvió KML');
       const xml = new DOMParser().parseFromString(response.data, 'application/xml');
-      const layers: L.Polygon[] = [];
+      const leafletLayers: L.Polygon[] = [];
+      const googleBounds = this.googleMap ? new google.maps.LatLngBounds() : null;
+      let renderedZones = 0;
       for (const placemark of Array.from(xml.getElementsByTagName('Placemark'))) {
         const name = placemark.getElementsByTagName('name')[0]?.textContent?.trim() || 'Zona';
         const description = placemark.getElementsByTagName('description')[0]?.textContent?.trim() || '';
@@ -875,28 +946,53 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
             .filter(([lat, lng]) => Number.isFinite(lat) && Number.isFinite(lng));
           if (points.length < 3) continue;
           const popupHtml = `<div class="zone-popup"><strong>${this.escapeHtml(name)}</strong>${description ? '<br>' + this.escapeHtml(description) : ''}</div>`;
-          const layer = L.polygon(points, { color: `#${color}`, fillColor: `#${color}`, fillOpacity: 0.28, weight: 2 }).bindPopup(
-            popupHtml,
-          );
           const zone: MapParkingZone = {
             zoneId,
             name: description || this.readableZoneName(name),
             color,
             points,
-            layer,
           };
-          layer.on('click', (event: L.LeafletMouseEvent) => {
-            this.map?.panTo(event.latlng);
-            this.selectZone(zone);
-          });
+          if (this.leafletMap) {
+            zone.leafletLayer = L.polygon(points, {
+              color: `#${color}`,
+              fillColor: `#${color}`,
+              fillOpacity: 0.28,
+              weight: 2,
+            }).bindPopup(popupHtml);
+            zone.leafletLayer.on('click', (event: L.LeafletMouseEvent) => {
+              this.leafletMap?.panTo(event.latlng);
+              this.selectZone(zone);
+            });
+            leafletLayers.push(zone.leafletLayer);
+          } else if (this.googleMap) {
+            const path = points.map(([lat, lng]) => ({ lat, lng }));
+            zone.googleLayer = new google.maps.Polygon({
+              map: this.googleMap,
+              paths: path,
+              strokeColor: `#${color}`,
+              strokeWeight: 2,
+              fillColor: `#${color}`,
+              fillOpacity: 0.28,
+            });
+            zone.googleLayer.addListener('click', (event: google.maps.PolyMouseEvent) => {
+              if (event.latLng) {
+                this.googleMap?.panTo(event.latLng);
+                this.googleInfoWindow?.setOptions({ content: popupHtml, position: event.latLng });
+                this.googleInfoWindow?.open({ map: this.googleMap });
+              }
+              this.selectZone(zone);
+            });
+            for (const coordinate of path) googleBounds?.extend(coordinate);
+          }
           this.zones.push(zone);
-          layers.push(layer);
+          renderedZones += 1;
         }
       }
-      this.zoneLayer = L.featureGroup(layers).addTo(this.map!);
-      this.zoneCount.set(layers.length);
-      if (layers.length) {
-        this.map!.fitBounds(this.zoneLayer.getBounds(), { padding: [28, 28] });
+      if (this.leafletMap) this.zoneLayer = L.featureGroup(leafletLayers).addTo(this.leafletMap);
+      this.zoneCount.set(renderedZones);
+      if (renderedZones) {
+        if (this.leafletMap && this.zoneLayer) this.leafletMap.fitBounds(this.zoneLayer.getBounds(), { padding: [28, 28] });
+        else if (this.googleMap && googleBounds) this.googleMap.fitBounds(googleBounds, 28);
         this.selectZoneAtMapCenter();
       }
     } catch {
@@ -911,27 +1007,37 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
   }
 
   private selectZoneAtMapCenter(): void {
-    const center = this.map?.getCenter();
+    const center = this.mapCenter();
     if (!center || !this.zones.length) return;
     this.selectZone(this.zones.find((zone) => this.containsPoint(center, zone.points)) ?? null);
   }
 
   private selectZone(zone: MapParkingZone | null): void {
     if (this.highlightedZone && this.highlightedZone !== zone) {
-      this.highlightedZone.layer.setStyle({ weight: 2, fillOpacity: 0.28 });
+      this.setZoneStyle(this.highlightedZone, false);
     }
     if (zone) {
-      zone.layer.setStyle({ weight: 4, fillOpacity: 0.42 });
-      zone.layer.bringToFront();
+      this.setZoneStyle(zone, true);
       this.highlightedZone = zone;
     } else {
       this.highlightedZone = undefined;
     }
     this.selectedZone.set(zone);
-    if (zone && this.map) void this.resolveSector(zone, this.map.getCenter());
+    const center = this.mapCenter();
+    if (zone && center) void this.resolveSector(zone, center);
   }
 
-  private async resolveSector(zone: MapParkingZone, point: L.LatLng): Promise<void> {
+  private setZoneStyle(zone: MapParkingZone, highlighted: boolean): void {
+    zone.leafletLayer?.setStyle({ weight: highlighted ? 4 : 2, fillOpacity: highlighted ? 0.42 : 0.28 });
+    if (highlighted) zone.leafletLayer?.bringToFront();
+    zone.googleLayer?.setOptions({
+      strokeWeight: highlighted ? 4 : 2,
+      fillOpacity: highlighted ? 0.42 : 0.28,
+      zIndex: highlighted ? 2 : 1,
+    });
+  }
+
+  private async resolveSector(zone: MapParkingZone, point: MapPoint): Promise<void> {
     try {
       const sectors = await this.parkingApi.sectors({
         contractId: this.selected.contractId,
@@ -952,7 +1058,7 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
     }
   }
 
-  private containsPoint(point: L.LatLng, polygon: L.LatLngTuple[]): boolean {
+  private containsPoint(point: MapPoint, polygon: L.LatLngTuple[]): boolean {
     let inside = false;
     for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
       const [yi, xi] = polygon[i];
