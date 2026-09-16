@@ -1,6 +1,10 @@
-import { Injectable } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { environment } from '../../../environments/environment';
 import { OpsApiEnvelope, OpsApiError } from './ops-api.types';
+import { OpsSessionService } from './ops-session.service';
+import { TranslationService } from '../services/translation.service';
+
+const SESSION_EXPIRED_ERROR_CODES = new Set([-23, -231]);
 
 interface OpsRequestOptions {
   body?: unknown;
@@ -13,6 +17,11 @@ interface OpsRequestOptions {
 
 @Injectable({ providedIn: 'root' })
 export class OpsApiClient {
+  private serverOffsetMs = 0;
+
+  private readonly session = inject(OpsSessionService);
+  private readonly translation = inject(TranslationService);
+
   get<T>(endpoint: string, options: Omit<OpsRequestOptions, 'body'> = {}): Promise<T> {
     return this.request<T>('GET', endpoint, options);
   }
@@ -29,9 +38,18 @@ export class OpsApiClient {
     return this.request<T | null>('POST', endpoint, { ...options, body, allowEmptyValue: true });
   }
 
+  serverNow(): Date {
+    return new Date(Date.now() + this.serverOffsetMs);
+  }
+
   private async request<T>(method: 'GET' | 'POST', endpoint: string, options: OpsRequestOptions): Promise<T> {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), options.timeoutMs ?? 15_000);
+    this.session?.registerRequest(controller);
+    let timedOut = false;
+    const timeout = setTimeout(() => {
+      timedOut = true;
+      controller.abort(new DOMException('La solicitud agotó el tiempo de espera', 'TimeoutError'));
+    }, options.timeoutMs ?? 15_000);
     const headers: Record<string, string> = {
       Accept: 'application/json',
       'Content-Type': 'application/json',
@@ -55,6 +73,12 @@ export class OpsApiClient {
         throw new OpsApiError('http', endpoint, `${endpoint}: HTTP ${response.status}${detail ? ` - ${detail}` : ''}`, response.status);
       }
 
+      const serverDate = response.headers.get('date');
+      if (serverDate) {
+        const parsedServerDate = Date.parse(serverDate);
+        if (!Number.isNaN(parsedServerDate)) this.serverOffsetMs = parsedServerDate - Date.now();
+      }
+
       let payload: unknown;
       try {
         payload = await response.json();
@@ -67,10 +91,10 @@ export class OpsApiClient {
       }
 
       if (!payload.isSuccess) {
-        if (payload.error?.code === -23 && !endpoint.endsWith('LoginUserAPI')) {
+        if (payload.error && SESSION_EXPIRED_ERROR_CODES.has(payload.error.code) && !endpoint.endsWith('LoginUserAPI')) {
           window.dispatchEvent(new CustomEvent('urbanoa:session-expired'));
         }
-        const message = payload.error?.message_ES ?? payload.error?.message_EN ?? `${endpoint}: error del servicio`;
+        const message = this.localizedBackendMessage(payload.error, endpoint);
         throw new OpsApiError('backend', endpoint, message, response.status, payload.error);
       }
 
@@ -82,10 +106,16 @@ export class OpsApiClient {
       return payload.value;
     } catch (error) {
       if (error instanceof OpsApiError) throw error;
+      if (controller.signal.aborted) {
+        const kind = timedOut || (error instanceof DOMException && error.name === 'TimeoutError') ? 'timeout' : 'abort';
+        const detail = kind === 'timeout' ? 'la solicitud agotó el tiempo de espera' : 'la solicitud fue cancelada';
+        throw new OpsApiError(kind, endpoint, `${endpoint}: ${detail}`);
+      }
       const message = error instanceof Error ? error.message : 'Error de red desconocido';
       throw new OpsApiError('transport', endpoint, `${endpoint}: ${message}`);
     } finally {
       clearTimeout(timeout);
+      this.session?.unregisterRequest(controller);
     }
   }
 
@@ -93,5 +123,16 @@ export class OpsApiClient {
     if (!payload || typeof payload !== 'object') return false;
     const value = payload as Partial<OpsApiEnvelope<T>>;
     return typeof value.isSuccess === 'boolean' && 'value' in value && 'error' in value;
+  }
+
+  private localizedBackendMessage(error: OpsApiEnvelope<unknown>['error'], endpoint: string): string {
+    if (!error) return `${endpoint}: error del servicio`;
+    const messages: Record<string, string | undefined> = {
+      es: error.message_ES,
+      eu: error.message_EU,
+      fr: error.message_FR,
+      uk: error.message_EN,
+    };
+    return messages[this.translation.currentLang$()] ?? error.message_ES ?? error.message_EN ?? `${endpoint}: error del servicio`;
   }
 }

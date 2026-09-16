@@ -7,15 +7,20 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { DateRangeFilterComponent, type DateRange } from '../../../shared/components/date-range-filter/date-range-filter.component';
 import { OperationType, OPERATION_TYPE_LABELS } from '../../../shared/models/operation-type';
-import { UnpaidFinesService } from '../../../core/services/unpaid-fines.service';
+import { UnpaidFinesService, isHistoricalUnpaidFine } from '../../../core/services/unpaid-fines.service';
 import { OperationsService, type ActiveParking } from '../../../core/services/operations.service';
+import { VehicleService } from '../../../core/services/vehicle.service';
 import { ParkingSessionService } from '../../../core/services/parking-session.service';
+import type { UnparkingQuoteResult } from '../../../core/services/parking-api.service';
 import { NavigationToCarService } from '../../../core/services/navigation-to-car.service';
 import type { Operation } from '../../../shared/models/operation';
 import { OperationIconComponent } from '../../../shared/components/operation-icon/operation-icon.component';
 import { SplitViewComponent } from '../../../layout/split-view/split-view.component';
 import { ResultModalComponent } from '../../../shared/components/result-modal/result-modal.component';
 import { ParkingTicketCardComponent } from '../../../shared/components/parking-ticket-card/parking-ticket-card.component';
+import { ParkingFlowStore } from '../../parking/parking-flow.store';
+import { OpsApiClient } from '../../../core/api/ops-api-client.service';
+import { OPERATION_PERIODS, operationPeriod } from '../operation-period';
 
 @Component({
   selector: 'app-operations-layout',
@@ -76,13 +81,22 @@ import { ParkingTicketCardComponent } from '../../../shared/components/parking-t
                 <span class="active-parkings-count">{{ activeParkingsCount() }}</span>
               }
             </p>
-            @if (activeParkings().length > 0) {
+            @if (activeParkingStatusLoading()) {
+              <div
+                class="skeleton-card skeleton-card-current active-parking-skeleton"
+                role="status"
+                aria-live="polite"
+                [attr.aria-label]="'common.loading' | translate"
+              >
+                <span class="sr-only">{{ 'common.loading' | translate }}</span>
+              </div>
+            } @else if (activeParkings().length > 0) {
               @for (parking of activeParkings(); track parking.id) {
                 <app-parking-ticket-card
                   [parking]="parking"
                   variant="operations-current"
                   (leaveParking)="onUnpark($event.id)"
-                  (extendTime)="onExtend()"
+                  (extendTime)="onExtend($event)"
                   (goToCar)="onGoToCar($event)"
                 />
                 @if (!$last) {
@@ -118,21 +132,30 @@ import { ParkingTicketCardComponent } from '../../../shared/components/parking-t
 
           <ul class="list history-list">
             @for (group of groupedHistory(); track group.label) {
-              <li class="history-group-label">{{ group.label | translate }}</li>
+              <li class="history-group">
+              <h2 class="history-group-label">{{ group.label | translate }}</h2>
+              <ul class="history-group-items">
               @for (op of group.items; track op.id) {
-                <a
+                <li><a
                   [routerLink]="['/app/operations/detail', op.id]"
                   class="list-item"
+                    [class.historic-fine-item]="isHistoricFine(op)"
                   routerLinkActive="active"
                   [routerLinkActiveOptions]="{ exact: true }"
                 >
                   <app-operation-icon [type]="op.type" />
                   <div class="list-item-content">
                     <div class="list-item-title" [class.finish-op-title]="isFinishParking(op)">
-                      {{ OPERATION_TYPE_LABELS[op.type] | translate }}
+                      {{ operationLabel(op) | translate }}
+                      @if (isHistoricFine(op)) {
+                        <span class="historic-fine-badge">{{ 'ops.fineDetail.historic' | translate }}</span>
+                      }
+                      @if (op.timePeriod === 2) {
+                        <span class="badge badge-warning">{{ 'ops.active' | translate }}</span>
+                      }
                     </div>
                     <div class="list-item-subtitle">
-                      {{ op.date }}{{ operationTime(op) ? ' · ' + operationTime(op) : '' }}{{ op.zone ? ' — ' + op.zone : '' }}
+                      {{ op.zone }}
                     </div>
                     @if (op.plate) {
                       <div class="operation-meta">
@@ -143,15 +166,28 @@ import { ParkingTicketCardComponent } from '../../../shared/components/parking-t
                       </div>
                     }
                   </div>
+                  <div class="operation-price-date">
+                  <span class="operation-date">{{ op.date }}</span>
+                  @if (operationTime(op)) { <span class="operation-time">{{ operationTime(op) }}</span> }
                   <span [class]="op.amount > 0 ? 'operation-amount operation-amount-credit' : 'operation-amount operation-amount-debit'">
                     {{ op.amount > 0 ? '+' : '' }}{{ op.amount | number: '1.2-2' }} €
                   </span>
-                </a>
+                  </div>
+                </a></li>
               }
+              </ul>
+              </li>
             }
             @if (groupedHistory().length === 0) {
               <li class="list-item" style="justify-content:center;color:var(--color-muted)">
-                {{ 'ops.empty' | translate }}
+                @if (operationsSource() === 'error') {
+                  <div class="operations-error">
+                    <span>{{ 'ops.loadError' | translate }}</span>
+                    <button type="button" class="btn btn-secondary" (click)="retryOperations()">{{ 'common.retry' | translate }}</button>
+                  </div>
+                } @else {
+                  {{ 'ops.empty' | translate }}
+                }
               </li>
             }
           </ul>
@@ -167,11 +203,24 @@ import { ParkingTicketCardComponent } from '../../../shared/components/parking-t
         (primaryAction)="unparked.set(false)"
       />
     }
+    @if (unparkError(); as error) {
+      <app-result-modal
+        type="error"
+        [title]="'dashboard.unparkError' | translate"
+        [message]="error"
+        [primaryText]="'common.accept' | translate"
+        (primaryAction)="unparkError.set(null)"
+      />
+    }
     @if (confirmUnpark()) {
       <app-result-modal
         type="confirmation"
         [title]="'dashboard.unpark' | translate"
-        [message]="'dashboard.unparkConfirmDetail' | translate: { amount: 'EUR3.70' }"
+        [message]="
+          (pendingUnparkAmount() ?? 0) > 0
+            ? ('dashboard.unparkConfirmDetail' | translate: { amount: 'EUR' + pendingUnparkAmount()!.toFixed(2) })
+            : ('dashboard.unparkNoRefund' | translate)
+        "
         [primaryText]="'common.accept' | translate"
         [secondaryText]="'common.cancel' | translate"
         (primaryAction)="confirmUnparkAction()"
@@ -181,10 +230,29 @@ import { ParkingTicketCardComponent } from '../../../shared/components/parking-t
   `,
   styles: [
     `
+      :host {
+        display: block;
+        height: 100%;
+        min-height: 0;
+      }
       .list-item.active {
         background: rgba(93, 154, 150, 0.16);
         color: var(--color-primary-dark);
         box-shadow: inset 4px 0 0 var(--color-primary);
+      }
+      .historic-fine-item {
+        border-left: 4px solid var(--color-error);
+        background: var(--color-surface);
+      }
+      .historic-fine-badge {
+        display: inline-flex;
+        margin-left: 0.45rem;
+        padding: 0.12rem 0.4rem;
+        border-radius: 999px;
+        background: var(--color-error-bg);
+        color: var(--color-error);
+        font-size: var(--text-xs);
+        font-weight: var(--font-bold);
       }
       .operations-content-hidden {
         display: none;
@@ -195,6 +263,7 @@ import { ParkingTicketCardComponent } from '../../../shared/components/parking-t
         padding-top: 0.75rem;
       }
       .operations-skeleton > div,
+      .active-parking-skeleton,
       .skeleton-chips span {
         position: relative;
         overflow: hidden;
@@ -202,6 +271,7 @@ import { ParkingTicketCardComponent } from '../../../shared/components/parking-t
         background: #e7ebe2;
       }
       .operations-skeleton > div::after,
+      .active-parking-skeleton::after,
       .skeleton-chips span::after {
         position: absolute;
         inset: 0;
@@ -221,6 +291,9 @@ import { ParkingTicketCardComponent } from '../../../shared/components/parking-t
       }
       .skeleton-card-current {
         height: 5.5rem;
+      }
+      .active-parking-skeleton {
+        margin-bottom: 0.1rem;
       }
       .skeleton-card-action {
         height: 4.25rem;
@@ -309,20 +382,40 @@ import { ParkingTicketCardComponent } from '../../../shared/components/parking-t
       }
       .history-list {
         margin: 0;
-        overflow: hidden;
+        overflow: visible;
         border: 1px solid var(--color-border);
         border-radius: var(--radius-md);
         background: var(--color-surface);
       }
       .history-group-label {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        margin: 0;
         list-style: none;
         padding: 0.65rem 0.8rem 0.4rem;
         color: var(--color-text-muted);
         font-size: var(--text-xs);
         font-weight: var(--font-extra);
-        text-transform: uppercase;
         letter-spacing: 0.05em;
         background: var(--color-background);
+      }
+      .history-group, .history-group-items, .history-group-items > li {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+      .operation-price-date {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 0.2rem;
+        flex-shrink: 0;
+      }
+      .operation-date, .operation-time {
+        color: var(--color-text-muted);
+        font-size: var(--text-xs);
+        white-space: nowrap;
       }
       .finish-op-title {
         color: var(--color-primary-dark);
@@ -500,11 +593,14 @@ import { ParkingTicketCardComponent } from '../../../shared/components/parking-t
   ],
 })
 export class OperationsLayoutComponent implements OnInit {
+  private readonly api = inject(OpsApiClient);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   readonly operationsService = inject(OperationsService);
   private readonly parkingSessionService = inject(ParkingSessionService);
   private readonly navigationToCar = inject(NavigationToCarService);
+  private readonly parkingFlowStore = inject(ParkingFlowStore);
+  private readonly vehicleService = inject(VehicleService);
   private readonly operations = this.operationsService.operations;
   private readonly rangeFilter = signal<DateRange>({ from: '', to: '' });
   private readonly unpaidFinesService = inject(UnpaidFinesService);
@@ -512,10 +608,15 @@ export class OperationsLayoutComponent implements OnInit {
   readonly OperationType = OperationType;
   readonly OPERATION_TYPE_LABELS = OPERATION_TYPE_LABELS;
   readonly activeParkings = this.parkingSessionService.activeParkings;
+  readonly unparkError = this.parkingSessionService.unparkError;
   readonly activeParkingsCount = this.parkingSessionService.activeParkingsCount;
+  readonly operationsSource = this.operationsService.source;
+  readonly activeParkingStatusLoading = computed(() => this.operationsService.activeSource() === 'idle');
   readonly unparked = signal(false);
   readonly confirmUnpark = signal(false);
+  readonly pendingUnparkAmount = signal<number | null>(null);
   private pendingUnparkId = '';
+  private pendingUnparkQuote: UnparkingQuoteResult | undefined;
   readonly filteredOps = computed(() => this.applyFilter(this.operations()));
   readonly groupedHistory = computed(() => this.groupByPeriod(this.filteredOps()));
   readonly initialLoading = computed(
@@ -532,7 +633,7 @@ export class OperationsLayoutComponent implements OnInit {
   );
 
   ngOnInit(): void {
-    void this.operationsService.load();
+    void this.reload();
     this.router.events
       .pipe(
         filter((event): event is NavigationEnd => event instanceof NavigationEnd),
@@ -540,9 +641,18 @@ export class OperationsLayoutComponent implements OnInit {
       )
       .subscribe((event) => {
         if (event.urlAfterRedirects.split('?')[0].replace(/\/$/, '') === '/app/operations') {
-          void this.operationsService.load();
+          this.reload();
         }
       });
+  }
+
+  private async reload(): Promise<void> {
+    await Promise.all([this.operationsService.load(), this.vehicleService.load()]);
+    await this.operationsService.loadDashboardParkingStatuses(this.vehicleService.vehicles());
+  }
+
+  retryOperations(): void {
+    void this.operationsService.load();
   }
 
   isDetailRoute = () => {
@@ -559,21 +669,32 @@ export class OperationsLayoutComponent implements OnInit {
     this.rangeFilter.set(range);
   }
 
-  onUnpark(parkingId: string): void {
+  async onUnpark(parkingId: string): Promise<void> {
     this.pendingUnparkId = parkingId;
+    const quote = await this.parkingSessionService.quoteUnparking(parkingId);
+    if (!quote.success) {
+      this.unparkError.set(quote.error instanceof Error ? quote.error.message : 'No se pudo calcular el desaparcar.');
+      return;
+    }
+    this.pendingUnparkQuote = quote;
+    this.pendingUnparkAmount.set(quote.refundAmount ?? 0);
     this.confirmUnpark.set(true);
   }
 
   async confirmUnparkAction(): Promise<void> {
     this.confirmUnpark.set(false);
-    if (await this.parkingSessionService.leaveParking(this.pendingUnparkId)) {
+    if (await this.parkingSessionService.leaveParking(this.pendingUnparkId, this.pendingUnparkQuote)) {
       this.pendingUnparkId = '';
+      this.pendingUnparkQuote = undefined;
+      this.pendingUnparkAmount.set(null);
       this.unparked.set(true);
     }
   }
 
-  onExtend(): void {
-    this.router.navigate(['/app/parking/time-steps']);
+  onExtend(parking: ActiveParking): void {
+    if (parking.extension !== 2) return;
+    if (!this.parkingFlowStore.startExtension(parking)) return;
+    void this.router.navigate(['/app/parking/time-steps']);
   }
 
   onGoToCar(parking: ActiveParking): void {
@@ -588,18 +709,33 @@ export class OperationsLayoutComponent implements OnInit {
     return op.type === OperationType.REFUND;
   }
 
+  operationLabel(op: Operation): string {
+    if (op.type === OperationType.UNPAID_FINES) return isHistoricalUnpaidFine(op) ? 'ops.fineDetail.sanction' : 'ops.type.sanciones';
+    return OPERATION_TYPE_LABELS[op.type];
+  }
+
+  isHistoricFine(op: Operation): boolean {
+    return isHistoricalUnpaidFine(op);
+  }
+
   isParking(op: Operation): boolean {
     return op.type === OperationType.PARKING || op.type === OperationType.PARKING_EXTENSION;
   }
 
   operationTime(op: Operation): string {
-    return op.startTime ?? op.endTime ?? '';
+    return op.operationTime ?? op.startTime ?? op.endTime ?? '';
   }
 
   private applyFilter(list: Operation[]): Operation[] {
     const { from, to } = this.rangeFilter();
-    const history = list.filter((op) => op.type !== OperationType.UNPAID_FINES);
-    const sorted = [...history].sort((a, b) => this.toDateValue(b.date) - this.toDateValue(a.date));
+    const history = list.filter((op) => op.type !== OperationType.UNPAID_FINES || isHistoricalUnpaidFine(op));
+    const sorted = [...history].sort((a, b) => {
+      const diff = this.toDateValue(b.date) - this.toDateValue(a.date);
+      if (diff !== 0) return diff;
+      const aTime = this.operationTime(a);
+      const bTime = this.operationTime(b);
+      return bTime.localeCompare(aTime);
+    });
 
     if (!from && !to) {
       return sorted;
@@ -614,40 +750,12 @@ export class OperationsLayoutComponent implements OnInit {
   }
 
   private groupByPeriod(list: Operation[]): { label: string; items: Operation[] }[] {
-    const now = new Date();
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const startOfYesterday = new Date(startOfToday);
-    startOfYesterday.setDate(startOfYesterday.getDate() - 1);
-    const startOfWeek = new Date(startOfToday);
-    const day = (startOfWeek.getDay() + 6) % 7;
-    startOfWeek.setDate(startOfWeek.getDate() - day);
-
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-
-    const groups: Record<string, Operation[]> = {
-      'ops.today': [],
-      'ops.yesterday': [],
-      'ops.thisWeek': [],
-      'ops.thisMonth': [],
-      'ops.previous': [],
-    };
-
+    const now = this.api.serverNow();
+    const groups = new Map<string, Operation[]>(OPERATION_PERIODS.map(label => [label, []]));
     for (const op of list) {
-      const d = this.parseDate(op.date);
-      if (d >= startOfToday) {
-        groups['ops.today'].push(op);
-      } else if (d >= startOfYesterday) {
-        groups['ops.yesterday'].push(op);
-      } else if (d >= startOfWeek) {
-        groups['ops.thisWeek'].push(op);
-      } else if (d >= startOfMonth) {
-        groups['ops.thisMonth'].push(op);
-      } else {
-        groups['ops.previous'].push(op);
-      }
+      groups.get(operationPeriod(op.date, now))!.push(op);
     }
-
-    return Object.entries(groups)
+    return [...groups.entries()]
       .filter(([, items]) => items.length > 0)
       .map(([label, items]) => ({ label, items }));
   }

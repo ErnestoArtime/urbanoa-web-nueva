@@ -1,22 +1,60 @@
-import { Component, HostListener, inject, OnInit, signal } from '@angular/core';
-import { DecimalPipe } from '@angular/common';
-import { RouterLink, NavigationEnd, Router } from '@angular/router';
+import { PaymentAddComponent } from '../payment-add/payment-add.component';
+import { AccountRechargeComponent } from '../recharge/recharge.component';
+import { AccountRefundComponent } from '../refund/refund.component';
+import { Component, HostListener, inject, input, OnInit, signal, ViewChild } from '@angular/core';
+import { NgTemplateOutlet, DecimalPipe } from '@angular/common';
+import { NavigationEnd, Router } from '@angular/router';
 import { filter, map, startWith } from 'rxjs/operators';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { SplitViewComponent } from '../../../layout/split-view/split-view.component';
 import { UserService } from '../../../core/services/user.service';
 import { WalletService } from '../../../core/services/wallet.service';
-import { WalletMovementListComponent } from '../../../shared/components/wallet-movement-list/wallet-movement-list.component';
 import { ResultModalComponent } from '../../../shared/components/result-modal/result-modal.component';
 
 @Component({
   selector: 'app-payment-layout',
-  imports: [RouterLink, SplitViewComponent, TranslatePipe, DecimalPipe, WalletMovementListComponent, ResultModalComponent],
+  imports: [
+    NgTemplateOutlet,
+    PaymentAddComponent,
+    AccountRechargeComponent,
+    AccountRefundComponent,
+    SplitViewComponent,
+    TranslatePipe,
+    DecimalPipe,
+    ResultModalComponent,
+  ],
   template: `
-    <app-split-view [hideList]="isChildRoute()" [hideDetail]="!isChildRoute()">
-      <div splitList class="page">
-        <h1 class="page-title">{{ 'account.menu.paymentMethods' | translate }}</h1>
+    @if (embedded()) {
+      @if (screen() !== 'list') {
+        <button type="button" class="btn btn-ghost" [disabled]="busy()" (click)="screen.set('list')">
+          ← {{ 'account.addCard.backToList' | translate }}
+        </button>
+      }
+      @switch (screen()) {
+        @case ('add') {
+          <app-payment-add [embedded]="true" (back)="screen.set('list')" />
+        }
+        @case ('recharge') {
+          <app-account-recharge [embedded]="true" [cardId]="actionCardId()" (addCard)="screen.set('add')" />
+        }
+        @case ('refund') {
+          <app-account-refund [embedded]="true" [cardId]="actionCardId()" />
+        }
+        @default {
+          <ng-container [ngTemplateOutlet]="walletContent" />
+        }
+      }
+    } @else {
+      <app-split-view [hideList]="isChildRoute()" [hideDetail]="!isChildRoute()">
+        <div splitList><ng-container [ngTemplateOutlet]="walletContent" /></div>
+      </app-split-view>
+    }
+    <ng-template #walletContent>
+      <div class="page" [class.compact]="embedded()">
+        @if (!embedded()) {
+          <h1 class="page-title">{{ 'account.menu.paymentMethods' | translate }}</h1>
+        }
         @if (walletService.source() === 'error') {
           <p class="data-notice" role="alert">No se pudieron cargar la billetera y las tarjetas.</p>
         }
@@ -76,15 +114,15 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
           <button type="button" class="btn btn-primary btn-sm" [disabled]="walletService.cards().length === 0" (click)="goToRecharge()">
             {{ 'dashboard.recharge' | translate }}
           </button>
-          <a routerLink="/app/account/payment-methods/refund" class="btn btn-secondary btn-sm">{{
-            'account.withdrawBalance' | translate
-          }}</a>
+          <button type="button" (click)="refundToCard(walletService.defaultCardId())" class="btn btn-secondary btn-sm">
+            {{ 'account.withdrawBalance' | translate }}
+          </button>
         </div>
-        <a routerLink="/app/account/payment-methods/add" class="btn btn-secondary btn-block mt-2">{{ 'account.addCard' | translate }}</a>
-
-        <app-wallet-movement-list class="mt-2" [movements]="walletService.movements()" title="account.movements" />
+        <button type="button" (click)="openScreen('add')" class="btn btn-secondary btn-block mt-2">
+          {{ 'account.addCard' | translate }}
+        </button>
       </div>
-    </app-split-view>
+    </ng-template>
     @if (cardToDelete()) {
       <app-result-modal
         type="confirmation"
@@ -98,6 +136,17 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
     }
   `,
   styles: `
+    .compact {
+      padding: 0;
+    }
+    .compact .payment-wallet-card {
+      aspect-ratio: auto;
+      min-height: 120px;
+    }
+    .card-info {
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
     .payment-wallet-card {
       position: relative;
       isolation: isolate;
@@ -274,6 +323,26 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
   `,
 })
 export class PaymentLayoutComponent implements OnInit {
+  @ViewChild(AccountRechargeComponent) private recharge?: AccountRechargeComponent;
+  @ViewChild(AccountRefundComponent) private refund?: AccountRefundComponent;
+  readonly updating = signal(false);
+  busy(): boolean {
+    return (
+      this.updating() || !!this.cardToDelete() || !!this.recharge?.saving() || !!this.refund?.requesting() || !!this.refund?.refundQuote()
+    );
+  }
+  readonly embedded = input(false);
+  readonly screen = signal<'list' | 'add' | 'recharge' | 'refund'>('list');
+  readonly actionCardId = signal('');
+  openScreen(screen: 'add' | 'recharge' | 'refund', cardId = ''): void {
+    this.activeCardMenu.set(null);
+    if (this.embedded()) {
+      this.actionCardId.set(cardId);
+      this.screen.set(screen);
+    } else {
+      void this.router.navigate(['/app/account/payment-methods', screen], { queryParams: cardId ? { cardId } : {} });
+    }
+  }
   private readonly userService = inject(UserService);
   readonly walletService = inject(WalletService);
   readonly user = this.userService.user;
@@ -309,7 +378,10 @@ export class PaymentLayoutComponent implements OnInit {
     this.activeCardMenu.set(null);
   }
   async setAsDefault(id: string): Promise<void> {
+    if (this.updating()) return;
+    this.updating.set(true);
     await this.walletService.setDefaultCard(id);
+    this.updating.set(false);
     this.activeCardMenu.set(null);
   }
   requestDelete(id: string): void {
@@ -318,21 +390,24 @@ export class PaymentLayoutComponent implements OnInit {
   }
   rechargeCard(id: string): void {
     this.activeCardMenu.set(null);
-    void this.router.navigate(['/app/account/payment-methods/recharge'], { queryParams: { cardId: id } });
+    this.openScreen('recharge', id);
   }
   goToRecharge(): void {
     const cardId = this.walletService.defaultCardId();
     if (!this.walletService.cards().length || !cardId) return;
-    void this.router.navigate(['/app/account/payment-methods/recharge'], { queryParams: { cardId } });
+    this.openScreen('recharge', cardId);
   }
   refundToCard(id: string): void {
     this.activeCardMenu.set(null);
-    void this.router.navigate(['/app/account/payment-methods/refund'], { queryParams: { cardId: id } });
+    this.openScreen('refund', id);
   }
   async confirmDelete(): Promise<void> {
+    if (this.updating()) return;
+    this.updating.set(true);
     const id = this.cardToDelete();
     if (id) await this.walletService.removeCard(id);
     this.cardToDelete.set(null);
+    this.updating.set(false);
   }
   brandAsset(brand: string): string | null {
     const normalized = brand.toLowerCase();

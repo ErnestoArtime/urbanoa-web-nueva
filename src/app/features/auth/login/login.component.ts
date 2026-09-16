@@ -217,8 +217,8 @@ export class LoginComponent {
     const { email, password } = this.form.getRawValue();
 
     try {
-      await this.authService.login(email, password);
-      await this.router.navigateByUrl(this.returnUrl() || '/app');
+      const user = await this.authService.login(email, password);
+      await this.router.navigateByUrl(user.firstLogin ? '/onboarding/user' : this.returnUrl() || '/app');
     } catch (error) {
       this.errorMessage.set(
         this.backendErrorMessage(error) ??

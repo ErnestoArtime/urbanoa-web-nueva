@@ -3,9 +3,9 @@ import { OperationType } from '../../shared/models/operation-type';
 import type { Operation } from '../../shared/models/operation';
 import { OPS_ENDPOINTS } from '../api/ops-endpoints';
 import { OpsApiClient } from '../api/ops-api-client.service';
+import { OpsApiError } from '../api/ops-api.types';
 import { OpsSessionService } from '../api/ops-session.service';
-import { CitiesService } from './cities.service';
-import { LocationSettingsService } from './location-settings.service';
+import { formatOpsCalendarDate, formatOpsDate, formatOpsTime, parseOpsDate, opsRelativeDayLabel } from '../utils/ops-date';
 
 interface OperationResponseDto {
   contractId?: number;
@@ -28,6 +28,7 @@ interface OperationResponseDto {
   idPaymentMethod2?: number | null;
   descPaymentMethod2?: string | null;
   amountPaymentMethod2?: number | null;
+  newBalance?: number | null;
   zoneId?: number;
   sectorId?: number;
   sectorColor?: string | null;
@@ -48,6 +49,12 @@ interface OperationResponseDto {
   fineAmount?: number | null;
   latitude?: number | null;
   longitude?: number | null;
+  timePeriod?: number | null;
+  refundable?: number | string | null;
+  extension?: number | string | null;
+  ticketId?: number | null;
+  ticketDesc?: string | null;
+  pstreet?: string | null;
 }
 
 export interface ActiveParking {
@@ -56,9 +63,13 @@ export interface ActiveParking {
   vehicleId: string;
   zone: string;
   startTime: string;
+  startDayLabel?: string;
   durationLabel: string;
   timeRemaining: string;
+  /** Absolute instant when the local countdown may begin. */
+  countdownStartsAt?: number;
   endTime: string;
+  endDayLabel?: string;
   latitude?: number;
   longitude?: number;
   street?: string;
@@ -69,67 +80,96 @@ export interface ActiveParking {
   contractId?: number;
   tariffId?: number;
   sectorId?: number;
-}
-
-interface ParkingStatusResponseDto {
-  status: number;
-  extension: number;
-  tariffId: number;
-  dateInitial: string;
-  dateEnd: string;
-  accumulatedTime: number;
-  sector?: string;
-  sectorname?: string;
-  zonename?: string;
-  latitude?: number;
-  longitude?: number;
+  sectorColor?: string;
   operationDate?: string;
-  streetname?: string;
+  /** Base operation id of the chain (APK opBaseId): links extensions to the first parking. */
+  opBaseId?: string;
+  /** Mirrors the APK parking-status `extension` flag. */
+  canExtend?: boolean;
+  extension?: 0 | 1 | 2;
+  /** Backend unpark option: only value 2 grants permission to unpark. */
+  refundable?: 0 | 1 | 2;
 }
 
 @Injectable({ providedIn: 'root' })
 export class OperationsService {
   private readonly api = inject(OpsApiClient);
   private readonly session = inject(OpsSessionService);
-  private readonly citiesService = inject(CitiesService);
-  private readonly locationSettings = inject(LocationSettingsService);
   private readonly _operations = signal<Operation[]>([]);
   private readonly _activeParkings = signal<ActiveParking[]>([]);
+  private readonly _activeLoading = signal(false);
+  private readonly operationsLoadsInFlight = new Map<string, Promise<void>>();
+  private activeLoadingRequests = 0;
+  private lastLoadParameters: [string?, string?, number[]?] = [];
 
   readonly operations = this._operations.asReadonly();
   readonly activeParkings = this._activeParkings.asReadonly();
   readonly activeParkingsCount = computed(() => this._activeParkings().length);
   readonly hasActiveParkings = computed(() => this._activeParkings().length > 0);
+  readonly activeParkingOperations = computed(() =>
+    this._operations().filter(
+      (operation) =>
+        operation.timePeriod === 2 && (operation.type === OperationType.PARKING || operation.type === OperationType.PARKING_EXTENSION),
+    ),
+  );
+  readonly hasActiveParkingOperations = computed(() => this.activeParkingOperations().length > 0);
+  readonly operationsBadgeCount = computed(
+    () =>
+      this._activeParkings().length +
+      this._operations().filter((operation) => operation.type === OperationType.UNPAID_FINES && operation.fineStatus === 1).length,
+  );
+  readonly activeLoading = this._activeLoading.asReadonly();
   readonly source = signal<'idle' | 'remote' | 'error'>('idle');
   readonly activeSource = signal<'idle' | 'remote' | 'error'>('idle');
   readonly loading = signal(false);
+  readonly lastError = signal<string | null>(null);
 
-  async load(dateStart?: string, dateEnd?: string, operationTypeList = [1, 2, 3, 4, 5, 7, 101, 102, 103, 104]): Promise<void> {
-    const token = this.session.token();
-    if (!token) {
-      this._operations.set([]);
-      this.source.set('error');
-      return;
-    }
+  load(dateStart?: string, dateEnd?: string, operationTypeList = [1, 2, 3, 4, 5, 7, 101, 102, 103, 104]): Promise<void> {
+    this.lastLoadParameters = [dateStart, dateEnd, operationTypeList];
     const year = new Date().getFullYear();
     const effectiveStart = dateStart ?? `${year}-01-01`;
     const effectiveEnd = dateEnd ?? `${year}-12-31`;
+    const requestKey = JSON.stringify([effectiveStart, effectiveEnd, operationTypeList]);
+    const inFlight = this.operationsLoadsInFlight.get(requestKey);
+    if (inFlight) return inFlight;
+
+    const request = this.loadRemote(effectiveStart, effectiveEnd, operationTypeList);
+    const tracked = request.finally(() => {
+      if (this.operationsLoadsInFlight.get(requestKey) === tracked) this.operationsLoadsInFlight.delete(requestKey);
+    });
+    this.operationsLoadsInFlight.set(requestKey, tracked);
+    return tracked;
+  }
+
+  private async loadRemote(effectiveStart: string, effectiveEnd: string, operationTypeList: number[]): Promise<void> {
+    const token = this.session.token();
+    if (!token) {
+      this._operations.set([]);
+      this._activeParkings.set([]);
+      this.lastError.set('No hay una sesión OPS activa');
+      this.source.set('error');
+      this.activeSource.set('error');
+      return;
+    }
+    const requestBody = {
+      contractId: 0,
+      dateStart: this.queryDate(effectiveStart, false),
+      dateEnd: this.queryDate(effectiveEnd, true),
+      operationTypeList,
+    };
     this.loading.set(true);
+    this.lastError.set(null);
     try {
-      const response = await this.api.post<OperationResponseDto[]>(
-        OPS_ENDPOINTS.user.operations,
-        {
-          contractId: 0,
-          dateStart: this.queryDate(effectiveStart, false),
-          dateEnd: this.queryDate(effectiveEnd, true),
-          operationTypeList,
-        },
-        { token },
-      );
+      const response = await this.api.post<OperationResponseDto[]>(OPS_ENDPOINTS.user.operations, requestBody, { token });
       this._operations.set(response.map((item) => this.mapRemoteOperation(item)));
       this.source.set('remote');
     } catch (error) {
-      this._operations.set([]);
+      this.lastError.set(error instanceof Error ? error.message : 'Error desconocido al cargar las operaciones');
+      const errorDetails =
+        error instanceof OpsApiError
+          ? { kind: error.kind, status: error.status, backendError: error.backendError }
+          : { message: error instanceof Error ? error.message : String(error) };
+      console.warn('[OPS API] No se pudieron cargar las operaciones', JSON.stringify({ requestBody, error: errorDetails }));
       this.source.set('error');
     } finally {
       this.loading.set(false);
@@ -137,108 +177,131 @@ export class OperationsService {
   }
 
   async loadDetail(id: string): Promise<Operation | undefined> {
-    const cached = this.getOperationById(id);
-    if (cached) return cached;
-    await this.load();
+    if (!id) return undefined;
+    await this.load(...this.lastLoadParameters);
     return this.getOperationById(id);
   }
 
   async loadParkingStatuses(vehicles: readonly { id: string; plate: string }[], contractId?: number): Promise<void> {
-    await this.loadParkingStatusesFromContracts(vehicles, () => (contractId ? [contractId] : this.contractIdsToCheck()));
+    this.beginActiveLoading();
+    try {
+      await this.load();
+      this.syncActiveParkingsFromOperations(vehicles, contractId);
+    } finally {
+      this.endActiveLoading();
+    }
   }
 
-  async loadDashboardParkingStatuses(vehicles: readonly { id: string; plate: string }[]): Promise<void> {
-    const preferredCityId = this.locationSettings.settings().preferredCityId;
-    const preferredContractId = preferredCityId ? this.citiesService.contractIdFor(preferredCityId) : 0;
-    await this.loadParkingStatusesFromContracts(vehicles, (vehicle) => {
-      const recentContractId = this.latestParkingContractId(vehicle.plate);
-      if (recentContractId) return [recentContractId];
-      if (this.source() !== 'remote') return this.contractIdsToCheck();
-      if (preferredContractId > 0) return [preferredContractId];
-      return [];
-    });
+  loadDashboardParkingStatuses(vehicles: readonly { id: string; plate: string }[]): Promise<void> {
+    this.syncActiveParkingsFromOperations(vehicles);
+    return Promise.resolve();
   }
 
-  private async loadParkingStatusesFromContracts(
-    vehicles: readonly { id: string; plate: string }[],
-    contractsFor: (vehicle: { id: string; plate: string }) => readonly number[],
-  ): Promise<void> {
-    const token = this.session.token();
-    if (!token) {
-      this._activeParkings.set([]);
+  syncActiveParkingsFromOperations(vehicles: readonly { id: string; plate: string }[], contractId?: number): void {
+    if (this.source() !== 'remote') {
       this.activeSource.set('error');
       return;
     }
-    if (vehicles.length === 0) {
-      this._activeParkings.set([]);
-      this.activeSource.set('remote');
-      return;
-    }
 
-    const date = this.opsDate(new Date());
-    const results = await Promise.allSettled(
-      vehicles.map(async (vehicle) => {
-        const contractIds = [...new Set(contractsFor(vehicle).filter((id) => id > 0))];
-        let answered = contractIds.length === 0;
-        for (const id of contractIds) {
-          try {
-            const status = await this.api.postOrNull<ParkingStatusResponseDto>(
-              OPS_ENDPOINTS.parking.parkingStatus,
-              { contractId: id, plate: vehicle.plate, date },
-              { token },
-            );
-            answered = true;
-            if (status?.status === 2) return this.mapParkingStatus(vehicle, id, status);
-          } catch {
-            // Error de red/backend para este contrato: se prueba el siguiente.
-          }
-        }
-        if (!answered) throw new Error(`${vehicle.plate}: sin respuesta de ningún contrato`);
-        return null;
-      }),
-    );
-
-    const remote = results
-      .filter((result): result is PromiseFulfilledResult<ActiveParking | null> => result.status === 'fulfilled')
-      .map((result) => result.value)
-      .filter((parking): parking is ActiveParking => parking !== null);
-    const failedPlates = new Set(results.flatMap((result, index) => (result.status === 'rejected' ? [vehicles[index].plate] : [])));
-
-    this._activeParkings.set(remote);
-    this.activeSource.set(failedPlates.size === 0 ? 'remote' : 'error');
+    const mergedByParking = new Map<string, Operation>();
+    this.activeParkingOperations()
+      .filter((operation) => contractId === undefined || operation.contractId === contractId)
+      .sort((a, b) => this.operationTimestamp(a) - this.operationTimestamp(b))
+      .forEach((operation) => {
+        const key = this.activeParkingKey(operation);
+        const previous = mergedByParking.get(key);
+        mergedByParking.set(key, previous ? this.mergeDefinedOperation(previous, operation) : operation);
+      });
+    const parkings = [...mergedByParking.values()]
+      .sort((a, b) => this.operationTimestamp(b) - this.operationTimestamp(a))
+      .map((operation) => this.activeParkingFromOperation(operation, vehicles));
+    this._activeParkings.set(parkings);
+    this.activeSource.set('remote');
   }
 
-  private latestParkingContractId(plate: string): number | undefined {
-    const normalizedPlate = plate.replace(/\s+/g, '').toLocaleUpperCase('es');
-    const parkingTypes = new Set([OperationType.PARKING, OperationType.PARKING_EXTENSION, OperationType.REFUND]);
-    return this._operations()
-      .filter(
-        (operation) =>
-          parkingTypes.has(operation.type) &&
-          operation.contractId != null &&
-          operation.contractId > 0 &&
-          operation.plate?.replace(/\s+/g, '').toLocaleUpperCase('es') === normalizedPlate,
-      )
-      .sort((a, b) => this.operationTimestamp(b) - this.operationTimestamp(a))[0]?.contractId;
+  private upsertActiveParking(parking: ActiveParking): void {
+    const plate = this.normalizePlate(parking.plate);
+    this._activeParkings.update((current) => [...current.filter((item) => this.normalizePlate(item.plate) !== plate), parking]);
+  }
+
+  private activeParkingFromOperation(operation: Operation, vehicles: readonly { id: string; plate: string }[]): ActiveParking {
+    const plate = operation.plate ?? '';
+    const vehicle = vehicles.find((item) => this.normalizePlate(item.plate) === this.normalizePlate(plate));
+    const start = this.operationDateTime(operation.startDate ?? operation.date, operation.startTime);
+    const end = this.operationDateTime(operation.endDate ?? operation.date, operation.endTime);
+    const now = this.api.serverNow ? this.api.serverNow() : new Date();
+    const countdownFrom = Math.max(now.getTime(), start.getTime());
+    const remainingSeconds = Math.max(0, Math.floor((end.getTime() - countdownFrom) / 1000));
+    const hours = String(Math.floor(remainingSeconds / 3600)).padStart(2, '0');
+    const minutes = String(Math.floor((remainingSeconds % 3600) / 60)).padStart(2, '0');
+    const seconds = String(remainingSeconds % 60).padStart(2, '0');
+    return {
+      id: `operation-${operation.id}`,
+      plate,
+      vehicleId: vehicle?.id ?? plate,
+      zone: operation.sectorName || operation.zoneName || operation.zone || '',
+      startTime: operation.startTime ?? '',
+      startDayLabel: this.relativeDayLabel(start, now),
+      durationLabel: operation.durationLabel ?? '0 min',
+      timeRemaining: `${hours}:${minutes}:${seconds}`,
+      countdownStartsAt: start.getTime(),
+      endTime: operation.endTime ?? '',
+      endDayLabel: this.relativeDayLabel(end, now),
+      latitude: operation.latitude,
+      longitude: operation.longitude,
+      street: operation.street,
+      operationId: operation.id,
+      operationDate: operation.operationDate,
+      opBaseId: operation.relatedOperationId ?? operation.operationNumber,
+      paymentBreakdown: operation.paymentBreakdown,
+      cardId: operation.cardId,
+      cardLabel: operation.cardLabel,
+      contractId: operation.contractId,
+      tariffId: operation.ticketId,
+      sectorId: operation.sectorId,
+      sectorColor: operation.sectorColor,
+      canExtend: operation.extension === 2,
+      extension: operation.extension,
+      refundable: operation.refundable,
+    };
+  }
+
+  private beginActiveLoading(): void {
+    this.activeLoadingRequests += 1;
+    this._activeLoading.set(true);
+  }
+
+  private endActiveLoading(): void {
+    this.activeLoadingRequests = Math.max(0, this.activeLoadingRequests - 1);
+    this._activeLoading.set(this.activeLoadingRequests > 0);
   }
 
   private operationTimestamp(operation: Operation): number {
-    const [day, month, year] = operation.date.split('/').map(Number);
-    const [hours = 0, minutes = 0] = (operation.startTime ?? operation.endTime ?? '').split(':').map(Number);
-    const timestamp = new Date(year, month - 1, day, hours, minutes).getTime();
-    return Number.isNaN(timestamp) ? 0 : timestamp;
+    if (operation.operationDate) return parseOpsDate(operation.operationDate).getTime();
+    return this.operationDateTime(operation.date, operation.startTime ?? operation.endTime).getTime();
   }
 
-  private contractIdsToCheck(): number[] {
-    const loaded = this.citiesService
-      .cities()
-      .map((city) => city.contractId)
-      .filter((id) => id > 0);
-    const all = loaded.length > 0 ? [...new Set(loaded)] : this.citiesService.knownContractIds();
-    const preferredCityId = this.locationSettings.settings().preferredCityId;
-    if (!preferredCityId) return all;
-    const preferred = this.citiesService.contractIdFor(preferredCityId);
-    return [preferred, ...all.filter((id) => id !== preferred)];
+  private operationDateTime(date: string, time?: string): Date {
+    const [day, month, year] = date.split('/').map(Number);
+    const [hours = 0, minutes = 0] = (time ?? '').split(':').map(Number);
+    if (![day, month, year, hours, minutes].every(Number.isFinite)) return new Date(0);
+    const two = (value: number): string => String(value).padStart(2, '0');
+    return parseOpsDate(`${two(hours)}${two(minutes)}00${two(day)}${two(month)}${two(year % 100)}`);
+  }
+
+  private relativeDayLabel(date: Date, now: Date): string {
+    return opsRelativeDayLabel(date, now);
+  }
+
+  private activeParkingKey(operation: Operation): string {
+    return [this.normalizePlate(operation.plate ?? ''), operation.contractId ?? '', operation.sectorId ?? ''].join('|');
+  }
+
+  private mergeDefinedOperation(base: Operation, update: Operation): Operation {
+    const values = Object.fromEntries(
+      Object.entries(update).filter(([, value]) => value !== undefined && value !== null && value !== ''),
+    ) as Partial<Operation>;
+    return { ...base, ...values };
   }
 
   async loadReceipt(id: string): Promise<unknown | null> {
@@ -251,11 +314,16 @@ export class OperationsService {
   }
 
   isPlateParked(plate: string): boolean {
-    return this._activeParkings().some((p) => p.plate === plate);
+    const normalizedPlate = this.normalizePlate(plate);
+    return this._activeParkings().some((p) => this.normalizePlate(p.plate) === normalizedPlate);
   }
 
   getActiveParking(id: string): ActiveParking | undefined {
     return this._activeParkings().find((p) => p.id === id);
+  }
+
+  restoreActiveParking(parking: ActiveParking): void {
+    this.upsertActiveParking(parking);
   }
 
   getOperationById(id: string): Operation | undefined {
@@ -263,69 +331,22 @@ export class OperationsService {
   }
 
   private todayDateString(): string {
-    const d = new Date();
-    const day = String(d.getDate()).padStart(2, '0');
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const year = d.getFullYear();
-    return `${day}/${month}/${year}`;
+    const d = this.api.serverNow ? this.api.serverNow() : new Date();
+    return formatOpsCalendarDate(d);
   }
 
-  private mapParkingStatus(vehicle: { id: string; plate: string }, contractId: number, status: ParkingStatusResponseDto): ActiveParking {
-    const start = this.parseOpsDate(status.dateInitial);
-    const end = this.parseOpsDate(status.dateEnd);
-    const remainingMs = Math.max(0, end.getTime() - Date.now());
-    const remainingSeconds = Math.floor(remainingMs / 1000);
-    const hours = String(Math.floor(remainingSeconds / 3600)).padStart(2, '0');
-    const minutes = String(Math.floor((remainingSeconds % 3600) / 60)).padStart(2, '0');
-    const seconds = String(remainingSeconds % 60).padStart(2, '0');
-    return {
-      id: `remote-${vehicle.plate}`,
-      plate: vehicle.plate,
-      vehicleId: vehicle.id,
-      zone: status.sectorname || status.zonename || status.sector || '',
-      startTime: this.timeLabel(start),
-      durationLabel: `${status.accumulatedTime ?? 0} min`,
-      timeRemaining: `${hours}:${minutes}:${seconds}`,
-      endTime: this.timeLabel(end),
-      latitude: status.latitude,
-      longitude: status.longitude,
-      street: status.streetname,
-      operationId: status.operationDate || status.dateInitial,
-      contractId,
-      tariffId: status.tariffId,
-      sectorId: Number(status.sector ?? 0) || undefined,
-    };
+  private normalizePlate(plate: string): string {
+    return plate.replace(/\s+/g, '').toLocaleUpperCase('es');
   }
 
   private opsDate(date: Date): string {
-    const two = (value: number): string => String(value).padStart(2, '0');
-    return `${two(date.getHours())}${two(date.getMinutes())}${two(date.getSeconds())}${two(date.getDate())}${two(date.getMonth() + 1)}${two(
-      date.getFullYear() % 100,
-    )}`;
+    return formatOpsDate(date);
   }
 
   private queryDate(value: string, endOfDay: boolean): string {
     if (/^\d{12}$/.test(value)) return value;
-    const parsed = new Date(`${value}T${endOfDay ? '23:59:59' : '00:00:00'}`);
+    const parsed = parseOpsDate(`${endOfDay ? '235959' : '000000'}${value.slice(8, 10)}${value.slice(5, 7)}${value.slice(2, 4)}`);
     return this.opsDate(Number.isNaN(parsed.getTime()) ? (endOfDay ? new Date(2099, 11, 31, 23, 59, 59) : new Date(2000, 0, 1)) : parsed);
-  }
-
-  private parseOpsDate(value: string): Date {
-    if (/^\d{12}$/.test(value)) {
-      const hours = Number(value.slice(0, 2));
-      const minutes = Number(value.slice(2, 4));
-      const seconds = Number(value.slice(4, 6));
-      const day = Number(value.slice(6, 8));
-      const month = Number(value.slice(8, 10));
-      const year = 2000 + Number(value.slice(10, 12));
-      return new Date(year, month - 1, day, hours, minutes, seconds);
-    }
-    const parsed = new Date(value);
-    return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
-  }
-
-  private timeLabel(date: Date): string {
-    return date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', hour12: false });
   }
 
   private mapRemoteOperation(item: OperationResponseDto): Operation {
@@ -334,17 +355,36 @@ export class OperationsService {
     const amount = remoteAmount / 100;
     const start = this.dateTimePart(item.parkingStartDate);
     const end = this.dateTimePart(item.parkingEndDate);
+    const operationTime = this.dateTimePart(item.opDate);
+    const startTime =
+      item.operationType === OperationType.PARKING_EXTENSION
+        ? start
+        : item.operationType === OperationType.PARKING
+          ? (start ?? operationTime)
+          : operationTime;
     const duration = item.parkingDuration ?? item.duration;
     const fineStatus = [1, 2, 3].includes(item.fineStatus ?? 0) ? (item.fineStatus as 1 | 2 | 3) : undefined;
     return {
-      id: String(item.operationNumber ?? item.opBaseId ?? `${item.operationType}-${item.opDate}-${item.plate ?? ''}`),
+      id: String(
+        item.operationNumber ??
+          item.opBaseId ??
+          (item.operationType === OperationType.UNPAID_FINES && item.fineNumber
+            ? `${item.operationType}-${item.fineNumber}`
+            : `${item.operationType}-${item.opDate}-${item.plate ?? ''}`),
+      ),
+      operationNumber: item.operationNumber == null ? undefined : String(item.operationNumber),
       type: (Object.values(OperationType).includes(item.operationType) ? item.operationType : OperationType.PARKING) as OperationType,
       plate: item.plate ?? null,
       date: this.datePart(item.opDate),
+      operationDate: item.opDate,
+      operationTime,
       amount: [OperationType.TOP_UP, OperationType.REFUND].includes(item.operationType) ? amount : -Math.abs(amount),
+      newBalance: item.newBalance == null ? undefined : item.newBalance / 100,
       zone: item.sectorDesc ?? item.zoneDesc ?? null,
-      startTime: start ?? this.dateTimePart(item.opDate),
+      startTime,
       endTime: end,
+      startDate: this.datePartOptional(item.parkingStartDate),
+      endDate: this.datePartOptional(item.parkingEndDate),
       durationLabel: duration ? `${duration} min` : undefined,
       relatedOperationId: item.opBaseId ? String(item.opBaseId) : undefined,
       cardId: item.idPaymentMethod2 ? String(item.idPaymentMethod2) : undefined,
@@ -364,17 +404,29 @@ export class OperationsService {
       fineStatus,
       fineStreet: item.fineStreet ?? item.fstreet ?? undefined,
       fineStreetNumber: item.fineStreetNumber ?? item.fstrnum ?? undefined,
-      fineValidDate: this.datePartOptional(item.fineValidDate),
+      fineValidDate: this.dateTimeLabel(item.fineValidDate),
       fineAmount: item.fineAmount == null ? undefined : Math.abs(item.fineAmount) / 100,
       cityId: item.cityId,
-      cityName: item.cityName ?? undefined,
+      cityName: item.cityName ?? item.contractName ?? undefined,
       zoneId: item.zoneId,
       zoneName: item.zoneDesc ?? undefined,
       sectorId: item.sectorId,
       sectorName: item.sectorDesc ?? undefined,
+      sectorColor: item.sectorColor ?? undefined,
       latitude: item.latitude ?? undefined,
       longitude: item.longitude ?? undefined,
+      timePeriod: [1, 2, 3].includes(item.timePeriod ?? 0) ? (item.timePeriod as 1 | 2 | 3) : undefined,
+      refundable: this.refundableOption(item.refundable),
+      extension: this.refundableOption(item.extension),
+      ticketId: item.ticketId ?? undefined,
+      ticketName: item.ticketDesc ?? undefined,
+      street: item.pstreet ?? undefined,
     };
+  }
+
+  private refundableOption(value: number | string | null | undefined): 0 | 1 | 2 | undefined {
+    const normalized = Number(value);
+    return normalized === 0 || normalized === 1 || normalized === 2 ? normalized : undefined;
   }
 
   private datePartOptional(value: string | null | undefined): string | undefined {
@@ -391,26 +443,18 @@ export class OperationsService {
   private datePart(value: string | null | undefined): string {
     if (!value) return this.todayDateString();
     const parsed = this.parseBackendDate(value);
-    return Number.isNaN(parsed.getTime()) ? value.slice(0, 10) : parsed.toLocaleDateString('es-ES');
+    return Number.isNaN(parsed.getTime()) ? value.slice(0, 10) : formatOpsCalendarDate(parsed);
   }
 
   private dateTimePart(value: string | null | undefined): string | undefined {
     if (!value) return undefined;
     const parsed = this.parseBackendDate(value);
-    return Number.isNaN(parsed.getTime())
-      ? value.slice(11, 16)
-      : parsed.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+    return Number.isNaN(parsed.getTime()) ? value.slice(11, 16) : formatOpsTime(parsed);
   }
 
   private parseBackendDate(value: string): Date {
     if (/^\d{12}$/.test(value)) {
-      const hour = Number(value.slice(0, 2));
-      const minute = Number(value.slice(2, 4));
-      const second = Number(value.slice(4, 6));
-      const day = Number(value.slice(6, 8));
-      const month = Number(value.slice(8, 10)) - 1;
-      const year = 2000 + Number(value.slice(10, 12));
-      return new Date(year, month, day, hour, minute, second);
+      return parseOpsDate(value);
     }
     return new Date(value);
   }

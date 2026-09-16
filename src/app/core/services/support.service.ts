@@ -5,6 +5,7 @@ import { OPS_ENDPOINTS } from '../api/ops-endpoints';
 import { OpsSessionService } from '../api/ops-session.service';
 import { CitiesService } from './cities.service';
 import { UserService } from './user.service';
+import { parseOpsDate, formatOpsDate } from '../utils/ops-date';
 
 export type FeedbackType = 'incident' | 'suggestion' | 'inquiry' | 'service-complaint' | 'compliment';
 export type FeedbackSubtype =
@@ -23,6 +24,7 @@ export interface SupportMessage {
   body: string;
   createdAt: string;
   attachment?: SupportAttachment;
+  attachments?: SupportAttachment[];
 }
 
 export interface SupportThread {
@@ -59,6 +61,7 @@ interface FeedbackFileRequestDto {
 
 interface RemoteFeedbackDto {
   id: number;
+  baseId?: number | null;
   contractId: number;
   date: string;
   type: number;
@@ -69,6 +72,18 @@ interface RemoteFeedbackDto {
   response?: string | null;
   dateSent?: string | null;
   read: number;
+  numFiles?: number | null;
+  files?: RemoteFileDto[] | null;
+}
+
+interface RemoteFileDto {
+  filename?: string | null;
+  title?: string | null;
+  payload?: string | null;
+  path?: string | null;
+  url?: string | null;
+  id?: number | null;
+  direction?: number | null;
 }
 
 interface QueryFeedbackResponseDto {
@@ -78,6 +93,8 @@ interface QueryFeedbackResponseDto {
 
 @Injectable({ providedIn: 'root' })
 export class SupportService {
+  private readonly aliases = new Map<string, string>();
+  private readonly unreadMembers = new Map<string, number[]>();
   private readonly state = signal<SupportThread[]>([]);
   private readonly api = inject(OpsApiClient);
   private readonly session = inject(OpsSessionService);
@@ -103,7 +120,7 @@ export class SupportService {
         { token },
       );
       const items = Array.isArray(response) ? response : (response.feedback ?? response.feedbackList ?? []);
-      this.state.set(items.map((item) => this.mapRemoteThread(item)));
+      this.state.set(this.groupRemoteThreads(items));
       this.source.set('remote');
       this.lastError.set(null);
       return true;
@@ -116,7 +133,7 @@ export class SupportService {
   }
 
   getById(id: string): SupportThread | undefined {
-    return this.state().find((thread) => thread.id === id);
+    return this.state().find((thread) => thread.id === (this.aliases.get(id) ?? id));
   }
 
   async create(input: NewSupportThread): Promise<SupportThread | null> {
@@ -139,6 +156,7 @@ export class SupportService {
   async reply(id: string, message: string, attachment?: SupportAttachment): Promise<boolean> {
     const thread = this.getById(id);
     if (!thread) return false;
+    id = thread.id;
     const result = await this.send(
       {
         type: thread.type,
@@ -172,15 +190,19 @@ export class SupportService {
   async markAsRead(id: string): Promise<boolean> {
     const thread = this.getById(id);
     if (!thread?.unread) return true;
+    id = thread.id;
     const token = this.session.token();
     const remoteId = Number(id);
     if (!token || !Number.isInteger(remoteId)) return false;
     try {
-      await this.api.post<string>(
+      for (const memberId of this.unreadMembers.get(id) ?? [remoteId]) {
+        await this.api.post<string>(
         OPS_ENDPOINTS.support.update,
-        { id: remoteId, contractId: Number(thread.cityId) || 0, read: 1 },
+        { id: memberId, contractId: Number(thread.cityId) || 0, read: 1 },
         { token },
-      );
+        );
+      }
+      this.unreadMembers.delete(id);
       this.state.update((threads) => threads.map((item) => (item.id === id ? { ...item, unread: false } : item)));
       this.source.set('remote');
       this.lastError.set(null);
@@ -257,24 +279,116 @@ export class SupportService {
     };
   }
 
-  private mapRemoteThread(item: RemoteFeedbackDto): SupportThread {
+  private mapRemoteThread(item: RemoteFeedbackDto, replyRecord = false): SupportThread {
+    const remoteAttachments = (item.files ?? [])
+      .map((file) => ({ direction: file.direction, attachment: this.mapRemoteFile(file) }))
+      .filter((item): item is { direction: number | null | undefined; attachment: SupportAttachment } => item.attachment !== null);
+    const userFiles = replyRecord ? [] : remoteAttachments.filter((file) => file.direction !== 1).map((file) => file.attachment);
+    const supportFiles = remoteAttachments.filter((file) => file.direction === 1).map((file) => file.attachment);
+    const date = this.normalizedDate(item.date);
+    const responseDate = this.normalizedDate(item.dateSent || item.date);
+    const userMessage = this.messageWithAttachments(`${item.id}-user`, 'user', item.message ?? '', date, userFiles);
+    const supportMessage = replyRecord
+      ? this.messageWithAttachments(`${item.id}-support`, 'support', item.response ?? '', responseDate, supportFiles)
+      : item.response || supportFiles.length
+      ? this.messageWithAttachments(`${item.id}-support`, 'support', item.response ?? '', responseDate, supportFiles)
+      : null;
     return {
       id: String(item.id),
       type: this.localType(item.type),
       subtype: this.localSubtype(item.subtype),
       cityId: String(item.contractId),
-      cityName: `Contrato ${item.contractId}`,
+      cityName: this.cities.nameFor?.({ contractId: item.contractId }) || `Contrato ${item.contractId}`,
       plate: item.plate ?? '',
       status: item.status >= 3 ? 'closed' : item.status === 2 ? 'in-progress' : item.status === 1 ? 'assigned' : 'submitted',
       unread: item.read === 0,
-      updatedAt: item.dateSent ?? item.date,
-      messages: [
-        { id: `${item.id}-user`, author: 'user', body: item.message, createdAt: item.date },
-        ...(item.response
-          ? [{ id: `${item.id}-support`, author: 'support' as const, body: item.response, createdAt: item.dateSent ?? item.date }]
-          : []),
-      ],
+      updatedAt: responseDate || date,
+      messages: [userMessage, ...(supportMessage ? [supportMessage] : [])],
     };
+  }
+
+  private normalizedDate(value: string): string {
+    if (!value) return '';
+    const date = parseOpsDate(value);
+    return Number.isFinite(date.getTime()) ? date.toISOString() : '';
+  }
+
+  private groupRemoteThreads(items: RemoteFeedbackDto[]): SupportThread[] {
+    this.aliases.clear();
+    this.unreadMembers.clear();
+    const byId = new Map(items.map(item => [item.id, item]));
+    const groups = new Map<number, RemoteFeedbackDto[]>();
+    for (const item of items) {
+      let root = item;
+      const visited = new Set<number>([item.id]);
+      while (root.baseId && byId.has(root.baseId) && !visited.has(root.baseId)) {
+        const parent = byId.get(root.baseId)!;
+        if (parent.contractId !== item.contractId) break;
+        visited.add(parent.id);
+        root = parent;
+      }
+      // Deterministic grouping also prevents malformed cycles from duplicating threads.
+      const rootId = root.baseId && visited.has(root.baseId) ? Math.min(...visited) : root.id;
+      groups.set(rootId, [...(groups.get(rootId) ?? []), item]);
+    }
+    return [...groups.entries()].map(([id, records]) => {
+      for (const record of records) this.aliases.set(String(record.id), String(id));
+      this.unreadMembers.set(String(id), records.filter(record => record.read === 0).map(record => record.id));
+      const mapped = records.map(record => this.mapRemoteThread(record, record.baseId != null));
+      mapped.sort((a, b) => a.updatedAt.localeCompare(b.updatedAt));
+      const root = mapped.find(thread => thread.id === String(id)) ?? mapped[0];
+      const latest = mapped[mapped.length - 1];
+      return {
+        ...root,
+        id: String(id),
+        status: latest.status,
+        updatedAt: latest.updatedAt,
+        unread: mapped.some(thread => thread.unread),
+        messages: mapped.flatMap(thread => thread.messages).sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
+      };
+    }).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  }
+
+  private messageWithAttachments(
+    id: string,
+    author: SupportMessage['author'],
+    body: string,
+    createdAt: string,
+    attachments: SupportAttachment[],
+  ): SupportMessage {
+    return {
+      id,
+      author,
+      body,
+      createdAt,
+      ...(attachments.length ? { attachment: attachments[0], attachments } : {}),
+    };
+  }
+
+  private mapRemoteFile(file: RemoteFileDto): SupportAttachment | null {
+    const name = file.filename?.trim() || file.title?.trim() || `adjunto-${file.id ?? 'soporte'}`;
+    const externalUrl = [file.url?.trim(), file.path?.trim()].find(url => url && /^https?:\/\//i.test(url));
+    const payload = file.payload?.trim();
+    const type = this.fileMimeType(name);
+    const rawPayload = payload?.startsWith('data:') ? payload.slice(payload.indexOf(',') + 1) : payload;
+    const dataUrl = rawPayload && /^[A-Za-z0-9+/\s]*={0,2}$/.test(rawPayload)
+      ? `data:${type};base64,${rawPayload}` : externalUrl || '';
+    if (!dataUrl) return null;
+    return { name, type: this.fileMimeType(name), dataUrl };
+  }
+
+  private fileMimeType(name: string): string {
+    const extension = name.toLowerCase().split('.').pop();
+    return (
+      {
+        png: 'image/png',
+        jpg: 'image/jpeg',
+        jpeg: 'image/jpeg',
+        gif: 'image/gif',
+        webp: 'image/webp',
+        pdf: 'application/pdf',
+      } as Record<string, string>
+    )[extension ?? ''] ?? 'application/octet-stream';
   }
 
   private feedbackType(type: FeedbackType): number {
@@ -282,8 +396,7 @@ export class SupportService {
   }
 
   private backendDate(value: Date): string {
-    const part = (item: number): string => String(item).padStart(2, '0');
-    return `${part(value.getHours())}${part(value.getMinutes())}${part(value.getSeconds())}${part(value.getDate())}${part(value.getMonth() + 1)}${String(value.getFullYear()).slice(-2)}`;
+    return formatOpsDate(value);
   }
 
   private feedbackSubtype(subtype: FeedbackSubtype): number {

@@ -5,6 +5,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { OperationIconComponent } from '../../../shared/components/operation-icon/operation-icon.component';
 import { OperationType, OPERATION_TYPE_LABELS } from '../../../shared/models/operation-type';
 import type { Operation } from '../../../shared/models/operation';
+import { isAcknowledgedFine } from '../../../core/services/unpaid-fines.service';
 
 @Component({
   selector: 'app-recent-operations-card',
@@ -15,16 +16,24 @@ import type { Operation } from '../../../shared/models/operation';
       <p class="card-title">{{ 'dashboard.recentOps' | translate }}</p>
       <ul class="list" style="margin-top:0.5rem;border-radius:var(--radius-sm);overflow:hidden">
         @for (op of operations(); track op.id) {
-          <a [routerLink]="['/app/operations/detail', op.id]" class="list-item">
+          <a [routerLink]="['/app/operations/detail', op.id]" class="list-item" [class.historic-fine-item]="isHistoricFine(op)">
             <app-operation-icon [type]="op.type" />
             <div class="list-item-content">
               @if (isFinishParking(op)) {
-                <div class="list-item-title">{{ 'ops.type.parkingEnd' | translate }}</div>
+                <div class="list-item-title">{{ 'ops.type.parkingEndRefund' | translate }}</div>
               } @else {
-                <div class="list-item-title">{{ OPERATION_TYPE_LABELS[op.type] | translate }}</div>
+                <div class="list-item-title">
+                  {{ isHistoricFine(op) ? ('ops.fineDetail.sanction' | translate) : (OPERATION_TYPE_LABELS[op.type] | translate) }}
+                  @if (isHistoricFine(op)) {
+                    <span class="historic-fine-badge">{{ 'ops.fineDetail.historic' | translate }}</span>
+                  }
+                  @if (op.timePeriod === 2) {
+                    <span class="badge badge-warning">{{ 'ops.active' | translate }}</span>
+                  }
+                </div>
               }
               <div class="list-item-subtitle">
-                {{ op.date }}{{ operationTime(op) ? ' · ' + operationTime(op) : '' }}{{ op.zone ? ' — ' + op.zone : '' }}
+                {{ op.zone }}
               </div>
               @if (op.plate) {
                 <div class="operation-meta">
@@ -35,9 +44,15 @@ import type { Operation } from '../../../shared/models/operation';
                 </div>
               }
             </div>
-            <span [class]="op.amount > 0 ? 'operation-amount operation-amount-credit' : 'operation-amount operation-amount-debit'">
-              {{ op.amount > 0 ? '+' : '' }}{{ op.amount | number: '1.2-2' }} €
-            </span>
+            <div class="operation-price-date">
+              <span class="operation-date">{{ op.date }}</span>
+              @if (operationTime(op)) {
+                <span class="operation-time">{{ operationTime(op) }}</span>
+              }
+              <span [class]="op.amount > 0 ? 'operation-amount operation-amount-credit' : 'operation-amount operation-amount-debit'">
+                {{ op.amount > 0 ? '+' : '' }}{{ op.amount | number: '1.2-2' }} €
+              </span>
+            </div>
           </a>
         }
       </ul>
@@ -58,6 +73,19 @@ import type { Operation } from '../../../shared/models/operation';
         color: var(--color-text-muted);
         font-size: var(--text-xs);
       }
+      .operation-history-card .operation-price-date {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 0.2rem;
+        flex-shrink: 0;
+      }
+      .operation-history-card .operation-date,
+      .operation-history-card .operation-time {
+        color: var(--color-text-muted);
+        font-size: var(--text-xs);
+        white-space: nowrap;
+      }
       .operation-history-card .operation-amount {
         display: inline-flex;
         align-items: center;
@@ -77,6 +105,20 @@ import type { Operation } from '../../../shared/models/operation';
       .operation-history-card .operation-amount-debit {
         background: var(--color-error-bg);
         color: var(--color-error);
+      }
+      .operation-history-card .historic-fine-badge {
+        display: inline-flex;
+        margin-left: 0.4rem;
+        padding: 0.12rem 0.38rem;
+        border-radius: 999px;
+        background: var(--color-error-bg);
+        color: var(--color-error);
+        font-size: var(--text-xs);
+        font-weight: var(--font-bold);
+      }
+      .operation-history-card .historic-fine-item {
+        border-left: 4px solid var(--color-error);
+        background: var(--color-surface);
       }
       .operation-history-card .card-title {
         margin-bottom: 0.35rem;
@@ -103,6 +145,10 @@ export class RecentOperationsCardComponent {
   }
 
   operationTime(op: Operation): string {
-    return op.startTime ?? op.endTime ?? '';
+    return op.operationTime ?? op.startTime ?? op.endTime ?? '';
+  }
+
+  isHistoricFine(op: Operation): boolean {
+    return isAcknowledgedFine(op);
   }
 }

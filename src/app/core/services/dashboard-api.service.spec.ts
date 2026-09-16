@@ -5,6 +5,7 @@ import { OperationsService } from './operations.service';
 import { VehicleService } from './vehicle.service';
 import { WalletService } from './wallet.service';
 import { UserService } from './user.service';
+import { OpsSessionService } from '../api/ops-session.service';
 
 describe('DashboardApiService', () => {
   it('does not block dashboard data while parking statuses are still loading', async () => {
@@ -46,6 +47,7 @@ describe('DashboardApiService', () => {
         { provide: VehicleService, useValue: vehicles },
         { provide: WalletService, useValue: wallet },
         { provide: UserService, useValue: user },
+        { provide: OpsSessionService, useValue: { token: () => 'session-token' } },
       ],
     });
     const service = TestBed.inject(DashboardApiService);

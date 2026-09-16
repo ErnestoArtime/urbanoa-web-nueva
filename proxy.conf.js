@@ -14,8 +14,25 @@ module.exports = {
     secure: false,
     changeOrigin: true,
     pathRewrite: {
-      '^/ops-api/OPSWebServicesLegacyAPI': '/OPSWebServicesAPI',
       '^/ops-api/OPSWebServicesAPI': '/OPSWebServicesAPI',
     },
   },
+  '/healthz': {
+    target: "http://127.0.0.1:10213",
+    pathRewrite: {
+      "^/healthz": "/assets/healthz.txt"
+    },
+    changeOrigin: true,
+    secure: false,
+    logLevel: "silent"
+  },
+  "/actuator/info": {
+    target: "http://127.0.0.1:10213",
+    pathRewrite: {
+      "^/actuator/info": "/assets/info.json"
+    },
+    changeOrigin: true,
+    secure: false,
+    logLevel: "silent"
+  }
 };

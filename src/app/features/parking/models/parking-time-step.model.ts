@@ -1,10 +1,12 @@
 export interface ParkingTimeStep {
+  tariffType: number;
   time: number;
   quantity: number;
   timeFormatted: string;
   hourMinute: string;
   dayDescriptor: string;
   datetimeRaw: string;
+  startDatetimeRaw: string;
   amount: number;
 }
 

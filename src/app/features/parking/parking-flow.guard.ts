@@ -29,7 +29,10 @@ function loadRouteQuery(route: ActivatedRouteSnapshot, store: ParkingFlowStore):
     duration: params['duration'] ?? '',
     minutes: params['minutes'] ?? '',
     amount: params['amount'] ?? '',
+    startTime: params['startTime'] ?? '',
     endTime: params['endTime'] ?? '',
+    mode: params['mode'] === 'extension' ? 'extension' : 'parking',
+    opBaseId: params['opBaseId'] ?? '',
   });
 }
 
@@ -63,4 +66,6 @@ export const canAccessParkingLocationStep = makeGuard('location');
 export const canAccessParkingTicketStep = makeGuard('ticket');
 export const canAccessParkingTimeStep = makeGuard('time');
 export const canAccessParkingConfirmStep = makeGuard('confirm');
-export const canAccessParkingSuccessStep = makeGuard('success');
+// A receipt must survive reload without the wizard's transient form state.
+// The success component validates the operation ID against authenticated remote data.
+export const canAccessParkingSuccessStep: CanActivateFn = () => true;

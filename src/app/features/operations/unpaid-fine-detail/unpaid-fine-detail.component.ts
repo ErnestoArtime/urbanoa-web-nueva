@@ -1,18 +1,42 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, ElementRef, afterRenderEffect, viewChild, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { DecimalPipe } from '@angular/common';
-import { FineStatus, UnpaidFinesService } from '../../../core/services/unpaid-fines.service';
+import { canMoveFineToHistory, FineStatus, UnpaidFinesService } from '../../../core/services/unpaid-fines.service';
 import { WalletService } from '../../../core/services/wallet.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
 import { ResultModalComponent } from '../../../shared/components/result-modal/result-modal.component';
 import { TranslationService } from '../../../core/services/translation.service';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
+import { distinctUntilChanged, map } from 'rxjs/operators';
+import { OperationsService } from '../../../core/services/operations.service';
+import { OperationType } from '../../../shared/models/operation-type';
+import { OpsApiError } from '../../../core/api/ops-api.types';
+import { apiErrorKey } from '../../../core/http/api-error-key';
+import { isCardUsable } from '../../../core/utils/card-expiry';
+import { LocationMap } from '../../../shared/components/location-map/location-map';
 
 @Component({
   selector: 'app-unpaid-fine-detail',
-  imports: [RouterLink, DecimalPipe, TranslatePipe, DetailPanelHeaderComponent, ResultModalComponent],
+  imports: [RouterLink, DecimalPipe, TranslatePipe, DetailPanelHeaderComponent, ResultModalComponent, LocationMap],
   template: `
-    @if (!paid()) {
+    @if (errorMessage(); as error) {
+      <app-result-modal
+        type="error"
+        [title]="'ops.fineDetail.errorTitle' | translate"
+        [message]="error"
+        [primaryText]="'common.close' | translate"
+        (primaryAction)="dismissError()"
+      />
+    } @else if (acknowledged()) {
+      <app-result-modal
+        type="success"
+        [title]="'ops.fineDetail.acknowledgedTitle' | translate"
+        [message]="'ops.fineDetail.acknowledgedMessage' | translate"
+        [primaryText]="'ops.unpaidFines.back' | translate"
+        (primaryAction)="onBackToFines()"
+      />
+    } @else if (!paid()) {
       <div class="page">
         <app-detail-panel-header [title]="'ops.fineDetail.title' | translate" backRoute="/app/operations/unpaid-fines" />
         @if (fine) {
@@ -29,10 +53,15 @@ import { TranslationService } from '../../../core/services/translation.service';
             <aside class="fine-status-banner" [class.expired]="fine.status === fineStatus.EXPIRED">
               <strong>{{ 'ops.fineDetail.status.' + fine.status | translate }}</strong>
               <p>{{ 'ops.fineDetail.statusMessage.' + fine.status | translate }}</p>
+              @if (fine.status === fineStatus.EXPIRED && fine.earlyPaymentDeadline) {
+                <p class="fine-status-deadline">
+                  <strong>{{ 'ops.fineDetail.earlyPaymentEnd' | translate }}:</strong> {{ fine.earlyPaymentDeadline }}
+                </p>
+              }
             </aside>
           }
           <div class="fine-ticket-shell mt-2">
-            <article class="fine-ticket-card">
+            <article #fineTicketCard class="fine-ticket-card">
               <div class="fine-ticket-accent"></div>
               <div class="fine-ticket-body">
                 <p>
@@ -68,7 +97,16 @@ import { TranslationService } from '../../../core/services/translation.service';
                   </p>
                 }
               </div>
-              <div class="fine-ticket-cut"></div>
+              @if (fineCoordinates(); as coordinates) {
+                <app-location-map
+                  [latitude]="coordinates.latitude"
+                  [longitude]="coordinates.longitude"
+                  [label]="'ops.detail.fineMapAria' | translate"
+                />
+              }
+              <div #fineTicketCut class="fine-ticket-cut" aria-hidden="true">
+                <div class="fine-ticket-cut-line"></div>
+              </div>
               <div class="fine-ticket-total">
                 <strong>{{ 'ops.fineDetail.amount' | translate }}</strong>
                 <div class="amount-stack">
@@ -91,11 +129,12 @@ import { TranslationService } from '../../../core/services/translation.service';
               <fieldset class="payment-card-selector">
                 <legend>{{ 'ops.fineDetail.cardForPayment' | translate }}</legend>
                 @for (card of walletService.cards(); track card.id) {
-                  <label class="payment-card-option" [class.selected]="selectedCardId() === card.id"
+                  <label class="payment-card-option" [class.selected]="selectedCardId() === card.id" [class.disabled]="!isCardUsable(card)"
                     ><input
                       type="radio"
                       name="fine-card"
                       [checked]="selectedCardId() === card.id"
+                      [disabled]="!isCardUsable(card)"
                       (change)="selectedCardId.set(card.id)"
                     /><span
                       ><strong>{{ card.brand }} •••• {{ card.last4 }}</strong
@@ -112,6 +151,16 @@ import { TranslationService } from '../../../core/services/translation.service';
               [disabled]="insufficientFunds() && !selectedCardId()"
             >
               {{ 'ops.fineDetail.pay' | translate }} {{ fine.amount }}
+            </button>
+          }
+          @if (fine.status !== fineStatus.PAYABLE && canMoveToHistory()) {
+            <button
+              type="button"
+              class="btn btn-primary btn-block mt-2 fine-understood-button"
+              (click)="acknowledgeExpired()"
+              [disabled]="movingToHistory()"
+            >
+              {{ 'ops.fineDetail.understood' | translate }}
             </button>
           }
         } @else {
@@ -180,7 +229,7 @@ import { TranslationService } from '../../../core/services/translation.service';
       }
       .fine-ticket-card {
         --ticket-notch-r: 10px;
-        --ticket-cut-y: 116px;
+        --ticket-cut-y: 50%;
         position: relative;
         overflow: hidden;
         border: 1px solid var(--color-border);
@@ -220,11 +269,12 @@ import { TranslationService } from '../../../core/services/translation.service';
         height: 20px;
         display: flex;
         align-items: center;
+      }
+      .fine-ticket-cut-line {
+        flex: 1;
+        height: 0;
         margin: 0 calc(var(--ticket-notch-r) + 5px);
-        background-image: linear-gradient(to right, rgba(149, 156, 146, 0.62) 50%, transparent 0);
-        background-position: center;
-        background-repeat: repeat-x;
-        background-size: 8px 3px;
+        border-top: 3px dashed rgba(149, 156, 146, 0.62);
       }
       .fine-ticket-total {
         display: flex;
@@ -273,10 +323,30 @@ import { TranslationService } from '../../../core/services/translation.service';
         background: var(--color-border);
         margin: 0.2rem 0;
       }
+      .fine-understood-button {
+        display: block;
+        width: 100%;
+        margin: 1.25rem 0 0;
+        padding: 1rem 1.25rem;
+        border: 0;
+        border-radius: 999px;
+        color: #fff;
+        background: var(--color-primary-dark, #007b78);
+        font: inherit;
+        font-weight: var(--font-bold);
+        cursor: pointer;
+      }
+      .fine-understood-button:disabled {
+        opacity: 0.65;
+        cursor: wait;
+      }
     `,
   ],
 })
 export class UnpaidFineDetailComponent {
+  private readonly fineTicketCard = viewChild<ElementRef<HTMLElement>>('fineTicketCard');
+  private readonly fineTicketCut = viewChild<ElementRef<HTMLElement>>('fineTicketCut');
+
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly unpaidFinesService = inject(UnpaidFinesService);
@@ -284,26 +354,89 @@ export class UnpaidFineDetailComponent {
   readonly walletService = inject(WalletService);
   readonly fineStatus = FineStatus;
 
-  readonly fineId = this.route.snapshot.paramMap.get('id') ?? '';
-  readonly fine = this.unpaidFinesService.getFine(this.fineId);
+  private readonly params = toSignal(this.route.paramMap);
+  get fineId(): string {
+    return this.params()?.get('id') ?? '';
+  }
+  get fine() {
+    return this.unpaidFinesService.getFine(this.fineId);
+  }
   readonly paid = signal(false);
+  readonly acknowledged = signal(false);
+  readonly errorMessage = signal<string | null>(null);
+  readonly movingToHistory = signal(false);
+  readonly canMoveToHistory = computed(() => {
+    const fine = this.fine;
+    return Boolean(fine && canMoveFineToHistory({ type: OperationType.UNPAID_FINES, fineStatus: fine.status, timePeriod: fine.timePeriod }));
+  });
   readonly selectedCardId = signal(this.walletService.defaultCardId());
+  readonly isCardUsable = isCardUsable;
+  readonly usableCards = computed(() => this.walletService.cards().filter((card) => isCardUsable(card)));
   readonly numericAmount = computed(() => {
     if (!this.fine) return 0;
     return this.fine.amountValue;
+  });
+  readonly fineCoordinates = computed(() => {
+    const fine = this.fine;
+    if (!fine) return null;
+    const { latitude, longitude } = fine;
+    if (
+      !Number.isFinite(latitude) ||
+      !Number.isFinite(longitude) ||
+      Math.abs(latitude!) > 90 ||
+      Math.abs(longitude!) > 180 ||
+      (latitude === 0 && longitude === 0)
+    )
+      return null;
+    return { latitude: latitude!, longitude: longitude! };
   });
   readonly walletAmount = computed(() => Math.min(this.walletService.balance(), this.numericAmount()));
   readonly cardAmount = computed(() => Math.max(0, this.numericAmount() - this.walletAmount()));
 
   readonly capturedWalletAmount = signal(0);
   readonly capturedCardAmount = signal(0);
+  private readonly paidFine = signal<{ plate: string; location: string } | undefined>(undefined);
+
+  constructor() {
+    afterRenderEffect((onCleanup) => {
+      const card = this.fineTicketCard()?.nativeElement;
+      const cut = this.fineTicketCut()?.nativeElement;
+      if (!card || !cut) return;
+      const updateCutPosition = () => {
+        const cardRect = card.getBoundingClientRect();
+        const cutRect = cut.getBoundingClientRect();
+        card.style.setProperty('--ticket-cut-y', `${cutRect.top - cardRect.top + cutRect.height / 2}px`);
+      };
+      updateCutPosition();
+      if (typeof ResizeObserver !== 'undefined') {
+        const observer = new ResizeObserver(updateCutPosition);
+        observer.observe(card);
+        observer.observe(cut);
+        onCleanup(() => observer.disconnect());
+      }
+    });
+    const operationsService = inject(OperationsService);
+    this.route.paramMap
+      .pipe(
+        map((params) => params.get('id') ?? ''),
+        distinctUntilChanged(),
+        takeUntilDestroyed(),
+      )
+      .subscribe((id) => {
+        this.paid.set(false);
+        this.acknowledged.set(false);
+        this.errorMessage.set(null);
+        this.selectedCardId.set(this.walletService.defaultCardId());
+        if (id) void operationsService.loadDetail(id);
+      });
+  }
 
   readonly successMessage = computed(() => {
     const wallet = this.capturedWalletAmount();
     const card = this.capturedCardAmount();
     const params = {
-      plate: this.fine?.plate ?? '',
-      location: this.fine?.location ?? '',
+      plate: this.paidFine()?.plate ?? '',
+      location: this.paidFine()?.location ?? '',
       wallet: wallet.toFixed(2).replace('.', ','),
       card: card.toFixed(2).replace('.', ','),
     };
@@ -315,26 +448,60 @@ export class UnpaidFineDetailComponent {
 
   readonly insufficientFunds = () => {
     if (!this.fine) return false;
-    return this.walletService.balance() < this.numericAmount();
+    return this.walletService.balance() < this.numericAmount() || !this.usableCards().length;
   };
 
   async pay(): Promise<void> {
-    if (!this.fine) return;
+    const fine = this.fine;
+    if (!fine) return;
     const walletAmt = this.walletAmount();
     const cardAmt = this.cardAmount();
-    const result = await this.unpaidFinesService.payFine(this.fineId, this.selectedCardId());
+    const result = await this.unpaidFinesService.payFine(fine.id, this.selectedCardId());
+    if (this.fineId !== fine.id) return;
     if (result.challengeUrl) {
       window.location.assign(result.challengeUrl);
       return;
     }
     if (result.success) {
+      this.paidFine.set(fine);
       this.capturedWalletAmount.set(walletAmt);
       this.capturedCardAmount.set(cardAmt);
       this.paid.set(true);
+      return;
+    }
+    this.errorMessage.set(this.failureMessage('ops.fineDetail.payFailed', result.error));
+  }
+
+  async acknowledgeExpired(): Promise<void> {
+    if (!this.fine) return;
+    this.movingToHistory.set(true);
+    try {
+      const result = await this.unpaidFinesService.acknowledgeExpired(this.fineId);
+      if (result.success) {
+        this.acknowledged.set(true);
+        return;
+      }
+      this.errorMessage.set(this.failureMessage('ops.fineDetail.actionFailed', result.error));
+    } finally {
+      this.movingToHistory.set(false);
     }
   }
 
   onBackToFines(): void {
     void this.router.navigate(['/app/operations/unpaid-fines']);
+  }
+
+  dismissError(): void {
+    this.errorMessage.set(null);
+  }
+
+  private failureMessage(key: string, error?: OpsApiError): string {
+    return this.translationService.translate(key, { message: this.localizedError(error) });
+  }
+
+  private localizedError(error?: OpsApiError): string {
+    if (!error) return this.translationService.translate('errors.server');
+    if (error.backendError) return error.message;
+    return this.translationService.translate(apiErrorKey(error));
   }
 }

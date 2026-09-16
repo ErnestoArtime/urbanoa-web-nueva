@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { Router, RouterOutlet, NavigationEnd, NavigationStart, NavigationCancel, NavigationError } from '@angular/router';
 import { filter, map, startWith } from 'rxjs/operators';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -12,7 +12,11 @@ import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 import { BreadcrumbService } from '../../core/services/breadcrumb.service';
 import { TranslationService } from '../../core/services/translation.service';
 import { OperationsService } from '../../core/services/operations.service';
+import { OpsSessionService } from '../../core/api/ops-session.service';
+import { VehicleService } from '../../core/services/vehicle.service';
 import { OperationType } from '../../shared/models/operation-type';
+import { AuthService } from '../../core/services/auth.service';
+import { UserService } from '../../core/services/user.service';
 
 const MAIN_TAB_PATHS = ['/app/home', '/app/parking', '/app/operations', '/app/account'];
 
@@ -24,7 +28,7 @@ const TITLE_KEYS: Record<string, string> = {
   '/app/parking/ticket': 'parking.title',
   '/app/parking/time-steps': 'parking.extend',
   '/app/parking/confirm': 'parking.confirmStart',
-  '/app/parking/success': 'parking.success',
+  '/app/parking/success': 'parking.wizard.step5.label',
   '/app/operations/detail': 'ops.detail',
   '/app/operations/unpaid-fines': 'ops.sanciones',
   '/app/operations/unpaid-fine-detail': 'ops.detail',
@@ -71,6 +75,13 @@ const TITLE_KEYS: Record<string, string> = {
         <div class="app-shell-toolbar">
           <app-breadcrumb />
           <div class="app-shell-toolbar-actions">
+            <div class="connected-user" [title]="connectedUserEmail()">
+              @if (connectedUserName()) {
+                <strong>{{ connectedUserName() }}</strong>
+              }
+              <span>{{ connectedUserEmail() }}</span>
+            </div>
+            <button type="button" class="toolbar-logout" (click)="logout()">{{ 'account.logout' | translate }}</button>
             <app-lang-selector />
           </div>
         </div>
@@ -108,9 +119,16 @@ const TITLE_KEYS: Record<string, string> = {
       position: relative;
     }
     .app-shell-content {
+      display: flex;
+      min-height: 0;
+      flex-direction: column;
       flex: 1;
       overflow-y: auto;
+    }
+    :host ::ng-deep .app-shell-content > app-parking-wizard-layout {
+      display: block;
       min-height: 0;
+      flex: 1 1 auto;
     }
     .app-shell-content.with-bottom-nav {
       padding-bottom: var(--bottom-nav-height);
@@ -159,6 +177,46 @@ const TITLE_KEYS: Record<string, string> = {
         align-items: center;
         gap: 0.5rem;
       }
+      .connected-user {
+        display: flex;
+        max-width: 220px;
+        overflow: hidden;
+        flex-direction: column;
+        align-items: flex-end;
+        color: var(--color-text);
+        font-size: var(--text-sm);
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .connected-user strong,
+      .connected-user span {
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .connected-user strong {
+        font-weight: var(--font-bold);
+      }
+      .connected-user span {
+        color: var(--color-text-muted);
+        font-size: var(--text-2xs);
+      }
+      .toolbar-logout {
+        min-height: 34px;
+        padding: 0.35rem 0.65rem;
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-pill);
+        background: var(--color-surface);
+        color: var(--color-primary);
+        cursor: pointer;
+        font: inherit;
+        font-size: var(--text-xs);
+        font-weight: var(--font-bold);
+      }
+      .toolbar-logout:hover,
+      .toolbar-logout:focus-visible {
+        border-color: var(--color-primary);
+      }
       app-lang-selector {
         display: block;
       }
@@ -174,6 +232,16 @@ export class AppShellComponent {
   private readonly breadcrumbService = inject(BreadcrumbService);
   private readonly translationService = inject(TranslationService);
   private readonly operationsService = inject(OperationsService);
+  private readonly vehicleService = inject(VehicleService);
+  private readonly opsSession = inject(OpsSessionService);
+  private readonly authService = inject(AuthService);
+  private readonly userService = inject(UserService);
+  readonly connectedUserName = computed(() => {
+    const profile = this.userService.user();
+    const session = this.authService.user();
+    return [profile.name || session.name, profile.surname || session.surname].filter(Boolean).join(' ').trim();
+  });
+  readonly connectedUserEmail = computed(() => this.userService.user().email || this.authService.user().email);
   readonly routeTransitionLoading = signal(false);
   private readonly routeTransitionMinMs = 1000;
   private routeTransitionStartedAt = 0;
@@ -189,6 +257,8 @@ export class AppShellComponent {
   );
 
   constructor() {
+    void this.initializeSessionData();
+
     this.router.events
       .pipe(
         filter((e): e is NavigationEnd => e instanceof NavigationEnd),
@@ -222,6 +292,20 @@ export class AppShellComponent {
     });
   }
 
+  private async initializeSessionData(): Promise<void> {
+    const sessionToken = this.opsSession.token();
+    if (!sessionToken || !this.isAppRoute()) return;
+    await Promise.all([this.operationsService.load(), this.vehicleService.load(), this.userService.load()]);
+    if (this.opsSession.token() !== sessionToken || !this.isAppRoute()) return;
+    const currentPath = this.router.url.split(/[?#]/, 1)[0].replace(/\/+$/, '');
+    if (currentPath === '/app') return;
+    await this.operationsService.loadDashboardParkingStatuses(this.vehicleService.vehicles());
+  }
+
+  private isAppRoute(): boolean {
+    return this.router.url.split(/[?#]/, 1)[0].replace(/\/+$/, '') === '/app' || this.router.url.startsWith('/app/');
+  }
+
   showBottomNav = () => {
     const u = this.url();
     return MAIN_TAB_PATHS.some((p) => u === p || u === p + '/');
@@ -233,6 +317,10 @@ export class AppShellComponent {
   };
 
   showBack = () => true;
+
+  logout(): void {
+    void this.authService.logout();
+  }
 
   headerTitle = () => {
     const u = this.url();

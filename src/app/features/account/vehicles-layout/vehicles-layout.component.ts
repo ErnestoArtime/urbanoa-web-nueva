@@ -1,8 +1,7 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { RouterLink, NavigationEnd, Router } from '@angular/router';
 import { filter, map, startWith } from 'rxjs/operators';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { LucideStar } from '@lucide/angular';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { SplitViewComponent } from '../../../layout/split-view/split-view.component';
 import { AppIconComponent } from '../../../shared/icons/app-icon.component';
@@ -13,23 +12,13 @@ import type { Vehicle } from '../../../shared/models/vehicle';
 
 @Component({
   selector: 'app-vehicles-layout',
-  imports: [RouterLink, SplitViewComponent, TranslatePipe, AppIconComponent, LucideStar],
+  imports: [RouterLink, SplitViewComponent, TranslatePipe, AppIconComponent],
   template: `
     <app-split-view [hideList]="isChildRoute()" [hideDetail]="!isChildRoute()">
       <div splitList class="page has-sticky-actions">
         <h1 class="page-title">{{ 'account.menu.vehicles' | translate }}</h1>
-        @if (source() === 'error' && lastError(); as error) {
-          <div class="data-notice data-notice-error" role="alert">
-            <p>
-              {{ (error.kind === 'backend' ? 'account.vehicles.loadErrorBackend' : 'account.vehicles.loadServerError') | translate }}
-            </p>
-            <button type="button" class="btn btn-secondary btn-sm" (click)="retry()">
-              {{ 'account.vehicles.retry' | translate }}
-            </button>
-          </div>
-        }
         @if (vehicles().length > 0) {
-          <ul class="list card" style="padding:0;overflow:hidden">
+          <ul class="list card vehicles-list">
             @for (v of vehicles(); track v.id) {
               <li class="list-item vehicle-item">
                 <a [routerLink]="['/app/account/vehicles/edit', v.id]" class="vehicle-item-link">
@@ -52,16 +41,6 @@ import type { Vehicle } from '../../../shared/models/vehicle';
                   </div>
                   <span class="list-item-chevron">›</span>
                 </a>
-                <button
-                  type="button"
-                  class="favorite-toggle"
-                  [class.is-favorite]="v.isDefault"
-                  [disabled]="v.isDefault || togglingId() !== null"
-                  [attr.aria-label]="(v.isDefault ? 'account.vehicles.currentFavorite' : 'account.vehicles.markFavorite') | translate"
-                  (click)="toggleFavorite(v)"
-                >
-                  <svg lucideStar [attr.fill]="v.isDefault ? 'currentColor' : 'none'" size="20" strokeWidth="2"></svg>
-                </button>
               </li>
             }
           </ul>
@@ -70,11 +49,7 @@ import type { Vehicle } from '../../../shared/models/vehicle';
           </div>
         } @else {
           <div class="card empty-vehicles">
-            @if (source() === 'remote') {
-              <p>Aún no tiene vehículos guardados.</p>
-            } @else if (source() === 'error') {
-              <p>No se pudieron cargar los vehículos.</p>
-            }
+            <p>Aún no tiene vehículos guardados.</p>
             <a routerLink="/app/account/vehicles/add" class="btn btn-primary btn-block">{{ 'account.addVehicle' | translate }}</a>
           </div>
         }
@@ -83,6 +58,18 @@ import type { Vehicle } from '../../../shared/models/vehicle';
   `,
   styles: [
     `
+      .page {
+        display: flex;
+        box-sizing: border-box;
+        height: 100%;
+        min-height: 0;
+        flex-direction: column;
+      }
+      .vehicles-list {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+      }
       .list-item.vehicle-item {
         padding: 0;
         align-items: stretch;
@@ -97,36 +84,6 @@ import type { Vehicle } from '../../../shared/models/vehicle';
         padding: 0.78rem 0.9rem;
         color: inherit;
         text-decoration: none;
-      }
-      .favorite-toggle {
-        display: grid;
-        place-items: center;
-        flex: none;
-        width: 44px;
-        align-self: stretch;
-        border: 0;
-        border-left: 1px solid var(--color-border);
-        background: transparent;
-        color: var(--color-text-muted);
-        cursor: pointer;
-      }
-      .favorite-toggle.is-favorite {
-        color: var(--color-primary);
-      }
-      .favorite-toggle:disabled {
-        cursor: not-allowed;
-        opacity: 0.55;
-      }
-      .data-notice {
-        margin: 0 0 1rem;
-        padding: 0.75rem 0.9rem;
-        border: 1px solid #e5b85c;
-        border-radius: var(--radius-md);
-        background: #fff8e7;
-        color: #714b00;
-      }
-      .data-notice-error p {
-        margin: 0 0 0.5rem;
       }
       .vehicle-icon-wrap {
         display: grid;
@@ -167,9 +124,6 @@ export class VehiclesLayoutComponent implements OnInit {
   private readonly parkingSessionService = inject(ParkingSessionService);
   private readonly translation = inject(TranslationService);
   readonly vehicles = this.vehicleService.vehicles;
-  readonly source = this.vehicleService.source;
-  readonly lastError = this.vehicleService.lastError;
-  readonly togglingId = signal<string | null>(null);
   private readonly router = inject(Router);
   private readonly url = toSignal(
     this.router.events.pipe(
@@ -199,12 +153,5 @@ export class VehiclesLayoutComponent implements OnInit {
 
   translateLabel(value: string): string {
     return this.translation.translateLabel(value);
-  }
-
-  async toggleFavorite(vehicle: Vehicle): Promise<void> {
-    if (vehicle.isDefault || this.togglingId()) return;
-    this.togglingId.set(vehicle.id);
-    await this.vehicleService.setDefault(vehicle.id);
-    this.togglingId.set(null);
   }
 }

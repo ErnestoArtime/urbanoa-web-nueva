@@ -4,6 +4,7 @@ import { OpsApiClient } from '../../core/api/ops-api-client.service';
 import { OpsSessionService } from '../../core/api/ops-session.service';
 import { OpsApiError } from '../../core/api/ops-api.types';
 import type { ParkingTimeStep, ParkingTimeStepInput } from './models/parking-time-step.model';
+import { formatOpsDate } from '../../core/utils/ops-date';
 
 interface ParkingTimeStepsResponseDto {
   result?: number;
@@ -54,19 +55,21 @@ export class ParkingTimeStepsService {
           sector: input.sectorId,
           ticket: input.ticketId,
           plate: input.plate,
-          datetime: this.opsDate(input.startDate ?? new Date()),
+          datetime: this.opsDate(input.startDate ?? (this.api.serverNow ? this.api.serverNow() : new Date())),
           groupId: input.sectorId,
           ticketId: input.ticketId,
         },
         { token },
       );
       const mapped = (response.steps ?? []).map((step) => ({
+        tariffType: response.tariffType ?? 0,
         time: step.time,
         quantity: step.quantity,
         timeFormatted: this.durationLabel(step.time),
         hourMinute: `${Math.floor(step.time / 60)}:${String(step.time % 60).padStart(2, '0')}`,
         dayDescriptor: 'hoy',
         datetimeRaw: step.datetime,
+        startDatetimeRaw: response.dateInitial,
         amount: step.quantity / 100,
       }));
       if (!mapped.length) throw new Error('El servicio no devolvió tramos de tiempo');
@@ -86,9 +89,6 @@ export class ParkingTimeStepsService {
   }
 
   private opsDate(date: Date): string {
-    const two = (value: number): string => String(value).padStart(2, '0');
-    return `${two(date.getHours())}${two(date.getMinutes())}${two(date.getSeconds())}${two(date.getDate())}${two(date.getMonth() + 1)}${two(
-      date.getFullYear() % 100,
-    )}`;
+    return formatOpsDate(date);
   }
 }

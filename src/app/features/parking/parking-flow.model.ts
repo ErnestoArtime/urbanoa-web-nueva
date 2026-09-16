@@ -15,12 +15,18 @@ export interface ParkingFlowQuery extends Record<string, string | undefined> {
   latitude: string;
   longitude: string;
   tariffId: string;
+  tariffType: string;
   tariff: string;
   tariffPrice: string;
   duration: string;
   minutes: string;
   amount: string;
+  startTime: string;
+  startDayLabel?: string;
   endTime: string;
+  endDayLabel?: string;
+  mode: string;
+  opBaseId: string;
   paymentWalletAmount?: string;
   paymentCardAmount?: string;
   paymentCardId?: string;
@@ -28,7 +34,8 @@ export interface ParkingFlowQuery extends Record<string, string | undefined> {
 }
 
 export function readParkingFlowQuery(route: import('@angular/router').ActivatedRoute): ParkingFlowQuery {
-  return Object.fromEntries(
-    route.snapshot.queryParamMap.keys.map((key) => [key, route.snapshot.queryParamMap.get(key) ?? '']),
-  ) as ParkingFlowQuery;
+  const queryParamMap = route.snapshot.queryParamMap;
+  if (!queryParamMap) return {} as ParkingFlowQuery;
+  const keys = queryParamMap.keys ?? [];
+  return Object.fromEntries(keys.map((key) => [key, queryParamMap.get(key) ?? ''])) as ParkingFlowQuery;
 }

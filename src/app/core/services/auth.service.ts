@@ -2,6 +2,7 @@ import { computed, inject, Injectable, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { OpsLoginRequest, OpsLoginResponse, OpsRegisterRequest, OpsUserResponse } from '../api/ops-auth.types';
 import { OpsApiClient } from '../api/ops-api-client.service';
+import { OPS_APP_VERSION, OPS_OPERATING_SYSTEM } from '../api/ops-client.constants';
 import { OPS_ENDPOINTS } from '../api/ops-endpoints';
 import { OpsSessionService } from '../api/ops-session.service';
 import { readStorage, writeStorage } from '../storage/signal-storage';
@@ -42,8 +43,6 @@ export interface RegisterPayload {
 
 export type ResendMailType = 'register' | 'recover';
 
-const OPS_APP_VERSION = '4.0.0';
-const OPS_OPERATING_SYSTEM = 1;
 const DEVICE_TOKEN_KEY = 'urbanoa.deviceToken';
 
 function getOrCreateCloudToken(): string {
@@ -75,7 +74,7 @@ const EMPTY_USER: AuthUser = {
     city: '',
     province: '',
     postalCode: '',
-    country: 'ESPANA',
+    country: '',
   },
 };
 
@@ -152,7 +151,7 @@ export class AuthService {
 
   async resendMail(email: string, type: ResendMailType): Promise<void> {
     const normalizedEmail = email.trim();
-    const body = type === 'register' ? { userName: normalizedEmail, email: normalizedEmail, type } : { email: normalizedEmail, type };
+    const body = { contractId: 0, userName: normalizedEmail, email: normalizedEmail, type };
 
     try {
       await this.opsApi.post(OPS_ENDPOINTS.auth.resendMail, body, { headers: this.languageHeaders() });
@@ -259,7 +258,7 @@ export class AuthService {
           city: profile.addressCity ?? '',
           province: profile.addressProvince ?? '',
           postalCode: profile.addressPostalCode ?? '',
-          country: profile.addressCountry || 'ESPANA',
+          country: profile.addressCountry || '',
         },
         firstLogin: login.firstLogin === 1,
         userName: profile.userName,

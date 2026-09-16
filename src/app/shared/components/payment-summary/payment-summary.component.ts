@@ -10,10 +10,16 @@ export type PaymentMethod = 'none' | 'balance' | 'card' | 'mixed';
   standalone: true,
   imports: [TranslatePipe, AppIconComponent],
   template: `
-    <div class="card payment-section">
+    <div class="card payment-section" [class.empty-payment]="cardUsed() > 0 && !wallet().mainCard.last4">
       <p class="section-label">{{ 'payment.methodLabel' | translate }}</p>
+      <ng-content />
 
-      @if (method() === 'none') {
+      @if (cardUsed() > 0 && !wallet().mainCard.last4) {
+        <div class="payment-summary missing-payment" role="status">
+          <p>{{ 'dashboard.cardEmptyTitle' | translate }}</p>
+          <p>{{ 'payment.missingCard' | translate: { amount: cardUsedFormatted() } }}</p>
+        </div>
+      } @else if (method() === 'none') {
         <div class="payment-summary">
           <div class="payment-summary-row">
             <app-icon name="check" [stroke]="true" />
@@ -29,11 +35,7 @@ export type PaymentMethod = 'none' | 'balance' | 'card' | 'mixed';
             <app-icon name="wallet" [stroke]="false" />
             <div class="payment-summary-info">
               <strong>{{ 'payment.wallet' | translate }}</strong>
-              @if (balanceAfter() > 0) {
-                <small>{{ 'payment.walletUsed' | translate: { amount: balanceUsedFormatted() } }}</small>
-              } @else {
-                <small>{{ 'payment.walletAvailable' | translate: { balance: walletBalanceFormatted() } }}</small>
-              }
+              <small>{{ 'payment.walletUsed' | translate: { amount: balanceUsedFormatted() } }}</small>
             </div>
           </div>
         </div>
@@ -90,6 +92,25 @@ export type PaymentMethod = 'none' | 'balance' | 'card' | 'mixed';
       }
       .payment-summary {
         padding: 0.35rem 0.55rem;
+      }
+      .empty-payment {
+        padding: 1rem;
+        color: var(--color-text);
+        font-size: var(--text-sm);
+        line-height: 1.5;
+      }
+      .empty-payment .section-label {
+        margin: 0 0 0.5rem;
+        color: inherit;
+        font-size: inherit;
+        text-transform: none;
+        letter-spacing: normal;
+      }
+      .empty-payment .payment-summary {
+        padding: 0;
+      }
+      .missing-payment p {
+        margin: 0;
       }
       .payment-summary-row {
         display: flex;

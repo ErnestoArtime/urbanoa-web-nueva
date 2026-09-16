@@ -39,4 +39,12 @@ describe('StreetsService', () => {
 
     await expectAsync(service.getStreets(5)).toBeRejectedWithError('offline');
   });
+
+  it('accepts the backend empty-list representation', async () => {
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
+    api.post.and.resolveTo({ streetsFullNumber: 0, streetsFulllist: null });
+    const service = serviceWith(api);
+
+    await expectAsync(service.getStreets(3)).toBeResolvedTo({ data: [], source: 'remote' });
+  });
 });

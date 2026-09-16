@@ -4,6 +4,8 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
 import { ResultModalComponent } from '../../../shared/components/result-modal/result-modal.component';
 import { VehicleService } from '../../../core/services/vehicle.service';
+import { FOREIGN_PLATE_MAX_LENGTH, isValidPlate } from '../../../shared/utils/plate-validation';
+import { OperationsService } from '../../../core/services/operations.service';
 
 @Component({
   selector: 'app-vehicle-add',
@@ -16,22 +18,25 @@ import { VehicleService } from '../../../core/services/vehicle.service';
           <label>{{ 'account.vehicleAdd.plate' | translate }} <span class="text-error">*</span></label
           ><input
             class="form-input"
-            [class.invalid]="plateError()"
+            [class.invalid]="plateError() || plateInvalid() || plateDuplicate()"
             [value]="plate()"
             (input)="setPlate($event)"
             [placeholder]="'account.vehicleAdd.plate' | translate"
+            [attr.maxlength]="foreignPlate() ? FOREIGN_PLATE_MAX_LENGTH : null"
           />
           @if (plateError()) {
             <p class="form-error">{{ 'account.vehicleAdd.plateRequired' | translate }}</p>
+          }
+          @if (plateInvalid()) {
+            <p class="form-error">{{ 'account.vehicleAdd.plateInvalid' | translate }}</p>
+          }
+          @if (plateDuplicate()) {
+            <p class="form-error">{{ 'account.vehicleAdd.plateDuplicate' | translate }}</p>
           }
         </div>
         <label class="switch-row"
           ><span>{{ 'account.vehicleAdd.foreignPlate' | translate }}</span
           ><input type="checkbox" [checked]="foreignPlate()" (change)="foreignPlate.set(checked($event))" /><span class="switch"></span
-        ></label>
-        <label class="switch-row"
-          ><span>{{ 'account.vehicleAdd.favorite' | translate }}</span
-          ><input type="checkbox" [checked]="favorite()" (change)="favorite.set(checked($event))" /><span class="switch"></span
         ></label>
         <button type="button" class="btn btn-primary btn-block mt-2" [disabled]="saving()" (click)="save()">
           {{ 'account.vehicleAdd.save' | translate }}
@@ -44,6 +49,15 @@ import { VehicleService } from '../../../core/services/vehicle.service';
           [message]="'account.vehicleAdd.successDetail' | translate"
           [primaryText]="'account.vehicle.backToVehicles' | translate"
           (primaryAction)="goBack()"
+        />
+      }
+      @if (addFailed()) {
+        <app-result-modal
+          type="error"
+          [title]="'account.vehicleAdd.addErrorTitle' | translate"
+          [message]="addErrorMessage() ? ('account.vehicleAdd.addErrorPrefix' | translate) + addErrorMessage() : ('account.vehicleAdd.addErrorDetail' | translate)"
+          [primaryText]="'common.accept' | translate"
+          (primaryAction)="addFailed.set(false)"
         />
       }
     </div>
@@ -97,17 +111,26 @@ import { VehicleService } from '../../../core/services/vehicle.service';
 })
 export class VehicleAddComponent {
   private readonly vehicleService = inject(VehicleService);
+  private readonly operationsService = inject(OperationsService);
   private readonly router = inject(Router);
   readonly plate = signal('');
   readonly foreignPlate = signal(false);
-  readonly favorite = signal(false);
   readonly plateError = signal(false);
+  readonly plateInvalid = signal(false);
+  readonly plateDuplicate = signal(false);
   readonly saved = signal(false);
   readonly saving = signal(false);
+  readonly addFailed = signal(false);
+  readonly addErrorMessage = signal<string | null>(null);
+  readonly FOREIGN_PLATE_MAX_LENGTH = FOREIGN_PLATE_MAX_LENGTH;
 
   setPlate(event: Event): void {
     this.plate.set((event.target as HTMLInputElement).value.toUpperCase());
-    if (this.plate().trim()) this.plateError.set(false);
+    if (this.plate().trim()) {
+      this.plateError.set(false);
+      this.plateInvalid.set(false);
+      this.plateDuplicate.set(false);
+    }
   }
 
   checked(event: Event): boolean {
@@ -120,14 +143,29 @@ export class VehicleAddComponent {
       this.plateError.set(true);
       return;
     }
+    if (!isValidPlate(plate, this.foreignPlate())) {
+      this.plateInvalid.set(true);
+      return;
+    }
+    if (this.vehicleService.hasPlate(plate)) {
+      this.plateDuplicate.set(true);
+      return;
+    }
     this.saving.set(true);
     const mutation = await this.vehicleService.add({
       plate,
-      isDefault: this.favorite(),
+      isDefault: false,
+      isForeign: this.foreignPlate(),
       label: this.foreignPlate() ? 'account.vehicle.foreignPlate' : undefined,
     });
     this.saving.set(false);
-    if (mutation.success) this.saved.set(true);
+    if (mutation.success) {
+      await this.operationsService.load();
+      this.saved.set(true);
+    } else {
+      this.addErrorMessage.set(mutation.error?.backendError ? mutation.error.message : null);
+      this.addFailed.set(true);
+    }
   }
 
   goBack(): void {

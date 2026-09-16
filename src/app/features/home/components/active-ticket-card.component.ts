@@ -1,8 +1,10 @@
-import { Component, input, output } from '@angular/core';
+import { Component, OnDestroy, computed, input, output, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { LucideCarFront, LucideNavigation, LucideTimerReset } from '@lucide/angular';
 import type { ActiveParking } from '../../../core/services/operations.service';
+import { normalizeSectorColor } from '../../../shared/utils/sector-color';
+import { formatCountdown, liveCountdownSeconds, parseCountdownToSeconds } from '../../../core/utils/parking-countdown';
 
 @Component({
   selector: 'app-active-ticket-card',
@@ -11,7 +13,7 @@ import type { ActiveParking } from '../../../core/services/operations.service';
   template: `
     @if (ticket(); as active) {
       <div class="active-ticket-shell">
-        <div class="card active-ticket-card">
+        <div class="card active-ticket-card" [style.--ticket-header-color]="ticketHeaderColor()">
           <div class="ticket-main-row">
             <div class="ticket-main-icon" [style.--ticket-progress]="ticketProgress(active)">
               <svg class="ticket-progress-ring" viewBox="0 0 44 44" aria-hidden="true">
@@ -22,7 +24,7 @@ import type { ActiveParking } from '../../../core/services/operations.service';
             </div>
             <div>
               <p class="ticket-plate">{{ active.plate }}</p>
-              <p class="ticket-timer">{{ active.timeRemaining }}</p>
+              <p class="ticket-timer">{{ liveTimeRemaining(active) }}</p>
             </div>
             <div class="ticket-location">
               <small>{{ 'dashboard.ticket.zone' | translate }}</small
@@ -101,7 +103,7 @@ import type { ActiveParking } from '../../../core/services/operations.service';
         right: 0;
         height: 8px;
         border-radius: var(--radius-md) var(--radius-md) 0 0;
-        background: linear-gradient(90deg, #8f84f3 0%, #7971de 48%, #7469d2 100%);
+        background: var(--ticket-header-color, linear-gradient(90deg, #8f84f3 0%, #7971de 48%, #7469d2 100%));
       }
       .ticket-main-row {
         display: flex;
@@ -256,18 +258,44 @@ import type { ActiveParking } from '../../../core/services/operations.service';
     `,
   ],
 })
-export class ActiveTicketCardComponent {
+export class ActiveTicketCardComponent implements OnDestroy {
   readonly ticket = input<ActiveParking | null>(null);
   readonly unpark = output<void>();
   readonly extend = output<void>();
   readonly goToCar = output<ActiveParking>();
+  readonly ticketHeaderColor = computed(() => normalizeSectorColor(this.ticket()?.sectorColor));
+  /** Ticks every second so the countdown stays live like the APK timer. */
+  private readonly tick = signal(0);
+  private readonly timer = setInterval(() => this.tick.update((value) => value + 1), 1000);
+  private baseline: { id: string; seconds: number; at: number } | null = null;
+
+  ngOnDestroy(): void {
+    clearInterval(this.timer);
+  }
+
+  /** Live seconds left, rebased whenever the backend snapshot moves. */
+  liveRemainingSeconds(ticket: ActiveParking): number {
+    this.tick();
+    const now = Date.now();
+    const snapshot = parseCountdownToSeconds(ticket.timeRemaining);
+    const base = this.baseline;
+    if (!base || base.id !== ticket.id || Math.abs(snapshot - liveCountdownSeconds(base.seconds, base.at, now)) > 2) {
+      this.baseline = { id: ticket.id, seconds: snapshot, at: now };
+      return snapshot;
+    }
+    return liveCountdownSeconds(base.seconds, base.at, now);
+  }
+
+  liveTimeRemaining(ticket: ActiveParking): string {
+    return formatCountdown(this.liveRemainingSeconds(ticket));
+  }
 
   hasCoordinates(ticket: ActiveParking): boolean {
     return Number.isFinite(ticket.latitude) && Number.isFinite(ticket.longitude);
   }
 
   ticketProgress(ticket: ActiveParking): string {
-    const remaining = this.parseDurationSeconds(ticket.timeRemaining);
+    const remaining = this.liveRemainingSeconds(ticket);
     const total = this.parseDurationSeconds(ticket.durationLabel);
     if (!remaining || !total || remaining > total) return '28';
     const percent = Math.round((remaining / total) * 100);

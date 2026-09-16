@@ -1,34 +1,47 @@
 import { DecimalPipe } from '@angular/common';
-import { Component, inject, signal } from '@angular/core';
+import { Component, effect, input, output, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { RouterLink } from '@angular/router';
+import { map } from 'rxjs/operators';
 import { OperationsService } from '../../../core/services/operations.service';
 import { WalletService } from '../../../core/services/wallet.service';
 import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
 import { ResultModalComponent } from '../../../shared/components/result-modal/result-modal.component';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { isCardUsable } from '../../../core/utils/card-expiry';
 
 @Component({
   selector: 'app-account-recharge',
   imports: [ReactiveFormsModule, RouterLink, TranslatePipe, DetailPanelHeaderComponent, ResultModalComponent, DecimalPipe],
   template: `
     <div class="page account-static-page">
-      <app-detail-panel-header [title]="'account.recharge.title' | translate" backRoute="/app/account/payment-methods" />
+      @if (!embedded()) {
+        <app-detail-panel-header [title]="'account.recharge.title' | translate" backRoute="/app/account/payment-methods" />
+      } @else {
+        <h2>{{ 'account.recharge.title' | translate }}</h2>
+      }
       @if (walletService.source() === 'error') {
         <p class="data-notice" role="alert">No se pudo conectar con el servicio de pagos.</p>
       }
-      @if (walletService.cards().length === 0) {
+      @if (!usableCards().length) {
         <div class="card empty-recharge-state">
           <p class="card-title">{{ 'dashboard.cardEmptyTitle' | translate }}</p>
           <p class="text-muted">{{ 'dashboard.cardEmptyDetail' | translate }}</p>
-          <a routerLink="/app/account/payment-methods/add" class="btn btn-primary btn-block mt-2">{{ 'account.addCard' | translate }}</a>
+          @if (embedded()) {
+            <button type="button" class="btn btn-primary btn-block mt-2" (click)="addCard.emit()">
+              {{ 'account.addCard' | translate }}
+            </button>
+          } @else {
+            <a routerLink="/app/account/payment-methods/add" class="btn btn-primary btn-block mt-2">{{ 'account.addCard' | translate }}</a>
+          }
         </div>
       } @else {
         <form [formGroup]="form" (ngSubmit)="confirm()" novalidate>
           <div class="card">
             <p class="text-muted">
-              {{ 'account.recharge.currentBalance' | translate }} <strong>{{ walletService.balance() }} €</strong>
+              {{ 'account.recharge.currentBalance' | translate }} <strong>{{ walletService.balance() | number: '1.2-2' }} €</strong>
             </p>
             <fieldset class="recharge-options">
               <legend>{{ 'account.recharge.amountQuestion' | translate }}</legend>
@@ -46,8 +59,8 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
             <legend>{{ 'account.recharge.cardForRecharge' | translate }}</legend>
             <div role="radiogroup" [attr.aria-label]="'account.recharge.cardForRecharge' | translate">
               @for (card of walletService.cards(); track card.id) {
-                <label class="payment-card-option" [class.selected]="selectedCardId() === card.id">
-                  <input type="radio" formControlName="cardId" [value]="card.id" />
+                <label class="payment-card-option" [class.selected]="selectedCardId() === card.id" [class.disabled]="!isCardUsable(card)">
+                  <input type="radio" formControlName="cardId" [value]="card.id" [disabled]="!isCardUsable(card)" />
                   <span
                     ><strong>{{ card.brand }} •••• {{ card.last4 }}</strong
                     ><small>{{ card.cardholderName }} · {{ 'account.recharge.expires' | translate }} {{ card.expiryDate }}</small></span
@@ -61,7 +74,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
           </fieldset>
           <div class="card mt-1">
             <p>
-              {{ 'account.recharge.balanceAfter' | translate }} <strong>{{ walletService.balance() + selectedAmount() }} €</strong>
+              {{ 'account.recharge.balanceAfter' | translate }} <strong>{{ balanceAfterRecharge() | number: '1.2-2' }} €</strong>
             </p>
           </div>
           <button type="submit" class="btn btn-primary btn-block mt-2" [disabled]="saving()">
@@ -151,6 +164,11 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
   ],
 })
 export class AccountRechargeComponent {
+  readonly cardId = input('');
+  readonly addCard = output<void>();
+  readonly embedded = input(false);
+  readonly back = output<void>();
+
   readonly walletService = inject(WalletService);
   private readonly route = inject(ActivatedRoute);
   private readonly operationsService = inject(OperationsService);
@@ -158,13 +176,34 @@ export class AccountRechargeComponent {
   readonly rechargeAmounts = [1, 2, 5, 10, 20, 30, 40] as const;
   readonly done = signal(false);
   readonly saving = signal(false);
+  readonly isCardUsable = isCardUsable;
+  readonly usableCards = () => this.walletService.cards().filter((card) => isCardUsable(card));
+  private readonly queryCardId = toSignal(this.route.queryParamMap.pipe(map((params) => params.get('cardId'))), {
+    initialValue: this.route.snapshot.queryParamMap.get('cardId'),
+  });
   readonly form = this.fb.nonNullable.group({
     amount: [1, [Validators.required, Validators.min(1)]],
     cardId: [this.initialCardId(), Validators.required],
   });
+  private readonly syncSelectedCard = effect(() => {
+    const cardId = this.queryCardId();
+    if (cardId && this.usableCards().some((card) => card.id === cardId)) {
+      this.form.controls.cardId.setValue(cardId);
+    }
+  });
+
+  private readonly syncCard = effect(() => {
+    if (this.usableCards().some(card => card.id === this.cardId())) this.form.controls.cardId.setValue(this.cardId());
+  });
 
   selectedAmount(): number {
     return Number(this.form.controls.amount.value) || 0;
+  }
+
+  balanceAfterRecharge(): number {
+    const balanceInCents = Math.round(this.walletService.balance() * 100);
+    const amountInCents = Math.round(this.selectedAmount() * 100);
+    return (balanceInCents + amountInCents) / 100;
   }
 
   selectedCardId(): string {
@@ -181,7 +220,11 @@ export class AccountRechargeComponent {
 
   async confirm(): Promise<void> {
     if (this.done() || this.saving()) return;
-    if (!this.walletService.cards().length) return;
+    if (!this.usableCards().some(card => card.id === this.selectedCardId())) {
+      this.form.controls.cardId.setErrors({ unavailable: true });
+      this.form.controls.cardId.markAsTouched();
+      return;
+    }
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
@@ -204,7 +247,7 @@ export class AccountRechargeComponent {
   }
 
   private initialCardId(): string {
-    const requested = this.route.snapshot.queryParamMap.get('cardId');
-    return requested && this.walletService.cards().some((card) => card.id === requested) ? requested : this.walletService.defaultCardId();
+    const requested = this.queryCardId();
+    return requested && this.usableCards().some((card) => card.id === requested) ? requested : (this.walletService.defaultCard?.()?.id ?? this.walletService.defaultCardId());
   }
 }

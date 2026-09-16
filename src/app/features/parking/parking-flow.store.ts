@@ -3,6 +3,21 @@ import { ActivatedRoute } from '@angular/router';
 import { ParkingFlowQuery } from './parking-flow.model';
 import type { ParkingTimeStep, ParkingPaymentSummary } from './models/parking-time-step.model';
 
+export interface ExtensionParkingContext {
+  plate: string;
+  vehicleId: string;
+  zone: string;
+  contractId?: number;
+  tariffId?: number;
+  sectorId?: number;
+  sectorColor?: string;
+  street?: string;
+  latitude?: number;
+  longitude?: number;
+  /** Base operation id of the chain (APK opBaseId), sent as confirm reference. */
+  opBaseId?: string;
+}
+
 export interface ParkingFlowState {
   city: string;
   cityId: string;
@@ -21,12 +36,18 @@ export interface ParkingFlowState {
   latitude: string;
   longitude: string;
   tariffId: string;
+  tariffType: string;
   tariffName: string;
   tariffPrice: string;
   duration: string;
   minutes: string;
   amount: string;
+  startTime: string;
+  startDayLabel: string;
   endTime: string;
+  endDayLabel: string;
+  mode: 'parking' | 'extension';
+  opBaseId: string;
   selectedStep: ParkingTimeStep | null;
   paymentSummary: ParkingPaymentSummary | null;
 }
@@ -40,13 +61,64 @@ export class ParkingFlowStore {
     this.state.update((s) => ({ ...s, ...partial }));
   }
 
+  selectVehicle(vehicleId: string, plate: string): boolean {
+    const current = this.state();
+    if (current.vehicleId === vehicleId && current.plate === plate) return false;
+
+    this.state.set({
+      ...current,
+      vehicleId,
+      plate,
+      ticketId: undefined,
+      ticketName: undefined,
+      tariffId: undefined,
+      tariffType: undefined,
+      tariffName: undefined,
+      tariffPrice: undefined,
+      duration: undefined,
+      minutes: undefined,
+      amount: undefined,
+      startTime: undefined,
+      startDayLabel: undefined,
+      endTime: undefined,
+      endDayLabel: undefined,
+      mode: 'parking',
+      selectedStep: undefined,
+      paymentSummary: undefined,
+    });
+    return true;
+  }
+
   reset(): void {
     this.state.set({});
   }
 
+  startExtension(parking: ExtensionParkingContext): boolean {
+    if (!parking.plate || !parking.contractId || !parking.tariffId || !parking.sectorId) return false;
+
+    this.state.set({
+      cityId: String(parking.contractId),
+      plate: parking.plate,
+      vehicleId: parking.vehicleId,
+      zoneId: String(parking.sectorId),
+      zoneName: parking.zone,
+      sectorId: String(parking.sectorId),
+      sectorName: parking.zone,
+      sectorColor: parking.sectorColor ?? '',
+      street: parking.street ?? '',
+      ticketId: String(parking.tariffId),
+      tariffId: String(parking.tariffId),
+      latitude: parking.latitude == null ? '' : String(parking.latitude),
+      longitude: parking.longitude == null ? '' : String(parking.longitude),
+      opBaseId: parking.opBaseId ?? '',
+      mode: 'extension',
+    });
+    return true;
+  }
+
   hasLocationData(): boolean {
     const s = this.state();
-    return !!s.cityId && !!s.zoneId && !!s.street;
+    return !!s.cityId && !!s.zoneId && !!s.sectorId;
   }
 
   hasTicketData(): boolean {
@@ -61,7 +133,7 @@ export class ParkingFlowStore {
 
   canConfirm(): boolean {
     const s = this.state();
-    return !!s.cityId && !!s.plate && !!s.zoneId && !!s.sectorId && !!s.tariffId && !!s.minutes && !!s.amount;
+    return !!s.cityId && !!s.plate && !!s.zoneId && !!s.sectorId && !!s.tariffId && !!s.tariffType && !!s.minutes && !!s.amount;
   }
 
   hasMinimumParkingData(): boolean {
@@ -87,12 +159,18 @@ export class ParkingFlowStore {
       latitude: s.latitude ?? '',
       longitude: s.longitude ?? '',
       tariffId: s.tariffId ?? '',
+      tariffType: s.tariffType ?? '',
       tariff: s.tariffName ?? '',
       tariffPrice: s.tariffPrice ?? '',
       duration: s.duration ?? '',
       minutes: s.minutes ?? '',
       amount: s.amount ?? '',
+      startTime: s.startTime ?? '',
+      startDayLabel: s.startDayLabel ?? '',
       endTime: s.endTime ?? '',
+      endDayLabel: s.endDayLabel ?? '',
+      mode: s.mode ?? 'parking',
+      opBaseId: s.opBaseId ?? '',
     };
   }
 
@@ -122,12 +200,18 @@ export class ParkingFlowStore {
       latitude: params['latitude'] ?? '',
       longitude: params['longitude'] ?? '',
       tariffId: params['tariffId'] ?? '',
+      tariffType: params['tariffType'] ?? '',
       tariffName: params['tariff'] ?? '',
       tariffPrice: params['tariffPrice'] ?? '',
       duration: params['duration'] ?? '',
       minutes: params['minutes'] ?? '',
       amount: params['amount'] ?? '',
+      startTime: params['startTime'] ?? '',
+      startDayLabel: params['startDayLabel'] ?? '',
       endTime: params['endTime'] ?? '',
+      endDayLabel: params['endDayLabel'] ?? '',
+      mode: params['mode'] === 'extension' ? 'extension' : 'parking',
+      opBaseId: params['opBaseId'] ?? '',
     });
   }
 
@@ -151,12 +235,18 @@ export class ParkingFlowStore {
     if (s.latitude) result['latitude'] = s.latitude;
     if (s.longitude) result['longitude'] = s.longitude;
     if (s.tariffId) result['tariffId'] = s.tariffId;
+    if (s.tariffType) result['tariffType'] = s.tariffType;
     if (s.tariffName) result['tariff'] = s.tariffName;
     if (s.tariffPrice) result['tariffPrice'] = s.tariffPrice;
     if (s.duration) result['duration'] = s.duration;
     if (s.minutes) result['minutes'] = s.minutes;
     if (s.amount) result['amount'] = s.amount;
+    if (s.startTime) result['startTime'] = s.startTime;
+    if (s.startDayLabel) result['startDayLabel'] = s.startDayLabel;
     if (s.endTime) result['endTime'] = s.endTime;
+    if (s.endDayLabel) result['endDayLabel'] = s.endDayLabel;
+    if (s.mode) result['mode'] = s.mode;
+    if (s.opBaseId) result['opBaseId'] = s.opBaseId;
     return result;
   }
 }

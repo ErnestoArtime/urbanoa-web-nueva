@@ -11,20 +11,31 @@ const TRANSLATION_FETCH_OPTIONS: RequestInit = { cache: 'no-store' };
 export class TranslationService {
   private readonly currentLang = signal<SupportedLang>(DEFAULT_LANG);
   private readonly translations = signal<Record<string, string>>({});
+  private loadVersion = 0;
+  private catalogueLoaded = false;
+  private refreshAttempted = false;
   readonly translations$ = this.translations.asReadonly();
   readonly currentLang$ = this.currentLang.asReadonly();
 
   async setLang(lang: SupportedLang): Promise<void> {
+    const version = ++this.loadVersion;
+    this.catalogueLoaded = false;
+    this.refreshAttempted = false;
     const targetLang = this.isSupportedLang(lang) ? lang : DEFAULT_LANG;
     const data = await this.loadTranslations(targetLang);
+    if (version !== this.loadVersion) return;
 
     this.currentLang.set(targetLang);
     this.translations.set(data);
+    this.catalogueLoaded = true;
     localStorage.setItem(STORAGE_KEY, targetLang);
     document.documentElement.lang = targetLang;
   }
 
   translate(key: string, params?: Record<string, string | number>): string {
+    if (key && this.translations()[key] === undefined && this.catalogueLoaded && !this.refreshAttempted) {
+      void this.refreshCatalogue();
+    }
     let value = this.translations()[key] ?? `[${key}]`;
     if (params) {
       for (const [k, v] of Object.entries(params)) {
@@ -32,6 +43,19 @@ export class TranslationService {
       }
     }
     return value;
+  }
+
+  private async refreshCatalogue(): Promise<void> {
+    // One retry per language selection handles a tab opened before a deployment.
+    this.refreshAttempted = true;
+    const version = this.loadVersion;
+    const language = this.currentLang();
+    try {
+      const data = await this.loadTranslations(language);
+      if (version === this.loadVersion && Object.keys(data).length) this.translations.set(data);
+    } catch {
+      // Retain the working catalogue if the refresh is unavailable.
+    }
   }
 
   translateLabel(value?: string | null): string {

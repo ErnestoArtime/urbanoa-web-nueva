@@ -4,6 +4,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { LocationSettingsService } from '../../../core/services/location-settings.service';
 import { ParkingFlowStore } from '../parking-flow.store';
 import { CitiesService, ParkingMunicipio } from '../../../core/services/cities.service';
+import { LoaderComponent } from '../../../shared/components/loader/loader.component';
 
 const EMPTY_CITY: ParkingMunicipio = {
   id: '',
@@ -25,9 +26,14 @@ const EMPTY_CITY: ParkingMunicipio = {
 
 @Component({
   selector: 'app-parking-cities',
-  imports: [RouterLink, TranslatePipe],
+  imports: [RouterLink, TranslatePipe, LoaderComponent],
   template: `
     <div class="page has-sticky-actions">
+      <app-loader
+        [visible]="dataSource() === 'loading'"
+        [message]="'parking.cities.loading' | translate"
+        imageSrc="/assets/brand/login-logo.jpg"
+      />
       <h1 class="page-title">{{ 'parking.selectMunicipio' | translate }}</h1>
       @if (dataSource() === 'error') {
         <p class="data-notice" role="alert">No se pudieron cargar los municipios.</p>
@@ -42,26 +48,26 @@ const EMPTY_CITY: ParkingMunicipio = {
         />
       </label>
       <div class="municipios-layout mt-2">
-        <div class="municipios-grid">
-          @for (m of filteredMunicipios(); track m.id) {
-            <button type="button" class="municipio-card" [class.active]="selected().id === m.id"
-                    (click)="selected.set(m)">
-              <div class="municipio-img">
-                @if (m.imagen) {
-                  <img [src]="'assets/municipios/' + m.imagen"
-                       [alt]="'parking.cities.viewOf' | translate: { name: m.nombre }" />
-                }
-                <span class="municipio-map-label">{{ m.nombre }}</span>
-              </div>
-              <div class="municipio-body">
-                <p class="municipio-name">{{ m.nombre }}</p>
-                <p class="municipio-provincia">{{ m.provincia }}</p>
-                <p class="municipio-zonas">{{ m.zonas }} {{ 'parking.zones' | translate }}</p>
-              </div>
-            </button>
-          } @empty {
-            <p class="empty-result">{{ 'parking.cities.empty' | translate }}</p>
-          }
+        <div class="municipios-panel">
+          <div class="municipios-grid">
+            @for (m of filteredMunicipios(); track m.id) {
+              <button type="button" class="municipio-card" [class.active]="selected().id === m.id" (click)="selectCity(m)">
+                <div class="municipio-img">
+                  @if (m.imagePath || m.imagen) {
+                    <img [src]="'assets/municipios/' + m.imagen" [alt]="'parking.cities.viewOf' | translate: { name: m.nombre }" />
+                  }
+                  <span class="municipio-map-label">{{ m.nombre }}</span>
+                </div>
+                <div class="municipio-body">
+                  <p class="municipio-name">{{ m.nombre }}</p>
+                  <p class="municipio-provincia">{{ m.provincia }}</p>
+                  <p class="municipio-zonas">{{ m.zonas }} {{ 'parking.zones' | translate }}</p>
+                </div>
+              </button>
+            } @empty {
+              <p class="empty-result">{{ 'parking.cities.empty' | translate }}</p>
+            }
+          </div>
         </div>
         <aside class="municipio-detail">
           <span class="detail-kicker">{{ 'parking.cities.selected' | translate }}</span>
@@ -70,23 +76,41 @@ const EMPTY_CITY: ParkingMunicipio = {
           <h3>{{ 'parking.cities.streetsTitle' | translate }}</h3>
           <ul>
             @for (zone of selected().zones; track zone.id) {
-              <li><span>{{ zone.name }}</span><strong>{{ 'parking.zones' | translate }}</strong></li>
+              <li>
+                <span>{{ zone.name }}</span
+                ><strong>{{ 'parking.zones' | translate }}</strong>
+              </li>
             } @empty {
-              <li><span>{{ 'parking.cities.noZones' | translate }}</span></li>
+              <li>
+                <span>{{ 'parking.cities.noZones' | translate }}</span>
+              </li>
             }
           </ul>
           <div class="sticky-actions">
             <a
               routerLink="/app/parking"
-              [queryParams]="{ city: selected().id, cityId: selected().contractId, cityName: selected().nombre, vehicleId: vehicleId, plate: vehiclePlate }"
+              [queryParams]="{
+                city: selected().id,
+                cityId: selected().contractId,
+                cityName: selected().nombre,
+                vehicleId: vehicleId,
+                plate: vehiclePlate,
+              }"
               class="btn btn-primary btn-block"
-            >{{ 'parking.cities.viewMap' | translate }}</a
+              >{{ 'parking.cities.viewMap' | translate }}</a
             >
             <a
               routerLink="/app/parking/streets"
-              [queryParams]="{ municipio: selected().id, vehicleId: vehicleId, plate: vehiclePlate }"
+              [queryParams]="{
+                municipio: selected().id,
+                city: selected().id,
+                cityId: selected().contractId,
+                cityName: selected().nombre,
+                vehicleId: vehicleId,
+                plate: vehiclePlate,
+              }"
               class="btn btn-secondary btn-block"
-            >{{ 'parking.cities.viewStreets' | translate }}</a
+              >{{ 'parking.cities.viewStreets' | translate }}</a
             >
           </div>
         </aside>
@@ -95,9 +119,33 @@ const EMPTY_CITY: ParkingMunicipio = {
   `,
   styles: [
     `
+      :host {
+        display: block;
+        height: 100%;
+        min-height: 0;
+      }
+
+      .page {
+        box-sizing: border-box;
+        height: 100%;
+        min-height: 0;
+        overflow: hidden;
+      }
+
       .municipios-layout {
         display: grid;
         gap: 1rem;
+      }
+
+      .municipios-panel {
+        min-height: 0;
+        box-sizing: border-box;
+        padding: 1rem;
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        background: var(--color-surface);
+        overflow-y: auto;
+        max-height: 70vh;
       }
 
       .data-notice {
@@ -138,7 +186,7 @@ const EMPTY_CITY: ParkingMunicipio = {
 
       .municipios-grid {
         display: grid;
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
         gap: 1rem;
       }
 
@@ -170,14 +218,14 @@ const EMPTY_CITY: ParkingMunicipio = {
         position: relative;
         align-items: center;
         justify-content: center;
-        min-height: 100px;
+        aspect-ratio: 16 / 10;
         overflow: hidden;
         background: linear-gradient(145deg, #dce9df, #cbdedb);
       }
 
       .municipio-img img {
         width: 100%;
-        height: 118px;
+        height: 100%;
         object-fit: cover;
         filter: saturate(0.72) contrast(0.94);
       }
@@ -278,24 +326,51 @@ const EMPTY_CITY: ParkingMunicipio = {
         text-align: center;
       }
 
-      @media (min-width: 640px) {
-        .municipios-grid {
-          grid-template-columns: repeat(3, 1fr);
-        }
-      }
-
       @media (min-width: 1024px) {
+        .page {
+          display: flex;
+          min-height: 0;
+          flex-direction: column;
+          overflow: hidden;
+        }
+
         .municipios-layout {
+          min-height: 0;
+          flex: 1;
+          height: 100%;
           grid-template-columns: minmax(0, 1fr) 320px;
-          align-items: start;
+          grid-template-rows: minmax(0, 1fr);
+          align-items: stretch;
+        }
+
+        .municipios-panel {
+          min-height: 0;
+          height: 100%;
+          max-height: 100%;
+        }
+
+        .municipios-grid {
+          align-content: start;
         }
 
         .municipio-detail {
-          position: sticky;
-          top: 1rem;
+          display: flex;
+          height: 100%;
+          min-height: 0;
+          flex-direction: column;
+          box-sizing: border-box;
+          overflow: hidden;
+        }
+
+        .municipio-detail ul {
+          flex: 1;
+          min-height: 0;
+          overflow-y: auto;
+          margin-bottom: 0.75rem;
         }
 
         .sticky-actions {
+          flex-shrink: 0;
           display: grid;
           gap: 0.65rem;
         }
@@ -309,8 +384,12 @@ export class ParkingCitiesComponent implements OnInit {
   private readonly citiesService = inject(CitiesService);
   readonly flowStore = inject(ParkingFlowStore);
   readonly route = inject(ActivatedRoute);
-  readonly vehicleId = this.route.snapshot.queryParamMap.get('vehicleId') ?? this.flowStore.vm().vehicleId ?? '';
-  readonly vehiclePlate = this.route.snapshot.queryParamMap.get('plate') ?? this.flowStore.vm().plate ?? '';
+  get vehicleId(): string {
+    return this.flowStore.vm().vehicleId ?? this.route.snapshot.queryParamMap.get('vehicleId') ?? '';
+  }
+  get vehiclePlate(): string {
+    return this.flowStore.vm().plate ?? this.route.snapshot.queryParamMap.get('plate') ?? '';
+  }
   readonly municipios = signal<ParkingMunicipio[]>([]);
   readonly selected = signal(this.defaultCity());
   readonly dataSource = signal<'loading' | 'remote' | 'error'>('loading');
@@ -318,7 +397,7 @@ export class ParkingCitiesComponent implements OnInit {
   async ngOnInit(): Promise<void> {
     try {
       const result = await this.citiesService.getCities();
-      this.municipios.set(result.data);
+      this.municipios.set(this.citiesService.selectableCities(result.data));
       this.dataSource.set('remote');
       this.selected.set(this.defaultCity());
     } catch {
@@ -327,13 +406,34 @@ export class ParkingCitiesComponent implements OnInit {
     }
   }
 
+  selectCity(city: ParkingMunicipio): void {
+    this.selected.set(city);
+    this.flowStore.update({ city: city.id, cityId: String(city.contractId), cityName: city.nombre });
+  }
+
+  private currentCityMatch(): ParkingMunicipio | null {
+    const params = this.route.snapshot.queryParamMap;
+    const store = this.flowStore.vm();
+    const id = params.get('city') ?? params.get('municipio') ?? store.city ?? '';
+    const contractId = params.get('cityId') ?? store.cityId ?? '';
+    const name = params.get('cityName') ?? store.cityName ?? '';
+    if (!id && !contractId && !name) return null;
+    return (
+      this.municipios().find(
+        (m) => (id && m.id === id) || (contractId && String(m.contractId) === contractId) || (name && m.nombre === name),
+      ) ?? null
+    );
+  }
+
   private defaultCity(): ParkingMunicipio {
+    const current = this.currentCityMatch();
+    if (current) return current;
     const preferredId = this.locationSettings.settings().preferredCityId;
     if (preferredId) {
-      const match = this.municipios().find((m) => m.id === preferredId);
+      const match = this.municipios().find((m) => m.id === preferredId || String(m.contractId) === preferredId);
       if (match) return match;
     }
-    return this.municipios().find((city) => city.id === 'zarautz') ?? this.municipios()[0] ?? EMPTY_CITY;
+    return this.municipios()[0] ?? EMPTY_CITY;
   }
 
   readonly search = signal('');

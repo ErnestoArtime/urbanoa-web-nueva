@@ -1,9 +1,11 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
-import { OPS_ENDPOINTS } from '../api/ops-endpoints';
 import { OpsApiClient } from '../api/ops-api-client.service';
-import { OpsSessionService } from '../api/ops-session.service';
 import { OpsApiError } from '../api/ops-api.types';
+import { OPS_OPERATING_SYSTEM } from '../api/ops-client.constants';
+import { OPS_ENDPOINTS } from '../api/ops-endpoints';
+import { OpsSessionService } from '../api/ops-session.service';
 import { generateUuid } from '../utils/generate-uuid';
+import { isCardUsable } from '../utils/card-expiry';
 
 export interface MainCard {
   id: string;
@@ -40,7 +42,7 @@ interface RechargeUserCreditResponseDto {
 
 interface BalanceRefundResponseDto {
   result: number;
-  refundAmount: number;
+  refundAmount?: number | string | null;
 }
 
 export interface WalletActionResult {
@@ -89,7 +91,10 @@ export class WalletService {
   readonly movements = signal<WalletMovement[]>([]);
   readonly cards = signal<MainCard[]>([]);
   readonly defaultCardId = signal('');
-  readonly defaultCard = computed(() => this.cards().find((card) => card.id === this.defaultCardId()) ?? this.cards()[0]);
+  readonly usableCards = computed(() => this.cards().filter((card) => isCardUsable(card)));
+  readonly defaultCard = computed(
+    () => this.usableCards().find((card) => card.id === this.defaultCardId()) ?? this.usableCards()[0],
+  );
 
   private readonly api = inject(OpsApiClient);
   private readonly session = inject(OpsSessionService);
@@ -207,7 +212,7 @@ export class WalletService {
     const value = Math.abs(amount);
     const token = this.session?.token();
     const payMethodId = this.remoteId(cardId);
-    if (!token || payMethodId === null) return { success: false, source: 'error' };
+    if (!token || payMethodId === null || !Number.isFinite(amount) || amount <= 0 || !this.usableCards().some(card => card.id === cardId)) return { success: false, source: 'error' };
 
     try {
       const response = await this.api.post<RechargeUserCreditResponseDto>(
@@ -238,15 +243,18 @@ export class WalletService {
   async refund(amount: number, cloudToken = ''): Promise<WalletActionResult> {
     const value = Math.min(Math.abs(amount), this.balance());
     const token = this.session?.token();
-    if (!token) return { success: false, source: 'error' };
+    if (!token || !Number.isFinite(amount) || amount <= 0 || value <= 0) return { success: false, source: 'error' };
 
     try {
       const response = await this.api.post<BalanceRefundResponseDto>(
         OPS_ENDPOINTS.wallet.refund,
-        { contractId: 0, cloudToken, operatingSystem: 3, amount: this.toCents(value), simulate: 0 },
+        { contractId: 0, cloudToken, operatingSystem: OPS_OPERATING_SYSTEM, amount: this.toCents(value), simulate: 0 },
         { token },
       );
-      const refunded = this.fromCents(response.refundAmount || this.toCents(value));
+      if (response.result !== 1 || response.refundAmount == null || String(response.refundAmount).trim() === '' || !Number.isFinite(Number(response.refundAmount)) || Number(response.refundAmount) < 0) {
+        throw new OpsApiError('invalid-response', OPS_ENDPOINTS.wallet.refund, 'El servicio no confirmó el importe de la devolución.');
+      }
+      const refunded = this.fromCents(Number(response.refundAmount));
       this.recordRefund(refunded);
       this.source.set('remote');
       this.lastError.set(null);
@@ -330,10 +338,10 @@ export class WalletService {
     const digits = method.mask.replace(/\D/g, '');
     return {
       id: String(method.id),
-      brand: method.cardBrand || method.cardType || 'Tarjeta',
+      brand: method.cardBrand || method.cardType || '',
       last4: digits.slice(-4) || method.mask.slice(-4),
       expiryDate: method.expDate,
-      cardholderName: method.description || 'Tarjeta bancaria',
+      cardholderName: method.description || '',
     };
   }
 

@@ -70,7 +70,8 @@ import { OperationType } from '../../models/operation-type';
         background: #e4f3e9;
         color: var(--color-success);
       }
-      .operation-icon[data-type='4'] {
+      .operation-icon[data-type='4'],
+      .operation-icon[data-type='104'] {
         background: var(--color-error-bg);
         color: var(--color-error);
       }

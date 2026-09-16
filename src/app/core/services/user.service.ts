@@ -1,6 +1,7 @@
 import { inject, Injectable, signal } from '@angular/core';
 import { OpsApiClient } from '../api/ops-api-client.service';
 import { OpsApiError } from '../api/ops-api.types';
+import { OPS_APP_VERSION, OPS_OPERATING_SYSTEM } from '../api/ops-client.constants';
 import { OPS_ENDPOINTS } from '../api/ops-endpoints';
 import { OpsSessionService } from '../api/ops-session.service';
 
@@ -61,7 +62,7 @@ interface UserApiPayload {
 }
 
 function emptyAddress(): UserAddress {
-  return { street: '', number: '', floor: '', door: '', stair: '', letter: '', city: '', province: '', postalCode: '', country: 'ESPANA' };
+  return { street: '', number: '', floor: '', door: '', stair: '', letter: '', city: '', province: '', postalCode: '', country: '' };
 }
 
 function readString(value: unknown): string {
@@ -131,6 +132,11 @@ export class UserService {
     return result;
   }
 
+  async updatePreferredContract(contractId: number): Promise<UserMutationResult> {
+    this.remoteProfile = { ...(this.remoteProfile ?? {}), contractId };
+    return this.remoteUpdate(this.state());
+  }
+
   updateLocal(changes: Partial<UserData>): void {
     const current = this.state();
     this.state.set({
@@ -191,11 +197,10 @@ export class UserService {
     return {
       ...profile,
       cloudToken: readString(profile.cloudToken),
-      version: readString(profile.version) || '4.0.0',
-      operatingSystem: 3,
+      version: readString(profile.version) || OPS_APP_VERSION,
+      operatingSystem: OPS_OPERATING_SYSTEM,
       contractId: Number(profile.contractId) || 0,
       userName: readString(profile.userName) || user.email,
-      password: readString(profile.password),
       names: user.name,
       firstSurname: user.surname,
       secondSurname: user.secondSurname,
@@ -215,5 +220,4 @@ export class UserService {
       addressLetterNumber: user.address.letter,
     };
   }
-
 }

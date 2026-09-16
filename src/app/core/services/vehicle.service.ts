@@ -1,5 +1,5 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
-import type { Vehicle } from '../../shared/models/vehicle';
+import { preferredVehicle, type Vehicle } from '../../shared/models/vehicle';
 import { OpsApiClient } from '../api/ops-api-client.service';
 import { OpsApiError } from '../api/ops-api.types';
 import { OPS_ENDPOINTS } from '../api/ops-endpoints';
@@ -27,16 +27,27 @@ export class VehicleService {
   private readonly state = signal<Vehicle[]>([]);
   private readonly sourceState = signal<'idle' | 'remote' | 'error'>('idle');
   private readonly errorState = signal<OpsApiError | null>(null);
+  private loadPromise: Promise<void> | null = null;
 
   readonly vehicles = this.state.asReadonly();
   readonly source = this.sourceState.asReadonly();
   readonly lastError = this.errorState.asReadonly();
-  readonly mainVehicle = computed(() => this.state().find((vehicle) => vehicle.isDefault) ?? this.state()[0] ?? null);
+  readonly mainVehicle = computed(() => preferredVehicle(this.state()));
 
   private readonly api = inject(OpsApiClient);
   private readonly session = inject(OpsSessionService);
 
   async load(): Promise<void> {
+    if (this.loadPromise) return this.loadPromise;
+    this.loadPromise = this.loadRemote();
+    try {
+      await this.loadPromise;
+    } finally {
+      this.loadPromise = null;
+    }
+  }
+
+  private async loadRemote(): Promise<void> {
     const token = this.session.token();
     if (!token) {
       this.state.set([]);
@@ -45,34 +56,51 @@ export class VehicleService {
     }
 
     try {
-      const value = await this.api.getOrNull<PlatesApiValue>(OPS_ENDPOINTS.user.plates, { token });
+      const value = await this.fetchPlates(token);
       if (value === null || !Array.isArray(value.plates)) {
         this.state.set([]);
       } else {
-        this.state.set(value.plates.map((item) => this.fromApi(item)));
+        let favoriteAssigned = false;
+        this.state.set(
+          value.plates.map((item) => {
+            const vehicle = this.fromApi(item);
+            if (vehicle.isDefault && favoriteAssigned) return { ...vehicle, isDefault: false };
+            if (vehicle.isDefault) favoriteAssigned = true;
+            return vehicle;
+          }),
+        );
       }
       this.sourceState.set('remote');
       this.errorState.set(null);
-      await this.ensureFavorite();
     } catch (error) {
       this.state.set([]);
       this.useError(error, OPS_ENDPOINTS.user.plates);
     }
   }
 
-  private async ensureFavorite(): Promise<void> {
-    const vehicles = this.state();
-    if (vehicles.length === 0 || vehicles.some((vehicle) => vehicle.isDefault)) return;
-    await this.setDefault(vehicles[0].id);
+  private async fetchPlates(token: string): Promise<PlatesApiValue | null> {
+    try {
+      return await this.api.getOrNull<PlatesApiValue>(OPS_ENDPOINTS.user.plates, { token });
+    } catch {
+      // Any failure loading plates (network, backend error, the confirmed HTTP 500-for-empty-account
+      // quirk, etc.) is treated as "no plates yet" — the list screen always shows either the real
+      // list or a normal empty state with the add-vehicle action, never a load-error banner.
+      return null;
+    }
   }
 
   getById(id: string): Vehicle | undefined {
     return this.state().find((vehicle) => vehicle.id === id);
   }
 
+  hasPlate(plate: string): boolean {
+    const target = plate.replace(/\s/g, '').toUpperCase();
+    return this.state().some((vehicle) => vehicle.plate.replace(/\s/g, '').toUpperCase() === target);
+  }
+
   async add(input: Omit<Vehicle, 'id'>): Promise<VehicleMutationResult> {
     const plate = this.normalizePlate(input.plate);
-    const result = await this.remoteMutation(OPS_ENDPOINTS.user.addPlate, { plate });
+    const result = await this.remoteMutation(OPS_ENDPOINTS.user.addPlate, { plate, favorite: input.isDefault ? 1 : 0 });
     if (!result.success) return result;
 
     const vehicle: Vehicle = { ...input, plate, isDefault: false, id: generateUuid() };
@@ -80,28 +108,27 @@ export class VehicleService {
     this.persist();
 
     if (input.isDefault) return this.setDefault(vehicle.id);
-    return this.state().some((item) => item.isDefault) ? result : this.setDefault(vehicle.id);
+    return result;
   }
 
-  async update(id: string, changes: Partial<Omit<Vehicle, 'id'>>): Promise<VehicleMutationResult> {
+  async update(id: string, changes: Pick<Vehicle, 'isDefault'>): Promise<VehicleMutationResult> {
     const current = this.getById(id);
     if (!current) return { success: false, source: 'error' };
 
-    const nextPlate = this.normalizePlate(changes.plate ?? current.plate);
+    const nextIsDefault = changes.isDefault ?? current.isDefault;
+    const favoriteChanged = nextIsDefault !== current.isDefault;
     let result: VehicleMutationResult = { success: true, source: 'remote' };
 
-    if (nextPlate !== current.plate) {
-      result = await this.remoteMutation(OPS_ENDPOINTS.user.removePlate, { plate: current.plate });
-      if (result.success) result = await this.remoteMutation(OPS_ENDPOINTS.user.addPlate, { plate: nextPlate });
+    if (favoriteChanged) {
+      result = await this.remoteMutation(OPS_ENDPOINTS.user.updatePlate, { plate: current.plate, favorite: nextIsDefault ? 1 : 0 });
       if (!result.success) return result;
     }
 
-    this.state.update((vehicles) =>
-      vehicles.map((vehicle) => (vehicle.id === id ? { ...vehicle, ...changes, plate: nextPlate } : vehicle)),
-    );
+    this.state.update((vehicles) => vehicles.map((vehicle) => (vehicle.id === id ? { ...vehicle, isDefault: nextIsDefault } : vehicle)));
     this.persist();
 
-    if (result.success && changes.isDefault) result = await this.setDefault(id);
+    await this.refreshFromServer();
+
     return result;
   }
 
@@ -110,17 +137,27 @@ export class VehicleService {
     if (!current) return { success: false, source: 'error' };
     if (current.isDefault) return { success: true, source: 'remote' };
 
-    const previousDefault = this.state().find((vehicle) => vehicle.isDefault && vehicle.id !== id);
-
-    let result = await this.remoteMutation(OPS_ENDPOINTS.user.updatePlate, { plate: current.plate, favorite: 1 });
-    if (result.success && previousDefault) {
-      result = await this.remoteMutation(OPS_ENDPOINTS.user.updatePlate, { plate: previousDefault.plate, favorite: 0 });
-    }
+    const result = await this.remoteMutation(OPS_ENDPOINTS.user.updatePlate, { plate: current.plate, favorite: 1 });
     if (!result.success) return result;
 
     this.state.update((vehicles) => vehicles.map((vehicle) => ({ ...vehicle, isDefault: vehicle.id === id })));
     this.persist();
     return result;
+  }
+
+  /** Refetch the vehicles from QueryUserPlatesAPI, preserving any local-only label. */
+  private async refreshFromServer(): Promise<void> {
+    const token = this.session.token();
+    if (!token) return;
+    const value = await this.fetchPlates(token);
+    if (value === null || !Array.isArray(value.plates)) return;
+    const previous = new Map(this.state().map((vehicle) => [vehicle.plate, vehicle]));
+    const merged = value.plates.map((item) => {
+      const vehicle = this.fromApi(item);
+      return previous.get(vehicle.plate) ? { ...vehicle, label: previous.get(vehicle.plate)!.label } : vehicle;
+    });
+    this.state.set(merged);
+    this.persist();
   }
 
   async remove(id: string): Promise<VehicleMutationResult> {
@@ -132,9 +169,7 @@ export class VehicleService {
     const remaining = this.state().filter((vehicle) => vehicle.id !== id);
     this.state.set(remaining);
     this.persist();
-
-    const needsPromotion = result.success && remaining.length > 0 && !remaining.some((vehicle) => vehicle.isDefault);
-    return needsPromotion ? this.setDefault(remaining[0].id) : result;
+    return result;
   }
 
   private async remoteMutation(endpoint: string, body: { plate: string; favorite?: number }): Promise<VehicleMutationResult> {

@@ -20,6 +20,10 @@ import { NotificationsService } from '../../../core/services/notifications.servi
             ><input type="checkbox" [checked]="notif.enabled" (change)="notif.enabled = checked($event)" /><span class="switch"></span
           ></label>
         }
+        <label class="switch-row"
+          ><span>{{ 'account.notifications.feedback' | translate }}</span
+          ><input type="checkbox" [checked]="feedbackApp" (change)="feedbackApp = checked($event)" /><span class="switch"></span
+        ></label>
       </div>
       <div class="card mt-1">
         <p class="section-title">{{ 'account.notifications.email' | translate }}</p>
@@ -30,6 +34,10 @@ import { NotificationsService } from '../../../core/services/notifications.servi
             ><input type="checkbox" [checked]="notif.enabled" (change)="notif.enabled = checked($event)" /><span class="switch"></span
           ></label>
         }
+        <label class="switch-row"
+          ><span>{{ 'account.notifications.feedback' | translate }}</span
+          ><input type="checkbox" [checked]="feedbackEmail" (change)="feedbackEmail = checked($event)" /><span class="switch"></span
+        ></label>
       </div>
       <button type="button" class="btn btn-primary btn-block mt-2" [disabled]="saving()" (click)="save()">
         {{ 'account.notifications.save' | translate }}
@@ -107,6 +115,8 @@ export class AccountNotificationsComponent implements OnInit {
     { key: 'fine-warning', labelKey: 'account.notifications.fineWarning', enabled: false },
     { key: 'recharge-confirm', labelKey: 'account.notifications.rechargeConfirm', enabled: false },
   ];
+  feedbackApp = true;
+  feedbackEmail = false;
 
   async ngOnInit(): Promise<void> {
     const value = await this.notifications.load();
@@ -117,6 +127,8 @@ export class AccountNotificationsComponent implements OnInit {
     this.emailNotifications[1].enabled = value.emailUnparkingNotifications === 1;
     this.emailNotifications[2].enabled = value.emailFineNotifications === 1;
     this.emailNotifications[3].enabled = value.emailRechargeNotifications === 1;
+    this.feedbackApp = value.feedbackNotifications === 1;
+    this.feedbackEmail = value.emailFeedbackNotifications === 1;
   }
 
   async save(): Promise<void> {
@@ -131,6 +143,8 @@ export class AccountNotificationsComponent implements OnInit {
       emailUnparkingNotifications: Number(this.emailNotifications[1].enabled),
       emailFineNotifications: Number(this.emailNotifications[2].enabled),
       emailRechargeNotifications: Number(this.emailNotifications[3].enabled),
+      feedbackNotifications: Number(this.feedbackApp),
+      emailFeedbackNotifications: Number(this.feedbackEmail),
     });
     this.saving.set(false);
     this.saved.set(result === 'remote');

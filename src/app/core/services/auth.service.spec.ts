@@ -2,6 +2,7 @@ import { provideZonelessChangeDetection } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { OpsApiClient } from '../api/ops-api-client.service';
+import { OPS_APP_VERSION, OPS_OPERATING_SYSTEM } from '../api/ops-client.constants';
 import { OPS_ENDPOINTS } from '../api/ops-endpoints';
 import { OpsSessionService } from '../api/ops-session.service';
 import { AccountApiService } from './account-api.service';
@@ -58,8 +59,8 @@ describe('AuthService', () => {
         userName: 'user@example.com',
         password: 'secret',
         cloudToken: jasmine.any(String),
-        operatingSystem: 1,
-        appVersion: '4.0.0',
+        operatingSystem: OPS_OPERATING_SYSTEM,
+        appVersion: OPS_APP_VERSION,
         language: 'es',
       },
       { headers: { 'Accept-Language': 'es-ES' } },
@@ -137,11 +138,17 @@ describe('AuthService', () => {
     await service.resendMail(' user@example.com ', 'recover');
 
     expect(opsApi.post.calls.argsFor(0)[1]).toEqual({
+      contractId: 0,
       userName: 'user@example.com',
       email: 'user@example.com',
       type: 'register',
     });
-    expect(opsApi.post.calls.argsFor(1)[1]).toEqual({ email: 'user@example.com', type: 'recover' });
+    expect(opsApi.post.calls.argsFor(1)[1]).toEqual({
+      contractId: 0,
+      userName: 'user@example.com',
+      email: 'user@example.com',
+      type: 'recover',
+    });
   });
 
   it('preserves auth-service error handling when LoginUserAPI fails', async () => {

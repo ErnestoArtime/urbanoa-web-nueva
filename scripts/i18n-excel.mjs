@@ -294,8 +294,7 @@ function isStrictTranslationKey(value) {
 function addQuotedKeys(expression, keys) {
   for (const match of expression.matchAll(/['"]([^'"`\n]+)['"](?=[^|{}]*\|\s*translate\b)/g)) {
     const key = match[1].trim();
-    const isConfiguredSimpleKey = config.simpleTranslationKeyPrefixes
-      .some((prefix) => key.startsWith(prefix));
+    const isConfiguredSimpleKey = config.simpleTranslationKeyPrefixes.some((prefix) => key.startsWith(prefix));
     if (isLikelyTranslationKey(key) && (key.includes('.') || isConfiguredSimpleKey)) {
       keys.add(key);
     }
@@ -331,6 +330,8 @@ function extractTranslationKeys(content) {
 function extractPotentialTranslationKeys(content, relativePath) {
   const keys = new Set();
   const prefixes = new Set();
+  // Angular expressions inside inline templates are strings to the TS parser.
+  for (const match of content.matchAll(/['"]([\w-]+(?:\.[\w-]+)*\.)['"]\s*\+/g)) prefixes.add(match[1]);
   if (!relativePath.endsWith('.ts') || /[\\/]environments[\\/]/i.test(relativePath)) {
     return { keys, prefixes };
   }
@@ -374,8 +375,24 @@ function extractPotentialTranslationKeys(content, relativePath) {
 }
 
 function maskComments(content, extension) {
-  const commentPattern = extension === '.html' ? /<!--[\s\S]*?-->/g : /\/\*[\s\S]*?\*\/|\/\/[^\n\r]*/g;
-  return content.replace(commentPattern, (comment) => comment.replace(/[^\r\n]/g, ' '));
+  const mask = (value) => value.replace(/[^\r\n]/g, ' ');
+  if (extension === '.html') return content.replace(/<!--[\s\S]*?-->/g, mask);
+  const source = ts.createSourceFile('source.ts', content, ts.ScriptTarget.Latest, true);
+  const ranges = new Map();
+  const visit = (node) => {
+    for (const range of [
+      ...(ts.getLeadingCommentRanges(content, node.pos) ?? []),
+      ...(ts.getTrailingCommentRanges(content, node.end) ?? []),
+    ]) {
+      ranges.set(range.pos, range.end);
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
+  for (const [start, end] of [...ranges].sort((a, b) => b[0] - a[0])) {
+    content = content.slice(0, start) + mask(content.slice(start, end)) + content.slice(end);
+  }
+  return content.replace(/<!--[\s\S]*?-->/g, mask);
 }
 
 function findDirectLiterals(content, relativePath) {
@@ -723,15 +740,23 @@ async function audit(options) {
     };
   }
   const output = options.out ?? config.auditOutput;
-  await fs.mkdir(path.dirname(output), { recursive: true });
-  await fs.writeFile(output, `${JSON.stringify(report, null, 2)}\n`);
   const directLiteralsOutput = options.literalsOut ?? config.literalsOutput;
-  await fs.writeFile(directLiteralsOutput, markdownDirectLiteralReport(report.directLiterals));
-  console.log(`Auditoría guardada en ${output}`);
-  console.log(`Listado de candidatos guardado en ${directLiteralsOutput}`);
+  if (!options.check) {
+    await fs.mkdir(path.dirname(output), { recursive: true });
+    await fs.writeFile(output, `${JSON.stringify(report, null, 2)}\n`);
+    await fs.writeFile(directLiteralsOutput, markdownDirectLiteralReport(report.directLiterals));
+    console.log(`Auditoría guardada en ${output}`);
+    console.log(`Listado de candidatos guardado en ${directLiteralsOutput}`);
+  }
   console.log(
     `Claves usadas: ${report.sourceKeys}; faltantes: ${report.usedKeysMissingInReference.length}; literales directos candidatos: ${report.directLiterals.length}.`,
   );
+  if (sourceKeysMissing.length) {
+    throw new Error(`Claves usadas sin traducción en ${referenceLanguage}: ${sourceKeysMissing.join(', ')}.`);
+  }
+  const emptyUsed = Object.entries(emptyUsedInCatalogues).filter(([, keys]) => keys.length);
+  if (emptyUsed.length)
+    throw new Error(`Traducciones vacías: ${emptyUsed.map(([language, keys]) => `${language}: ${keys.join(', ')}`).join('; ')}.`);
   const structureErrors = Object.entries(report.missingInCatalogues)
     .filter(([language, keys]) => language !== referenceLanguage && keys.length)
     .map(([language, keys]) => `${language}: faltan ${keys.length}`);

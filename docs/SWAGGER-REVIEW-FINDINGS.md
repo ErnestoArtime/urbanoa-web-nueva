@@ -1,8 +1,12 @@
-# Swagger review — OPSWebServicesAPI
+# Swagger review — histórico archivado
+
+> Este documento conserva el histórico de comprobaciones anteriores. Para el
+> estado vigente del contrato y de la migración consultar
+> [`SWAGGER-REVIEW-CURRENT.md`](./SWAGGER-REVIEW-CURRENT.md).
 
 Hallazgos al comparar el código actual contra el Swagger publicado en
-`http://185.76.212.27/OPSWebServicesAPI3/swagger/ui/index` (spec crudo en
-`http://185.76.212.27/OPSWebServicesAPI3/swagger/docs/v1`, título interno
+`http://185.76.212.27/OPSWebServicesAPI/swagger/ui/index` (spec crudo en
+`http://185.76.212.27/OPSWebServicesAPI/swagger/docs/v1`, título interno
 `"OPSWebServicesAPI"`, versión `v1`).
 
 Este documento es una lista de trabajo para ir resolviendo paso a paso. Cada
@@ -12,7 +16,7 @@ que se marque explícitamente como `RESUELTO`.
 Cómo actualizar el spec si el backend cambia:
 
 ```
-curl http://185.76.212.27/OPSWebServicesAPI3/swagger/docs/v1
+curl http://185.76.212.27/OPSWebServicesAPI/swagger/docs/v1
 ```
 
 ## 1. `/OPSWebServicesAPI` vs `/OPSWebServicesAPI3` — RESUELTO
@@ -508,23 +512,16 @@ restauración de la cuenta a su estado original). `tsc --noEmit`, 45/45 tests
 
 ---
 
-## 11. Endpoints referenciados en `ops-endpoints.ts` que NO existen en el swagger
+## 11. Endpoints referenciados en `ops-endpoints.ts` — verificación actualizada
 
-**Prioridad: media (verificar con backend antes de usarlos).** Detectado el
-2026-08-24 comparando `OPS_ENDPOINTS` contra el spec descargado ese día.
+La comprobación del 2026-08-31 contra el Swagger actual confirma que todos
+los endpoints declarados en `OPS_ENDPOINTS` aparecen en el spec publicado.
 
-Estos endpoints están declarados en el código pero no aparecen en
-`swagger/docs/v1`:
+No queda ninguna ruta en código sin correspondencia en Swagger. El informe
+antiguo indicaba lo contrario porque se había comparado contra una versión
+anterior del documento.
 
-- `wallet.loadPaymentMethod` → `LoadPaymentMethodFormAPI`
-- `support.add/query/update` → `AddUserFeedbackAPI`, `QueryUserFeedbackAPI`,
-  `UpdateUserFeedbackAPI`
-
-Puede ser que el swagger esté incompleto o que esas rutas no existan. Si se
-necesitan, confirmar primero contra `185.76.212.27` antes de integrarlas;
-si no, limpiarlas de `ops-endpoints.ts` para no dar pistas falsas.
-
-**Estado:** pendiente de confirmar con backend.
+**Estado:** `RESUELTO`.
 
 ---
 
@@ -543,7 +540,13 @@ No requieren acción inmediata; referencia para futuras funcionalidades.
 
 ---
 
-## 13. Prefijo `/OPSWebServicesAPI` vs `/OPSWebServicesAPI3` — RESUELTO (3ª ronda, cierre definitivo)
+## 13. Prefijo `/OPSWebServicesAPI` — cierre definitivo
+
+Este apartado sustituye el historial anterior sobre `/OPSWebServicesAPI3`.
+El Swagger actualmente publicado y el backend consumido por la aplicación
+usan `/OPSWebServicesAPI`. El frontend mantiene el prefijo lógico
+`/ops-api/OPSWebServicesAPI/` y el proxy solo elimina `/ops-api`; no existe ya
+una regla de compatibilidad para `OPSWebServicesLegacyAPI`.
 
 **Fecha: 2026-08-25.** Historial completo del tira-y-afloja:
 

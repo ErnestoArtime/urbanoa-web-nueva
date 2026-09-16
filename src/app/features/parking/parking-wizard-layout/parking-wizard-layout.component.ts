@@ -1,11 +1,10 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { filter, map, startWith } from 'rxjs/operators';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { ParkingFlowStore } from '../parking-flow.store';
 import { VehicleService } from '../../../core/services/vehicle.service';
-import { ParkingSessionService } from '../../../core/services/parking-session.service';
 import type { Vehicle } from '../../../shared/models/vehicle';
 
 interface WizardStep {
@@ -65,18 +64,27 @@ interface WizardStep {
                 ><strong>{{ query()['zone'] }}</strong>
               </p>
             }
+            @if (query()['street']) {
+              <p>
+                <small>{{ 'parking.wizard.street' | translate }}</small
+                ><strong>{{ query()['street'] }}</strong>
+              </p>
+            }
             @if (query()['plate']) {
               <div class="vehicle-picker">
                 <small>{{ 'parking.wizard.vehicle' | translate }}</small
                 ><button
                   type="button"
                   class="vehicle-picker-trigger"
+                  [disabled]="!canChangeVehicle()"
                   [attr.aria-expanded]="vehiclePickerOpen()"
                   [attr.aria-label]="'parking.wizard.changeVehicle' | translate"
                   (click)="toggleVehiclePicker()"
                 >
-                  <strong>{{ query()['plate'] }}</strong
-                  ><span class="vehicle-picker-chevron" aria-hidden="true"></span>
+                  <strong>{{ query()['plate'] }}</strong>
+                  @if (canChangeVehicle()) {
+                    <span class="vehicle-picker-chevron" aria-hidden="true"></span>
+                  }
                 </button>
                 @if (vehiclePickerOpen()) {
                   <div class="vehicle-picker-menu" role="listbox">
@@ -117,8 +125,18 @@ interface WizardStep {
           @if (query()['plate']) {
             <div class="mobile-vehicle-picker">
               <small>{{ 'parking.wizard.vehicle' | translate }}</small>
-              <button type="button" (click)="toggleVehiclePicker()" [attr.aria-expanded]="vehiclePickerOpen()">
-                {{ query()['plate'] }} <span class="vehicle-picker-chevron" aria-hidden="true"></span>
+              <button
+                type="button"
+                class="mobile-vehicle-picker-trigger"
+                [disabled]="!canChangeVehicle()"
+                (click)="toggleVehiclePicker()"
+                [attr.aria-expanded]="vehiclePickerOpen()"
+                [attr.aria-label]="'parking.wizard.changeVehicle' | translate"
+              >
+                <strong>{{ query()['plate'] }}</strong>
+                @if (canChangeVehicle()) {
+                  <span class="vehicle-picker-chevron" aria-hidden="true"></span>
+                }
               </button>
               @if (vehiclePickerOpen()) {
                 <div class="vehicle-picker-menu" role="listbox">
@@ -142,7 +160,9 @@ interface WizardStep {
             </div>
           }
         </header>
-        <router-outlet />
+        <div class="wizard-route">
+          <router-outlet />
+        </div>
       </section>
     </div>
   `,
@@ -249,39 +269,94 @@ interface WizardStep {
       }
       .mobile-vehicle-picker {
         position: relative;
-        display: flex;
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
         align-items: center;
-        gap: 0.4rem;
+        gap: 0.6rem;
+        min-width: 0;
+        margin-top: 0.35rem;
+        padding: 0.45rem 0.6rem;
+        border-radius: 12px;
+        background: var(--color-active);
         color: var(--color-text-muted);
         font-size: var(--text-xs);
       }
-      .mobile-vehicle-picker button {
+      .mobile-vehicle-picker-trigger {
+        display: flex;
+        min-width: 0;
+        width: 100%;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.6rem;
         padding: 0;
         border: 0;
         background: transparent;
         color: var(--color-primary);
         cursor: pointer;
+        font: inherit;
         font-weight: var(--font-bold);
+        text-align: left;
+      }
+      .mobile-vehicle-picker-trigger strong {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
       .mobile-vehicle-picker .vehicle-picker-chevron {
+        flex: 0 0 auto;
         display: inline-block;
         width: 0.4rem;
         height: 0.4rem;
-        margin: -0.15rem 0 0 0.15rem;
+        margin-top: -0.15rem;
         border-right: 2px solid var(--color-primary);
         border-bottom: 2px solid var(--color-primary);
         transform: rotate(45deg);
         transition: transform 180ms ease;
       }
-      .mobile-vehicle-picker button[aria-expanded='true'] .vehicle-picker-chevron {
+      .mobile-vehicle-picker-trigger[aria-expanded='true'] .vehicle-picker-chevron {
         margin-top: 0.15rem;
         transform: rotate(225deg);
       }
       .mobile-vehicle-picker .vehicle-picker-menu {
+        z-index: 20;
         top: calc(100% + 0.4rem);
-        right: auto;
+        right: 0;
         bottom: auto;
         left: 0;
+      }
+      .vehicle-picker-menu {
+        position: absolute;
+        z-index: 5;
+        display: grid;
+        min-width: 190px;
+        padding: 0.3rem;
+        border: 1px solid var(--color-border);
+        border-radius: 10px;
+        background: var(--color-surface);
+        box-shadow: var(--shadow-md);
+      }
+      .vehicle-picker-option {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 0.55rem 0.65rem;
+        border: 0;
+        border-radius: 7px;
+        background: transparent;
+        color: var(--color-text);
+        cursor: pointer;
+        text-align: left;
+      }
+      .vehicle-picker-option:hover,
+      .vehicle-picker-option.selected {
+        background: var(--color-active);
+      }
+      .vehicle-picker-option small {
+        color: var(--color-text-muted);
+      }
+      .vehicle-picker-option strong {
+        overflow-wrap: anywhere;
       }
       .wizard-mobile-head.map-step {
         display: none;
@@ -289,8 +364,18 @@ interface WizardStep {
       .wizard-detail.map-step {
         display: flex;
         flex-direction: column;
+        overflow: hidden;
       }
-      :host ::ng-deep .wizard-detail.map-step > app-parking-map {
+      .wizard-route {
+        min-height: 0;
+      }
+      .wizard-detail.map-step > .wizard-route {
+        display: flex;
+        flex: 1;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      :host ::ng-deep .wizard-detail.map-step .wizard-route > app-parking-map {
         flex: 1;
         min-height: 0;
       }
@@ -430,44 +515,22 @@ interface WizardStep {
           transform: rotate(45deg);
           transition: transform 180ms ease;
         }
+        .vehicle-picker-trigger:disabled,
+        .mobile-vehicle-picker-trigger:disabled {
+          cursor: default;
+        }
         .vehicle-picker-trigger[aria-expanded='true'] .vehicle-picker-chevron {
           margin-top: 0.2rem;
           transform: rotate(225deg);
         }
         .vehicle-picker-menu {
-          position: absolute;
-          z-index: 5;
           top: auto;
           right: 0;
           bottom: calc(100% + 0.35rem);
-          display: grid;
-          min-width: 190px;
-          padding: 0.3rem;
-          border: 1px solid var(--color-border);
-          border-radius: 10px;
-          background: var(--color-surface);
-          box-shadow: var(--shadow-md);
-        }
-        .vehicle-picker-option {
-          display: flex;
-          flex-direction: column;
-          align-items: flex-start;
-          padding: 0.55rem 0.65rem;
-          border: 0;
-          border-radius: 7px;
-          background: transparent;
-          color: var(--color-text);
-          cursor: pointer;
-          text-align: left;
-        }
-        .vehicle-picker-option:hover,
-        .vehicle-picker-option.selected {
-          background: var(--color-active);
-        }
-        .vehicle-picker-option small {
-          color: var(--color-text-muted);
+          left: auto;
         }
         .wizard-detail {
+          box-sizing: border-box;
           height: calc(100% - 1.1rem);
           margin: 0.55rem;
           overflow-y: auto;
@@ -478,7 +541,13 @@ interface WizardStep {
         .wizard-mobile-head {
           display: none;
         }
-        :host ::ng-deep .wizard-detail > app-parking-map {
+        :host ::ng-deep .wizard-route > app-parking-cities,
+        :host ::ng-deep .wizard-route > app-parking-streets {
+          display: block;
+          min-height: 0;
+          height: 100%;
+        }
+        :host ::ng-deep .wizard-detail .wizard-route > app-parking-map {
           display: block;
           height: 100%;
         }
@@ -486,18 +555,13 @@ interface WizardStep {
     `,
   ],
 })
-export class ParkingWizardLayoutComponent {
+export class ParkingWizardLayoutComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly store = inject(ParkingFlowStore);
   private readonly vehicleService = inject(VehicleService);
-  private readonly parkingSessionService = inject(ParkingSessionService);
-  readonly hasAvailableVehicles = computed(() =>
-    this.vehicleService.vehicles().some((vehicle) => !this.parkingSessionService.isVehicleParked(vehicle.id)),
-  );
-  readonly availableVehicles = computed(() =>
-    this.vehicleService.vehicles().filter((vehicle) => !this.parkingSessionService.isVehicleParked(vehicle.id)),
-  );
+  readonly hasAvailableVehicles = computed(() => this.vehicleService.vehicles().length > 0);
+  readonly availableVehicles = computed(() => this.vehicleService.vehicles());
   readonly vehiclePickerOpen = signal(false);
   readonly steps: WizardStep[] = [
     { labelKey: 'parking.wizard.step1.label', hintKey: 'parking.wizard.step1.hint', path: '/app/parking' },
@@ -517,27 +581,42 @@ export class ParkingWizardLayoutComponent {
   readonly query = computed(() => {
     const urlParams = this.router.parseUrl(this.url()).queryParams as Record<string, string>;
     const s = this.store.vm();
+    const cityName = s.cityName || urlParams['cityName'] || '';
     return {
       ...urlParams,
-      ...(s.cityName ? { cityName: s.cityName } : {}),
+      ...(cityName ? { cityName } : {}),
       ...(s.zoneName ? { zone: s.zoneName } : {}),
+      ...(s.street ? { street: s.street } : {}),
+      ...(s.streetId ? { streetId: s.streetId } : {}),
       ...(s.plate ? { plate: s.plate } : {}),
       ...(s.duration ? { duration: s.duration } : {}),
       ...(s.vehicleId ? { vehicleId: s.vehicleId } : {}),
     };
   });
 
+  async ngOnInit(): Promise<void> {
+    if (this.vehicleService.source() !== 'remote') await this.vehicleService.load();
+  }
+
   toggleVehiclePicker(): void {
-    if (this.availableVehicles().length > 1) this.vehiclePickerOpen.update((open) => !open);
+    if (this.canChangeVehicle()) this.vehiclePickerOpen.update((open) => !open);
   }
 
   selectVehicle(vehicle: Vehicle): void {
-    this.store.update({ vehicleId: vehicle.id, plate: vehicle.plate });
     this.vehiclePickerOpen.set(false);
-    void this.router.navigate([], {
-      relativeTo: this.route,
-      queryParams: { ...this.query(), vehicleId: vehicle.id, plate: vehicle.plate },
+    if (!this.canChangeVehicle() || !this.store.selectVehicle(vehicle.id, vehicle.plate)) return;
+
+    const current = this.router.parseUrl(this.url()).queryParams as Record<string, string>;
+    const queryParams = { ...current, ...this.store.toQueryParams() };
+    const returnToTickets = this.currentStep() > 0;
+    void this.router.navigate(returnToTickets ? ['/app/parking/tickets'] : [], {
+      relativeTo: returnToTickets ? undefined : this.route,
+      queryParams,
     });
+  }
+
+  canChangeVehicle(): boolean {
+    return this.currentStep() < 4 && this.availableVehicles().length > 1;
   }
   readonly currentStep = computed(() => {
     const path = this.url().split('?')[0].replace(/\/+$/, '');

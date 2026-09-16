@@ -8,10 +8,14 @@ export interface OperationPaymentBreakdown {
 
 export interface Operation {
   id: string;
+  operationNumber?: string;
   type: OperationType;
   plate: string | null;
   date: string;
+  operationDate?: string;
+  operationTime?: string;
   amount: number;
+  newBalance?: number;
   zone: string | null;
   relatedOperationId?: string;
   cardId?: string;
@@ -20,6 +24,8 @@ export interface Operation {
   durationLabel?: string;
   startTime?: string;
   endTime?: string;
+  startDate?: string;
+  endDate?: string;
   contractId?: number;
   contractName?: string;
   fineNumber?: string;
@@ -38,6 +44,16 @@ export interface Operation {
   zoneName?: string;
   sectorId?: number;
   sectorName?: string;
+  sectorColor?: string;
   latitude?: number;
   longitude?: number;
+  /** Backend classification: 1 = historical, 2 = active, 3 = future. */
+  timePeriod?: 1 | 2 | 3;
+  /** Backend unpark option: 0 = hidden, 1 = disabled, 2 = enabled. */
+  refundable?: 0 | 1 | 2;
+  /** Backend extension option: 0 = hidden, 1 = disabled, 2 = enabled. */
+  extension?: 0 | 1 | 2;
+  ticketId?: number;
+  ticketName?: string;
+  street?: string;
 }
