@@ -1,10 +1,13 @@
 import { Component, input, output } from '@angular/core';
+import { LoaderComponent } from '../loader/loader.component';
 
 export type ResultType = 'success' | 'error' | 'warning' | 'confirmation' | 'delete' | 'unpark';
 
 @Component({
   selector: 'app-result-modal',
+  imports: [LoaderComponent],
   template: `
+    <app-loader [visible]="busy()" message="Procesando" />
     <div class="result-modal-overlay">
       <div class="result-modal">
         <div

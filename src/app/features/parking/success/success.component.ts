@@ -12,48 +12,55 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { OperationsService } from '../../../core/services/operations.service';
 import { VehicleService } from '../../../core/services/vehicle.service';
 import { WalletService } from '../../../core/services/wallet.service';
+import { LoaderComponent } from '../../../shared/components/loader/loader.component';
 
 @Component({
   selector: 'app-parking-success',
-  imports: [RouterLink, OperationIconComponent, TranslatePipe, AppIconComponent],
+  imports: [RouterLink, OperationIconComponent, TranslatePipe, AppIconComponent, LoaderComponent],
   template: `
+    <app-loader [visible]="loadingReceipt()" [message]="'common.loading' | translate" />
     <div class="page success-page">
       <div class="success-content text-center">
         @if (receipt()) {
-        <div class="success-mark"><span>✓</span><app-icon name="parkingSlip" [stroke]="false" /></div>
-        <h1 class="page-title">{{ (isExtension() ? 'parking.extension.success.title' : 'parking.success.title') | translate }}</h1>
-        <p class="page-subtitle">{{ (isExtension() ? 'parking.extension.success.subtitle' : 'parking.success.subtitle') | translate }}</p>
-        <div class="success-ticket-shell">
-          <article class="success-ticket">
-            <div class="ticket-accent" [style.background]="sectorColor()"></div>
-            <div class="ticket-head">
-              <app-operation-icon [type]="parkingType()" />
-              <div>
-                <strong>{{ query().plate }}</strong
-                ><span>{{ query().zone }} · {{ query().cityName }}</span>
+          <div class="success-mark"><span>✓</span><app-icon name="parkingSlip" [stroke]="false" /></div>
+          <h1 class="page-title">{{ (isExtension() ? 'parking.extension.success.title' : 'parking.success.title') | translate }}</h1>
+          <p class="page-subtitle">{{ (isExtension() ? 'parking.extension.success.subtitle' : 'parking.success.subtitle') | translate }}</p>
+          <div class="success-ticket-shell">
+            <article class="success-ticket">
+              <div class="ticket-accent" [style.background]="sectorColor()"></div>
+              <div class="ticket-head">
+                <app-operation-icon [type]="parkingType()" />
+                <div>
+                  <strong>{{ query().plate }}</strong
+                  ><span>{{ query().zone }} · {{ query().cityName }}</span>
+                  @if (query().tariff) {
+                    <small>{{ query().tariff }}</small>
+                  }
+                </div>
               </div>
-            </div>
-            <div class="ticket-times">
-              <div>
-                <small>{{ 'parking.success.start' | translate }}</small
-                ><strong>{{ startTime() }}</strong
-                ><span>{{ startDayLabel() }}</span>
+              <div class="ticket-times">
+                <div>
+                  <small>{{ 'parking.success.start' | translate }}</small
+                  ><strong>{{ startTime() }}</strong
+                  ><span>{{ startDayLabel() }}</span>
+                </div>
+                <i></i
+                ><b
+                  >{{ query().duration }}<small class="countdown">{{ countdown() }}</small></b
+                ><i></i>
+                <div>
+                  <small>{{ 'parking.success.end' | translate }}</small
+                  ><strong>{{ query().endTime }}</strong
+                  ><span>{{ endDayLabel() }}</span>
+                </div>
               </div>
-              <i></i><b>{{ query().duration }}<small class="countdown">{{ countdown() }}</small></b
-              ><i></i>
-              <div>
-                <small>{{ 'parking.success.end' | translate }}</small
-                ><strong>{{ query().endTime }}</strong
-                ><span>{{ endDayLabel() }}</span>
+              <div class="ticket-cut"><div class="ticket-cut-line"></div></div>
+              <div class="ticket-total">
+                <span>{{ 'parking.success.total' | translate }}</span
+                ><strong>{{ isFreeTicket() ? ('parking.tickets.free' | translate) : query().amount }}</strong>
               </div>
-            </div>
-            <div class="ticket-cut"><div class="ticket-cut-line"></div></div>
-            <div class="ticket-total">
-              <span>{{ 'parking.success.total' | translate }}</span
-              ><strong>{{ query().amount }}</strong>
-            </div>
-          </article>
-        </div>
+            </article>
+          </div>
         } @else {
           <h1 class="page-title">{{ 'parking.success.receiptPending' | translate }}</h1>
           <p role="status">{{ 'parking.success.receiptPendingDetail' | translate }}</p>
@@ -255,16 +262,21 @@ export class ParkingSuccessComponent implements OnInit {
   readonly sectorColor = computed(() => normalizeSectorColor(this.receipt()?.sectorColor));
   readonly query = computed(() => {
     const receipt = this.receipt();
-    return { ...this.initialQuery,
-      plate: receipt?.plate ?? '', zone: receipt?.sectorName || receipt?.zone || '',
+    return {
+      ...this.initialQuery,
+      plate: receipt?.plate ?? '',
+      zone: receipt?.sectorName || receipt?.zone || '',
       cityName: receipt?.cityName || receipt?.contractName || '',
-      startTime: receipt?.startTime || '', endTime: receipt?.endTime || '',
+      tariff: receipt?.ticketName || this.initialQuery.tariff || '',
+      startTime: receipt?.startTime || '',
+      endTime: receipt?.endTime || '',
       duration: receipt?.durationLabel || '',
       amount: receipt ? new Intl.NumberFormat(this.locale(), { style: 'currency', currency: 'EUR' }).format(Math.abs(receipt.amount)) : '',
     } as ParkingFlowQuery;
   });
   readonly isExtension = computed(() => this.query().mode === 'extension');
   readonly parkingType = computed(() => (this.isExtension() ? OperationType.PARKING_EXTENSION : OperationType.PARKING));
+  readonly isFreeTicket = computed(() => !!this.receipt() && Math.abs(this.receipt()!.amount) < 0.005);
 
   async ngOnInit(): Promise<void> {
     const timer = setInterval(() => this.now.set(Date.now()), 1000);
@@ -276,12 +288,27 @@ export class ParkingSuccessComponent implements OnInit {
     if (this.loadingReceipt()) return;
     this.loadingReceipt.set(true);
     try {
-      await Promise.all([this.operations.load(), this.wallet.load()]);
-      const id = this.initialQuery['operationId'];
-      const matches = this.operations.operations().filter(operation =>
-        !!id && (operation.id === id || operation.operationNumber === id) && operation.type === this.parkingType() &&
-        (!this.initialQuery.cityId || operation.contractId === Number(this.initialQuery.cityId)));
-      this.receipt.set(this.operations.source() === 'remote' && matches.length === 1 ? matches[0] : null);
+      const retryDelaysMs = [0, 500, 1_500, 3_000];
+      for (const delayMs of retryDelaysMs) {
+        if (delayMs) await new Promise<void>((resolve) => setTimeout(resolve, delayMs));
+        await Promise.all([this.operations.load(), this.wallet.load()]);
+        const id = this.initialQuery['operationId'];
+        const matches = this.operations
+          .operations()
+          .filter(
+            (operation) =>
+              !!id &&
+              (operation.id === id || operation.operationNumber === id) &&
+              operation.type === this.parkingType() &&
+              (!this.initialQuery.cityId || operation.contractId === Number(this.initialQuery.cityId)),
+          );
+        if (this.operations.source() === 'remote' && matches.length === 1) {
+          this.receipt.set(matches[0]);
+          this.operations.syncActiveParkingsFromOperations(this.vehicles.vehicles());
+          return;
+        }
+      }
+      this.receipt.set(null);
       this.operations.syncActiveParkingsFromOperations(this.vehicles.vehicles());
     } catch {
       this.receipt.set(null);
@@ -290,7 +317,9 @@ export class ParkingSuccessComponent implements OnInit {
     }
   }
 
-  startTime(): string { return this.receipt()?.startTime || ''; }
+  startTime(): string {
+    return this.receipt()?.startTime || '';
+  }
 
   startDayLabel(): string {
     return this.dayLabel(this.parkingDate('start'));
@@ -306,8 +335,9 @@ export class ParkingSuccessComponent implements OnInit {
     if (!start || !end) return '';
     const countdownFrom = Math.max(this.now(), start.getTime());
     const remaining = Math.max(0, Math.ceil((end.getTime() - countdownFrom) / 1000));
-    return [Math.floor(remaining / 3600), Math.floor(remaining % 3600 / 60), remaining % 60]
-      .map(value => String(value).padStart(2, '0')).join(':');
+    return [Math.floor(remaining / 3600), Math.floor((remaining % 3600) / 60), remaining % 60]
+      .map((value) => String(value).padStart(2, '0'))
+      .join(':');
   });
 
   private parkingDate(part: 'start' | 'end'): Date | null {
@@ -323,9 +353,12 @@ export class ParkingSuccessComponent implements OnInit {
   private dayLabel(date: Date | null): string {
     if (!date) return '';
     const label = opsRelativeDayLabel(date, new Date(this.now()));
-    return label.startsWith('ops.') ? this.translations.translate(label)
+    return label.startsWith('ops.')
+      ? this.translations.translate(label)
       : new Intl.DateTimeFormat(this.locale(), { timeZone: 'Europe/Madrid', day: 'numeric', month: 'short', year: 'numeric' }).format(date);
   }
 
-  private locale(): string { return this.translations.currentLang$() === 'uk' ? 'en-GB' : this.translations.currentLang$(); }
+  private locale(): string {
+    return this.translations.currentLang$() === 'uk' ? 'en-GB' : this.translations.currentLang$();
+  }
 }

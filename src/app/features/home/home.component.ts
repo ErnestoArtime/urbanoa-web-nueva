@@ -156,7 +156,8 @@ import { ParkingFlowStore } from '../parking/parking-flow.store';
           [primaryText]="'common.accept' | translate"
           [secondaryText]="'common.cancel' | translate"
           (primaryAction)="confirmUnparkAction()"
-          (secondaryAction)="confirmUnpark.set(false)"
+          (secondaryAction)="!unparking() && confirmUnpark.set(false)"
+          [busy]="unparking()"
         />
       }
     </div>
@@ -425,6 +426,7 @@ export class HomeComponent {
   readonly parkingStatusLoading = this.operationsService.activeLoading;
   readonly unparked = signal(false);
   readonly confirmUnpark = signal(false);
+  readonly unparking = signal(false);
   readonly pendingUnparkAmount = signal<number | null>(null);
   private pendingUnparkId = '';
   private pendingUnparkQuote: UnparkingQuoteResult | undefined;
@@ -446,12 +448,18 @@ export class HomeComponent {
   }
 
   async confirmUnparkAction(): Promise<void> {
-    this.confirmUnpark.set(false);
-    if (await this.parkingSessionService.leaveParking(this.pendingUnparkId, this.pendingUnparkQuote)) {
-      this.pendingUnparkId = '';
-      this.pendingUnparkQuote = undefined;
-      this.pendingUnparkAmount.set(null);
-      this.unparked.set(true);
+    if (this.unparking()) return;
+    this.unparking.set(true);
+    try {
+      if (await this.parkingSessionService.leaveParking(this.pendingUnparkId, this.pendingUnparkQuote)) {
+        this.confirmUnpark.set(false);
+        this.pendingUnparkId = '';
+        this.pendingUnparkQuote = undefined;
+        this.pendingUnparkAmount.set(null);
+        this.unparked.set(true);
+      }
+    } finally {
+      this.unparking.set(false);
     }
   }
 

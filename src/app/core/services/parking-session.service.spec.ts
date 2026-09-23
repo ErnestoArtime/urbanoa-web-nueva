@@ -74,7 +74,7 @@ describe('ParkingSessionService', () => {
       activeSource: () => 'remote',
       getActiveParking: jasmine.createSpy().and.returnValue(parking),
       isVehicleParked: jasmine.createSpy().and.returnValue(true),
-      isPlateParked: jasmine.createSpy().and.returnValue(true),
+      isPlateParked: jasmine.createSpy().and.returnValue(false),
       load: jasmine.createSpy().and.resolveTo(),
       syncActiveParkingsFromOperations: jasmine.createSpy(),
     };
@@ -122,7 +122,7 @@ describe('ParkingSessionService', () => {
       activeSource: () => 'remote',
       getActiveParking: jasmine.createSpy().and.returnValue(parking),
       isVehicleParked: jasmine.createSpy().and.returnValue(true),
-      isPlateParked: jasmine.createSpy().and.returnValue(true),
+      isPlateParked: jasmine.createSpy().and.returnValue(false),
       load: jasmine.createSpy().and.resolveTo(),
       syncActiveParkingsFromOperations: jasmine.createSpy(),
       restoreActiveParking: jasmine.createSpy(),

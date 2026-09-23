@@ -133,49 +133,61 @@ import { OPERATION_PERIODS, operationPeriod } from '../operation-period';
           <ul class="list history-list">
             @for (group of groupedHistory(); track group.label) {
               <li class="history-group">
-              <h2 class="history-group-label">{{ group.label | translate }}</h2>
-              <ul class="history-group-items">
-              @for (op of group.items; track op.id) {
-                <li><a
-                  [routerLink]="['/app/operations/detail', op.id]"
-                  class="list-item"
-                    [class.historic-fine-item]="isHistoricFine(op)"
-                  routerLinkActive="active"
-                  [routerLinkActiveOptions]="{ exact: true }"
-                >
-                  <app-operation-icon [type]="op.type" />
-                  <div class="list-item-content">
-                    <div class="list-item-title" [class.finish-op-title]="isFinishParking(op)">
-                      {{ operationLabel(op) | translate }}
-                      @if (isHistoricFine(op)) {
-                        <span class="historic-fine-badge">{{ 'ops.fineDetail.historic' | translate }}</span>
-                      }
-                      @if (op.timePeriod === 2) {
-                        <span class="badge badge-warning">{{ 'ops.active' | translate }}</span>
-                      }
-                    </div>
-                    <div class="list-item-subtitle">
-                      {{ op.zone }}
-                    </div>
-                    @if (op.plate) {
-                      <div class="operation-meta">
-                        {{ op.plate }}
-                        @if (isParking(op) && op.durationLabel) {
-                          <span> · {{ op.durationLabel }}</span>
-                        }
-                      </div>
-                    }
-                  </div>
-                  <div class="operation-price-date">
-                  <span class="operation-date">{{ op.date }}</span>
-                  @if (operationTime(op)) { <span class="operation-time">{{ operationTime(op) }}</span> }
-                  <span [class]="op.amount > 0 ? 'operation-amount operation-amount-credit' : 'operation-amount operation-amount-debit'">
-                    {{ op.amount > 0 ? '+' : '' }}{{ op.amount | number: '1.2-2' }} €
-                  </span>
-                  </div>
-                </a></li>
-              }
-              </ul>
+                <h2 class="history-group-label">{{ group.label | translate }}</h2>
+                <ul class="history-group-items">
+                  @for (op of group.items; track op.id) {
+                    <li>
+                      <a
+                        [routerLink]="['/app/operations/detail', op.id]"
+                        class="list-item"
+                        [class.historic-fine-item]="isHistoricFine(op)"
+                        routerLinkActive="active"
+                        [routerLinkActiveOptions]="{ exact: true }"
+                      >
+                        <app-operation-icon [type]="op.type" />
+                        <div class="list-item-content">
+                          <div class="list-item-title" [class.finish-op-title]="isFinishParking(op)">
+                            {{ operationLabel(op) | translate }}
+                            @if (isHistoricFine(op)) {
+                              <span class="historic-fine-badge">{{ 'ops.fineDetail.historic' | translate }}</span>
+                            }
+                            @if (op.timePeriod === 2) {
+                              <span class="badge badge-warning">{{ 'ops.active' | translate }}</span>
+                            }
+                          </div>
+                          <div class="list-item-subtitle">
+                            {{ op.zone }}{{ op.cityName ? ' · ' + op.cityName : '' }}{{ op.ticketName ? ' · ' + op.ticketName : '' }}
+                            @if (isFreeParking(op)) {
+                              <span> · {{ 'parking.tickets.free' | translate }}</span>
+                            }
+                          </div>
+                          @if (op.plate) {
+                            <div class="operation-meta">
+                              {{ op.plate }}
+                              @if (isParking(op) && op.durationLabel) {
+                                <span> · {{ op.durationLabel }}</span>
+                              }
+                            </div>
+                          }
+                          @if (op.type === OperationType.TOP_UP && op.cardLabel) {
+                            <div class="operation-meta">{{ op.cardLabel }}</div>
+                          }
+                        </div>
+                        <div class="operation-price-date">
+                          <span class="operation-date">{{ op.date }}</span>
+                          @if (operationTime(op)) {
+                            <span class="operation-time">{{ operationTime(op) }}</span>
+                          }
+                          <span
+                            [class]="op.amount > 0 ? 'operation-amount operation-amount-credit' : 'operation-amount operation-amount-debit'"
+                          >
+                            {{ op.amount > 0 ? '+' : '' }}{{ op.amount | number: '1.2-2' }} €
+                          </span>
+                        </div>
+                      </a>
+                    </li>
+                  }
+                </ul>
               </li>
             }
             @if (groupedHistory().length === 0) {
@@ -224,7 +236,8 @@ import { OPERATION_PERIODS, operationPeriod } from '../operation-period';
         [primaryText]="'common.accept' | translate"
         [secondaryText]="'common.cancel' | translate"
         (primaryAction)="confirmUnparkAction()"
-        (secondaryAction)="confirmUnpark.set(false)"
+        (secondaryAction)="!unparking() && confirmUnpark.set(false)"
+        [busy]="unparking()"
       />
     }
   `,
@@ -400,7 +413,9 @@ import { OPERATION_PERIODS, operationPeriod } from '../operation-period';
         letter-spacing: 0.05em;
         background: var(--color-background);
       }
-      .history-group, .history-group-items, .history-group-items > li {
+      .history-group,
+      .history-group-items,
+      .history-group-items > li {
         list-style: none;
         margin: 0;
         padding: 0;
@@ -412,7 +427,8 @@ import { OPERATION_PERIODS, operationPeriod } from '../operation-period';
         gap: 0.2rem;
         flex-shrink: 0;
       }
-      .operation-date, .operation-time {
+      .operation-date,
+      .operation-time {
         color: var(--color-text-muted);
         font-size: var(--text-xs);
         white-space: nowrap;
@@ -520,14 +536,24 @@ import { OPERATION_PERIODS, operationPeriod } from '../operation-period';
         background: transparent;
         border-radius: var(--radius-sm);
         margin: 0 -0.75rem;
-        padding: 0.5rem 0.75rem;
+        min-height: 3rem;
+        padding: 0.65rem 0.75rem;
         border-bottom: 1px solid var(--color-border);
+      }
+      .action-item .list-item-title {
+        color: var(--color-text);
+        font-size: var(--text-sm);
+        font-weight: var(--font-extra);
       }
       .action-item:last-child {
         border-bottom: none;
       }
       .action-item:hover {
         background: var(--color-background);
+      }
+      .action-item:focus-visible {
+        outline: 2px solid var(--color-primary);
+        outline-offset: 2px;
       }
       .action-item.active {
         position: relative;
@@ -536,6 +562,7 @@ import { OPERATION_PERIODS, operationPeriod } from '../operation-period';
         box-shadow: inset 4px 0 0 var(--color-primary);
       }
       .action-item.active .list-item-title {
+        color: var(--color-primary-dark);
         font-weight: var(--font-extra);
       }
       .parking-separator {
@@ -614,6 +641,7 @@ export class OperationsLayoutComponent implements OnInit {
   readonly activeParkingStatusLoading = computed(() => this.operationsService.activeSource() === 'idle');
   readonly unparked = signal(false);
   readonly confirmUnpark = signal(false);
+  readonly unparking = signal(false);
   readonly pendingUnparkAmount = signal<number | null>(null);
   private pendingUnparkId = '';
   private pendingUnparkQuote: UnparkingQuoteResult | undefined;
@@ -682,12 +710,18 @@ export class OperationsLayoutComponent implements OnInit {
   }
 
   async confirmUnparkAction(): Promise<void> {
-    this.confirmUnpark.set(false);
-    if (await this.parkingSessionService.leaveParking(this.pendingUnparkId, this.pendingUnparkQuote)) {
-      this.pendingUnparkId = '';
-      this.pendingUnparkQuote = undefined;
-      this.pendingUnparkAmount.set(null);
-      this.unparked.set(true);
+    if (this.unparking()) return;
+    this.unparking.set(true);
+    try {
+      if (await this.parkingSessionService.leaveParking(this.pendingUnparkId, this.pendingUnparkQuote)) {
+        this.confirmUnpark.set(false);
+        this.pendingUnparkId = '';
+        this.pendingUnparkQuote = undefined;
+        this.pendingUnparkAmount.set(null);
+        this.unparked.set(true);
+      }
+    } finally {
+      this.unparking.set(false);
     }
   }
 
@@ -722,6 +756,10 @@ export class OperationsLayoutComponent implements OnInit {
     return op.type === OperationType.PARKING || op.type === OperationType.PARKING_EXTENSION;
   }
 
+  isFreeParking(op: Operation): boolean {
+    return this.isParking(op) && Math.abs(op.amount) < 0.005;
+  }
+
   operationTime(op: Operation): string {
     return op.operationTime ?? op.startTime ?? op.endTime ?? '';
   }
@@ -751,13 +789,11 @@ export class OperationsLayoutComponent implements OnInit {
 
   private groupByPeriod(list: Operation[]): { label: string; items: Operation[] }[] {
     const now = this.api.serverNow();
-    const groups = new Map<string, Operation[]>(OPERATION_PERIODS.map(label => [label, []]));
+    const groups = new Map<string, Operation[]>(OPERATION_PERIODS.map((label) => [label, []]));
     for (const op of list) {
       groups.get(operationPeriod(op.date, now))!.push(op);
     }
-    return [...groups.entries()]
-      .filter(([, items]) => items.length > 0)
-      .map(([label, items]) => ({ label, items }));
+    return [...groups.entries()].filter(([, items]) => items.length > 0).map(([label, items]) => ({ label, items }));
   }
 
   private toDateValue(d: string): number {
