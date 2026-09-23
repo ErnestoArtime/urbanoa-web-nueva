@@ -96,6 +96,9 @@ import { opsRelativeDayLabel, formatOpsTime, parseOpsDate } from '../../../core/
       @if (!loading() && noExtensionAvailable()) {
         <p class="card no-extension-message" role="status">{{ 'parking.timeSteps.noExtensionAvailable' | translate }}</p>
       }
+      @if (!loading() && invalidTicketBehavior()) {
+        <p class="card no-extension-message" role="status">{{ 'parking.timeSteps.ticketUnavailable' | translate }}</p>
+      }
 
       @if (canContinue()) {
         <div class="price-card card">
@@ -397,7 +400,13 @@ export class ParkingTimeStepsComponent implements OnInit {
   readonly loading = signal(true);
   readonly error = signal(false);
   readonly noExtensionAvailable = signal(false);
-  readonly canContinue = computed(() => this.steps().length > 0 && this.selectedStep().time > 0);
+  readonly invalidTicketBehavior = computed(() => {
+    const behavior = this.query().ticketBehavior;
+    return behavior !== undefined && behavior !== '' && [0, 2, 3].includes(Number(behavior));
+  });
+  readonly canContinue = computed(() => {
+    return this.steps().length > 0 && this.selectedStep().time > 0 && !this.invalidTicketBehavior();
+  });
   private readonly startedAt = this.api.serverNow();
 
   private currentlyLoadedPlate = '';
@@ -420,6 +429,11 @@ export class ParkingTimeStepsComponent implements OnInit {
     this.loading.set(true);
     this.error.set(false);
     this.noExtensionAvailable.set(false);
+    if (this.invalidTicketBehavior()) {
+      this.steps.set([]);
+      this.loading.set(false);
+      return;
+    }
     // Extensions carry the ticket identifier; OPS supplies their durations and prices.
     if (!q.tariffId) {
       this.error.set(true);

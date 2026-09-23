@@ -387,6 +387,8 @@ interface MapParkingZone {
         max-height: 18rem;
         opacity: 1;
         pointer-events: auto;
+        overflow-y: auto;
+        overflow-x: hidden;
       }
       .vehicle-option {
         display: flex;
@@ -763,7 +765,7 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
       return;
     }
     const vehicle = this.selectedVehicle();
-    if (vehicle) this.store.selectVehicle(vehicle.id, vehicle.plate);
+    if (vehicle) this.store.startNewParking(vehicle.id, vehicle.plate);
     const center = this.cityCenter();
     if (!center) {
       this.mapError.set(true);

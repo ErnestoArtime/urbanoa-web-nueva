@@ -184,12 +184,42 @@ describe('ParkingApiService', () => {
       { contractId: 3, plate: '1234567', date: '183423260826', zone: 22002, language: 'ES' },
       { token: 'token' },
     );
-    expect(result.data[0]).toEqual(jasmine.objectContaining({
-      id: '4',
-      desc: 'Lunes - Sábado 0 € - 2,50 € - Domingo - Festivos 0 € - 20,00 €',
-      minAmount: 'Lunes - Sábado 0 € - 2,50 € - Domingo - Festivos 0 € - 20,00 €',
-      sectorId: 22002,
-    }));
+    expect(result.data[0]).toEqual(
+      jasmine.objectContaining({
+        id: '4',
+        desc: 'Lunes - Sábado 0 € - 2,50 € - Domingo - Festivos 0 € - 20,00 €',
+        minAmount: 'Lunes - Sábado 0 € - 2,50 € - Domingo - Festivos 0 € - 20,00 €',
+        sectorId: 22002,
+      }),
+    );
+  });
+
+  it('preserves ticket behavior zero, hides behavior two and marks behavior three as informational', async () => {
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
+    api.post.and.resolveTo({
+      ticketlist: [
+        {
+          ticketId: 1,
+          ticketDesc: 'Residentes',
+          minAmount: 0,
+          schedule: '',
+          ticketBehavior: 0,
+          ticketBehText: 'Zona residencial 24H',
+        },
+        { ticketId: 2, ticketDesc: 'Oculta', minAmount: 0, schedule: '', ticketBehavior: 2 },
+        { ticketId: 3, ticketDesc: 'PMR gratuito', minAmount: 0, schedule: '', ticketBehavior: 3 },
+        { ticketId: 4, ticketDesc: 'Activa', minAmount: 100, schedule: '', ticketBehavior: 1 },
+      ],
+    });
+    const service = serviceWith(api);
+    TestBed.inject(OpsSessionService).setToken('token');
+
+    const result = await service.tickets({ contractId: 3, plate: '1234567', zone: 22002, date: '183423260826' });
+
+    expect(result.data.map((ticket) => ticket.id)).toEqual(['1', '3', '4']);
+    expect(result.data[0]).toEqual(jasmine.objectContaining({ ticketBehavior: 0, informationalOnly: true, resident24h: true, free: true }));
+    expect(result.data[1]).toEqual(jasmine.objectContaining({ ticketBehavior: 3, informationalOnly: true, pmr: true, free: true }));
+    expect(result.data[2]).toEqual(jasmine.objectContaining({ ticketBehavior: 1, informationalOnly: false }));
   });
 
   it('always sends a non-empty map version and the complete sector location', async () => {

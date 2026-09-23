@@ -24,30 +24,57 @@ import { ParkingApiService, ParkingTicketOption } from '../../../core/services/p
       </div>
       <div class="tariff-list">
         @for (tariff of tariffs(); track tariff.id) {
-          <a routerLink="/app/parking/time-steps" [queryParams]="withTariff(tariff)" (click)="onSelectTariff(tariff)" class="ticket-option">
-            <span class="ticket-color" [style.background]="'#' + (query().sectorColor || '2b6767')"></span>
-            <div class="ticket-option-head">
-              <div>
-                <small>{{ query().zone || ('parking.tickets.defaultZone' | translate) }}</small>
-                <h2>{{ tariff.name }}</h2>
-                <p>{{ tariff.desc }}</p>
-              </div>
-              <strong>{{ tariff.price }}</strong>
-            </div>
-            <div class="ticket-meta">
+          @if (tariff.informationalOnly) {
+            <article class="ticket-option ticket-option-information" aria-disabled="true" role="status">
               <span
-                ><small>{{ 'parking.tickets.sector' | translate }}</small
-                ><strong>{{ query().sector || query().street }}</strong></span
-              ><span
-                ><small>{{ 'parking.tickets.schedule' | translate }}</small
-                ><strong>{{ tariff.schedule || '—' }}</strong></span
-              ><span
-                ><small>{{ 'parking.tickets.minimum' | translate }}</small
-                ><strong>{{ tariff.minAmount || '—' }}</strong></span
-              >
-            </div>
-            <span class="ticket-action">{{ 'parking.tickets.getTicket' | translate }} <b>›</b></span>
-          </a>
+                class="ticket-color"
+                [style.background]="'#' + (tariff.sectorColor || query().sectorColor || '2b6767').replace('#', '')"
+              ></span>
+              <p>{{ tariff.desc || tariff.name }}</p>
+            </article>
+          } @else {
+            <a
+              routerLink="/app/parking/time-steps"
+              [queryParams]="withTariff(tariff)"
+              (click)="onSelectTariff(tariff)"
+              class="ticket-option"
+            >
+              <span
+                class="ticket-color"
+                [style.background]="'#' + (tariff.sectorColor || query().sectorColor || '2b6767').replace('#', '')"
+              ></span>
+              <div class="ticket-option-head">
+                <div>
+                  <small>{{ query().zone || ('parking.tickets.defaultZone' | translate) }}</small>
+                  <h2>{{ tariff.name }}</h2>
+                  <p>{{ tariff.desc }}</p>
+                </div>
+                <strong>{{ tariff.price }}</strong>
+              </div>
+              <div class="ticket-meta">
+                <span
+                  ><small>{{ 'parking.tickets.sector' | translate }}</small
+                  ><strong>{{ query().sector || query().street }}</strong></span
+                ><span
+                  ><small>{{ 'parking.tickets.schedule' | translate }}</small
+                  ><strong>{{ tariff.schedule || '—' }}</strong></span
+                ><span
+                  ><small>{{ 'parking.tickets.minimum' | translate }}</small
+                  ><strong>{{ tariff.minAmount || '—' }}</strong></span
+                >
+              </div>
+              <span class="ticket-action">{{ 'parking.tickets.getTicket' | translate }} <b>›</b></span>
+              @if (tariff.free) {
+                <small class="ticket-note">{{ 'parking.tickets.free' | translate }}</small>
+              }
+              @if (tariff.resident24h) {
+                <small class="ticket-note">{{ 'parking.tickets.resident24h' | translate }}</small>
+              }
+              @if (tariff.pmr) {
+                <small class="ticket-note">{{ 'parking.tickets.pmr' | translate }}</small>
+              }
+            </a>
+          }
         }
         @if (!loading() && !tariffs().length) {
           <p class="card" role="status">{{ error() ? 'No se pudieron cargar las tarifas.' : 'No hay tarifas disponibles.' }}</p>
@@ -102,6 +129,19 @@ import { ParkingApiService, ParkingTicketOption } from '../../../core/services/p
       .ticket-option:hover {
         text-decoration: none;
         box-shadow: var(--shadow-md);
+      }
+      .ticket-option-information {
+        min-height: 72px;
+        align-content: center;
+      }
+      .ticket-option-information p {
+        margin: 0;
+        color: var(--color-text);
+        font-weight: var(--font-bold);
+      }
+      .ticket-note {
+        color: var(--color-primary-dark);
+        font-weight: var(--font-bold);
       }
       .ticket-color {
         position: absolute;
@@ -217,7 +257,15 @@ export class ParkingTicketsComponent implements OnInit {
     }
   }
   withTariff(tariff: ParkingTicketOption): Record<string, string> {
-    return { ...this.query(), ticketId: tariff.id, tariffId: tariff.id, tariff: tariff.name, tariffPrice: tariff.price };
+    return {
+      ...this.query(),
+      ticketId: tariff.id,
+      tariffId: tariff.id,
+      tariff: tariff.name,
+      tariffPrice: tariff.price,
+      ticketBehavior: String(tariff.ticketBehavior ?? 1),
+      sectorColor: tariff.sectorColor || this.query().sectorColor,
+    };
   }
   onSelectTariff(tariff: ParkingTicketOption): void {
     this.store.update({
@@ -226,6 +274,8 @@ export class ParkingTicketsComponent implements OnInit {
       tariffId: tariff.id,
       tariffName: tariff.name,
       tariffPrice: tariff.price,
+      ticketBehavior: String(tariff.ticketBehavior ?? 1),
+      sectorColor: tariff.sectorColor || this.query().sectorColor,
     });
   }
 }

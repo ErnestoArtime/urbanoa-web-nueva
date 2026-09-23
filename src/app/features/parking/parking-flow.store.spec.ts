@@ -81,6 +81,17 @@ describe('ParkingFlowStore', () => {
     expect(store.canConfirm()).toBeTrue();
   });
 
+  it('clears stale tariff and time data when starting a new parking with the same vehicle', () => {
+    const store = new ParkingFlowStore();
+    store.update({ vehicleId: 'vehicle-1', plate: '1234567', tariffId: '4', minutes: '60', amount: '1,50 €', mode: 'extension' });
+
+    store.startNewParking('vehicle-1', '1234567');
+
+    expect(store.fromStore()).toEqual(
+      jasmine.objectContaining({ vehicleId: 'vehicle-1', plate: '1234567', tariffId: '', minutes: '', amount: '', mode: 'parking' }),
+    );
+  });
+
   it('starts an extension with the active parking context required by the time-step guard', () => {
     const store = new ParkingFlowStore();
 

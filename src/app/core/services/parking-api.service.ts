@@ -63,6 +63,11 @@ export interface ParkingTicketOption {
   zoneId?: number;
   sectorId?: number;
   sectorColor?: string;
+  ticketBehavior?: number;
+  informationalOnly?: boolean;
+  free?: boolean;
+  resident24h?: boolean;
+  pmr?: boolean;
 }
 
 export interface ParkingSectorOption {
@@ -249,6 +254,8 @@ export class ParkingApiService {
             zoneId?: number;
             sectorId?: number;
             sectorColor?: string;
+            ticketBehavior?: number;
+            ticketBeh?: number;
           }[]
         | null;
     }>(
@@ -263,31 +270,39 @@ export class ParkingApiService {
       { token },
     );
     return {
-      data: (response.ticketlist ?? []).map((ticket) => {
-        const minAmountCents = this.amountInCents(ticket.minAmount);
-        const schedule = this.normalizeTariffText(ticket.schedule) ?? '';
-        const behaviorText = this.normalizeTariffText(ticket.ticketBehText);
-        const minAmountText =
-          typeof ticket.minAmount === 'string'
-            ? this.normalizeTariffText(ticket.minAmount.replace(/<br\s*\/?>/gi, ' · '))
-            : undefined;
-        return {
-          id: String(ticket.ticketId),
-          name: ticket.ticketDesc,
-          desc: behaviorText || schedule,
-          price:
-            minAmountText?.trim()
-              ? minAmountText
-              : `${(minAmountCents / 100).toFixed(2).replace('.', ',')} €`,
-          schedule,
-          maxTime: ticket.maxTime,
-          minAmount: minAmountText,
-          minAmountCents,
-          zoneId: ticket.zoneId,
-          sectorId: ticket.sectorId,
-          sectorColor: ticket.sectorColor,
-        };
-      }),
+      data: (response.ticketlist ?? [])
+        .map((ticket) => {
+          const rawBehavior = ticket.ticketBehavior ?? ticket.ticketBeh;
+          const parsedBehavior = rawBehavior === undefined || rawBehavior === null ? undefined : Number(rawBehavior);
+          return { ticket, behavior: Number.isFinite(parsedBehavior) ? parsedBehavior : undefined };
+        })
+        .filter(({ behavior }) => behavior !== 2)
+        .map(({ ticket, behavior }) => {
+          const minAmountCents = this.amountInCents(ticket.minAmount);
+          const schedule = this.normalizeTariffText(ticket.schedule) ?? '';
+          const behaviorText = this.normalizeTariffText(ticket.ticketBehText);
+          const tariffText = `${ticket.ticketDesc} ${behaviorText ?? ''} ${schedule}`.toLocaleLowerCase('es-ES');
+          const minAmountText =
+            typeof ticket.minAmount === 'string' ? this.normalizeTariffText(ticket.minAmount.replace(/<br\s*\/?>/gi, ' · ')) : undefined;
+          return {
+            id: String(ticket.ticketId),
+            name: ticket.ticketDesc,
+            desc: behaviorText || schedule,
+            price: minAmountText?.trim() ? minAmountText : `${(minAmountCents / 100).toFixed(2).replace('.', ',')} €`,
+            schedule,
+            maxTime: ticket.maxTime,
+            minAmount: minAmountText,
+            minAmountCents,
+            zoneId: ticket.zoneId,
+            sectorId: ticket.sectorId,
+            sectorColor: ticket.sectorColor,
+            ticketBehavior: behavior,
+            informationalOnly: [0, 3].includes(behavior ?? 1),
+            free: minAmountCents === 0,
+            resident24h: /residente|residentes/.test(tariffText) && /24\s*h|24h/.test(tariffText),
+            pmr: /pmr|discapacidad|minusválid/.test(tariffText),
+          };
+        }),
       source: 'remote',
     };
   }
@@ -326,8 +341,9 @@ export class ParkingApiService {
 
   private normalizeTariffText(value: string | undefined): string | undefined {
     if (!value) return value;
-    return value.replace(/\b(lunes|martes|miércoles|miercoles|jueves|viernes|sábado|sabado|domingo)\b/giu, (day) =>
-      day.charAt(0).toLocaleUpperCase('es-ES') + day.slice(1).toLocaleLowerCase('es-ES'),
+    return value.replace(
+      /\b(lunes|martes|miércoles|miercoles|jueves|viernes|sábado|sabado|domingo)\b/giu,
+      (day) => day.charAt(0).toLocaleUpperCase('es-ES') + day.slice(1).toLocaleLowerCase('es-ES'),
     );
   }
 

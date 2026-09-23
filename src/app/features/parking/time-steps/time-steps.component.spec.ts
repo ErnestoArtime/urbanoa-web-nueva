@@ -76,6 +76,17 @@ describe('ParkingTimeStepsComponent extension', () => {
     expect(component.error()).toBeTrue();
   });
 
+  it('does not query prices or enable continuing for an informational ticket', async () => {
+    TestBed.inject(ParkingFlowStore).update({ ticketBehavior: '3' });
+    const component = TestBed.runInInjectionContext(() => new ParkingTimeStepsComponent());
+
+    await component.ngOnInit();
+
+    expect(api.post).not.toHaveBeenCalled();
+    expect(component.invalidTicketBehavior()).toBeTrue();
+    expect(component.canContinue()).toBeFalse();
+  });
+
   it('explains that the parking can no longer be extended when no duration remains', async () => {
     api.post.and.resolveTo({ dateInitial: '120000090926', steps: [] });
     const component = TestBed.runInInjectionContext(() => new ParkingTimeStepsComponent());

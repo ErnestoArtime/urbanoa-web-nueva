@@ -31,6 +31,7 @@ export interface ParkingFlowQuery extends Record<string, string | undefined> {
   paymentCardAmount?: string;
   paymentCardId?: string;
   paymentCardLabel?: string;
+  ticketBehavior?: string;
 }
 
 export function readParkingFlowQuery(route: import('@angular/router').ActivatedRoute): ParkingFlowQuery {

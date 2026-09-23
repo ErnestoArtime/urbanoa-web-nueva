@@ -33,6 +33,7 @@ export interface ParkingFlowState {
   streetId: string;
   ticketId: string;
   ticketName: string;
+  ticketBehavior: string;
   latitude: string;
   longitude: string;
   tariffId: string;
@@ -87,6 +88,10 @@ export class ParkingFlowStore {
       paymentSummary: undefined,
     });
     return true;
+  }
+
+  startNewParking(vehicleId: string, plate: string): void {
+    this.state.set({ vehicleId, plate, mode: 'parking' });
   }
 
   reset(): void {
@@ -156,6 +161,7 @@ export class ParkingFlowStore {
       sectorColor: s.sectorColor ?? '',
       sectorId: s.sectorId ?? s.zoneId ?? '',
       ticketId: s.ticketId ?? '',
+      ticketBehavior: s.ticketBehavior ?? '',
       latitude: s.latitude ?? '',
       longitude: s.longitude ?? '',
       tariffId: s.tariffId ?? '',
@@ -197,6 +203,7 @@ export class ParkingFlowStore {
       sectorName: params['sector'] ?? '',
       ticketId: params['ticketId'] ?? '',
       ticketName: params['ticketName'] ?? '',
+      ticketBehavior: params['ticketBehavior'] ?? '',
       latitude: params['latitude'] ?? '',
       longitude: params['longitude'] ?? '',
       tariffId: params['tariffId'] ?? '',
@@ -232,6 +239,7 @@ export class ParkingFlowStore {
     if (s.sectorName) result['sector'] = s.sectorName;
     if (s.ticketId) result['ticketId'] = s.ticketId;
     if (s.ticketName) result['ticketName'] = s.ticketName;
+    if (s.ticketBehavior) result['ticketBehavior'] = s.ticketBehavior;
     if (s.latitude) result['latitude'] = s.latitude;
     if (s.longitude) result['longitude'] = s.longitude;
     if (s.tariffId) result['tariffId'] = s.tariffId;
