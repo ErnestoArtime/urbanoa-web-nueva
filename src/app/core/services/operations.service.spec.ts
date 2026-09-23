@@ -80,6 +80,27 @@ describe('OperationsService stored data migration', () => {
     expect(api.post.calls.mostRecent().args[1]).toEqual(jasmine.objectContaining({ operationTypeList: jasmine.arrayContaining([7]) }));
   });
 
+  it('uses the first payment method as the card label for wallet top-ups', async () => {
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
+    api.post.and.resolveTo([
+      {
+        operationNumber: 21,
+        operationType: OperationType.TOP_UP,
+        paymentAmount: 1000,
+        opDate: '120000260826',
+        idPaymentMethod1: 44,
+        descPaymentMethod1: 'VISA ···· 4021',
+      },
+    ]);
+    TestBed.overrideProvider(OpsApiClient, { useValue: api });
+    TestBed.overrideProvider(OpsSessionService, { useValue: { token: () => 'token' } });
+    const service = TestBed.inject(OperationsService);
+
+    await service.load();
+
+    expect(service.operations()[0]).toEqual(jasmine.objectContaining({ cardId: '44', cardLabel: 'VISA ···· 4021' }));
+  });
+
   it('keeps the municipality from contractName when the operation omits cityName', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
     api.post.and.resolveTo([

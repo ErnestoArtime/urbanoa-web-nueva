@@ -415,8 +415,21 @@ export class OperationsService {
       endDate: this.datePartOptional(item.parkingEndDate),
       durationLabel: duration == null ? undefined : formatParkingDuration(duration),
       relatedOperationId: item.opBaseId ? String(item.opBaseId) : undefined,
-      cardId: item.idPaymentMethod2 ? String(item.idPaymentMethod2) : undefined,
-      cardLabel: item.descPaymentMethod2 ?? undefined,
+      cardId: (
+        item.operationType === OperationType.TOP_UP
+          ? (item.idPaymentMethod1 ?? item.idPaymentMethod2)
+          : (item.idPaymentMethod2 ?? item.idPaymentMethod1)
+      )
+        ? String(
+            item.operationType === OperationType.TOP_UP
+              ? (item.idPaymentMethod1 ?? item.idPaymentMethod2)
+              : (item.idPaymentMethod2 ?? item.idPaymentMethod1),
+          )
+        : undefined,
+      cardLabel:
+        (item.operationType === OperationType.TOP_UP
+          ? (item.descPaymentMethod1 ?? item.descPaymentMethod2)
+          : (item.descPaymentMethod2 ?? item.descPaymentMethod1)) ?? undefined,
       paymentBreakdown: {
         walletAmount: Math.abs(item.amountPaymentMethod1 ?? 0) / 100,
         cardAmount: Math.abs(item.amountPaymentMethod2 ?? 0) / 100,

@@ -22,7 +22,7 @@ import { CitiesService } from '../../../core/services/cities.service';
     <div class="page operation-detail-page">
       <app-detail-panel-header [title]="detailTitle() | translate" backRoute="/app/operations" />
       @if (op(); as operation) {
-          @if (isFinePaymentDetail()) {
+        @if (isFinePaymentDetail()) {
           <section class="fine-payment-detail">
             <article class="fine-payment-card card">
               <div class="fine-payment-kind">
@@ -45,7 +45,7 @@ import { CitiesService } from '../../../core/services/cities.service';
                 @if (operation.fineStatus === 2 || operation.fineStatus === 3) {
                   <div class="fine-payment-status-message">
                     <span class="fine-payment-row-icon"><app-icon name="warning" [stroke]="false" /></span>
-                    <p>{{ ('ops.fineDetail.statusMessage.' + operation.fineStatus) | translate }}</p>
+                    <p>{{ 'ops.fineDetail.statusMessage.' + operation.fineStatus | translate }}</p>
                   </div>
                 }
               }
@@ -159,7 +159,10 @@ import { CitiesService } from '../../../core/services/cities.service';
                   <app-operation-icon [type]="operation.type" />
                   <div>
                     <strong>{{ operation.plate }}</strong
-                    ><span>{{ operation.zone }}</span>
+                    ><span>{{ operation.zone }}{{ operation.cityName ? ' · ' + operation.cityName : '' }}</span>
+                    @if (operation.ticketName) {
+                      <small class="ticket-context">{{ operation.ticketName }}</small>
+                    }
                   </div>
                   <div class="ticket-date">
                     <small>{{ 'ops.detail.date' | translate }}</small
@@ -187,7 +190,10 @@ import { CitiesService } from '../../../core/services/cities.service';
                     ><small>{{ 'ops.detail.paymentMethod' | translate }}</small>
                   </div>
                   <div>
-                    <strong>{{ absoluteAmount() | number: '1.2-2' }} €</strong><span>{{ paymentMethodLabel() }}</span>
+                    <strong>{{
+                      isFreeTicket() ? ('parking.tickets.free' | translate) : (absoluteAmount() | number: '1.2-2') + ' €'
+                    }}</strong
+                    ><span>{{ paymentMethodLabel() }}</span>
                   </div>
                 </div>
                 @if (hasPaymentBreakdown()) {
@@ -209,7 +215,11 @@ import { CitiesService } from '../../../core/services/cities.service';
               </article>
             </div>
           } @else {
-            <article class="info-detail card">
+            <article
+              class="info-detail card"
+              [class.refund-detail]="isRefundOperation()"
+              [style.--ticket-header-color]="ticketHeaderColor()"
+            >
               @if (transactionId()) {
                 <div class="transaction">
                   <span>{{ 'ops.detail.transactionId' | translate }}</span
@@ -304,15 +314,23 @@ import { CitiesService } from '../../../core/services/cities.service';
         padding: 0.8rem 0;
         border-bottom: 1px solid var(--color-border);
       }
-      .top-up-row:last-child { border-bottom: 0; }
+      .top-up-row:last-child {
+        border-bottom: 0;
+      }
       .top-up-row > div {
         display: flex;
         flex-direction: column;
         gap: 0.12rem;
       }
-      .top-up-row span { color: var(--color-text-muted); }
-      .top-up-row strong { font-weight: var(--font-medium); }
-      .top-up-row .positive { color: var(--color-primary); }
+      .top-up-row span {
+        color: var(--color-text-muted);
+      }
+      .top-up-row strong {
+        font-weight: var(--font-medium);
+      }
+      .top-up-row .positive {
+        color: var(--color-primary);
+      }
       .top-up-row-icon {
         display: grid;
         place-items: center;
@@ -521,6 +539,13 @@ import { CitiesService } from '../../../core/services/cities.service';
       .info-detail {
         padding: 1.2rem 1.4rem;
       }
+      .refund-detail {
+        border-top: 14px solid var(--ticket-header-color, #248cda);
+      }
+      .ticket-context {
+        color: var(--color-text-muted);
+        font-size: var(--text-xs);
+      }
       .transaction {
         display: flex;
         flex-direction: column;
@@ -611,6 +636,7 @@ export class OperationsDetailComponent {
     return labels[this.opType()] ?? 'ops.detail';
   });
   readonly isTicketOperation = computed(() => [OperationType.PARKING, OperationType.PARKING_EXTENSION].includes(this.opType()));
+  readonly isRefundOperation = computed(() => this.opType() === OperationType.REFUND);
   readonly isTopUpOperation = computed(() => this.opType() === OperationType.TOP_UP);
   readonly isAcknowledgedFineDetail = computed(() => {
     const operation = this.op();
@@ -621,6 +647,7 @@ export class OperationsDetailComponent {
   readonly duration = () => this.op()?.durationLabel ?? '—';
   readonly transactionId = computed(() => this.op()?.operationNumber ?? '');
   readonly absoluteAmount = computed(() => Math.abs(this.op()?.amount ?? 0));
+  readonly isFreeTicket = computed(() => this.isTicketOperation() && this.absoluteAmount() < 0.005);
   readonly walletPaymentAmount = computed(() => Math.abs(this.op()?.paymentBreakdown?.walletAmount ?? 0));
   readonly cardPaymentAmount = computed(() => Math.abs(this.op()?.paymentBreakdown?.cardAmount ?? 0));
   readonly hasPaymentBreakdown = computed(() => this.walletPaymentAmount() > 0 || this.cardPaymentAmount() > 0);
@@ -646,7 +673,7 @@ export class OperationsDetailComponent {
     if (this.cardPaymentAmount() > 0) return this.cardPaymentLabel();
     return this.translationService.translate('ops.detail.wallet');
   });
-  readonly topUpPaymentMethod = computed(() => this.op()?.cardLabel || '');
+  readonly topUpPaymentMethod = computed(() => this.op()?.cardLabel || '—');
   readonly balanceAfterTopUp = computed(() => {
     const balance = this.op()?.newBalance;
     return balance == null ? '—' : `${balance.toFixed(2).replace('.', ',')} €`;
@@ -681,6 +708,8 @@ export class OperationsDetailComponent {
     if (o.type === OperationType.REFUND)
       return [
         ...(o.plate ? [{ label: 'ops.detail.plate', value: o.plate, icon: car, positive: undefined }] : []),
+        ...(o.cityName ? [{ label: 'ops.detail.municipality', value: o.cityName, icon: calendar, positive: undefined }] : []),
+        ...(o.ticketName ? [{ label: 'ops.detail.tariff', value: o.ticketName, icon: calendar, positive: undefined }] : []),
         { label: 'ops.detail.datetime', value: this.dateTime(o), icon: calendar, positive: undefined },
         ...(o.durationLabel ? [{ label: 'ops.detail.totalTime', value: o.durationLabel, icon: clock, positive: undefined }] : []),
         { label: 'ops.detail.refund', value: `+${this.absoluteAmount().toFixed(2).replace('.', ',')} €`, icon: money, positive: true },

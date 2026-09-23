@@ -123,9 +123,9 @@ describe('ParkingTicketCardComponent', () => {
         const unpark = fixture.nativeElement.querySelector('.btn-danger') as HTMLButtonElement | null;
         const extend = fixture.nativeElement.querySelector('.btn-primary') as HTMLButtonElement | null;
         expect(!!unpark).toBe(refundable !== 0);
-        expect(!!extend).toBe(extension === 2);
+        expect(!!extend).toBe(extension !== 0);
         if (unpark) expect(unpark.disabled).toBe(refundable !== 2);
-        if (extend) expect(extend.disabled).toBeFalse();
+        if (extend) expect(extend.disabled).toBe(extension !== 2);
       });
     }
   }
