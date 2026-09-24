@@ -5,16 +5,18 @@ import type { ActiveParking } from '../../../core/services/operations.service';
 import { TranslatePipe } from '../../pipes/translate.pipe';
 import { normalizeSectorColor } from '../../utils/sector-color';
 import { formatCountdown, liveCountdownSeconds, parseCountdownToSeconds } from '../../../core/utils/parking-countdown';
+import { TicketCutAlignDirective } from '../../directives/ticket-cut-align.directive';
 
 export type ParkingTicketCardVariant = 'dashboard' | 'operations-current' | 'detail';
 
 @Component({
   selector: 'app-parking-ticket-card',
   standalone: true,
-  imports: [RouterLink, TranslatePipe, LucideCarFront, LucideMapPin, LucideNavigation, LucideTimerReset],
+  imports: [RouterLink, TranslatePipe, LucideCarFront, LucideMapPin, LucideNavigation, LucideTimerReset, TicketCutAlignDirective],
   template: `
     @if (parking(); as active) {
       <article
+        appTicketCutAlign
         class="parking-ticket-card card"
         [class.detail-variant]="variant() === 'detail'"
         [style.--ticket-header-color]="ticketHeaderColor()"
@@ -62,7 +64,7 @@ export type ParkingTicketCardVariant = 'dashboard' | 'operations-current' | 'det
         </div>
 
         @if (variant() !== 'detail') {
-          <div class="ticket-divider"><div class="ticket-divider-line"></div></div>
+          <div class="ticket-divider" data-ticket-cut><div class="ticket-divider-line"></div></div>
           <div class="ticket-actions">
             <button type="button" class="btn btn-secondary btn-sm" [disabled]="!hasCoordinates()" (click)="goToCar.emit(active)">
               <svg lucideNavigation class="action-btn-icon" size="19" strokeWidth="2"></svg>

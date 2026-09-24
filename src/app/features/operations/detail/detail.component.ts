@@ -14,10 +14,19 @@ import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/
 import { LocationMap } from '../../../shared/components/location-map/location-map';
 import { normalizeSectorColor } from '../../../shared/utils/sector-color';
 import { CitiesService } from '../../../core/services/cities.service';
+import { TicketCutAlignDirective } from '../../../shared/directives/ticket-cut-align.directive';
 
 @Component({
   selector: 'app-operations-detail',
-  imports: [DecimalPipe, OperationIconComponent, AppIconComponent, TranslatePipe, DetailPanelHeaderComponent, LocationMap],
+  imports: [
+    DecimalPipe,
+    OperationIconComponent,
+    AppIconComponent,
+    TranslatePipe,
+    DetailPanelHeaderComponent,
+    LocationMap,
+    TicketCutAlignDirective,
+  ],
   template: `
     <div class="page operation-detail-page">
       <app-detail-panel-header [title]="detailTitle() | translate" backRoute="/app/operations" />
@@ -153,7 +162,7 @@ import { CitiesService } from '../../../core/services/cities.service';
             </article>
           } @else if (isTicketStyleOperation()) {
             <div class="ticket-shell">
-              <article class="ticket-card" [style.--ticket-header-color]="ticketHeaderColor()">
+              <article appTicketCutAlign class="ticket-card" [style.--ticket-header-color]="ticketHeaderColor()">
                 <div class="ticket-accent"></div>
                 <div class="ticket-header">
                   <app-operation-icon [type]="operation.type" />
@@ -187,7 +196,7 @@ import { CitiesService } from '../../../core/services/cities.service';
                     ><span>{{ operation.endDate ?? operation.date }}</span>
                   </div>
                 </div>
-                <div class="ticket-cut"></div>
+                <div class="ticket-cut" data-ticket-cut></div>
                 <div class="ticket-total">
                   <div>
                     <span>{{ 'ops.detail.total' | translate }}</span
