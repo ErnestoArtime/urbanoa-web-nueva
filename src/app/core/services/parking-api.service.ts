@@ -297,7 +297,9 @@ export class ParkingApiService {
             sectorId: ticket.sectorId,
             sectorColor: ticket.sectorColor,
             ticketBehavior: behavior,
-            informationalOnly: [0, 3].includes(behavior ?? 1),
+            // QueryTicketsAPI only permits continuing for behavior 1.
+            // Behaviors 0 and 3 are informational; behavior 2 is filtered above.
+            informationalOnly: behavior !== 1,
             free: minAmountCents === 0,
             resident24h: /residente|residentes/.test(tariffText) && /24\s*h|24h/.test(tariffText),
             pmr: /pmr|discapacidad|minusválid/.test(tariffText),

@@ -194,7 +194,7 @@ describe('ParkingApiService', () => {
     );
   });
 
-  it('preserves ticket behavior zero, hides behavior two and marks behavior three as informational', async () => {
+  it('applies every QueryTicketsAPI ticket behavior exactly', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
     api.post.and.resolveTo({
       ticketlist: [
@@ -209,6 +209,7 @@ describe('ParkingApiService', () => {
         { ticketId: 2, ticketDesc: 'Oculta', minAmount: 0, schedule: '', ticketBehavior: 2 },
         { ticketId: 3, ticketDesc: 'PMR gratuito', minAmount: 0, schedule: '', ticketBehavior: 3 },
         { ticketId: 4, ticketDesc: 'Activa', minAmount: 100, schedule: '', ticketBehavior: 1 },
+        { ticketId: 5, ticketDesc: 'Sin comportamiento', minAmount: 100, schedule: '' },
       ],
     });
     const service = serviceWith(api);
@@ -216,10 +217,11 @@ describe('ParkingApiService', () => {
 
     const result = await service.tickets({ contractId: 3, plate: '1234567', zone: 22002, date: '183423260826' });
 
-    expect(result.data.map((ticket) => ticket.id)).toEqual(['1', '3', '4']);
+    expect(result.data.map((ticket) => ticket.id)).toEqual(['1', '3', '4', '5']);
     expect(result.data[0]).toEqual(jasmine.objectContaining({ ticketBehavior: 0, informationalOnly: true, resident24h: true, free: true }));
     expect(result.data[1]).toEqual(jasmine.objectContaining({ ticketBehavior: 3, informationalOnly: true, pmr: true, free: true }));
     expect(result.data[2]).toEqual(jasmine.objectContaining({ ticketBehavior: 1, informationalOnly: false }));
+    expect(result.data[3]).toEqual(jasmine.objectContaining({ ticketBehavior: undefined, informationalOnly: true }));
   });
 
   it('always sends a non-empty map version and the complete sector location', async () => {
