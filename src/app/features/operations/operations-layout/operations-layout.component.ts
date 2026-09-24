@@ -1,4 +1,4 @@
-import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
+import { AfterViewInit, Component, computed, DestroyRef, ElementRef, inject, OnInit, signal, ViewChild } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { RouterLink, RouterLinkActive, NavigationEnd, Router } from '@angular/router';
 import { filter, map, startWith } from 'rxjs/operators';
@@ -110,27 +110,29 @@ import { OPERATION_PERIODS, operationPeriod } from '../operation-period';
             }
           </section>
 
-          <section class="actions-section">
-            <a
-              routerLink="/app/operations/report"
-              routerLinkActive="active"
-              [routerLinkActiveOptions]="{ exact: false }"
-              ariaCurrentWhenActive="page"
-              class="list-item action-item"
-            >
-              <div class="list-item-content">
-                <div class="list-item-title">{{ 'ops.report' | translate }}</div>
-              </div>
-              <span class="list-item-chevron">›</span>
-            </a>
-          </section>
+          <div #historyControls class="history-controls-sticky">
+            <section class="actions-section">
+              <a
+                routerLink="/app/operations/report"
+                routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: false }"
+                ariaCurrentWhenActive="page"
+                class="list-item action-item"
+              >
+                <div class="list-item-content">
+                  <div class="list-item-title">{{ 'ops.report' | translate }}</div>
+                </div>
+                <span class="list-item-chevron">›</span>
+              </a>
+            </section>
 
-          <section class="history-filter-panel">
-            <p class="section-label history-label">{{ 'dashboard.recentOps' | translate }}</p>
-            <app-date-range-filter (rangeChange)="onRangeChange($event)" />
-          </section>
+            <section class="history-filter-panel">
+              <p class="section-label history-label">{{ 'dashboard.recentOps' | translate }}</p>
+              <app-date-range-filter (rangeChange)="onRangeChange($event)" />
+            </section>
+          </div>
 
-          <ul class="list history-list">
+          <ul class="list history-list" [style.--history-controls-height]="historyControlsHeight() + 'px'">
             @for (group of groupedHistory(); track group.label) {
               <li class="history-group">
                 <h2 class="history-group-label">{{ group.label | translate }}</h2>
@@ -383,6 +385,16 @@ import { OPERATION_PERIODS, operationPeriod } from '../operation-period';
         letter-spacing: normal;
         line-height: 1;
       }
+      .history-controls-sticky {
+        position: sticky;
+        top: 0;
+        z-index: 4;
+        padding-top: 1rem;
+        background: var(--color-surface);
+      }
+      .history-controls-sticky .actions-section {
+        margin-top: 0;
+      }
       .history-filter-panel {
         margin: 1rem 0 0.7rem;
         padding: 0.8rem;
@@ -402,8 +414,8 @@ import { OPERATION_PERIODS, operationPeriod } from '../operation-period';
       }
       .history-group-label {
         position: sticky;
-        top: 0;
-        z-index: 2;
+        top: var(--history-controls-height, 0px);
+        z-index: 3;
         margin: 0;
         list-style: none;
         padding: 0.65rem 0.8rem 0.4rem;
@@ -619,7 +631,8 @@ import { OPERATION_PERIODS, operationPeriod } from '../operation-period';
     `,
   ],
 })
-export class OperationsLayoutComponent implements OnInit {
+export class OperationsLayoutComponent implements OnInit, AfterViewInit {
+  @ViewChild('historyControls') private historyControls?: ElementRef<HTMLElement>;
   private readonly api = inject(OpsApiClient);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
@@ -630,6 +643,7 @@ export class OperationsLayoutComponent implements OnInit {
   private readonly vehicleService = inject(VehicleService);
   private readonly operations = this.operationsService.operations;
   private readonly rangeFilter = signal<DateRange>({ from: '', to: '' });
+  readonly historyControlsHeight = signal(0);
   private readonly unpaidFinesService = inject(UnpaidFinesService);
   readonly unpaidFinesCount = () => this.unpaidFinesService.fines().length;
   readonly OperationType = OperationType;
@@ -672,6 +686,18 @@ export class OperationsLayoutComponent implements OnInit {
           this.reload();
         }
       });
+  }
+
+  ngAfterViewInit(): void {
+    const controls = this.historyControls?.nativeElement;
+    if (!controls) return;
+
+    const updateHeight = () => this.historyControlsHeight.set(controls.getBoundingClientRect().height);
+    updateHeight();
+
+    const resizeObserver = new ResizeObserver(updateHeight);
+    resizeObserver.observe(controls);
+    this.destroyRef.onDestroy(() => resizeObserver.disconnect());
   }
 
   private async reload(): Promise<void> {
