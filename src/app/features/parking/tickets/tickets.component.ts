@@ -33,9 +33,8 @@ import { ParkingApiService, ParkingTicketOption } from '../../../core/services/p
             <div
               class="ticket-zone-header"
               [style.background]="'#' + (tariff.sectorColor || query().sectorColor || '2b6767').replace('#', '')"
-            >
-              {{ query().zone || ('parking.tickets.defaultZone' | translate) }}
-            </div>
+              aria-hidden="true"
+            ></div>
             <div class="ticket-content">
               <div class="ticket-option-head">
                 <h2>{{ tariff.name }}</h2>
@@ -115,11 +114,7 @@ import { ParkingApiService, ParkingTicketOption } from '../../../core/services/p
         box-shadow: var(--shadow-sm);
       }
       .ticket-zone-header {
-        padding: 0.55rem 1rem;
-        color: #fff;
-        font-size: var(--text-sm);
-        font-weight: var(--font-extra);
-        text-align: center;
+        height: 6px;
       }
       .ticket-content {
         display: grid;

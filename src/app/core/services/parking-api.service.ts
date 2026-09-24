@@ -256,6 +256,7 @@ export class ParkingApiService {
             sectorColor?: string;
             ticketBehavior?: number;
             ticketBeh?: number;
+            hasTicket?: number | string | boolean;
           }[]
         | null;
     }>(
@@ -286,6 +287,7 @@ export class ParkingApiService {
           const tariffText = `${ticket.ticketDesc} ${behaviorText ?? ''} ${schedule} ${minAmountText ?? ''}`.toLocaleLowerCase('es-ES');
           const explicitlyFree = /\bgratuit[oa]s?\b|\bgratis\b/.test(tariffText);
           const hasZeroAmount = this.hasOnlyZeroAmounts(ticket.minAmount);
+          const isPmr = /pmr|discapacidad|minusválid/.test(tariffText);
           return {
             id: String(ticket.ticketId),
             name: ticket.ticketDesc,
@@ -299,14 +301,14 @@ export class ParkingApiService {
             sectorId: ticket.sectorId,
             sectorColor: ticket.sectorColor,
             ticketBehavior: behavior,
-            // QueryTicketsAPI only permits continuing for behavior 1.
-            // Behaviors 0 and 3 are informational; behavior 2 is filtered above.
+            // hasTicket describes the vehicle's current state, not whether this tariff
+            // requires obtaining a ticket. The APK drives the action from ticketBehavior.
             informationalOnly: behavior !== 1,
             // A zero can be the lower bound of a paid range (for example 0 € - 20 €).
-            // Behavior 3 with a zero amount is the free informational tariff used by PMR.
-            free: explicitlyFree || (behavior === 3 && hasZeroAmount),
+            // PMR behavior 3 is free even when OPS repeats the rotation price range.
+            free: explicitlyFree || (behavior === 3 && (hasZeroAmount || isPmr)),
             resident24h: /residente|residentes/.test(tariffText) && /24\s*h|24h/.test(tariffText),
-            pmr: /pmr|discapacidad|minusválid/.test(tariffText),
+            pmr: isPmr,
           };
         }),
       source: 'remote',

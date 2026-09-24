@@ -213,13 +213,14 @@ describe('ParkingApiService', () => {
         {
           ticketId: 3,
           ticketDesc: 'PMR',
-          minAmount: 'Gratuito',
+          minAmount: 'L - S 0 € - 2,00 €',
           schedule: 'Todos los días',
           maxTime: 'Sin límite de tiempo',
           ticketBehavior: 3,
+          hasTicket: 0,
           ticketBehText: 'Con la tarjeta europea de movilidad reducida, no es necesario obtener un ticket.',
         },
-        { ticketId: 4, ticketDesc: 'Activa', minAmount: 100, schedule: '', ticketBehavior: 1 },
+        { ticketId: 4, ticketDesc: 'Activa', minAmount: 0, schedule: '', ticketBehavior: 1, hasTicket: 0 },
         { ticketId: 5, ticketDesc: 'Sin comportamiento', minAmount: 100, schedule: '' },
         { ticketId: 6, ticketDesc: 'Restringida', minAmount: 'No permite aparcar', schedule: '', ticketBehavior: 3 },
       ],
@@ -238,14 +239,14 @@ describe('ParkingApiService', () => {
         name: 'PMR',
         schedule: 'Todos los días',
         maxTime: 'Sin límite de tiempo',
-        minAmount: 'Gratuito',
+        minAmount: 'L - S 0 € - 2,00 €',
         ticketBehavior: 3,
         informationalOnly: true,
         pmr: true,
         free: true,
       }),
     );
-    expect(result.data[2]).toEqual(jasmine.objectContaining({ ticketBehavior: 1, informationalOnly: false }));
+    expect(result.data[2]).toEqual(jasmine.objectContaining({ ticketBehavior: 1, informationalOnly: false, free: false }));
     expect(result.data[3]).toEqual(jasmine.objectContaining({ ticketBehavior: undefined, informationalOnly: true }));
     expect(result.data[4]).toEqual(jasmine.objectContaining({ ticketBehavior: 3, informationalOnly: true, free: false }));
   });
