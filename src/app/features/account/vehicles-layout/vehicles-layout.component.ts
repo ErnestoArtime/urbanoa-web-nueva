@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { RouterLink, NavigationEnd, Router } from '@angular/router';
 import { filter, map, startWith } from 'rxjs/operators';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -15,9 +15,11 @@ import type { Vehicle } from '../../../shared/models/vehicle';
   imports: [RouterLink, SplitViewComponent, TranslatePipe, AppIconComponent],
   template: `
     <app-split-view [hideList]="isChildRoute()" [hideDetail]="!isChildRoute()">
-      <div splitList class="page has-sticky-actions">
+      <div splitList class="page has-sticky-actions" [attr.aria-busy]="loadingVehicles()">
         <h1 class="page-title">{{ 'account.menu.vehicles' | translate }}</h1>
-        @if (vehicles().length > 0) {
+        @if (loadingVehicles()) {
+          <span class="sr-only" role="status">{{ 'common.loading' | translate }}</span>
+        } @else if (vehicles().length > 0) {
           <ul class="list card vehicles-list">
             @for (v of vehicles(); track v.id) {
               <li class="list-item vehicle-item">
@@ -69,6 +71,17 @@ import type { Vehicle } from '../../../shared/models/vehicle';
         flex: 1;
         min-height: 0;
         overflow-y: auto;
+      }
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
       }
       .list-item.vehicle-item {
         padding: 0;
@@ -124,6 +137,7 @@ export class VehiclesLayoutComponent implements OnInit {
   private readonly parkingSessionService = inject(ParkingSessionService);
   private readonly translation = inject(TranslationService);
   readonly vehicles = this.vehicleService.vehicles;
+  readonly loadingVehicles = signal(true);
   private readonly router = inject(Router);
   private readonly url = toSignal(
     this.router.events.pipe(
@@ -143,7 +157,12 @@ export class VehiclesLayoutComponent implements OnInit {
   }
 
   async retry(): Promise<void> {
-    await this.vehicleService.load();
+    this.loadingVehicles.set(true);
+    try {
+      await this.vehicleService.load();
+    } finally {
+      this.loadingVehicles.set(false);
+    }
     await this.parkingSessionService.loadParkingStatuses(this.vehicles());
   }
 
