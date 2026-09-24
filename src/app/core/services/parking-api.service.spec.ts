@@ -1,7 +1,7 @@
 import { provideZonelessChangeDetection } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { OpsApiClient } from '../api/ops-api-client.service';
-import { OPS_OPERATING_SYSTEM } from '../api/ops-client.constants';
+import { OPS_OPERATING_SYSTEMS } from '../api/ops-client.constants';
 import { OpsSessionService } from '../api/ops-session.service';
 import { ParkingApiService } from './parking-api.service';
 import { TranslationService } from './translation.service';
@@ -54,8 +54,8 @@ describe('ParkingApiService', () => {
         sector: 4,
         quantity: 125,
         tariffType: 2,
-        cloudToken: '',
-        operatingSystem: OPS_OPERATING_SYSTEM,
+        cloudToken: jasmine.any(String),
+        operatingSystem: OPS_OPERATING_SYSTEMS.android,
         date: '120000130826',
         time: 60,
         latitude: 43.2,
@@ -129,6 +129,74 @@ describe('ParkingApiService', () => {
       }),
       { token: 'token', timeoutMs: 60_000 },
     );
+  });
+
+  it('rejects unparking error -4 instead of treating it as a no-refund confirmation', async () => {
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
+    api.post.and.resolveTo({
+      error: -4,
+      tariffType: 0,
+      tariffTime: 0,
+      payAmount: 0,
+      dateInitial: '',
+      dateEnd: '',
+      moneyReturned: false,
+    });
+    const service = serviceWith(api);
+    TestBed.inject(OpsSessionService).setToken('token');
+
+    const result = await service.queryUnparking({ contractId: 3, plate: '1234ABC', groupId: 4, ticketId: 7 });
+
+    expect(result.success).toBeFalse();
+    expect(result.error instanceof Error ? result.error.message : '').toBe('La matrícula no tiene derechos al desaparcar');
+  });
+
+  [
+    [-1, 'No se pudo calcular el desaparcar. (autenticación no válida)'],
+    [-4, 'La matrícula no tiene derechos al desaparcar'],
+    [-9, 'No se pudo calcular el desaparcar. (error genérico)'],
+    [-10, 'No se pudo calcular el desaparcar. (parámetro de entrada no válido)'],
+    [-11, 'No se pudo calcular el desaparcar. (parámetro de entrada faltante)'],
+    [-12, 'No se pudo calcular el desaparcar. (error del sistema)'],
+  ].forEach(([code, message]) => {
+    it(`maps unparking result ${code} to its user-facing error`, async () => {
+      const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
+      api.post.and.resolveTo({ result: code as number, tariffType: 0, tariffTime: 0, payAmount: 0, moneyReturned: false });
+      const service = serviceWith(api);
+      TestBed.inject(OpsSessionService).setToken('token');
+
+      const result = await service.queryUnparking({ contractId: 3, plate: '1234ABC', groupId: 4, ticketId: 7 });
+
+      expect(result.success).toBeFalse();
+      expect(result.error instanceof Error ? result.error.message : '').toBe(message as string);
+    });
+  });
+
+  it('confirms a prepared no-refund unparking with quantity zero', async () => {
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
+    api.post.and.resolveTo('ok');
+    const service = serviceWith(api);
+    TestBed.inject(OpsSessionService).setToken('token');
+
+    const result = await service.unpark(
+      { contractId: 3, plate: '1234ABC', groupId: 4, ticketId: 7 },
+      { success: true, source: 'remote', refundAmount: 0, quantity: 0 },
+    );
+
+    expect(api.post).toHaveBeenCalledOnceWith(
+      'OPSWebServicesAPI/ConfirmUnParkingOperationAPI',
+      jasmine.objectContaining({
+        contractId: 3,
+        plate: '1234ABC',
+        quantity: 0,
+        groupId: 4,
+        ticketId: 7,
+        cloudToken: jasmine.any(String),
+        operatingSystem: OPS_OPERATING_SYSTEMS.android,
+      }),
+      { token: 'token' },
+    );
+    expect(result).toEqual(jasmine.objectContaining({ success: true, source: 'remote', refundAmount: 0 }));
   });
 
   it('returns the PSD2 challenge URL from the new confirmation response object', async () => {
@@ -299,13 +367,20 @@ describe('ParkingApiService', () => {
     ]);
     expect(api.post.calls.argsFor(1)).toEqual([
       'OPSWebServicesAPI/ConfirmUnParkingOperationAPI',
-      jasmine.objectContaining({ contractId: 3, plate: '1234ABC', quantity: 125, date: jasmine.stringMatching(/^\d{12}$/) }),
+      jasmine.objectContaining({
+        contractId: 3,
+        plate: '1234ABC',
+        quantity: 125,
+        cloudToken: jasmine.any(String),
+        operatingSystem: OPS_OPERATING_SYSTEMS.android,
+        date: jasmine.stringMatching(/^\d{12}$/),
+      }),
       { token: 'token' },
     ]);
     expect(result).toEqual(jasmine.objectContaining({ source: 'remote', refundAmount: 1.25 }));
   });
 
-  it('does not confirm unparking when the quote rejects the plate', async () => {
+  it('does not confirm unparking when the quote returns result -4', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
     api.post.and.resolveTo({ result: -4, tariffType: 0, tariffTime: 0, payAmount: 0, moneyReturned: false });
     const service = serviceWith(api);

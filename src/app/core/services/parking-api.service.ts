@@ -1,7 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { OpsApiClient } from '../api/ops-api-client.service';
 import { OpsApiError } from '../api/ops-api.types';
-import { OPS_OPERATING_SYSTEM } from '../api/ops-client.constants';
+import { getOpsCloudToken, OPS_OPERATING_SYSTEMS } from '../api/ops-client.constants';
 import { OPS_ENDPOINTS } from '../api/ops-endpoints';
 import { OpsSessionService } from '../api/ops-session.service';
 import { formatOpsDate } from '../utils/ops-date';
@@ -43,6 +43,7 @@ export interface UnparkingQuoteResult extends ParkingApiResult {
 
 interface UnparkingResponseDto {
   result?: number;
+  error?: number;
   tariffType: number;
   tariffTime: number;
   payAmount: number;
@@ -115,8 +116,9 @@ export class ParkingApiService {
           sector: input.sector,
           quantity: input.quantity,
           tariffType: input.tariffType,
-          cloudToken: '',
-          operatingSystem: OPS_OPERATING_SYSTEM,
+          cloudToken: getOpsCloudToken(),
+          // Compatibility with the current OPS/Swagger parking contract.
+          operatingSystem: OPS_OPERATING_SYSTEMS.android,
           date: input.date,
           time: input.time,
           latitude: input.latitude,
@@ -165,8 +167,9 @@ export class ParkingApiService {
         { ...input, datetime: date },
         { token },
       );
-      if (quote.result !== undefined && quote.result !== 1) {
-        const message = this.unparkResultMessage(quote.result);
+      const result = quote.result ?? (quote.error !== undefined && quote.error < 0 ? quote.error : undefined);
+      if (result !== undefined && result !== 1) {
+        const message = this.unparkResultMessage(result);
         return {
           success: false,
           source: 'remote',
@@ -203,8 +206,9 @@ export class ParkingApiService {
           quantity: quote.quantity ?? 0,
           groupId: input.groupId,
           ticketId: input.ticketId,
-          cloudToken: '',
-          operatingSystem: OPS_OPERATING_SYSTEM,
+          cloudToken: getOpsCloudToken(),
+          // Compatibility with the current OPS/Swagger parking contract.
+          operatingSystem: OPS_OPERATING_SYSTEMS.android,
           date,
         },
         { token },
