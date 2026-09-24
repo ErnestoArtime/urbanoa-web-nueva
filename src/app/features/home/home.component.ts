@@ -130,9 +130,9 @@ import { ParkingFlowStore } from '../parking/parking-flow.store';
         <app-result-modal
           type="unpark"
           [title]="'parking.ended' | translate"
-          [message]="'dashboard.unparkSuccessDetail' | translate"
+          [message]="unparkedRefundAmount() > 0 ? ('dashboard.unparkSuccessDetail' | translate) : undefined"
           [primaryText]="'common.accept' | translate"
-          (primaryAction)="unparked.set(false)"
+          (primaryAction)="dismissUnparked()"
         />
       }
       @if (unparkError(); as error) {
@@ -425,6 +425,7 @@ export class HomeComponent {
   readonly initialLoading = computed(() => this.dashboardApi.source() === 'idle');
   readonly parkingStatusLoading = this.operationsService.activeLoading;
   readonly unparked = signal(false);
+  readonly unparkedRefundAmount = signal(0);
   readonly confirmUnpark = signal(false);
   readonly unparking = signal(false);
   readonly pendingUnparkAmount = signal<number | null>(null);
@@ -452,6 +453,7 @@ export class HomeComponent {
     this.unparking.set(true);
     try {
       if (await this.parkingSessionService.leaveParking(this.pendingUnparkId, this.pendingUnparkQuote)) {
+        this.unparkedRefundAmount.set(this.pendingUnparkAmount() ?? 0);
         this.confirmUnpark.set(false);
         this.pendingUnparkId = '';
         this.pendingUnparkQuote = undefined;
@@ -461,6 +463,11 @@ export class HomeComponent {
     } finally {
       this.unparking.set(false);
     }
+  }
+
+  dismissUnparked(): void {
+    this.unparked.set(false);
+    this.unparkedRefundAmount.set(0);
   }
 
   onExtend(parking: ActiveParking): void {

@@ -75,13 +75,8 @@ import { OPERATION_PERIODS, operationPeriod } from '../operation-period';
           }
 
           <section class="current-section">
-            <p class="section-label">
-              {{ 'ops.inProgress' | translate }}
-              @if (activeParkingsCount() > 1) {
-                <span class="active-parkings-count">{{ activeParkingsCount() }}</span>
-              }
-            </p>
             @if (activeParkingStatusLoading()) {
+              <p class="section-label">{{ 'ops.inProgress' | translate }}</p>
               <div
                 class="skeleton-card skeleton-card-current active-parking-skeleton"
                 role="status"
@@ -90,20 +85,37 @@ import { OPERATION_PERIODS, operationPeriod } from '../operation-period';
               >
                 <span class="sr-only">{{ 'common.loading' | translate }}</span>
               </div>
-            } @else if (activeParkings().length > 0) {
-              @for (parking of activeParkings(); track parking.id) {
-                <app-parking-ticket-card
-                  [parking]="parking"
-                  variant="operations-current"
-                  (leaveParking)="onUnpark($event.id)"
-                  (extendTime)="onExtend($event)"
-                  (goToCar)="onGoToCar($event)"
-                />
-                @if (!$last) {
-                  <div class="parking-separator"></div>
+            } @else if (activeParkings().length === 1) {
+              <p class="section-label">{{ 'ops.inProgress' | translate }}</p>
+              <app-parking-ticket-card
+                [parking]="activeParkings()[0]"
+                variant="operations-current"
+                (leaveParking)="onUnpark($event.id)"
+                (extendTime)="onExtend($event)"
+                (goToCar)="onGoToCar($event)"
+              />
+            } @else if (activeParkings().length > 1) {
+              <details class="active-parkings-section" open>
+                <summary class="active-parkings-summary">
+                  <span class="section-label">{{ 'ops.inProgress' | translate }}</span>
+                  <span class="active-parkings-count" aria-hidden="true">{{ activeParkings().length }}</span>
+                  <span class="sr-only">{{ 'dashboard.activeParkingsCount' | translate: { count: activeParkings().length } }}</span>
+                </summary>
+                @for (parking of activeParkings(); track parking.id) {
+                  <app-parking-ticket-card
+                    [parking]="parking"
+                    variant="operations-current"
+                    (leaveParking)="onUnpark($event.id)"
+                    (extendTime)="onExtend($event)"
+                    (goToCar)="onGoToCar($event)"
+                  />
+                  @if (!$last) {
+                    <div class="parking-separator"></div>
+                  }
                 }
-              }
+              </details>
             } @else {
+              <p class="section-label">{{ 'ops.inProgress' | translate }}</p>
               <article class="active-operation empty-active-operation">
                 <p>{{ 'ops.noActive' | translate }}</p>
               </article>
@@ -212,9 +224,9 @@ import { OPERATION_PERIODS, operationPeriod } from '../operation-period';
       <app-result-modal
         type="unpark"
         [title]="'parking.ended' | translate"
-        [message]="'dashboard.unparkSuccessDetail' | translate"
+        [message]="unparkedRefundAmount() > 0 ? ('dashboard.unparkSuccessDetail' | translate) : undefined"
         [primaryText]="'common.accept' | translate"
-        (primaryAction)="unparked.set(false)"
+        (primaryAction)="dismissUnparked()"
       />
     }
     @if (unparkError(); as error) {
@@ -370,19 +382,42 @@ import { OPERATION_PERIODS, operationPeriod } from '../operation-period';
         text-transform: uppercase;
         letter-spacing: 0.06em;
       }
-      .active-parkings-count {
-        display: inline-flex;
+      .active-parkings-summary {
+        display: flex;
         align-items: center;
-        justify-content: center;
+        gap: 0.5rem;
+        min-height: 2.75rem;
+        padding: 0.35rem 0.15rem;
+        cursor: pointer;
+        list-style: none;
+      }
+      .active-parkings-summary::-webkit-details-marker {
+        display: none;
+      }
+      .active-parkings-summary::after {
+        width: 0.55rem;
+        height: 0.55rem;
+        margin-right: 0.35rem;
+        margin-left: auto;
+        border-right: 2px solid var(--color-primary);
+        border-bottom: 2px solid var(--color-primary);
+        content: '';
+        transform: rotate(45deg) translateY(-0.15rem);
+      }
+      .active-parkings-section[open] .active-parkings-summary::after {
+        transform: rotate(225deg) translateY(-0.15rem);
+      }
+      .active-parkings-count {
+        display: inline-grid;
+        place-items: center;
         min-width: 1.5rem;
         height: 1.5rem;
         padding: 0 0.35rem;
         border-radius: var(--radius-pill);
-        background: var(--color-active);
-        color: var(--color-primary-dark);
+        background: var(--color-primary);
+        color: #fff;
         font-size: var(--text-xs);
         font-weight: var(--font-extra);
-        letter-spacing: normal;
         line-height: 1;
       }
       .history-controls-sticky {
@@ -421,6 +456,9 @@ import { OPERATION_PERIODS, operationPeriod } from '../operation-period';
         border-bottom: none;
       }
       .history-group-label {
+        position: sticky;
+        top: var(--history-controls-height, 0px);
+        z-index: 3;
         display: flex;
         align-items: center;
         gap: 0.5rem;
@@ -681,10 +719,10 @@ export class OperationsLayoutComponent implements OnInit, AfterViewInit {
   readonly OPERATION_TYPE_LABELS = OPERATION_TYPE_LABELS;
   readonly activeParkings = this.parkingSessionService.activeParkings;
   readonly unparkError = this.parkingSessionService.unparkError;
-  readonly activeParkingsCount = this.parkingSessionService.activeParkingsCount;
   readonly operationsSource = this.operationsService.source;
   readonly activeParkingStatusLoading = computed(() => this.operationsService.activeSource() === 'idle');
   readonly unparked = signal(false);
+  readonly unparkedRefundAmount = signal(0);
   readonly confirmUnpark = signal(false);
   readonly unparking = signal(false);
   readonly pendingUnparkAmount = signal<number | null>(null);
@@ -771,6 +809,7 @@ export class OperationsLayoutComponent implements OnInit, AfterViewInit {
     this.unparking.set(true);
     try {
       if (await this.parkingSessionService.leaveParking(this.pendingUnparkId, this.pendingUnparkQuote)) {
+        this.unparkedRefundAmount.set(this.pendingUnparkAmount() ?? 0);
         this.confirmUnpark.set(false);
         this.pendingUnparkId = '';
         this.pendingUnparkQuote = undefined;
@@ -780,6 +819,11 @@ export class OperationsLayoutComponent implements OnInit, AfterViewInit {
     } finally {
       this.unparking.set(false);
     }
+  }
+
+  dismissUnparked(): void {
+    this.unparked.set(false);
+    this.unparkedRefundAmount.set(0);
   }
 
   onExtend(parking: ActiveParking): void {
