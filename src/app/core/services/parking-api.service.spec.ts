@@ -165,6 +165,7 @@ describe('ParkingApiService', () => {
           minAmount: 'Lunes - sábado 0 € - 2,50 € - Domingo - Festivos 0 € - 20,00 €',
           schedule: 'Todos los días 9:00 - 20:00',
           ticketBehText: 'Lunes - sábado 0 € - 2,50 € - Domingo - Festivos 0 € - 20,00 €',
+          ticketBehavior: 1,
           sectorId: 22002,
         },
       ],
@@ -190,6 +191,8 @@ describe('ParkingApiService', () => {
         desc: 'Lunes - Sábado 0 € - 2,50 € - Domingo - Festivos 0 € - 20,00 €',
         minAmount: 'Lunes - Sábado 0 € - 2,50 € - Domingo - Festivos 0 € - 20,00 €',
         sectorId: 22002,
+        informationalOnly: false,
+        free: false,
       }),
     );
   });
@@ -207,9 +210,18 @@ describe('ParkingApiService', () => {
           ticketBehText: 'Zona residencial 24H',
         },
         { ticketId: 2, ticketDesc: 'Oculta', minAmount: 0, schedule: '', ticketBehavior: 2 },
-        { ticketId: 3, ticketDesc: 'PMR gratuito', minAmount: 0, schedule: '', ticketBehavior: 3 },
+        {
+          ticketId: 3,
+          ticketDesc: 'PMR',
+          minAmount: 'Gratuito',
+          schedule: 'Todos los días',
+          maxTime: 'Sin límite de tiempo',
+          ticketBehavior: 3,
+          ticketBehText: 'Con la tarjeta europea de movilidad reducida, no es necesario obtener un ticket.',
+        },
         { ticketId: 4, ticketDesc: 'Activa', minAmount: 100, schedule: '', ticketBehavior: 1 },
         { ticketId: 5, ticketDesc: 'Sin comportamiento', minAmount: 100, schedule: '' },
+        { ticketId: 6, ticketDesc: 'Restringida', minAmount: 'No permite aparcar', schedule: '', ticketBehavior: 3 },
       ],
     });
     const service = serviceWith(api);
@@ -217,11 +229,25 @@ describe('ParkingApiService', () => {
 
     const result = await service.tickets({ contractId: 3, plate: '1234567', zone: 22002, date: '183423260826' });
 
-    expect(result.data.map((ticket) => ticket.id)).toEqual(['1', '3', '4', '5']);
-    expect(result.data[0]).toEqual(jasmine.objectContaining({ ticketBehavior: 0, informationalOnly: true, resident24h: true, free: true }));
-    expect(result.data[1]).toEqual(jasmine.objectContaining({ ticketBehavior: 3, informationalOnly: true, pmr: true, free: true }));
+    expect(result.data.map((ticket) => ticket.id)).toEqual(['1', '3', '4', '5', '6']);
+    expect(result.data[0]).toEqual(
+      jasmine.objectContaining({ ticketBehavior: 0, informationalOnly: true, resident24h: true, free: false }),
+    );
+    expect(result.data[1]).toEqual(
+      jasmine.objectContaining({
+        name: 'PMR',
+        schedule: 'Todos los días',
+        maxTime: 'Sin límite de tiempo',
+        minAmount: 'Gratuito',
+        ticketBehavior: 3,
+        informationalOnly: true,
+        pmr: true,
+        free: true,
+      }),
+    );
     expect(result.data[2]).toEqual(jasmine.objectContaining({ ticketBehavior: 1, informationalOnly: false }));
     expect(result.data[3]).toEqual(jasmine.objectContaining({ ticketBehavior: undefined, informationalOnly: true }));
+    expect(result.data[4]).toEqual(jasmine.objectContaining({ ticketBehavior: 3, informationalOnly: true, free: false }));
   });
 
   it('always sends a non-empty map version and the complete sector location', async () => {

@@ -281,9 +281,11 @@ export class ParkingApiService {
           const minAmountCents = this.amountInCents(ticket.minAmount);
           const schedule = this.normalizeTariffText(ticket.schedule) ?? '';
           const behaviorText = this.normalizeTariffText(ticket.ticketBehText);
-          const tariffText = `${ticket.ticketDesc} ${behaviorText ?? ''} ${schedule}`.toLocaleLowerCase('es-ES');
           const minAmountText =
             typeof ticket.minAmount === 'string' ? this.normalizeTariffText(ticket.minAmount.replace(/<br\s*\/?>/gi, ' · ')) : undefined;
+          const tariffText = `${ticket.ticketDesc} ${behaviorText ?? ''} ${schedule} ${minAmountText ?? ''}`.toLocaleLowerCase('es-ES');
+          const explicitlyFree = /\bgratuit[oa]s?\b|\bgratis\b/.test(tariffText);
+          const hasZeroAmount = this.hasOnlyZeroAmounts(ticket.minAmount);
           return {
             id: String(ticket.ticketId),
             name: ticket.ticketDesc,
@@ -300,7 +302,9 @@ export class ParkingApiService {
             // QueryTicketsAPI only permits continuing for behavior 1.
             // Behaviors 0 and 3 are informational; behavior 2 is filtered above.
             informationalOnly: behavior !== 1,
-            free: minAmountCents === 0,
+            // A zero can be the lower bound of a paid range (for example 0 € - 20 €).
+            // Behavior 3 with a zero amount is the free informational tariff used by PMR.
+            free: explicitlyFree || (behavior === 3 && hasZeroAmount),
             resident24h: /residente|residentes/.test(tariffText) && /24\s*h|24h/.test(tariffText),
             pmr: /pmr|discapacidad|minusválid/.test(tariffText),
           };
@@ -339,6 +343,13 @@ export class ParkingApiService {
     const match = value.match(/[\d]+(?:[,.][\d]+)?/);
     if (!match) return 0;
     return Math.round(Number(match[0].replace(',', '.')) * 100);
+  }
+
+  private hasOnlyZeroAmounts(value: number | string): boolean {
+    if (typeof value === 'number') return value === 0;
+    const amounts = [...value.matchAll(/(\d+(?:[,.]\d+)?)\s*€/g)].map((match) => Number(match[1].replace(',', '.')));
+    if (amounts.length) return amounts.every((amount) => amount === 0);
+    return /^0+(?:[,.]0+)?$/.test(value.trim());
   }
 
   private normalizeTariffText(value: string | undefined): string | undefined {

@@ -24,57 +24,49 @@ import { ParkingApiService, ParkingTicketOption } from '../../../core/services/p
       </div>
       <div class="tariff-list">
         @for (tariff of tariffs(); track tariff.id) {
-          @if (tariff.informationalOnly) {
-            <article class="ticket-option ticket-option-information" aria-disabled="true" role="status">
-              <span
-                class="ticket-color"
-                [style.background]="'#' + (tariff.sectorColor || query().sectorColor || '2b6767').replace('#', '')"
-              ></span>
-              <p>{{ tariff.desc || tariff.name }}</p>
-            </article>
-          } @else {
-            <a
-              routerLink="/app/parking/time-steps"
-              [queryParams]="withTariff(tariff)"
-              (click)="onSelectTariff(tariff)"
-              class="ticket-option"
+          <article
+            class="ticket-option"
+            [class.ticket-option-information]="tariff.informationalOnly"
+            [attr.aria-disabled]="tariff.informationalOnly ? 'true' : null"
+            [attr.role]="tariff.informationalOnly ? 'status' : null"
+          >
+            <div
+              class="ticket-zone-header"
+              [style.background]="'#' + (tariff.sectorColor || query().sectorColor || '2b6767').replace('#', '')"
             >
-              <span
-                class="ticket-color"
-                [style.background]="'#' + (tariff.sectorColor || query().sectorColor || '2b6767').replace('#', '')"
-              ></span>
+              {{ query().zone || ('parking.tickets.defaultZone' | translate) }}
+            </div>
+            <div class="ticket-content">
               <div class="ticket-option-head">
-                <div>
-                  <small>{{ query().zone || ('parking.tickets.defaultZone' | translate) }}</small>
-                  <h2>{{ tariff.name }}</h2>
-                  <p>{{ tariff.desc }}</p>
-                </div>
-                <strong>{{ tariff.price }}</strong>
+                <h2>{{ tariff.name }}</h2>
+                <strong>{{ tariff.free ? ('parking.tickets.free' | translate) : tariff.price }}</strong>
               </div>
               <div class="ticket-meta">
                 <span
-                  ><small>{{ 'parking.tickets.sector' | translate }}</small
-                  ><strong>{{ query().sector || query().street }}</strong></span
-                ><span
                   ><small>{{ 'parking.tickets.schedule' | translate }}</small
                   ><strong>{{ tariff.schedule || '—' }}</strong></span
                 ><span
-                  ><small>{{ 'parking.tickets.minimum' | translate }}</small
-                  ><strong>{{ tariff.minAmount || '—' }}</strong></span
+                  ><small>{{ 'parking.tickets.maximumTime' | translate }}</small
+                  ><strong>{{ tariff.maxTime || '—' }}</strong></span
+                ><span
+                  ><small>{{ 'parking.tickets.amount' | translate }}</small
+                  ><strong>{{ tariff.free ? ('parking.tickets.free' | translate) : tariff.minAmount || tariff.price || '—' }}</strong></span
                 >
               </div>
-              <span class="ticket-action">{{ 'parking.tickets.getTicket' | translate }} <b>›</b></span>
-              @if (tariff.free) {
-                <small class="ticket-note">{{ 'parking.tickets.free' | translate }}</small>
+              @if (tariff.informationalOnly) {
+                <p class="ticket-behavior">{{ tariff.desc || tariff.name }}</p>
+              } @else {
+                <a
+                  routerLink="/app/parking/time-steps"
+                  [queryParams]="withTariff(tariff)"
+                  (click)="onSelectTariff(tariff)"
+                  class="ticket-action"
+                >
+                  {{ 'parking.tickets.getTicket' | translate }} <b>›</b>
+                </a>
               }
-              @if (tariff.resident24h) {
-                <small class="ticket-note">{{ 'parking.tickets.resident24h' | translate }}</small>
-              }
-              @if (tariff.pmr) {
-                <small class="ticket-note">{{ 'parking.tickets.pmr' | translate }}</small>
-              }
-            </a>
-          }
+            </div>
+          </article>
         }
         @if (!loading() && !tariffs().length) {
           <p class="card" role="status">{{ error() ? 'No se pudieron cargar las tarifas.' : 'No hay tarifas disponibles.' }}</p>
@@ -115,54 +107,39 @@ import { ParkingApiService, ParkingTicketOption } from '../../../core/services/p
         gap: 0.8rem;
       }
       .ticket-option {
-        position: relative;
-        display: grid;
-        gap: 0.8rem;
         overflow: hidden;
-        padding: 1rem;
         border: 1px solid var(--color-border);
         border-radius: 14px;
         background: var(--color-surface);
         color: inherit;
         box-shadow: var(--shadow-sm);
       }
-      .ticket-option:hover {
-        text-decoration: none;
-        box-shadow: var(--shadow-md);
+      .ticket-zone-header {
+        padding: 0.55rem 1rem;
+        color: #fff;
+        font-size: var(--text-sm);
+        font-weight: var(--font-extra);
+        text-align: center;
       }
-      .ticket-option-information {
-        min-height: 72px;
-        align-content: center;
+      .ticket-content {
+        display: grid;
+        gap: 0.8rem;
+        padding: 1rem;
       }
-      .ticket-option-information p {
+      .ticket-behavior {
         margin: 0;
         color: var(--color-text);
-        font-weight: var(--font-bold);
-      }
-      .ticket-note {
-        color: var(--color-primary-dark);
-        font-weight: var(--font-bold);
-      }
-      .ticket-color {
-        position: absolute;
-        top: 0;
-        right: 0;
-        left: 0;
-        height: 6px;
+        font-size: var(--text-sm);
+        line-height: 1.45;
       }
       .ticket-option-head {
         display: flex;
+        align-items: center;
         justify-content: space-between;
         gap: 1rem;
-        padding-top: 0.2rem;
-      }
-      .ticket-option-head small,
-      .ticket-option-head p {
-        color: var(--color-text-muted);
-        font-size: var(--text-xs);
       }
       .ticket-option-head h2 {
-        margin: 0.12rem 0;
+        margin: 0;
         font-size: var(--text-base);
       }
       .ticket-option-head > strong {
@@ -187,19 +164,31 @@ import { ParkingApiService, ParkingTicketOption } from '../../../core/services/p
         font-size: var(--text-2xs);
       }
       .ticket-meta strong {
-        overflow: hidden;
         font-size: var(--text-xs);
-        text-overflow: ellipsis;
-        white-space: nowrap;
+        overflow-wrap: anywhere;
       }
       .ticket-action {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
         justify-self: end;
-        color: var(--color-primary);
+        padding: 0.55rem 1rem;
+        border-radius: 999px;
+        background: var(--color-primary);
+        color: #fff;
         font-size: var(--text-sm);
         font-weight: var(--font-extra);
       }
+      .ticket-action:hover {
+        text-decoration: none;
+      }
       .ticket-action b {
         font-size: var(--text-base);
+      }
+      @media (max-width: 600px) {
+        .ticket-meta {
+          grid-template-columns: 1fr;
+        }
       }
     `,
   ],

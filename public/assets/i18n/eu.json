@@ -116,6 +116,8 @@
   "parking.tickets.sector": "eu_Sector",
   "parking.tickets.schedule": "eu_Horario",
   "parking.tickets.minimum": "eu_Mínimo",
+  "parking.tickets.maximumTime": "Gehieneko denbora",
+  "parking.tickets.amount": "Zenbatekoa",
   "parking.tickets.getTicket": "eu_Sacar ticket",
   "parking.tickets.informationOnly": "Informazioa soilik",
   "parking.tickets.free": "Doakoa",

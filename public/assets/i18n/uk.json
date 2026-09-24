@@ -116,6 +116,8 @@
   "parking.tickets.sector": "uk_Sector",
   "parking.tickets.schedule": "uk_Horario",
   "parking.tickets.minimum": "uk_Mínimo",
+  "parking.tickets.maximumTime": "Maximum time",
+  "parking.tickets.amount": "Amount",
   "parking.tickets.getTicket": "uk_Sacar ticket",
   "parking.tickets.informationOnly": "Information only",
   "parking.tickets.free": "Free",
