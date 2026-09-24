@@ -21,57 +21,61 @@ import { LoaderComponent } from '../../../shared/components/loader/loader.compon
     <app-loader [visible]="loadingReceipt()" [message]="'common.loading' | translate" />
     <div class="page success-page">
       <div class="success-content text-center">
-        @if (receipt()) {
-          <div class="success-mark"><span>✓</span><app-icon name="parkingSlip" [stroke]="false" /></div>
-          <h1 class="page-title">{{ (isExtension() ? 'parking.extension.success.title' : 'parking.success.title') | translate }}</h1>
-          <p class="page-subtitle">{{ (isExtension() ? 'parking.extension.success.subtitle' : 'parking.success.subtitle') | translate }}</p>
-          <div class="success-ticket-shell">
-            <article class="success-ticket">
-              <div class="ticket-accent" [style.background]="sectorColor()"></div>
-              <div class="ticket-head">
-                <app-operation-icon [type]="parkingType()" />
-                <div>
-                  <strong>{{ query().plate }}</strong
-                  ><span>{{ query().zone }} · {{ query().cityName }}</span>
-                  @if (query().tariff) {
-                    <small>{{ query().tariff }}</small>
-                  }
+        @if (!loadingReceipt()) {
+          @if (receipt()) {
+            <div class="success-mark"><span>✓</span><app-icon name="parkingSlip" [stroke]="false" /></div>
+            <h1 class="page-title">{{ (isExtension() ? 'parking.extension.success.title' : 'parking.success.title') | translate }}</h1>
+            <p class="page-subtitle">
+              {{ (isExtension() ? 'parking.extension.success.subtitle' : 'parking.success.subtitle') | translate }}
+            </p>
+            <div class="success-ticket-shell">
+              <article class="success-ticket">
+                <div class="ticket-accent" [style.background]="sectorColor()"></div>
+                <div class="ticket-head">
+                  <app-operation-icon [type]="parkingType()" />
+                  <div>
+                    <strong>{{ query().plate }}</strong
+                    ><span>{{ query().zone }} · {{ query().cityName }}</span>
+                    @if (query().tariff) {
+                      <small>{{ query().tariff }}</small>
+                    }
+                  </div>
                 </div>
-              </div>
-              <div class="ticket-times">
-                <div>
-                  <small>{{ 'parking.success.start' | translate }}</small
-                  ><strong>{{ startTime() }}</strong
-                  ><span>{{ startDayLabel() }}</span>
+                <div class="ticket-times">
+                  <div>
+                    <small>{{ 'parking.success.start' | translate }}</small
+                    ><strong>{{ startTime() }}</strong
+                    ><span>{{ startDayLabel() }}</span>
+                  </div>
+                  <i></i
+                  ><b
+                    >{{ query().duration }}<small class="countdown">{{ countdown() }}</small></b
+                  ><i></i>
+                  <div>
+                    <small>{{ 'parking.success.end' | translate }}</small
+                    ><strong>{{ query().endTime }}</strong
+                    ><span>{{ endDayLabel() }}</span>
+                  </div>
                 </div>
-                <i></i
-                ><b
-                  >{{ query().duration }}<small class="countdown">{{ countdown() }}</small></b
-                ><i></i>
-                <div>
-                  <small>{{ 'parking.success.end' | translate }}</small
-                  ><strong>{{ query().endTime }}</strong
-                  ><span>{{ endDayLabel() }}</span>
+                <div class="ticket-cut"><div class="ticket-cut-line"></div></div>
+                <div class="ticket-total">
+                  <span>{{ 'parking.success.total' | translate }}</span
+                  ><strong>{{ isFreeTicket() ? ('parking.tickets.free' | translate) : query().amount }}</strong>
                 </div>
-              </div>
-              <div class="ticket-cut"><div class="ticket-cut-line"></div></div>
-              <div class="ticket-total">
-                <span>{{ 'parking.success.total' | translate }}</span
-                ><strong>{{ isFreeTicket() ? ('parking.tickets.free' | translate) : query().amount }}</strong>
-              </div>
-            </article>
+              </article>
+            </div>
+          } @else {
+            <h1 class="page-title">{{ 'parking.success.receiptPending' | translate }}</h1>
+            <p role="status">{{ 'parking.success.receiptPendingDetail' | translate }}</p>
+            <button class="btn btn-secondary" (click)="loadReceipt()">{{ 'common.retry' | translate }}</button>
+          }
+          <div class="actions">
+            <a routerLink="/app/home" class="btn btn-primary btn-block">{{ 'parking.success.goHome' | translate }}</a>
+            <a routerLink="/app/parking" [queryParams]="{ city: query().city }" class="btn btn-ghost btn-block">{{
+              'parking.success.viewMap' | translate
+            }}</a>
           </div>
-        } @else {
-          <h1 class="page-title">{{ 'parking.success.receiptPending' | translate }}</h1>
-          <p role="status">{{ 'parking.success.receiptPendingDetail' | translate }}</p>
-          <button class="btn btn-secondary" [disabled]="loadingReceipt()" (click)="loadReceipt()">{{ 'common.retry' | translate }}</button>
         }
-        <div class="actions">
-          <a routerLink="/app/home" class="btn btn-primary btn-block">{{ 'parking.success.goHome' | translate }}</a>
-          <a routerLink="/app/parking" [queryParams]="{ city: query().city }" class="btn btn-ghost btn-block">{{
-            'parking.success.viewMap' | translate
-          }}</a>
-        </div>
       </div>
     </div>
   `,
