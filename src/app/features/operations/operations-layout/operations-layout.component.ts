@@ -134,8 +134,8 @@ import { OPERATION_PERIODS, operationPeriod } from '../operation-period';
 
           <ul class="list history-list" [style.--history-controls-height]="historyControlsHeight() + 'px'">
             @for (group of groupedHistory(); track group.label) {
-              <li class="history-group">
-                <h2 class="history-group-label">{{ group.label | translate }}</h2>
+              <details class="history-group" open>
+                <summary class="history-group-label">{{ group.label | translate }}</summary>
                 <ul class="history-group-items">
                   @for (op of group.items; track op.id) {
                     <li>
@@ -190,7 +190,7 @@ import { OPERATION_PERIODS, operationPeriod } from '../operation-period';
                     </li>
                   }
                 </ul>
-              </li>
+              </details>
             }
             @if (groupedHistory().length === 0) {
               <li class="list-item" style="justify-content:center;color:var(--color-muted)">
@@ -412,25 +412,56 @@ import { OPERATION_PERIODS, operationPeriod } from '../operation-period';
         border-radius: var(--radius-md);
         background: var(--color-surface);
       }
+      .history-group {
+        display: flex;
+        flex-direction: column;
+        border-bottom: 1px solid var(--color-border);
+      }
+      .history-group:last-child {
+        border-bottom: none;
+      }
       .history-group-label {
-        position: sticky;
-        top: var(--history-controls-height, 0px);
-        z-index: 3;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
         margin: 0;
-        list-style: none;
-        padding: 0.65rem 0.8rem 0.4rem;
+        padding: 0.65rem 0.8rem;
         color: var(--color-text-muted);
         font-size: var(--text-xs);
         font-weight: var(--font-extra);
         letter-spacing: 0.05em;
-        background: var(--color-background);
-      }
-      .history-group,
-      .history-group-items,
-      .history-group-items > li {
+        cursor: pointer;
         list-style: none;
+        background: var(--color-background);
+        user-select: none;
+      }
+      .history-group-label::-webkit-details-marker {
+        display: none;
+      }
+      .history-group-label::after {
+        content: '';
+        width: 0.55rem;
+        height: 0.55rem;
+        margin-left: auto;
+        border-right: 2px solid var(--color-primary);
+        border-bottom: 2px solid var(--color-primary);
+        transform: rotate(45deg) translateY(-0.15rem);
+        transition: transform 180ms ease;
+      }
+      .history-group[open] .history-group-label::after {
+        transform: rotate(225deg) translateY(-0.15rem);
+      }
+      .history-group-label:focus-visible {
+        outline: 2px solid var(--color-primary);
+        outline-offset: -2px;
+      }
+      .history-group-items {
         margin: 0;
         padding: 0;
+        overflow: hidden;
+      }
+      .history-group-items > li {
+        list-style: none;
       }
       .operation-price-date {
         display: flex;
