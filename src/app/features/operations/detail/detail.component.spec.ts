@@ -23,6 +23,26 @@ describe('OperationsDetailComponent navigation', () => {
     await fixture.whenStable();
     expect(fixture.componentInstance.detailRows()[0].value).toContain('18:51');
   });
+
+  it('renders parking refunds with the same ticket layout as parking operations', async () => {
+    operations.update((items) =>
+      items.map((op) => ({
+        ...op,
+        type: OperationType.REFUND,
+        startTime: '17:28',
+        endTime: '17:38',
+        durationLabel: '10 min',
+        ticketName: 'ROTACIÓN',
+        amount: 1.3,
+      })),
+    );
+    const fixture = TestBed.createComponent(OperationsDetailComponent);
+
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('.ticket-card')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.refund-detail')).toBeNull();
+  });
   const params = new BehaviorSubject(convertToParamMap({ id: 'first' }));
   const operations = signal<Operation[]>([]);
   const loadDetail = jasmine.createSpy('loadDetail').and.resolveTo(undefined);

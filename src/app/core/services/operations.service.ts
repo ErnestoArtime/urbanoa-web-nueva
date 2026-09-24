@@ -387,7 +387,7 @@ export class OperationsService {
     const startTime =
       item.operationType === OperationType.PARKING_EXTENSION
         ? start
-        : item.operationType === OperationType.PARKING
+        : [OperationType.PARKING, OperationType.REFUND].includes(item.operationType)
           ? (start ?? operationTime)
           : operationTime;
     const duration = item.parkingDuration ?? item.duration;

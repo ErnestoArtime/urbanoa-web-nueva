@@ -151,7 +151,7 @@ import { CitiesService } from '../../../core/services/cities.service';
                 </div>
               </div>
             </article>
-          } @else if (isTicketOperation()) {
+          } @else if (isTicketStyleOperation()) {
             <div class="ticket-shell">
               <article class="ticket-card" [style.--ticket-header-color]="ticketHeaderColor()">
                 <div class="ticket-accent"></div>
@@ -165,8 +165,12 @@ import { CitiesService } from '../../../core/services/cities.service';
                     }
                   </div>
                   <div class="ticket-date">
-                    <small>{{ 'ops.detail.date' | translate }}</small
-                    ><strong>{{ operation.date }}</strong>
+                    @if (isRefundOperation() && transactionId()) {
+                      <small># {{ transactionId() }}</small>
+                    } @else {
+                      <small>{{ 'ops.detail.date' | translate }}</small>
+                    }
+                    <strong>{{ operation.date }}</strong>
                   </div>
                 </div>
                 <div class="ticket-timeline">
@@ -637,6 +641,7 @@ export class OperationsDetailComponent {
   });
   readonly isTicketOperation = computed(() => [OperationType.PARKING, OperationType.PARKING_EXTENSION].includes(this.opType()));
   readonly isRefundOperation = computed(() => this.opType() === OperationType.REFUND);
+  readonly isTicketStyleOperation = computed(() => this.isTicketOperation() || this.isRefundOperation());
   readonly isTopUpOperation = computed(() => this.opType() === OperationType.TOP_UP);
   readonly isAcknowledgedFineDetail = computed(() => {
     const operation = this.op();

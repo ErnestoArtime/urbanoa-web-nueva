@@ -128,7 +128,7 @@ describe('OperationsService stored data migration', () => {
     expect(service.operations()[0]).toEqual(jasmine.objectContaining({ cityName: 'ZARAUTZ', latitude: 0, longitude: 0 }));
   });
 
-  it('keeps the operation time separate from parking start and end times', async () => {
+  it('keeps the refund operation time separate from its parking interval', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
     api.post.and.resolveTo([
       {
@@ -147,7 +147,7 @@ describe('OperationsService stored data migration', () => {
 
     await service.load();
 
-    expect(service.operations()[0]).toEqual(jasmine.objectContaining({ operationTime: '21:01', startTime: '21:01', endTime: '10:30' }));
+    expect(service.operations()[0]).toEqual(jasmine.objectContaining({ operationTime: '21:01', startTime: '09:00', endTime: '10:30' }));
   });
 
   it('uses the QueryUserOperationsAPI timePeriod field to identify active parking operations', async () => {
