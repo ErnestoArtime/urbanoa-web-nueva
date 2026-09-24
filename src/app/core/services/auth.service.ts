@@ -2,7 +2,7 @@ import { computed, inject, Injectable, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { OpsLoginRequest, OpsLoginResponse, OpsRegisterRequest, OpsUserResponse } from '../api/ops-auth.types';
 import { OpsApiClient } from '../api/ops-api-client.service';
-import { OPS_APP_VERSION, OPS_OPERATING_SYSTEM } from '../api/ops-client.constants';
+import { getOpsCloudToken, OPS_APP_VERSION, OPS_OPERATING_SYSTEM } from '../api/ops-client.constants';
 import { OPS_ENDPOINTS } from '../api/ops-endpoints';
 import { OpsSessionService } from '../api/ops-session.service';
 import { readStorage, writeStorage } from '../storage/signal-storage';
@@ -43,19 +43,6 @@ export interface RegisterPayload {
 
 export type ResendMailType = 'register' | 'recover';
 
-const DEVICE_TOKEN_KEY = 'urbanoa.deviceToken';
-
-function getOrCreateCloudToken(): string {
-  try {
-    const existing = localStorage.getItem(DEVICE_TOKEN_KEY);
-    if (existing) return existing;
-    const token = crypto.randomUUID?.() ?? `device-${Date.now()}`;
-    localStorage.setItem(DEVICE_TOKEN_KEY, token);
-    return token;
-  } catch {
-    return `device-${Date.now()}`;
-  }
-}
 const EMPTY_USER: AuthUser = {
   id: '',
   name: '',
@@ -227,7 +214,7 @@ export class AuthService {
     return {
       userName: email,
       password,
-      cloudToken: getOrCreateCloudToken(),
+      cloudToken: getOpsCloudToken(),
       operatingSystem: OPS_OPERATING_SYSTEM,
       appVersion: OPS_APP_VERSION,
       language: this.opsLanguage(),
