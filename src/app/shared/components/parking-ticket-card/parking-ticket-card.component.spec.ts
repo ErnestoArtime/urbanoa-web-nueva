@@ -27,14 +27,20 @@ describe('ParkingTicketCardComponent', () => {
         {
           provide: TranslationService,
           useValue: {
-            translate: (key: string) => ({ 'ops.today': 'Hoy', 'ops.tomorrow': 'Mañana' })[key as 'ops.today' | 'ops.tomorrow'] ?? key,
+            translate: (key: string) =>
+              ({
+                'ops.today': 'Hoy',
+                'ops.tomorrow': 'Mañana',
+                'dashboard.unpark': 'Desaparcar',
+                'dashboard.extend': 'Ampliar',
+              })[key] ?? key,
           },
         },
       ],
     });
   });
 
-  it('keeps unparking disabled and hides extension when both flags are 1', async () => {
+  it('keeps unparking and extension disabled when both flags are 1', async () => {
     const fixture = TestBed.createComponent(ParkingTicketCardComponent);
     fixture.componentRef.setInput('parking', { ...parking(1), extension: 1 });
 
@@ -42,7 +48,8 @@ describe('ParkingTicketCardComponent', () => {
 
     expect(fixture.nativeElement.querySelector('.btn-danger')).not.toBeNull();
     expect(fixture.nativeElement.querySelector('.btn-danger').disabled).toBeTrue();
-    expect(fixture.nativeElement.querySelector('.btn-primary')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.btn-primary')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.btn-primary').disabled).toBeTrue();
   });
 
   it('hides actions when their flags are absent', async () => {
@@ -129,4 +136,24 @@ describe('ParkingTicketCardComponent', () => {
       });
     }
   }
+  it('matches the compact APK ticket header and actions', async () => {
+    const fixture = TestBed.createComponent(ParkingTicketCardComponent);
+    fixture.componentRef.setInput('parking', {
+      ...parking(2),
+      operationId: '8431347',
+      cityName: 'ZARAUTZ',
+      amount: -5,
+      extension: 2,
+    });
+
+    await fixture.whenStable();
+
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.querySelector('.ticket-header')?.textContent).toContain('ZARAUTZ · Z2 AZUL');
+    expect(element.querySelector('.ticket-amount')?.textContent).toMatch(/5[,.]00 €/);
+    expect(element.querySelector('.ticket-actions .btn-secondary')).toBeNull();
+    expect(element.querySelector('.ticket-actions')?.textContent).toContain('Desaparcar');
+    expect(element.querySelector('.ticket-actions')?.textContent).toContain('Ampliar');
+    expect(element.querySelector('.ticket-actions')?.textContent).not.toContain('Ampliar tiempo');
+  });
 });

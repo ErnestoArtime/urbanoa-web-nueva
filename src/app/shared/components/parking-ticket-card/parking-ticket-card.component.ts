@@ -1,6 +1,6 @@
 import { Component, OnDestroy, computed, input, output, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { LucideCarFront, LucideMapPin, LucideNavigation, LucideTimerReset } from '@lucide/angular';
+import { LucideCarFront, LucideMapPin, LucideTimerReset } from '@lucide/angular';
 import type { ActiveParking } from '../../../core/services/operations.service';
 import { TranslatePipe } from '../../pipes/translate.pipe';
 import { normalizeSectorColor } from '../../utils/sector-color';
@@ -12,7 +12,7 @@ export type ParkingTicketCardVariant = 'dashboard' | 'operations-current' | 'det
 @Component({
   selector: 'app-parking-ticket-card',
   standalone: true,
-  imports: [RouterLink, TranslatePipe, LucideCarFront, LucideMapPin, LucideNavigation, LucideTimerReset, TicketCutAlignDirective],
+  imports: [RouterLink, TranslatePipe, LucideCarFront, LucideMapPin, LucideTimerReset, TicketCutAlignDirective],
   template: `
     @if (parking(); as active) {
       <article
@@ -21,6 +21,7 @@ export type ParkingTicketCardVariant = 'dashboard' | 'operations-current' | 'det
         [class.detail-variant]="variant() === 'detail'"
         [style.--ticket-header-color]="ticketHeaderColor()"
       >
+        <div class="ticket-header">{{ ticketHeaderLabel(active) }}</div>
         <div class="ticket-main-row">
           <div class="ticket-main-icon" [style.--ticket-progress]="ticketProgress()">
             <svg class="ticket-progress-ring" viewBox="0 0 44 44" aria-hidden="true">
@@ -32,17 +33,18 @@ export type ParkingTicketCardVariant = 'dashboard' | 'operations-current' | 'det
           <div>
             <p class="ticket-plate">{{ active.plate }}</p>
             <p class="ticket-timer">{{ liveTimeRemaining(active) }}</p>
-          </div>
-          <div class="ticket-location">
-            <small>{{ 'dashboard.ticket.zone' | translate }}</small>
-            <strong>{{ active.zone }}</strong>
             @if (active.street) {
-              <span class="ticket-street"><svg lucideMapPin aria-hidden="true" size="14" strokeWidth="2"></svg>{{ active.street }}</span>
+              <span class="ticket-street"><svg lucideMapPin aria-hidden="true" size="13" strokeWidth="2"></svg>{{ active.street }}</span>
             }
           </div>
-          @if (active.operationId; as opId) {
-            <span class="ticket-op-id">{{ operationReference(opId) }}</span>
-          }
+          <div class="ticket-summary">
+            @if (active.amount !== undefined) {
+              <strong class="ticket-amount">{{ formattedAmount(active.amount) }}</strong>
+            }
+            @if (active.operationId; as opId) {
+              <span class="ticket-op-id">{{ operationReference(opId) }}</span>
+            }
+          </div>
         </div>
 
         <div class="ticket-time-row">
@@ -66,10 +68,6 @@ export type ParkingTicketCardVariant = 'dashboard' | 'operations-current' | 'det
         @if (variant() !== 'detail') {
           <div class="ticket-divider" data-ticket-cut><div class="ticket-divider-line"></div></div>
           <div class="ticket-actions">
-            <button type="button" class="btn btn-secondary btn-sm" [disabled]="!hasCoordinates()" (click)="goToCar.emit(active)">
-              <svg lucideNavigation class="action-btn-icon" size="19" strokeWidth="2"></svg>
-              {{ 'dashboard.howToGetThere' | translate }}
-            </button>
             @if (active.refundable === 1 || active.refundable === 2) {
               <button type="button" class="btn btn-danger btn-sm" [disabled]="active.refundable !== 2" (click)="leaveParking.emit(active)">
                 {{ 'dashboard.unpark' | translate }}
@@ -83,7 +81,7 @@ export type ParkingTicketCardVariant = 'dashboard' | 'operations-current' | 'det
                 (click)="active.extension === 2 && extendTime.emit(active)"
               >
                 <svg lucideTimerReset class="action-btn-icon" size="19" strokeWidth="2"></svg>
-                {{ 'dashboard.extendTime' | translate }}
+                {{ 'dashboard.extend' | translate }}
               </button>
             }
           </div>
@@ -107,6 +105,7 @@ export type ParkingTicketCardVariant = 'dashboard' | 'operations-current' | 'det
         --ticket-cut-y: 133px;
         position: relative;
         overflow: hidden;
+        padding-top: 0;
         box-shadow: none;
         -webkit-mask:
           radial-gradient(circle at 0 var(--ticket-cut-y), transparent 0 var(--ticket-notch-r), #000 calc(var(--ticket-notch-r) + 1px)) left
@@ -119,24 +118,34 @@ export type ParkingTicketCardVariant = 'dashboard' | 'operations-current' | 'det
           radial-gradient(circle at 100% var(--ticket-cut-y), transparent 0 var(--ticket-notch-r), #000 calc(var(--ticket-notch-r) + 1px))
             right top / 51% 100% no-repeat;
       }
-      .parking-ticket-card::before {
-        content: '';
-        position: absolute;
-        inset: 0 0 auto;
-        z-index: 0;
-        height: var(--space-2);
+      .ticket-header {
+        min-height: 1.75rem;
+        margin: 0 calc(0rem - var(--card-padding-inline));
+        padding: 0.3rem var(--space-3);
         border-radius: var(--radius-md) var(--radius-md) 0 0;
         background: var(--ticket-header-color, linear-gradient(90deg, #8f84f3 0%, #7971de 48%, #7469d2 100%));
+        color: #fff;
+        font-size: var(--text-sm);
+        font-weight: var(--font-medium);
+        line-height: 1.2;
+        text-align: center;
+        text-transform: uppercase;
       }
-      .parking-ticket-card > * {
-        position: relative;
-        z-index: 1;
+      .ticket-summary {
+        display: flex;
+        flex: 1;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 0.25rem;
+        margin-left: auto;
+      }
+      .ticket-amount {
+        font-size: var(--text-lg);
+        font-weight: var(--font-medium);
+        line-height: var(--line-tight);
+        white-space: nowrap;
       }
       .ticket-op-id {
-        flex: 0 0 auto;
-        align-self: flex-start;
-        margin-left: auto;
-        padding-top: 0.1rem;
         color: var(--color-text-muted);
         font-size: var(--text-2xs);
         font-weight: var(--font-extra);
@@ -147,9 +156,10 @@ export type ParkingTicketCardVariant = 'dashboard' | 'operations-current' | 'det
       .ticket-street {
         display: flex;
         align-items: center;
-        gap: 0.3rem;
+        gap: 0.25rem;
+        margin-top: 0.2rem;
         color: var(--color-text-muted);
-        font-size: var(--text-xs);
+        font-size: var(--text-2xs);
       }
       .ticket-street svg {
         flex: none;
@@ -211,21 +221,6 @@ export type ParkingTicketCardVariant = 'dashboard' | 'operations-current' | 'det
         color: var(--color-text-muted);
         font-size: var(--text-xs);
       }
-      .ticket-location {
-        display: flex;
-        min-width: 0;
-        flex: 1;
-        flex-direction: column;
-        margin-left: auto;
-        padding-left: var(--space-2);
-      }
-      .ticket-location strong {
-        overflow: hidden;
-        margin-top: 0.1rem;
-        font-size: var(--text-sm);
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
       .ticket-time-row {
         display: flex;
         align-items: center;
@@ -271,7 +266,7 @@ export type ParkingTicketCardVariant = 'dashboard' | 'operations-current' | 'det
         gap: var(--space-2);
         margin-top: var(--space-2);
       }
-      .ticket-actions .btn-secondary {
+      .ticket-actions > :only-child {
         grid-column: 1 / -1;
       }
       .action-btn-icon {
@@ -336,9 +331,12 @@ export class ParkingTicketCardComponent implements OnDestroy {
     return /^\d+$/.test(id) && id.length < 7 ? `#${id.padStart(7, '0')}` : `#${id}`;
   }
 
-  hasCoordinates(): boolean {
-    const active = this.parking();
-    return Number.isFinite(active?.latitude) && Number.isFinite(active?.longitude);
+  ticketHeaderLabel(active: ActiveParking): string {
+    return active.cityName ? `${active.cityName} · ${active.zone}` : active.zone;
+  }
+
+  formattedAmount(amount: number): string {
+    return `${Math.abs(amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
   }
 
   private durationMinutes(label: string): number {
