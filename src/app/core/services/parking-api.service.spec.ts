@@ -319,6 +319,47 @@ describe('ParkingApiService', () => {
     expect(result.data[4]).toEqual(jasmine.objectContaining({ ticketBehavior: 3, informationalOnly: true, free: false }));
   });
 
+  it('preserves the resident message when QueryTicketsAPI returns nullable tariff fields', async () => {
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
+    api.post.and.resolveTo({
+      ticketlist: [
+        {
+          ticketId: 0,
+          ticketDesc: null,
+          zoneId: 10002,
+          zoneDesc: 'ZONA 2',
+          sectorId: 22004,
+          sectorDesc: 'Z2 RESIDENTES',
+          sectorColor: '',
+          schedule: null,
+          maxTime: null,
+          minAmount: null,
+          ticketBehavior: 0,
+          ticketBehText: 'Zona residencial 24h. No se permite aparcar.',
+          hasTicket: 0,
+        },
+      ],
+    });
+    const service = serviceWith(api);
+    TestBed.inject(OpsSessionService).setToken('token');
+
+    const result = await service.tickets({ contractId: 3, plate: '8765432109', zone: 22004, date: '120000250926' });
+
+    expect(result.data).toEqual([
+      jasmine.objectContaining({
+        name: 'Z2 RESIDENTES',
+        desc: 'Zona residencial 24h. No se permite aparcar.',
+        price: '',
+        schedule: '',
+        minAmount: undefined,
+        ticketBehavior: 0,
+        informationalOnly: true,
+        free: false,
+        resident24h: true,
+      }),
+    ]);
+  });
+
   it('always sends a non-empty map version and the complete sector location', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
     api.post.and.returnValues(

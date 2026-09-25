@@ -250,14 +250,16 @@ export class ParkingApiService {
       ticketlist:
         | {
             ticketId: number;
-            ticketDesc: string;
-            minAmount: number | string;
-            schedule: string;
-            ticketBehText?: string;
-            maxTime?: string;
+            ticketDesc?: string | null;
+            minAmount?: number | string | null;
+            schedule?: string | null;
+            ticketBehText?: string | null;
+            maxTime?: string | null;
             zoneId?: number;
+            zoneDesc?: string | null;
             sectorId?: number;
-            sectorColor?: string;
+            sectorDesc?: string | null;
+            sectorColor?: string | null;
             ticketBehavior?: number;
             ticketBeh?: number;
             hasTicket?: number | string | boolean;
@@ -286,24 +288,29 @@ export class ParkingApiService {
           const minAmountCents = this.amountInCents(ticket.minAmount);
           const schedule = this.normalizeTariffText(ticket.schedule) ?? '';
           const behaviorText = this.normalizeTariffText(ticket.ticketBehText);
+          const ticketName = this.normalizeTariffText(ticket.ticketDesc) || this.normalizeTariffText(ticket.sectorDesc) || '';
           const minAmountText =
             typeof ticket.minAmount === 'string' ? this.normalizeTariffText(ticket.minAmount.replace(/<br\s*\/?>/gi, ' · ')) : undefined;
-          const tariffText = `${ticket.ticketDesc} ${behaviorText ?? ''} ${schedule} ${minAmountText ?? ''}`.toLocaleLowerCase('es-ES');
+          const tariffText = `${ticketName} ${behaviorText ?? ''} ${schedule} ${minAmountText ?? ''}`.toLocaleLowerCase('es-ES');
           const explicitlyFree = /\bgratuit[oa]s?\b|\bgratis\b/.test(tariffText);
           const hasZeroAmount = this.hasOnlyZeroAmounts(ticket.minAmount);
           const isPmr = /pmr|discapacidad|minusválid/.test(tariffText);
           return {
             id: String(ticket.ticketId),
-            name: ticket.ticketDesc,
+            name: ticketName,
             desc: behaviorText || schedule,
-            price: minAmountText?.trim() ? minAmountText : `${(minAmountCents / 100).toFixed(2).replace('.', ',')} €`,
+            price: minAmountText?.trim()
+              ? minAmountText
+              : typeof ticket.minAmount === 'number'
+                ? `${(minAmountCents / 100).toFixed(2).replace('.', ',')} €`
+                : '',
             schedule,
-            maxTime: ticket.maxTime,
+            maxTime: ticket.maxTime ?? undefined,
             minAmount: minAmountText,
             minAmountCents,
             zoneId: ticket.zoneId,
             sectorId: ticket.sectorId,
-            sectorColor: ticket.sectorColor,
+            sectorColor: ticket.sectorColor || undefined,
             ticketBehavior: behavior,
             // hasTicket describes the vehicle's current state, not whether this tariff
             // requires obtaining a ticket. The APK drives the action from ticketBehavior.
@@ -344,22 +351,24 @@ export class ParkingApiService {
     return this.opsDate(Number.isNaN(date.getTime()) ? new Date() : date);
   }
 
-  private amountInCents(value: number | string): number {
+  private amountInCents(value: number | string | null | undefined): number {
     if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+    if (typeof value !== 'string') return 0;
     const match = value.match(/[\d]+(?:[,.][\d]+)?/);
     if (!match) return 0;
     return Math.round(Number(match[0].replace(',', '.')) * 100);
   }
 
-  private hasOnlyZeroAmounts(value: number | string): boolean {
+  private hasOnlyZeroAmounts(value: number | string | null | undefined): boolean {
     if (typeof value === 'number') return value === 0;
+    if (typeof value !== 'string') return false;
     const amounts = [...value.matchAll(/(\d+(?:[,.]\d+)?)\s*€/g)].map((match) => Number(match[1].replace(',', '.')));
     if (amounts.length) return amounts.every((amount) => amount === 0);
     return /^0+(?:[,.]0+)?$/.test(value.trim());
   }
 
-  private normalizeTariffText(value: string | undefined): string | undefined {
-    if (!value) return value;
+  private normalizeTariffText(value: string | null | undefined): string | undefined {
+    if (!value) return undefined;
     return value.replace(
       /\b(lunes|martes|miércoles|miercoles|jueves|viernes|sábado|sabado|domingo)\b/giu,
       (day) => day.charAt(0).toLocaleUpperCase('es-ES') + day.slice(1).toLocaleLowerCase('es-ES'),
