@@ -5,8 +5,18 @@ import { OPS_ENDPOINTS } from '../api/ops-endpoints';
 import { OpsApiClient } from '../api/ops-api-client.service';
 import { OpsApiError } from '../api/ops-api.types';
 import { OpsSessionService } from '../api/ops-session.service';
-import { formatOpsCalendarDate, formatOpsDate, formatOpsTime, parseOpsDate, opsRelativeDayLabel } from '../utils/ops-date';
+import {
+  calendarRelativeDayLabel,
+  formatLocalCalendarDate,
+  formatOpsCalendarDate,
+  formatOpsDate,
+  formatOpsTime,
+  parseOpsDate,
+} from '../utils/ops-date';
 import { formatParkingDuration } from '../utils/parking-duration';
+
+const ENDED_PARKINGS_SESSION_KEY = 'urbanoa.operations.ended';
+const ENDED_PARKING_TTL_MS = 60 * 60 * 1000;
 
 interface OperationResponseDto {
   contractId?: number;
@@ -62,7 +72,9 @@ export interface ActiveParking {
   id: string;
   plate: string;
   vehicleId: string;
+  cityName?: string;
   zone: string;
+  amount?: number;
   startTime: string;
   startDayLabel?: string;
   durationLabel: string;
@@ -99,6 +111,7 @@ export class OperationsService {
   private readonly _operations = signal<Operation[]>([]);
   private readonly _activeParkings = signal<ActiveParking[]>([]);
   private readonly _activeLoading = signal(false);
+  private readonly locallyEndedOperationIds = this.readLocallyEndedOperationIds();
   private readonly operationsLoadsInFlight = new Map<string, Promise<void>>();
   private activeLoadingRequests = 0;
   private lastLoadParameters: [string?, string?, number[]?] = [];
@@ -162,7 +175,13 @@ export class OperationsService {
     this.lastError.set(null);
     try {
       const response = await this.api.post<OperationResponseDto[]>(OPS_ENDPOINTS.user.operations, requestBody, { token });
-      this._operations.set(response.map((item) => this.mapRemoteOperation(item)));
+      const operations = response.map((item) => this.mapRemoteOperation(item));
+      this.reconcileLocallyEndedOperations(operations);
+      this._operations.set(
+        operations.map((operation) =>
+          operation.timePeriod === 2 && this.locallyEndedOperationIds.has(operation.id) ? { ...operation, timePeriod: 1 } : operation,
+        ),
+      );
       this.source.set('remote');
     } catch (error) {
       this.lastError.set(error instanceof Error ? error.message : 'Error desconocido al cargar las operaciones');
@@ -219,12 +238,34 @@ export class OperationsService {
     this._activeParkings.update((current) => [...current.filter((item) => item.id !== parking.id), parking]);
   }
 
+  /**
+   * Removes only the confirmed parking while OPS propagates the unparking to
+   * QueryUserOperationsAPI. The marker survives a page refresh in this tab.
+   */
+  markParkingEnded(parkingId: string): void {
+    const parking = this.getActiveParking(parkingId);
+    const operationId = parking?.operationId;
+    if (!operationId) return;
+
+    this.locallyEndedOperationIds.set(operationId, Date.now());
+    this.persistLocallyEndedOperationIds();
+    this._activeParkings.update((current) => current.filter((item) => item.id !== parkingId));
+    this._operations.update((current) =>
+      current.map((operation) =>
+        operation.id === operationId && operation.timePeriod === 2 ? { ...operation, timePeriod: 1 } : operation,
+      ),
+    );
+  }
+
   private activeParkingFromOperation(operation: Operation, vehicles: readonly { id: string; plate: string }[]): ActiveParking {
     const plate = operation.plate ?? '';
     const vehicle = vehicles.find((item) => this.normalizePlate(item.plate) === this.normalizePlate(plate));
     const start = this.operationDateTime(operation.startDate ?? operation.date, operation.startTime);
     const end = this.operationDateTime(operation.endDate ?? operation.date, operation.endTime);
     const now = this.api.serverNow ? this.api.serverNow() : new Date();
+    const localToday = formatLocalCalendarDate(now);
+    const startDate = operation.startDate ?? operation.date;
+    const endDate = operation.endDate ?? operation.date;
     const countdownFrom = Math.max(now.getTime(), start.getTime());
     const remainingSeconds = Math.max(0, Math.floor((end.getTime() - countdownFrom) / 1000));
     const hours = String(Math.floor(remainingSeconds / 3600)).padStart(2, '0');
@@ -234,14 +275,16 @@ export class OperationsService {
       id: `operation-${operation.id}`,
       plate,
       vehicleId: vehicle?.id ?? plate,
+      cityName: operation.cityName,
       zone: operation.sectorName || operation.zoneName || operation.zone || '',
+      amount: operation.amount,
       startTime: operation.startTime ?? '',
-      startDayLabel: this.relativeDayLabel(start, now),
+      startDayLabel: calendarRelativeDayLabel(startDate, localToday),
       durationLabel: operation.durationLabel ?? '0 min',
       timeRemaining: `${hours}:${minutes}:${seconds}`,
       countdownStartsAt: start.getTime(),
       endTime: operation.endTime ?? '',
-      endDayLabel: this.relativeDayLabel(end, now),
+      endDayLabel: calendarRelativeDayLabel(endDate, localToday),
       latitude: operation.latitude,
       longitude: operation.longitude,
       street: operation.street,
@@ -282,10 +325,6 @@ export class OperationsService {
     if (![day, month, year, hours, minutes].every(Number.isFinite)) return new Date(0);
     const two = (value: number): string => String(value).padStart(2, '0');
     return parseOpsDate(`${two(hours)}${two(minutes)}00${two(day)}${two(month)}${two(year % 100)}`);
-  }
-
-  private relativeDayLabel(date: Date, now: Date): string {
-    return opsRelativeDayLabel(date, now);
   }
 
   private enrichExtensionContext(operation: Operation, allOperations: readonly Operation[]): Operation {
@@ -365,6 +404,42 @@ export class OperationsService {
 
   private normalizePlate(plate: string): string {
     return plate.replace(/\s+/g, '').toLocaleUpperCase('es');
+  }
+
+  private readLocallyEndedOperationIds(): Map<string, number> {
+    try {
+      const parsed = JSON.parse(sessionStorage.getItem(ENDED_PARKINGS_SESSION_KEY) ?? '[]') as unknown;
+      if (!Array.isArray(parsed)) return new Map();
+      const minimumTimestamp = Date.now() - ENDED_PARKING_TTL_MS;
+      return new Map(
+        parsed.filter(
+          (entry): entry is [string, number] =>
+            Array.isArray(entry) && typeof entry[0] === 'string' && typeof entry[1] === 'number' && entry[1] >= minimumTimestamp,
+        ),
+      );
+    } catch {
+      return new Map();
+    }
+  }
+
+  private reconcileLocallyEndedOperations(operations: readonly Operation[]): void {
+    let changed = false;
+    for (const [operationId, timestamp] of this.locallyEndedOperationIds) {
+      const remoteOperation = operations.find((operation) => operation.id === operationId);
+      if (timestamp < Date.now() - ENDED_PARKING_TTL_MS || (remoteOperation && remoteOperation.timePeriod !== 2)) {
+        this.locallyEndedOperationIds.delete(operationId);
+        changed = true;
+      }
+    }
+    if (changed) this.persistLocallyEndedOperationIds();
+  }
+
+  private persistLocallyEndedOperationIds(): void {
+    try {
+      sessionStorage.setItem(ENDED_PARKINGS_SESSION_KEY, JSON.stringify([...this.locallyEndedOperationIds]));
+    } catch {
+      // Session storage may be unavailable in restricted browser contexts.
+    }
   }
 
   private opsDate(date: Date): string {

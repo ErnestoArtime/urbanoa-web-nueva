@@ -24,6 +24,7 @@ describe('OperationsService stored data migration', () => {
 
   beforeEach(() => {
     localStorage.clear();
+    sessionStorage.clear();
     TestBed.configureTestingModule({
       providers: [
         provideZonelessChangeDetection(),
@@ -167,6 +168,38 @@ describe('OperationsService stored data migration', () => {
 
     expect(service.activeParkingOperations().map((operation) => operation.id)).toEqual(['1', '2']);
     expect(service.hasActiveParkingOperations()).toBeTrue();
+  });
+
+  it('does not resurrect a confirmed unparking while the backend still reports it as active', async () => {
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
+    const staleActiveOperation = {
+      operationNumber: 8431342,
+      operationType: OperationType.PARKING,
+      paymentAmount: 400,
+      opDate: '191627240926',
+      plate: 'TTT 12345',
+      timePeriod: 2,
+      contractId: 3,
+      ticketId: 4,
+      sectorId: 22002,
+      refundable: 2,
+    };
+    api.post.and.resolveTo([staleActiveOperation]);
+    TestBed.overrideProvider(OpsApiClient, { useValue: api });
+    TestBed.overrideProvider(OpsSessionService, { useValue: { token: () => 'token' } });
+    const service = TestBed.inject(OperationsService);
+
+    await service.load();
+    service.syncActiveParkingsFromOperations([{ id: 'vehicle-1', plate: 'TTT 12345' }]);
+    const parkingId = service.activeParkings()[0].id;
+
+    service.markParkingEnded(parkingId);
+    await service.load();
+    service.syncActiveParkingsFromOperations([{ id: 'vehicle-1', plate: 'TTT 12345' }]);
+
+    expect(service.activeParkings()).toEqual([]);
+    expect(service.operations()[0].timePeriod).toBe(1);
+    expect(api.post).toHaveBeenCalledTimes(2);
   });
 
   it('gives unpaid fines without operationNumber a distinct id based on their fineNumber', async () => {
