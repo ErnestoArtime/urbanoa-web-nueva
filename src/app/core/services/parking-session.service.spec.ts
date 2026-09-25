@@ -75,6 +75,7 @@ describe('ParkingSessionService', () => {
       getActiveParking: jasmine.createSpy().and.returnValue(parking),
       isVehicleParked: jasmine.createSpy().and.returnValue(true),
       isPlateParked: jasmine.createSpy().and.returnValue(false),
+      markParkingEnded: jasmine.createSpy(),
       load: jasmine.createSpy().and.resolveTo(),
       syncActiveParkingsFromOperations: jasmine.createSpy(),
     };
@@ -94,7 +95,8 @@ describe('ParkingSessionService', () => {
 
     expect(result).toBeTrue();
     expect(parkingApi.unpark).toHaveBeenCalledOnceWith({ contractId: 3, plate: '1234 ABC', ticketId: 7 });
-    expect(operations.load).toHaveBeenCalled();
+    expect(operations.markParkingEnded).toHaveBeenCalledOnceWith('parking-1');
+    expect(operations.load).toHaveBeenCalledTimes(1);
     expect(wallet.load).toHaveBeenCalled();
     expect(operations.syncActiveParkingsFromOperations).toHaveBeenCalledWith([{ id: 'vehicle-1', plate: '1234 ABC' }]);
   });
@@ -123,6 +125,7 @@ describe('ParkingSessionService', () => {
       getActiveParking: jasmine.createSpy().and.returnValue(parking),
       isVehicleParked: jasmine.createSpy().and.returnValue(true),
       isPlateParked: jasmine.createSpy().and.returnValue(false),
+      markParkingEnded: jasmine.createSpy(),
       load: jasmine.createSpy().and.resolveTo(),
       syncActiveParkingsFromOperations: jasmine.createSpy(),
       restoreActiveParking: jasmine.createSpy(),

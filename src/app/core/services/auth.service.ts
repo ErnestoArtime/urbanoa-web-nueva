@@ -2,7 +2,7 @@ import { computed, inject, Injectable, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { OpsLoginRequest, OpsLoginResponse, OpsRegisterRequest, OpsUserResponse } from '../api/ops-auth.types';
 import { OpsApiClient } from '../api/ops-api-client.service';
-import { getOpsCloudToken, OPS_APP_VERSION, OPS_OPERATING_SYSTEM } from '../api/ops-client.constants';
+import { getOpsCloudToken, OPS_APP_VERSION, OPS_PARKING_SESSION_OPERATING_SYSTEM } from '../api/ops-client.constants';
 import { OPS_ENDPOINTS } from '../api/ops-endpoints';
 import { OpsSessionService } from '../api/ops-session.service';
 import { readStorage, writeStorage } from '../storage/signal-storage';
@@ -215,7 +215,7 @@ export class AuthService {
       userName: email,
       password,
       cloudToken: getOpsCloudToken(),
-      operatingSystem: OPS_OPERATING_SYSTEM,
+      operatingSystem: OPS_PARKING_SESSION_OPERATING_SYSTEM,
       appVersion: OPS_APP_VERSION,
       language: this.opsLanguage(),
     };

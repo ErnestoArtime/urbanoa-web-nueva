@@ -59,6 +59,29 @@ export function formatOpsCalendarDate(date: Date): string {
   return new Intl.DateTimeFormat('es-ES', { timeZone: OPS_TIME_ZONE, day: '2-digit', month: '2-digit', year: 'numeric' }).format(date);
 }
 
+/** Formats the calendar day shown by the user's browser/device. */
+export function formatLocalCalendarDate(date: Date): string {
+  const two = (value: number): string => String(value).padStart(2, '0');
+  return `${two(date.getDate())}/${two(date.getMonth() + 1)}/${date.getFullYear()}`;
+}
+
+/** Compares two timezone-free dd/MM/yyyy calendar values. */
+export function calendarRelativeDayLabel(target: string, today: string): string {
+  const dayNumber = (value: string): number | null => {
+    const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(value);
+    if (!match) return null;
+    const [, day, month, year] = match;
+    return Date.UTC(Number(year), Number(month) - 1, Number(day)) / 86_400_000;
+  };
+  const targetDay = dayNumber(target);
+  const todayDay = dayNumber(today);
+  if (targetDay === null || todayDay === null) return target;
+  const difference = targetDay - todayDay;
+  if (difference === 0) return 'ops.today';
+  if (difference === 1) return 'ops.tomorrow';
+  return target;
+}
+
 /** Day labels use Madrid calendar days, including 23/25-hour DST days. */
 export function opsRelativeDayLabel(date: Date, now: Date): string {
   if (!Number.isFinite(date.getTime()) || !Number.isFinite(now.getTime())) return '';

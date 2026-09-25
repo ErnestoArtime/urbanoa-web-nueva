@@ -4,10 +4,12 @@ export const OPS_OPERATING_SYSTEMS = {
   web: 3,
 } as const;
 
-// OPS currently validates parking confirmations as mobile requests. Keep this
-// separate from the web value used by login/refund until the backend exposes
-// an explicit web value for these endpoints.
 export const OPS_OPERATING_SYSTEM = OPS_OPERATING_SYSTEMS.web;
+
+// Temporary OPS compatibility: parking confirmations only accept the mobile
+// contract and validate it against the operating system used to create the
+// session. Login and parking confirmations must therefore use the same value.
+export const OPS_PARKING_SESSION_OPERATING_SYSTEM = OPS_OPERATING_SYSTEMS.android;
 export const OPS_APP_VERSION = '4.0.0';
 
 const DEVICE_TOKEN_KEY = 'urbanoa.deviceToken';

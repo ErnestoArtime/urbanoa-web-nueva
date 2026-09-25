@@ -53,14 +53,9 @@ export class ParkingSessionService {
       this.unparkError.set(error instanceof Error ? error.message : 'No se pudo completar el desaparcar.');
       return false;
     }
-    const retryDelaysMs = [0, 500, 1_500, 3_000];
-    for (const delayMs of retryDelaysMs) {
-      if (delayMs) await new Promise<void>((resolve) => setTimeout(resolve, delayMs));
-      await this.operationsService.load();
-      this.operationsService.syncActiveParkingsFromOperations([{ id: parking.vehicleId, plate: parking.plate }]);
-      if (!this.operationsService.isPlateParked(parking.plate)) break;
-    }
-    await this.walletService.load();
+    this.operationsService.markParkingEnded(parking.id);
+    await Promise.all([this.operationsService.load(), this.walletService.load()]);
+    this.operationsService.syncActiveParkingsFromOperations([{ id: parking.vehicleId, plate: parking.plate }]);
     this.ticketStore.clearByPlate(parking.plate);
     return true;
   }
