@@ -1,7 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { OpsApiClient } from '../api/ops-api-client.service';
 import { OpsApiError } from '../api/ops-api.types';
-import { getOpsCloudToken, OPS_OPERATING_SYSTEMS } from '../api/ops-client.constants';
+import { getOpsCloudToken, OPS_PARKING_SESSION_OPERATING_SYSTEM } from '../api/ops-client.constants';
 import { OPS_ENDPOINTS } from '../api/ops-endpoints';
 import { OpsSessionService } from '../api/ops-session.service';
 import { formatOpsDate } from '../utils/ops-date';
@@ -118,7 +118,7 @@ export class ParkingApiService {
           tariffType: input.tariffType,
           cloudToken: getOpsCloudToken(),
           // Compatibility with the current OPS/Swagger parking contract.
-          operatingSystem: OPS_OPERATING_SYSTEMS.android,
+          operatingSystem: OPS_PARKING_SESSION_OPERATING_SYSTEM,
           date: input.date,
           time: input.time,
           latitude: input.latitude,
@@ -208,7 +208,7 @@ export class ParkingApiService {
           ticketId: input.ticketId,
           cloudToken: getOpsCloudToken(),
           // Compatibility with the current OPS/Swagger parking contract.
-          operatingSystem: OPS_OPERATING_SYSTEMS.android,
+          operatingSystem: OPS_PARKING_SESSION_OPERATING_SYSTEM,
           date,
         },
         { token },

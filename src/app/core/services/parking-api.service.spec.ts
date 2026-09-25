@@ -1,7 +1,7 @@
 import { provideZonelessChangeDetection } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { OpsApiClient } from '../api/ops-api-client.service';
-import { OPS_OPERATING_SYSTEMS } from '../api/ops-client.constants';
+import { OPS_PARKING_SESSION_OPERATING_SYSTEM } from '../api/ops-client.constants';
 import { OpsSessionService } from '../api/ops-session.service';
 import { ParkingApiService } from './parking-api.service';
 import { TranslationService } from './translation.service';
@@ -55,7 +55,7 @@ describe('ParkingApiService', () => {
         quantity: 125,
         tariffType: 2,
         cloudToken: jasmine.any(String),
-        operatingSystem: OPS_OPERATING_SYSTEMS.android,
+        operatingSystem: OPS_PARKING_SESSION_OPERATING_SYSTEM,
         date: '120000130826',
         time: 60,
         latitude: 43.2,
@@ -192,7 +192,7 @@ describe('ParkingApiService', () => {
         groupId: 4,
         ticketId: 7,
         cloudToken: jasmine.any(String),
-        operatingSystem: OPS_OPERATING_SYSTEMS.android,
+        operatingSystem: OPS_PARKING_SESSION_OPERATING_SYSTEM,
       }),
       { token: 'token' },
     );
@@ -372,7 +372,7 @@ describe('ParkingApiService', () => {
         plate: '1234ABC',
         quantity: 125,
         cloudToken: jasmine.any(String),
-        operatingSystem: OPS_OPERATING_SYSTEMS.android,
+        operatingSystem: OPS_PARKING_SESSION_OPERATING_SYSTEM,
         date: jasmine.stringMatching(/^\d{12}$/),
       }),
       { token: 'token' },
