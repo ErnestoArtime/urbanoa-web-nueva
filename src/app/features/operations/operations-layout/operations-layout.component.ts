@@ -17,6 +17,7 @@ import type { Operation } from '../../../shared/models/operation';
 import { OperationIconComponent } from '../../../shared/components/operation-icon/operation-icon.component';
 import { SplitViewComponent } from '../../../layout/split-view/split-view.component';
 import { ResultModalComponent } from '../../../shared/components/result-modal/result-modal.component';
+import { LoaderComponent } from '../../../shared/components/loader/loader.component';
 import { ParkingTicketCardComponent } from '../../../shared/components/parking-ticket-card/parking-ticket-card.component';
 import { ParkingFlowStore } from '../../parking/parking-flow.store';
 import { OpsApiClient } from '../../../core/api/ops-api-client.service';
@@ -34,6 +35,7 @@ import { OPERATION_PERIODS, operationPeriod } from '../operation-period';
     SplitViewComponent,
     ParkingTicketCardComponent,
     ResultModalComponent,
+    LoaderComponent,
   ],
   template: `
     <app-split-view [hideList]="isDetailRoute()" [hideDetail]="!isDetailRoute()" [showOutlet]="isDetailRoute()" emptyMessageKey="ops.empty">
@@ -254,6 +256,7 @@ import { OPERATION_PERIODS, operationPeriod } from '../operation-period';
         [busy]="unparking()"
       />
     }
+    <app-loader [visible]="unparkQuerying()" [message]="'common.loading' | translate" />
   `,
   styles: [
     `
@@ -725,6 +728,7 @@ export class OperationsLayoutComponent implements OnInit, AfterViewInit {
   readonly unparkedRefundAmount = signal(0);
   readonly confirmUnpark = signal(false);
   readonly unparking = signal(false);
+  readonly unparkQuerying = signal(false);
   readonly pendingUnparkAmount = signal<number | null>(null);
   private pendingUnparkId = '';
   private pendingUnparkQuote: UnparkingQuoteResult | undefined;
@@ -793,15 +797,22 @@ export class OperationsLayoutComponent implements OnInit, AfterViewInit {
   }
 
   async onUnpark(parkingId: string): Promise<void> {
-    this.pendingUnparkId = parkingId;
-    const quote = await this.parkingSessionService.quoteUnparking(parkingId);
-    if (!quote.success) {
-      this.unparkError.set(quote.error instanceof Error ? quote.error.message : 'No se pudo calcular el desaparcar.');
-      return;
+    if (this.unparkQuerying()) return;
+    this.unparkQuerying.set(true);
+    this.unparkError.set(null);
+    try {
+      this.pendingUnparkId = parkingId;
+      const quote = await this.parkingSessionService.quoteUnparking(parkingId);
+      if (!quote.success) {
+        this.unparkError.set(quote.error instanceof Error ? quote.error.message : 'No se pudo calcular el desaparcar.');
+        return;
+      }
+      this.pendingUnparkQuote = quote;
+      this.pendingUnparkAmount.set(quote.refundAmount ?? 0);
+      this.confirmUnpark.set(true);
+    } finally {
+      this.unparkQuerying.set(false);
     }
-    this.pendingUnparkQuote = quote;
-    this.pendingUnparkAmount.set(quote.refundAmount ?? 0);
-    this.confirmUnpark.set(true);
   }
 
   async confirmUnparkAction(): Promise<void> {

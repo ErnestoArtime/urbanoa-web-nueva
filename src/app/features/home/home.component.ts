@@ -15,6 +15,7 @@ import { VehicleSummaryCardComponent } from './components/vehicle-summary-card.c
 import { RecentOperationsCardComponent } from './components/recent-operations-card.component';
 import { ProfileProgressCardComponent } from './components/profile-progress-card.component';
 import { ResultModalComponent } from '../../shared/components/result-modal/result-modal.component';
+import { LoaderComponent } from '../../shared/components/loader/loader.component';
 import { VehicleService } from '../../core/services/vehicle.service';
 import { DashboardApiService } from '../../core/services/dashboard-api.service';
 import { ParkingFlowStore } from '../parking/parking-flow.store';
@@ -30,6 +31,7 @@ import { ParkingFlowStore } from '../parking/parking-flow.store';
     RecentOperationsCardComponent,
     ProfileProgressCardComponent,
     ResultModalComponent,
+    LoaderComponent,
   ],
   template: `
     <div class="page">
@@ -160,6 +162,7 @@ import { ParkingFlowStore } from '../parking/parking-flow.store';
           [busy]="unparking()"
         />
       }
+      <app-loader [visible]="unparkQuerying()" [message]="'common.loading' | translate" />
     </div>
   `,
   styles: [
@@ -277,6 +280,9 @@ import { ParkingFlowStore } from '../parking/parking-flow.store';
         display: flex;
         flex-direction: column;
         gap: 0.5rem;
+      }
+      .active-parkings-section app-parking-ticket-card + app-parking-ticket-card {
+        margin-top: 0.5rem;
       }
       .parking-status-progress {
         position: relative;
@@ -428,6 +434,7 @@ export class HomeComponent {
   readonly unparkedRefundAmount = signal(0);
   readonly confirmUnpark = signal(false);
   readonly unparking = signal(false);
+  readonly unparkQuerying = signal(false);
   readonly pendingUnparkAmount = signal<number | null>(null);
   private pendingUnparkId = '';
   private pendingUnparkQuote: UnparkingQuoteResult | undefined;
@@ -437,15 +444,22 @@ export class HomeComponent {
   }
 
   async confirmUnparkFor(parking: ActiveParking): Promise<void> {
-    this.pendingUnparkId = parking.id;
-    const quote = await this.parkingSessionService.quoteUnparking(parking.id);
-    if (!quote.success) {
-      this.unparkError.set(quote.error instanceof Error ? quote.error.message : 'No se pudo calcular el desaparcar.');
-      return;
+    if (this.unparkQuerying()) return;
+    this.unparkQuerying.set(true);
+    this.unparkError.set(null);
+    try {
+      this.pendingUnparkId = parking.id;
+      const quote = await this.parkingSessionService.quoteUnparking(parking.id);
+      if (!quote.success) {
+        this.unparkError.set(quote.error instanceof Error ? quote.error.message : 'No se pudo calcular el desaparcar.');
+        return;
+      }
+      this.pendingUnparkQuote = quote;
+      this.pendingUnparkAmount.set(quote.refundAmount ?? 0);
+      this.confirmUnpark.set(true);
+    } finally {
+      this.unparkQuerying.set(false);
     }
-    this.pendingUnparkQuote = quote;
-    this.pendingUnparkAmount.set(quote.refundAmount ?? 0);
-    this.confirmUnpark.set(true);
   }
 
   async confirmUnparkAction(): Promise<void> {
