@@ -27,6 +27,7 @@ interface MapParkingZone {
   sectorId?: number;
   name: string;
   color: string;
+  popupDescription?: string;
   points: L.LatLngTuple[];
   leafletLayer?: L.Polygon;
   googleLayer?: google.maps.Polygon;
@@ -85,7 +86,7 @@ interface MapParkingZone {
               <span class="vehicle-control-icon"><svg lucideCarFront size="20" strokeWidth="2.2"></svg></span>
               <span
                 ><small>{{ 'parking.map.vehicle' | translate }}</small
-                ><strong>{{ selectedVehicle()?.plate ?? ('parking.map.noVehicles' | translate) }}</strong></span
+                ><strong>{{ selectedVehicle()?.plate ?? (vehiclePlaceholderKey() | translate) }}</strong></span
               >
               <b class="vehicle-control-chevron" aria-hidden="true"></b>
             </button>
@@ -140,13 +141,17 @@ interface MapParkingZone {
                 ><strong>{{ zone.name }}</strong>
               </div>
             </div>
+          } @else if (sectorResolving()) {
+            <p class="select-hint" role="status">{{ 'parking.map.resolvingSector' | translate }}</p>
+          } @else if (sectorError()) {
+            <p class="select-hint select-hint-error" role="status">{{ 'parking.map.sectorNotFound' | translate }}</p>
           } @else {
             <p class="select-hint">{{ 'parking.map.selectHint' | translate }}</p>
           }
           <button type="button" class="btn btn-primary btn-block" [disabled]="!canStartParking()" (click)="startParking()">
             {{ 'parking.map.parkHere' | translate }}
           </button>
-          @if (!hasAvailableVehicles()) {
+          @if (!hasAvailableVehicles() && !initialDataLoading()) {
             <p class="flow-warning">{{ 'parking.map.noVehiclesAvailable' | translate }}</p>
           }
         </section>
@@ -433,7 +438,8 @@ interface MapParkingZone {
       .map-target {
         position: absolute;
         z-index: 450;
-        top: 50%;
+        /* The rotated pin's visual tip is 7 px above its container bottom. */
+        top: calc(50% + 7px);
         left: 50%;
         width: 30px;
         height: 38px;
@@ -500,6 +506,9 @@ interface MapParkingZone {
         color: var(--color-text-muted);
         font-size: var(--text-xs);
         text-align: center;
+      }
+      .select-hint-error {
+        color: var(--color-error);
       }
       .btn:disabled,
       .vehicle-control:disabled {
@@ -659,6 +668,9 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
   private destroyed = false;
   private readonly zones: MapParkingZone[] = [];
   private highlightedZone?: MapParkingZone;
+  private leafletPopupRequest?: { zone: MapParkingZone };
+  private googlePopupRequest?: { zone: MapParkingZone };
+  private sectorRequestVersion = 0;
   private readonly selectedState = signal<ParkingMunicipio>(EMPTY_CITY);
   get selected(): ParkingMunicipio {
     return this.selectedState();
@@ -666,6 +678,8 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
   readonly mapLoading = signal(true);
   readonly flowError = signal(this.route.snapshot.queryParamMap.get('flowError') === 'missingData');
   readonly mapError = signal(false);
+  readonly sectorResolving = signal(false);
+  readonly sectorError = signal(false);
   readonly locationState = signal<MapLocationState>('idle');
   readonly zoneCount = signal(0);
   readonly selectedZone = signal<MapParkingZone | null>(null);
@@ -679,6 +693,9 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
   }
   readonly availableVehicles = computed(() => this.vehicles());
   readonly hasAvailableVehicles = computed(() => this.availableVehicles().length > 0);
+  readonly vehiclesLoading = computed(() => this.vehicleService.source() === 'idle');
+  readonly initialDataLoading = computed(() => this.mapLoading() || this.vehiclesLoading());
+  readonly vehiclePlaceholderKey = computed(() => (this.initialDataLoading() ? 'parking.map.loadingVehicles' : 'parking.map.noVehicles'));
   readonly selectedVehicle = signal<Vehicle | null>(
     this.availableVehicles().find((vehicle) => vehicle.id === this.query.vehicleId || vehicle.plate === this.query.plate) ??
       preferredVehicle(this.availableVehicles()),
@@ -686,7 +703,7 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
   readonly canStartParking = computed(() => {
     const zone = this.selectedZone();
     const vehicle = this.selectedVehicle();
-    return Boolean(zone?.sectorId && vehicle);
+    return Boolean(zone?.sectorId && vehicle && !this.sectorResolving());
   });
   readonly showVehicleSelector = signal(false);
   readonly showParkingBehaviorHelp = signal(false);
@@ -947,11 +964,11 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
             })
             .filter(([lat, lng]) => Number.isFinite(lat) && Number.isFinite(lng));
           if (points.length < 3) continue;
-          const popupHtml = `<div class="zone-popup"><strong>${this.escapeHtml(name)}</strong>${description ? '<br>' + this.escapeHtml(description) : ''}</div>`;
           const zone: MapParkingZone = {
             zoneId,
             name: description || this.readableZoneName(name),
             color,
+            popupDescription: description,
             points,
           };
           if (this.leafletMap) {
@@ -960,10 +977,10 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
               fillColor: `#${color}`,
               fillOpacity: 0.28,
               weight: 2,
-            }).bindPopup(popupHtml);
+            });
             zone.leafletLayer.on('click', (event: L.LeafletMouseEvent) => {
+              this.leafletPopupRequest = { zone };
               this.leafletMap?.panTo(event.latlng);
-              this.selectZone(zone);
             });
             leafletLayers.push(zone.leafletLayer);
           } else if (this.googleMap) {
@@ -978,11 +995,9 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
             });
             zone.googleLayer.addListener('click', (event: google.maps.PolyMouseEvent) => {
               if (event.latLng) {
+                this.googlePopupRequest = { zone };
                 this.googleMap?.panTo(event.latLng);
-                this.googleInfoWindow?.setOptions({ content: popupHtml, position: event.latLng });
-                this.googleInfoWindow?.open({ map: this.googleMap });
               }
-              this.selectZone(zone);
             });
             for (const coordinate of path) googleBounds?.extend(coordinate);
           }
@@ -1008,6 +1023,10 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
     return value.replace(/[&<>'"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[char]!);
   }
 
+  private zonePopupHtml(name: string, description?: string): string {
+    return `<div class="zone-popup"><strong>${this.escapeHtml(name)}</strong>${description ? '<br>' + this.escapeHtml(description) : ''}</div>`;
+  }
+
   private selectZoneAtMapCenter(): void {
     const center = this.mapCenter();
     if (!center || !this.zones.length) return;
@@ -1015,6 +1034,11 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
   }
 
   private selectZone(zone: MapParkingZone | null): void {
+    const requestVersion = ++this.sectorRequestVersion;
+    if (this.leafletPopupRequest?.zone !== zone) this.leafletPopupRequest = undefined;
+    if (this.googlePopupRequest?.zone !== zone) this.googlePopupRequest = undefined;
+    this.sectorError.set(false);
+    this.sectorResolving.set(Boolean(zone));
     if (this.highlightedZone && this.highlightedZone !== zone) {
       this.setZoneStyle(this.highlightedZone, false);
     }
@@ -1024,9 +1048,10 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
     } else {
       this.highlightedZone = undefined;
     }
-    this.selectedZone.set(zone);
+    this.selectedZone.set(null);
     const center = this.mapCenter();
-    if (zone && center) void this.resolveSector(zone, center);
+    if (zone && center) void this.resolveSector(zone, center, requestVersion);
+    else this.sectorResolving.set(false);
   }
 
   private setZoneStyle(zone: MapParkingZone, highlighted: boolean): void {
@@ -1039,15 +1064,21 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
     });
   }
 
-  private async resolveSector(zone: MapParkingZone, point: MapPoint): Promise<void> {
+  private async resolveSector(zone: MapParkingZone, point: MapPoint, requestVersion: number): Promise<void> {
     try {
       const sectors = await this.parkingApi.sectors({
         contractId: this.selected.contractId,
         latitude: point.lat,
         longitude: point.lng,
       });
+      if (requestVersion !== this.sectorRequestVersion) return;
+      // QueryMapStretchesAPI and QuerySectorsAPI do not use the same zone identifiers
+      // in every municipality. The sector response is authoritative for these coordinates.
       const match = sectors.find((sector) => sector.zoneId === zone.zoneId) ?? sectors[0];
-      if (!match || this.selectedZone() !== zone) return;
+      if (!match) {
+        this.sectorError.set(true);
+        return;
+      }
       const resolved = {
         ...zone,
         sectorId: match.sectorId,
@@ -1055,8 +1086,26 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
         color: (match.sectorColor || match.zoneColor || zone.color).replace('#', ''),
       };
       this.selectedZone.set(resolved);
+      const confirmedPopup = this.zonePopupHtml(resolved.name);
+      const leafletPopup = this.leafletPopupRequest;
+      if (leafletPopup?.zone === zone) {
+        zone.leafletLayer?.bindPopup(confirmedPopup, { offset: L.point(0, -32) }).openPopup(L.latLng(point.lat, point.lng));
+        this.leafletPopupRequest = undefined;
+      }
+      const googlePopup = this.googlePopupRequest;
+      if (googlePopup?.zone === zone) {
+        this.googleInfoWindow?.setOptions({
+          content: confirmedPopup,
+          position: new google.maps.LatLng(point.lat, point.lng),
+          pixelOffset: new google.maps.Size(0, -32),
+        });
+        this.googleInfoWindow?.open({ map: this.googleMap });
+        this.googlePopupRequest = undefined;
+      }
     } catch {
-      this.mapError.set(true);
+      if (requestVersion === this.sectorRequestVersion) this.sectorError.set(true);
+    } finally {
+      if (requestVersion === this.sectorRequestVersion) this.sectorResolving.set(false);
     }
   }
 
