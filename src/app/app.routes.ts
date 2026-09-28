@@ -3,6 +3,10 @@ import { requireSession } from './core/guards/auth.guard';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'auth/login', pathMatch: 'full' },
+  // Paycomet's native flow reports URLs ending in /ok? and /ko?. Keep these
+  // aliases so the provider can return to the web app using the same contract.
+  { path: 'ok', redirectTo: 'app/paycomet/ok', pathMatch: 'full' },
+  { path: 'ko', redirectTo: 'app/paycomet/ko', pathMatch: 'full' },
   {
     path: 'auth',
     loadChildren: () => import('./features/auth/auth.routes').then((m) => m.AUTH_ROUTES),
@@ -32,6 +36,22 @@ export const routes: Routes = [
       {
         path: 'account',
         loadChildren: () => import('./features/account/account.routes').then((m) => m.ACCOUNT_ROUTES),
+      },
+      {
+        path: 'paycomet/ok',
+        loadComponent: () =>
+          import('./features/account/payment-challenge-return/payment-challenge-return.component').then(
+            (m) => m.PaymentChallengeReturnComponent,
+          ),
+        data: { outcome: 'ok' },
+      },
+      {
+        path: 'paycomet/ko',
+        loadComponent: () =>
+          import('./features/account/payment-challenge-return/payment-challenge-return.component').then(
+            (m) => m.PaymentChallengeReturnComponent,
+          ),
+        data: { outcome: 'ko' },
       },
     ],
   },
