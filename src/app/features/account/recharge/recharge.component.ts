@@ -6,6 +6,8 @@ import { ActivatedRoute } from '@angular/router';
 import { RouterLink } from '@angular/router';
 import { map } from 'rxjs/operators';
 import { OperationsService } from '../../../core/services/operations.service';
+import { PaymentChallengeService } from '../../../core/services/payment-challenge.service';
+import { TranslationService } from '../../../core/services/translation.service';
 import { WalletService } from '../../../core/services/wallet.service';
 import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
 import { ResultModalComponent } from '../../../shared/components/result-modal/result-modal.component';
@@ -24,6 +26,9 @@ import { isCardUsable } from '../../../core/utils/card-expiry';
       }
       @if (walletService.source() === 'error') {
         <p class="data-notice" role="alert">No se pudo conectar con el servicio de pagos.</p>
+      }
+      @if (submitError(); as error) {
+        <p class="data-notice" role="alert">{{ error }}</p>
       }
       @if (!usableCards().length) {
         <div class="card empty-recharge-state">
@@ -172,10 +177,13 @@ export class AccountRechargeComponent {
   readonly walletService = inject(WalletService);
   private readonly route = inject(ActivatedRoute);
   private readonly operationsService = inject(OperationsService);
+  private readonly paymentChallenge = inject(PaymentChallengeService);
+  private readonly translationService = inject(TranslationService);
   private readonly fb = inject(FormBuilder);
   readonly rechargeAmounts = [1, 2, 5, 10, 20, 30, 40] as const;
   readonly done = signal(false);
   readonly saving = signal(false);
+  readonly submitError = signal<string | null>(null);
   readonly isCardUsable = isCardUsable;
   readonly usableCards = () => this.walletService.cards().filter((card) => isCardUsable(card));
   private readonly queryCardId = toSignal(this.route.queryParamMap.pipe(map((params) => params.get('cardId'))), {
@@ -231,14 +239,19 @@ export class AccountRechargeComponent {
     }
 
     const amount = this.selectedAmount();
+    this.submitError.set(null);
     this.saving.set(true);
     try {
       const result = await this.walletService.recharge(amount, this.selectedCardId());
       if (result.challengeUrl) {
+        this.paymentChallenge.beginRecharge({ amount, ...(result.order ? { order: result.order } : {}) });
         window.location.assign(result.challengeUrl);
         return;
       }
-      if (!result.success) return;
+      if (!result.success) {
+        this.submitError.set(result.error?.message ?? this.translationService.translate('errors.server'));
+        return;
+      }
       await this.operationsService.load();
       this.done.set(true);
     } finally {
