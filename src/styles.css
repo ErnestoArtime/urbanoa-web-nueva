@@ -493,6 +493,17 @@ a:hover {
 .split-view-detail {
   min-height: 0;
 }
+/*
+ * Los flujos anidados de cuenta pueden mostrar Cuenta → Métodos → detalle.
+ * En escritorio amplio se conservan las tres columnas; antes de que el
+ * detalle pierda legibilidad se muestra únicamente el panel en curso.
+ */
+@media (min-width: 960px) and (max-width: 1499px) {
+  .split-view-list.split-hidden,
+  .split-view-detail.split-hidden {
+    display: none;
+  }
+}
 @media (min-width: 960px) {
   .split-view {
     flex-direction: row;
