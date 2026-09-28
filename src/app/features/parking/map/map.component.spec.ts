@@ -49,6 +49,7 @@ describe('ParkingMapComponent', () => {
 
     expect(component.selectedZone().name).toBe('Z2 RESIDENTES');
     expect(component.canStartParking()).toBeTrue();
+    expect(component.zoneLabelVisible()).toBeTrue();
   });
 
   it('does not report that there are no vehicles while they are still loading', () => {
@@ -82,5 +83,50 @@ describe('ParkingMapComponent', () => {
 
     expect(component.vehiclesLoading()).toBeFalse();
     expect(component.vehiclePlaceholderKey()).toBe('parking.map.noVehicles');
+  });
+
+  it('does not restart sector resolution when the map reports the same resolved zone again', () => {
+    const parkingApi = jasmine.createSpyObj<ParkingApiService>('ParkingApiService', ['sectors']);
+    parkingApi.sectors.and.resolveTo([
+      { zoneId: 2, sectorId: 22004, zone: 'Z2', zoneColor: '2196f3', sector: 'Z2 RESIDENTES', sectorColor: '2196f3' },
+    ]);
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [
+        provideZonelessChangeDetection(),
+        ParkingFlowStore,
+        { provide: ParkingApiService, useValue: parkingApi },
+        { provide: VehicleService, useValue: { vehicles: signal([]), source: signal<'idle' | 'remote'>('remote') } },
+        { provide: LocationSettingsService, useValue: { settings: signal({ preferredCityId: '' }) } },
+        { provide: TranslationService, useValue: { translateLabel: (value?: string) => value ?? '' } },
+        { provide: CitiesService, useValue: {} },
+        { provide: GoogleMapsLoaderService, useValue: {} },
+        { provide: ParkingSessionService, useValue: { isVehicleParked: () => false } },
+        { provide: Router, useValue: { navigate: () => Promise.resolve(true) } },
+        { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: convertToParamMap({}) } } },
+      ],
+    });
+    const component: any = TestBed.runInInjectionContext(() => new ParkingMapComponent());
+    const zone = { zoneId: 2, name: 'Z2', color: '2196f3', points: [] };
+    component.selectedState.set({ id: 'zarautz', contractId: 3, nombre: 'Zarautz' });
+    component.mapCenter = () => ({ lat: 43.28, lng: -2.16 });
+    component.setZoneStyle = () => undefined;
+    component.highlightedZone = zone;
+    component.selectedZone.set({ ...zone, sectorId: 22004 });
+
+    component.selectZone(zone);
+
+    expect(parkingApi.sectors).not.toHaveBeenCalled();
+    expect(component.selectedZone().sectorId).toBe(22004);
+    expect(component.zoneLabelVisible()).toBeTrue();
+
+    component.closeZoneLabel();
+
+    expect(component.zoneLabelVisible()).toBeFalse();
+
+    component.zoneLabelVisible.set(true);
+    component.handleMapMoveStart();
+
+    expect(component.zoneLabelVisible()).toBeFalse();
   });
 });

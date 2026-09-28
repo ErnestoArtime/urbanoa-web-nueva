@@ -27,7 +27,6 @@ interface MapParkingZone {
   sectorId?: number;
   name: string;
   color: string;
-  popupDescription?: string;
   points: L.LatLngTuple[];
   leafletLayer?: L.Polygon;
   googleLayer?: google.maps.Polygon;
@@ -56,6 +55,14 @@ interface MapParkingZone {
       <div class="map-frame">
         <div #mapContainer class="leaflet-map" [attr.aria-label]="'parking.map.ariaLabel' | translate"></div>
         <div class="map-target" aria-hidden="true"><span></span></div>
+        @if (zoneLabelVisible()) {
+          @if (selectedZone(); as zone) {
+            <div class="map-zone-label" role="status" aria-live="polite">
+              <span>{{ zone.name }}</span>
+              <button type="button" [attr.aria-label]="'common.close' | translate" (click)="closeZoneLabel()">×</button>
+            </div>
+          }
+        }
         <app-map-location-control [state]="locationState()" (locate)="locateUser()" />
 
         <section class="parking-controls">
@@ -469,6 +476,59 @@ interface MapParkingZone {
         border-radius: 50%;
         background: #fff;
       }
+      .map-zone-label {
+        position: absolute;
+        z-index: 1200;
+        top: calc(50% - 46px);
+        left: 50%;
+        max-width: min(280px, calc(100% - 2rem));
+        padding: 0.7rem 2.5rem 0.7rem 1rem;
+        border-radius: 14px;
+        background: var(--color-surface);
+        color: var(--color-primary-dark);
+        box-shadow: var(--shadow-md);
+        font-size: var(--text-sm);
+        font-weight: var(--font-bold);
+        line-height: var(--line-tight);
+        overflow-wrap: anywhere;
+        pointer-events: none;
+        text-align: center;
+        transform: translate(-50%, -100%);
+      }
+      .map-zone-label button {
+        position: absolute;
+        top: 0.25rem;
+        right: 0.35rem;
+        display: grid;
+        width: 1.75rem;
+        height: 1.75rem;
+        padding: 0;
+        place-items: center;
+        border: 0;
+        border-radius: 50%;
+        background: transparent;
+        color: var(--color-text-muted);
+        cursor: pointer;
+        font-size: 1.25rem;
+        line-height: 1;
+        pointer-events: auto;
+      }
+      .map-zone-label button:hover {
+        background: var(--color-background);
+        color: var(--color-primary-dark);
+      }
+      .map-zone-label::after {
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        width: 0;
+        height: 0;
+        border-top: 10px solid var(--color-surface);
+        border-right: 10px solid transparent;
+        border-left: 10px solid transparent;
+        content: '';
+        transform: translateX(-50%);
+      }
       .selected-zone {
         display: flex;
         align-items: center;
@@ -530,12 +590,6 @@ interface MapParkingZone {
       }
       .map-status.error {
         color: var(--color-error);
-      }
-      :host ::ng-deep .leaflet-popup-content {
-        margin: 0.7rem 0.85rem;
-      }
-      :host ::ng-deep .zone-popup strong {
-        color: var(--color-primary-dark);
       }
       @media (min-width: 900px) {
         .parking-map-page,
@@ -664,12 +718,9 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
   private resizeFrame?: number;
   private leafletLocationMarker?: L.CircleMarker;
   private googleLocationMarker?: google.maps.Circle;
-  private googleInfoWindow?: google.maps.InfoWindow;
   private destroyed = false;
   private readonly zones: MapParkingZone[] = [];
   private highlightedZone?: MapParkingZone;
-  private leafletPopupRequest?: { zone: MapParkingZone };
-  private googlePopupRequest?: { zone: MapParkingZone };
   private sectorRequestVersion = 0;
   private readonly selectedState = signal<ParkingMunicipio>(EMPTY_CITY);
   get selected(): ParkingMunicipio {
@@ -683,6 +734,7 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
   readonly locationState = signal<MapLocationState>('idle');
   readonly zoneCount = signal(0);
   readonly selectedZone = signal<MapParkingZone | null>(null);
+  readonly zoneLabelVisible = signal(false);
   readonly vehicles = this.vehicleService.vehicles;
   private readonly parkingSessionService = inject(ParkingSessionService);
   readonly isParkedIn = (vehicle: Vehicle) =>
@@ -740,6 +792,10 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
     this.store.selectVehicle(vehicle.id, vehicle.plate);
     this.showVehicleSelector.set(false);
     this.showParkingBehaviorHelp.set(false);
+  }
+
+  closeZoneLabel(): void {
+    this.zoneLabelVisible.set(false);
   }
 
   vehicleQueryParams(): Record<string, string> {
@@ -906,7 +962,7 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
 
   private initializeLeafletMap(center: L.LatLngExpression): void {
     this.leafletMap = L.map(this.mapContainer.nativeElement, { zoomControl: false }).setView(center, 15);
-    this.leafletMap.on('movestart', () => this.showParkingBehaviorHelp.set(false));
+    this.leafletMap.on('movestart', () => this.handleMapMoveStart());
     L.control.zoom({ position: 'topright' }).addTo(this.leafletMap);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
@@ -927,8 +983,7 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
       mapTypeControl: false,
       fullscreenControl: false,
     });
-    this.googleInfoWindow = new googleMaps.InfoWindow();
-    this.googleMap.addListener('dragstart', () => this.showParkingBehaviorHelp.set(false));
+    this.googleMap.addListener('dragstart', () => this.handleMapMoveStart());
     this.googleMap.addListener('idle', () => this.selectZoneAtMapCenter());
   }
 
@@ -939,13 +994,17 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
     return googleCenter ? { lat: googleCenter.lat(), lng: googleCenter.lng() } : null;
   }
 
+  private handleMapMoveStart(): void {
+    this.showParkingBehaviorHelp.set(false);
+    this.zoneLabelVisible.set(false);
+  }
+
   private async loadRealZones(): Promise<void> {
     try {
       const response = await this.parkingApi.mapStretches(this.selected.contractId);
       if (!response.data?.trim()) throw new Error('QueryMapStretchesAPI no devolvió KML');
       const xml = new DOMParser().parseFromString(response.data, 'application/xml');
       const leafletLayers: L.Polygon[] = [];
-      const googleBounds = this.googleMap ? new google.maps.LatLngBounds() : null;
       let renderedZones = 0;
       for (const placemark of Array.from(xml.getElementsByTagName('Placemark'))) {
         const name = placemark.getElementsByTagName('name')[0]?.textContent?.trim() || 'Zona';
@@ -968,7 +1027,6 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
             zoneId,
             name: description || this.readableZoneName(name),
             color,
-            popupDescription: description,
             points,
           };
           if (this.leafletMap) {
@@ -979,7 +1037,6 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
               weight: 2,
             });
             zone.leafletLayer.on('click', (event: L.LeafletMouseEvent) => {
-              this.leafletPopupRequest = { zone };
               this.leafletMap?.panTo(event.latlng);
             });
             leafletLayers.push(zone.leafletLayer);
@@ -995,11 +1052,9 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
             });
             zone.googleLayer.addListener('click', (event: google.maps.PolyMouseEvent) => {
               if (event.latLng) {
-                this.googlePopupRequest = { zone };
                 this.googleMap?.panTo(event.latLng);
               }
             });
-            for (const coordinate of path) googleBounds?.extend(coordinate);
           }
           this.zones.push(zone);
           renderedZones += 1;
@@ -1008,8 +1063,9 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
       if (this.leafletMap) this.zoneLayer = L.featureGroup(leafletLayers).addTo(this.leafletMap);
       this.zoneCount.set(renderedZones);
       if (renderedZones) {
-        if (this.leafletMap && this.zoneLayer) this.leafletMap.fitBounds(this.zoneLayer.getBounds(), { padding: [28, 28] });
-        else if (this.googleMap && googleBounds) this.googleMap.fitBounds(googleBounds, 28);
+        // The city coordinates are the authoritative initial viewport. Fitting the
+        // union of all polygons here moves the map after it has already been
+        // initialized and makes the map center depend on the distribution of zones.
         this.selectZoneAtMapCenter();
       }
     } catch {
@@ -1019,14 +1075,6 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
     }
   }
 
-  private escapeHtml(value: string): string {
-    return value.replace(/[&<>'"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[char]!);
-  }
-
-  private zonePopupHtml(name: string, description?: string): string {
-    return `<div class="zone-popup"><strong>${this.escapeHtml(name)}</strong>${description ? '<br>' + this.escapeHtml(description) : ''}</div>`;
-  }
-
   private selectZoneAtMapCenter(): void {
     const center = this.mapCenter();
     if (!center || !this.zones.length) return;
@@ -1034,9 +1082,15 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
   }
 
   private selectZone(zone: MapParkingZone | null): void {
+    const sameZoneIsAlreadyResolved =
+      zone !== null && this.highlightedZone === zone && this.selectedZone()?.zoneId === zone.zoneId && !this.sectorResolving();
+    if (sameZoneIsAlreadyResolved) {
+      this.zoneLabelVisible.set(true);
+      return;
+    }
+
     const requestVersion = ++this.sectorRequestVersion;
-    if (this.leafletPopupRequest?.zone !== zone) this.leafletPopupRequest = undefined;
-    if (this.googlePopupRequest?.zone !== zone) this.googlePopupRequest = undefined;
+    this.zoneLabelVisible.set(false);
     this.sectorError.set(false);
     this.sectorResolving.set(Boolean(zone));
     if (this.highlightedZone && this.highlightedZone !== zone) {
@@ -1086,22 +1140,7 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
         color: (match.sectorColor || match.zoneColor || zone.color).replace('#', ''),
       };
       this.selectedZone.set(resolved);
-      const confirmedPopup = this.zonePopupHtml(resolved.name);
-      const leafletPopup = this.leafletPopupRequest;
-      if (leafletPopup?.zone === zone) {
-        zone.leafletLayer?.bindPopup(confirmedPopup, { offset: L.point(0, -32) }).openPopup(L.latLng(point.lat, point.lng));
-        this.leafletPopupRequest = undefined;
-      }
-      const googlePopup = this.googlePopupRequest;
-      if (googlePopup?.zone === zone) {
-        this.googleInfoWindow?.setOptions({
-          content: confirmedPopup,
-          position: new google.maps.LatLng(point.lat, point.lng),
-          pixelOffset: new google.maps.Size(0, -32),
-        });
-        this.googleInfoWindow?.open({ map: this.googleMap });
-        this.googlePopupRequest = undefined;
-      }
+      this.zoneLabelVisible.set(true);
     } catch {
       if (requestVersion === this.sectorRequestVersion) this.sectorError.set(true);
     } finally {
