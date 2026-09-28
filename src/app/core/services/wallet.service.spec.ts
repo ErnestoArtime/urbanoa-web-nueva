@@ -2,6 +2,7 @@ import { provideZonelessChangeDetection } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { OpsApiClient } from '../api/ops-api-client.service';
 import { OPS_OPERATING_SYSTEM } from '../api/ops-client.constants';
+import { OpsApiError } from '../api/ops-api.types';
 import { OpsSessionService } from '../api/ops-session.service';
 import { WalletService } from './wallet.service';
 
@@ -96,6 +97,21 @@ describe('WalletService', () => {
     );
     expect(result).toEqual({ success: true, source: 'remote', amount: 2.5, order: 'order-123' });
     expect(service.balance()).toBe(15);
+  });
+
+  it('keeps loaded wallet data available when a recharge is rejected by the backend', async () => {
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'post']);
+    api.post.and.rejectWith(new OpsApiError('backend', 'RechargeUserCreditAPI', 'Error genérico'));
+    const service = serviceWith(api);
+    TestBed.inject(OpsSessionService).setToken('token');
+    service.source.set('remote');
+    service.cards.set([{ id: '93', brand: 'Visa', last4: '1234', expiryDate: '12/99', cardholderName: 'Test' }]);
+
+    const result = await service.recharge(10, '93');
+
+    expect(result.success).toBeFalse();
+    expect(result.error?.message).toBe('Error genérico');
+    expect(service.source()).toBe('remote');
   });
 
   it('refunds with the exact APK fields and converts cents to euros', async () => {
