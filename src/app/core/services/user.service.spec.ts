@@ -119,6 +119,13 @@ describe('UserService', () => {
 
   it('updates the preferred contract id through UpdateUserAPI', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'post']);
+    api.get.and.resolveTo({
+      ...baseUser(),
+      contractId: 1,
+      names: 'Ane',
+      firstSurname: 'Lopez',
+      email: 'ane@example.com',
+    });
     api.post.and.resolveTo('194063');
     const service = serviceWith(api);
     service.updateLocal(baseUser());

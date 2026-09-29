@@ -8,6 +8,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { ParkingFlowStore } from '../parking-flow.store';
 import { ParkingFlowQuery, readParkingFlowQuery } from '../parking-flow.model';
 import { VehicleService } from '../../../core/services/vehicle.service';
+import { UserService } from '../../../core/services/user.service';
 import { LocationSettingsService } from '../../../core/services/location-settings.service';
 import { ParkingSessionService } from '../../../core/services/parking-session.service';
 import { TranslationService } from '../../../core/services/translation.service';
@@ -705,6 +706,7 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
   private readonly router = inject(Router);
   private readonly store = inject(ParkingFlowStore);
   private readonly vehicleService = inject(VehicleService);
+  private readonly userService = inject(UserService);
   private readonly locationSettings = inject(LocationSettingsService);
   private readonly translationService = inject(TranslationService);
   private readonly citiesService = inject(CitiesService);
@@ -820,13 +822,20 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
       const selectableCities = this.citiesService.selectableCities(data);
       const requestedContractId = Number(this.query.cityId);
       const preferredId = this.locationSettings.settings().preferredCityId;
+      const preferredContractId = this.locationSettings.settings().preferredContractId;
+      const remotePreferredContractId = this.userService.user().preferredContractId;
       const selected =
         selectableCities.find((city) => city.contractId === requestedContractId) ??
         selectableCities.find((city) => city.id === this.query.city) ??
+        selectableCities.find((city) => city.contractId === remotePreferredContractId) ??
+        selectableCities.find((city) => city.contractId === preferredContractId) ??
         selectableCities.find((city) => city.id === preferredId || String(city.contractId) === preferredId) ??
         selectableCities[0];
       if (!selected) throw new Error('No hay contratos de aparcamiento disponibles');
       this.selectedState.set(selected);
+      if (remotePreferredContractId === selected.contractId) {
+        this.locationSettings.setPreferredCity(selected.id, selected.nombre, selected.contractId);
+      }
       await this.parkingSessionService.loadParkingStatuses(this.vehicles());
       this.selectedVehicle.set(
         this.availableVehicles().find((vehicle) => vehicle.id === this.query.vehicleId || vehicle.plate === this.query.plate) ??

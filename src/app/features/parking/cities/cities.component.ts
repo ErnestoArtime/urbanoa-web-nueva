@@ -429,8 +429,11 @@ export class ParkingCitiesComponent implements OnInit {
     const current = this.currentCityMatch();
     if (current) return current;
     const preferredId = this.locationSettings.settings().preferredCityId;
+    const preferredContractId = this.locationSettings.settings().preferredContractId;
     if (preferredId) {
-      const match = this.municipios().find((m) => m.id === preferredId || String(m.contractId) === preferredId);
+      const match = this.municipios().find(
+        (m) => m.contractId === preferredContractId || m.id === preferredId || String(m.contractId) === preferredId,
+      );
       if (match) return match;
     }
     return this.municipios()[0] ?? EMPTY_CITY;

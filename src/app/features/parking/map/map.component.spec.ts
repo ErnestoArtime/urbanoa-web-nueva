@@ -7,6 +7,7 @@ import { LocationSettingsService } from '../../../core/services/location-setting
 import { ParkingApiService } from '../../../core/services/parking-api.service';
 import { ParkingSessionService } from '../../../core/services/parking-session.service';
 import { TranslationService } from '../../../core/services/translation.service';
+import { UserService } from '../../../core/services/user.service';
 import { VehicleService } from '../../../core/services/vehicle.service';
 import { ParkingFlowStore } from '../parking-flow.store';
 import { ParkingMapComponent } from './map.component';
@@ -22,7 +23,11 @@ describe('ParkingMapComponent', () => {
         ParkingFlowStore,
         { provide: ParkingApiService, useValue: parkingApi },
         { provide: VehicleService, useValue: { vehicles: signal([]), source: signal<'idle' | 'remote'>('idle') } },
-        { provide: LocationSettingsService, useValue: { settings: signal({ preferredCityId: '' }) } },
+        {
+          provide: LocationSettingsService,
+          useValue: { settings: signal({ preferredCityId: '' }), setPreferredCity: jasmine.createSpy() },
+        },
+        { provide: UserService, useValue: { user: signal({ preferredContractId: undefined }) } },
         { provide: TranslationService, useValue: { translateLabel: (value?: string) => value ?? '' } },
         { provide: CitiesService, useValue: {} },
         { provide: GoogleMapsLoaderService, useValue: {} },
@@ -61,7 +66,8 @@ describe('ParkingMapComponent', () => {
         ParkingFlowStore,
         { provide: ParkingApiService, useValue: {} },
         { provide: VehicleService, useValue: { vehicles: signal([]), source: vehicleSource } },
-        { provide: LocationSettingsService, useValue: { settings: signal({ preferredCityId: '' }) } },
+        { provide: LocationSettingsService, useValue: { settings: signal({ preferredCityId: '' }), setPreferredCity: jasmine.createSpy() } },
+        { provide: UserService, useValue: { user: signal({ preferredContractId: undefined }) } },
         { provide: TranslationService, useValue: { translateLabel: (value?: string) => value ?? '' } },
         { provide: CitiesService, useValue: {} },
         { provide: GoogleMapsLoaderService, useValue: {} },
@@ -97,7 +103,11 @@ describe('ParkingMapComponent', () => {
         ParkingFlowStore,
         { provide: ParkingApiService, useValue: parkingApi },
         { provide: VehicleService, useValue: { vehicles: signal([]), source: signal<'idle' | 'remote'>('remote') } },
-        { provide: LocationSettingsService, useValue: { settings: signal({ preferredCityId: '' }) } },
+        {
+          provide: LocationSettingsService,
+          useValue: { settings: signal({ preferredCityId: '' }), setPreferredCity: jasmine.createSpy() },
+        },
+        { provide: UserService, useValue: { user: signal({ preferredContractId: undefined }) } },
         { provide: TranslationService, useValue: { translateLabel: (value?: string) => value ?? '' } },
         { provide: CitiesService, useValue: {} },
         { provide: GoogleMapsLoaderService, useValue: {} },

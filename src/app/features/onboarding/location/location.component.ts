@@ -140,9 +140,14 @@ export class OnboardingLocationComponent {
     }
   }
 
-  selectCity(id: string, name: string): void {
-    this.locationService.setPreferredCity(id, name);
-    void this.userService.updatePreferredContract(this.citiesService.contractIdFor(id));
+  async selectCity(id: string, name: string): Promise<void> {
+    const contractId = this.citiesService.contractIdFor(id);
+    this.locationService.setPreferredCity(id, name, contractId);
+    const result = await this.userService.updatePreferredContract(contractId);
+    if (!result.success) {
+      this.message.set('onboarding.location.citySaveError');
+      return;
+    }
     this.showCityPicker.set(false);
     this.message.set('onboarding.location.citySavedRedirect');
     setTimeout(() => void this.router.navigate(['/onboarding/notification']), 1000);

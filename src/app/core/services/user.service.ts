@@ -26,6 +26,7 @@ export interface UserData {
   nif: string;
   phone: string;
   address: UserAddress;
+  preferredContractId?: number;
 }
 
 export interface UserMutationResult {
@@ -133,8 +134,15 @@ export class UserService {
   }
 
   async updatePreferredContract(contractId: number): Promise<UserMutationResult> {
+    if (!Number.isFinite(contractId) || contractId <= 0) return { success: false, source: 'error' };
+    if (!this.remoteProfile) {
+      await this.load();
+      if (!this.remoteProfile) return { success: false, source: 'error' };
+    }
     this.remoteProfile = { ...(this.remoteProfile ?? {}), contractId };
-    return this.remoteUpdate(this.state());
+    const result = await this.remoteUpdate(this.state());
+    if (result.success) this.state.update((user) => ({ ...user, preferredContractId: contractId }));
+    return result;
   }
 
   updateLocal(changes: Partial<UserData>): void {
@@ -189,6 +197,7 @@ export class UserService {
         postalCode: readString(value.addressPostalCode),
         country: readString(value.addressCountry) || base.address.country,
       },
+      preferredContractId: Number.isFinite(Number(value.contractId)) ? Number(value.contractId) : base.preferredContractId,
     };
   }
 
@@ -199,7 +208,7 @@ export class UserService {
       cloudToken: readString(profile.cloudToken),
       version: readString(profile.version) || OPS_APP_VERSION,
       operatingSystem: OPS_OPERATING_SYSTEM,
-      contractId: Number(profile.contractId) || 0,
+      contractId: Number(profile.contractId ?? user.preferredContractId) || 0,
       userName: readString(profile.userName) || user.email,
       names: user.name,
       firstSurname: user.surname,

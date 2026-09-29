@@ -253,7 +253,13 @@ export class AccountSettingsComponent {
   constructor() {
     void this.citiesService
       .getCities()
-      .then((result) => this.municipios.set(this.citiesService.selectableCities(result.data)))
+      .then((result) => {
+        const cities = this.citiesService.selectableCities(result.data);
+        this.municipios.set(cities);
+        const remoteContractId = this.userService.user().preferredContractId;
+        const remoteCity = cities.find((city) => city.contractId === remoteContractId);
+        if (remoteCity) this.locationService.setPreferredCity(remoteCity.id, remoteCity.nombre, remoteCity.contractId);
+      })
       .catch(() => this.municipios.set([]));
   }
 
@@ -278,9 +284,14 @@ export class AccountSettingsComponent {
           : 'account.settings.location.failedMessage',
     });
   }
-  selectCity(id: string, name: string): void {
-    this.locationService.setPreferredCity(id, name);
-    void this.userService.updatePreferredContract(this.citiesService.contractIdFor(id));
+  async selectCity(id: string, name: string): Promise<void> {
+    const contractId = this.citiesService.contractIdFor(id);
+    this.locationService.setPreferredCity(id, name, contractId);
+    const result = await this.userService.updatePreferredContract(contractId);
+    if (!result.success) {
+      this.locationMessage.set({ key: 'account.settings.location.citySaveError' });
+      return;
+    }
     this.showCityPicker.set(false);
     this.locationMessage.set({ key: 'account.settings.location.citySavedMessage', params: { city: name } });
   }
