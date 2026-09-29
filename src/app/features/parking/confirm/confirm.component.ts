@@ -18,6 +18,7 @@ import { parseOpsDate } from '../../../core/utils/ops-date';
 import { ResultModalComponent } from '../../../shared/components/result-modal/result-modal.component';
 import { isCardUsable } from '../../../core/utils/card-expiry';
 import { TranslationService } from '../../../core/services/translation.service';
+import { PaymentChallengeService } from '../../../core/services/payment-challenge.service';
 
 @Component({
   selector: 'app-parking-confirm',
@@ -60,8 +61,8 @@ import { TranslationService } from '../../../core/services/translation.service';
             }
             @if (query().endDayLabel; as endDayLabel) {
               · hasta {{ dayLabel(endDayLabel) }} ({{ query().endTime }})
-            }</strong
-          >
+            }
+          </strong>
         </p>
         <p>
           <span>{{ 'parking.confirm.tariff' | translate }}</span
@@ -274,6 +275,7 @@ export class ParkingConfirmComponent implements OnInit {
   private readonly ticketStore = inject(ParkingTicketStoreService);
   private readonly operations = inject(OperationsService);
   private readonly translations = inject(TranslationService);
+  private readonly paymentChallenge = inject(PaymentChallengeService);
   @ViewChild(SwipeToPayComponent) swipePay!: SwipeToPayComponent;
   private readonly initialQuery = readParkingFlowQuery(this.route);
   readonly query = computed(() =>
@@ -368,6 +370,11 @@ export class ParkingConfirmComponent implements OnInit {
       return;
     }
     if (result.challengeUrl) {
+      this.paymentChallenge.begin({
+        kind: this.query().mode === 'extension' ? 'parking-extension' : 'parking',
+        returnUrl: '/app/operations',
+        amount,
+      });
       window.location.assign(result.challengeUrl);
       return;
     }

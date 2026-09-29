@@ -1,44 +1,106 @@
 import { Injectable } from '@angular/core';
 
+export type PaymentChallengeKind = 'recharge' | 'parking' | 'parking-extension' | 'fine';
+
+export interface PendingPaymentChallenge {
+  kind: PaymentChallengeKind;
+  returnUrl: string;
+  startedAt: number;
+  amount?: number;
+  order?: string;
+}
+
 export interface PendingRechargeChallenge {
   amount: number;
   order?: string;
 }
 
+export type PaymentChallengeRequest = Omit<PendingPaymentChallenge, 'startedAt'>;
+
 /**
- * Persists only the UI context required to resume after Paycomet redirects the
- * browser away from the SPA. It deliberately does not assert that a payment
- * has settled: the current provider flow exposes only an OK/KO return signal.
+ * Keeps the minimum UI context required while Paycomet takes the browser away
+ * from the SPA. A stored challenge is navigation context, never proof that a
+ * payment has settled.
  */
 @Injectable({ providedIn: 'root' })
 export class PaymentChallengeService {
-  private readonly rechargeKey = 'urbanoa.paycomet.pending-recharge';
+  private readonly key = 'urbanoa.paycomet.pending-payment-v1';
+  private readonly legacyRechargeKey = 'urbanoa.paycomet.pending-recharge';
+  private readonly maxAgeMs = 30 * 60_000;
 
-  beginRecharge(challenge: PendingRechargeChallenge): void {
-    this.write(this.rechargeKey, JSON.stringify(challenge));
+  begin(challenge: PaymentChallengeRequest): void {
+    const pending: PendingPaymentChallenge = { ...challenge, startedAt: Date.now() };
+    this.write(this.key, JSON.stringify(pending));
+    this.remove(this.legacyRechargeKey);
   }
 
-  consumeRecharge(): PendingRechargeChallenge | null {
-    const value = this.read(this.rechargeKey);
-    if (!value) return null;
+  beginRecharge(challenge: PendingRechargeChallenge): void {
+    this.begin({
+      kind: 'recharge',
+      returnUrl: '/app/account/payment-methods/recharge',
+      amount: challenge.amount,
+      ...(challenge.order ? { order: challenge.order } : {}),
+    });
+  }
 
+  getPending(): PendingPaymentChallenge | null {
+    const value = this.read(this.key);
+    if (value) return this.parsePending(value);
+
+    // Allows an in-flight recharge created by the previous web version to
+    // return safely after a deployment. It still is not treated as success.
+    const legacy = this.read(this.legacyRechargeKey);
+    if (!legacy) return null;
     try {
-      const parsed = JSON.parse(value) as Partial<PendingRechargeChallenge>;
+      const parsed = JSON.parse(legacy) as Partial<PendingRechargeChallenge>;
       if (!Number.isFinite(parsed.amount) || Number(parsed.amount) <= 0) return null;
-      return {
+      const pending: PendingPaymentChallenge = {
+        kind: 'recharge',
+        returnUrl: '/app/account/payment-methods/recharge',
+        startedAt: Date.now(),
         amount: Number(parsed.amount),
         ...(typeof parsed.order === 'string' && parsed.order.trim() ? { order: parsed.order.trim() } : {}),
       };
+      this.write(this.key, JSON.stringify(pending));
+      this.remove(this.legacyRechargeKey);
+      return pending;
     } catch {
       return null;
     }
   }
 
+  consumeRecharge(): PendingRechargeChallenge | null {
+    const pending = this.getPending();
+    if (pending?.kind !== 'recharge' || !pending.amount) return null;
+    return {
+      amount: pending.amount,
+      ...(pending.order ? { order: pending.order } : {}),
+    };
+  }
+
   clear(): void {
+    this.remove(this.key);
+    this.remove(this.legacyRechargeKey);
+  }
+
+  private parsePending(value: string): PendingPaymentChallenge | null {
     try {
-      sessionStorage.removeItem(this.rechargeKey);
+      const parsed = JSON.parse(value) as Partial<PendingPaymentChallenge>;
+      const validKinds: PaymentChallengeKind[] = ['recharge', 'parking', 'parking-extension', 'fine'];
+      if (!parsed.kind || !validKinds.includes(parsed.kind)) return null;
+      if (typeof parsed.returnUrl !== 'string' || !parsed.returnUrl.startsWith('/app/')) return null;
+      if (!Number.isFinite(parsed.startedAt) || Date.now() - Number(parsed.startedAt) > this.maxAgeMs) return null;
+      if (parsed.amount !== undefined && (!Number.isFinite(parsed.amount) || Number(parsed.amount) <= 0)) return null;
+
+      return {
+        kind: parsed.kind,
+        returnUrl: parsed.returnUrl,
+        startedAt: Number(parsed.startedAt),
+        ...(parsed.amount !== undefined ? { amount: Number(parsed.amount) } : {}),
+        ...(typeof parsed.order === 'string' && parsed.order.trim() ? { order: parsed.order.trim() } : {}),
+      };
     } catch {
-      // Storage can be unavailable in restricted browsing contexts.
+      return null;
     }
   }
 
@@ -55,6 +117,14 @@ export class PaymentChallengeService {
       return sessionStorage.getItem(key);
     } catch {
       return null;
+    }
+  }
+
+  private remove(key: string): void {
+    try {
+      sessionStorage.removeItem(key);
+    } catch {
+      // Storage can be unavailable in restricted browsing contexts.
     }
   }
 }

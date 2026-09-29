@@ -18,10 +18,20 @@ import { LocationMap } from '../../../shared/components/location-map/location-ma
 import { AppIconComponent } from '../../../shared/icons/app-icon.component';
 import { OperationIconComponent } from '../../../shared/components/operation-icon/operation-icon.component';
 import { formatFineDate } from '../../../shared/utils/fine-date';
+import { PaymentChallengeService } from '../../../core/services/payment-challenge.service';
 
 @Component({
   selector: 'app-unpaid-fine-detail',
-  imports: [RouterLink, DecimalPipe, TranslatePipe, DetailPanelHeaderComponent, ResultModalComponent, LocationMap, AppIconComponent, OperationIconComponent],
+  imports: [
+    RouterLink,
+    DecimalPipe,
+    TranslatePipe,
+    DetailPanelHeaderComponent,
+    ResultModalComponent,
+    LocationMap,
+    AppIconComponent,
+    OperationIconComponent,
+  ],
   template: `
     @if (errorMessage(); as error) {
       <app-result-modal
@@ -54,14 +64,20 @@ import { formatFineDate } from '../../../shared/utils/fine-date';
             @if (fine.status === fineStatus.PAYABLE && fine.earlyPaymentDeadline) {
               <div class="fine-detail-row">
                 <span class="fine-detail-row-icon"><app-icon name="schedule" [stroke]="false" /></span>
-                <div><span>{{ 'ops.fineDetail.earlyPaymentEnd' | translate }}</span><strong>{{ displayDate(fine.earlyPaymentDeadline) }}</strong></div>
+                <div>
+                  <span>{{ 'ops.fineDetail.earlyPaymentEnd' | translate }}</span
+                  ><strong>{{ displayDate(fine.earlyPaymentDeadline) }}</strong>
+                </div>
               </div>
             }
             @if (fine.status !== fineStatus.PAYABLE) {
               @if (fine.earlyPaymentDeadline) {
                 <div class="fine-detail-row">
                   <span class="fine-detail-row-icon"><app-icon name="schedule" [stroke]="false" /></span>
-                  <div><span>{{ 'ops.fineDetail.earlyPaymentEnd' | translate }}</span><strong>{{ displayDate(fine.earlyPaymentDeadline) }}</strong></div>
+                  <div>
+                    <span>{{ 'ops.fineDetail.earlyPaymentEnd' | translate }}</span
+                    ><strong>{{ displayDate(fine.earlyPaymentDeadline) }}</strong>
+                  </div>
                 </div>
               }
               <div class="fine-detail-message">
@@ -70,10 +86,34 @@ import { formatFineDate } from '../../../shared/utils/fine-date';
               </div>
             }
             <section class="fine-detail-info" aria-label="Detalle de la sanción">
-              <div class="fine-detail-row"><span class="fine-detail-row-icon">#</span><div><span>{{ 'ops.fineDetail.fineNumber' | translate }}</span><strong>{{ fine.fineNumber }}</strong></div></div>
-              <div class="fine-detail-row"><span class="fine-detail-row-icon"><app-icon name="vehicle" [stroke]="false" /></span><div><span>{{ 'ops.fineDetail.plate' | translate }}</span><strong>{{ fine.plate }}</strong></div></div>
-              <div class="fine-detail-row"><span class="fine-detail-row-icon"><app-icon name="dateRange" [stroke]="false" /></span><div><span>{{ 'ops.detail.datetime' | translate }}</span><strong>{{ displayDate(fine.date) }}</strong></div></div>
-              <div class="fine-detail-row"><span class="fine-detail-row-icon"><app-icon name="location" [stroke]="false" /></span><div><span>{{ fine.zoneName || ('ops.fineDetail.location' | translate) }}</span><strong>{{ fine.location }}</strong></div></div>
+              <div class="fine-detail-row">
+                <span class="fine-detail-row-icon">#</span>
+                <div>
+                  <span>{{ 'ops.fineDetail.fineNumber' | translate }}</span
+                  ><strong>{{ fine.fineNumber }}</strong>
+                </div>
+              </div>
+              <div class="fine-detail-row">
+                <span class="fine-detail-row-icon"><app-icon name="vehicle" [stroke]="false" /></span>
+                <div>
+                  <span>{{ 'ops.fineDetail.plate' | translate }}</span
+                  ><strong>{{ fine.plate }}</strong>
+                </div>
+              </div>
+              <div class="fine-detail-row">
+                <span class="fine-detail-row-icon"><app-icon name="dateRange" [stroke]="false" /></span>
+                <div>
+                  <span>{{ 'ops.detail.datetime' | translate }}</span
+                  ><strong>{{ displayDate(fine.date) }}</strong>
+                </div>
+              </div>
+              <div class="fine-detail-row">
+                <span class="fine-detail-row-icon"><app-icon name="location" [stroke]="false" /></span>
+                <div>
+                  <span>{{ fine.zoneName || ('ops.fineDetail.location' | translate) }}</span
+                  ><strong>{{ fine.location }}</strong>
+                </div>
+              </div>
             </section>
             @if (fineCoordinates(); as coordinates) {
               <app-location-map
@@ -93,7 +133,10 @@ import { formatFineDate } from '../../../shared/utils/fine-date';
                 <fieldset class="payment-card-selector">
                   <legend>{{ 'ops.fineDetail.cardForPayment' | translate }}</legend>
                   @for (card of walletService.cards(); track card.id) {
-                    <label class="payment-card-option" [class.selected]="selectedCardId() === card.id" [class.disabled]="!isCardUsable(card)"
+                    <label
+                      class="payment-card-option"
+                      [class.selected]="selectedCardId() === card.id"
+                      [class.disabled]="!isCardUsable(card)"
                       ><input
                         type="radio"
                         name="fine-card"
@@ -116,7 +159,12 @@ import { formatFineDate } from '../../../shared/utils/fine-date';
                 {{ 'ops.fineDetail.pay' | translate }} {{ fine.amount }}
               </button>
             } @else if (canMoveToHistory()) {
-              <button type="button" class="btn btn-primary btn-block fine-understood-button" (click)="acknowledgeExpired()" [disabled]="movingToHistory()">
+              <button
+                type="button"
+                class="btn btn-primary btn-block fine-understood-button"
+                (click)="acknowledgeExpired()"
+                [disabled]="movingToHistory()"
+              >
                 {{ 'ops.fineDetail.understood' | translate }}
               </button>
             }
@@ -287,6 +335,7 @@ export class UnpaidFineDetailComponent {
   private readonly router = inject(Router);
   private readonly unpaidFinesService = inject(UnpaidFinesService);
   private readonly translationService = inject(TranslationService);
+  private readonly paymentChallenge = inject(PaymentChallengeService);
   readonly walletService = inject(WalletService);
   readonly fineStatus = FineStatus;
   readonly operationType = OperationType;
@@ -304,7 +353,9 @@ export class UnpaidFineDetailComponent {
   readonly movingToHistory = signal(false);
   readonly canMoveToHistory = computed(() => {
     const fine = this.fine;
-    return Boolean(fine && canMoveFineToHistory({ type: OperationType.UNPAID_FINES, fineStatus: fine.status, timePeriod: fine.timePeriod }));
+    return Boolean(
+      fine && canMoveFineToHistory({ type: OperationType.UNPAID_FINES, fineStatus: fine.status, timePeriod: fine.timePeriod }),
+    );
   });
   readonly selectedCardId = signal(this.walletService.defaultCardId());
   readonly isCardUsable = isCardUsable;
@@ -381,6 +432,11 @@ export class UnpaidFineDetailComponent {
     const result = await this.unpaidFinesService.payFine(fine.id, this.selectedCardId());
     if (this.fineId !== fine.id) return;
     if (result.challengeUrl) {
+      this.paymentChallenge.begin({
+        kind: 'fine',
+        returnUrl: `/app/operations/unpaid-fines/${encodeURIComponent(fine.id)}`,
+        amount: this.numericAmount(),
+      });
       window.location.assign(result.challengeUrl);
       return;
     }

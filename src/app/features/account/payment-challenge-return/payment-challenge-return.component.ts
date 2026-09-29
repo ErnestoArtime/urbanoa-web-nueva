@@ -1,7 +1,7 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { OperationsService } from '../../../core/services/operations.service';
-import { PaymentChallengeService, PendingRechargeChallenge } from '../../../core/services/payment-challenge.service';
+import { PaymentChallengeService, PendingPaymentChallenge } from '../../../core/services/payment-challenge.service';
 import { WalletService } from '../../../core/services/wallet.service';
 import { ResultModalComponent } from '../../../shared/components/result-modal/result-modal.component';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
@@ -12,9 +12,9 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
   template: `
     @if (completed()) {
       <app-result-modal
-        type="success"
-        [title]="'account.recharge.success' | translate"
-        [message]="'account.recharge.successDetail' | translate: { amount: recharge()?.amount + ',00 €' }"
+        [type]="outcome() === 'ok' ? 'warning' : 'error'"
+        [title]="(outcome() === 'ok' ? 'payment.challenge.pendingTitle' : 'payment.challenge.failedTitle') | translate"
+        [message]="(outcome() === 'ok' ? 'payment.challenge.pendingMessage' : 'payment.challenge.failedMessage') | translate"
         [primaryText]="'common.accept' | translate"
         (primaryAction)="finish()"
       />
@@ -29,28 +29,31 @@ export class PaymentChallengeReturnComponent implements OnInit {
   private readonly paymentChallenge = inject(PaymentChallengeService);
 
   readonly completed = signal(false);
-  readonly recharge = signal<PendingRechargeChallenge | null>(null);
+  readonly pending = signal<PendingPaymentChallenge | null>(null);
+  readonly outcome = signal<'ok' | 'ko'>('ko');
 
   ngOnInit(): void {
-    const outcome = this.route.snapshot.data['outcome'];
+    const outcome = this.route.snapshot.data['outcome'] === 'ok' ? 'ok' : 'ko';
+    this.outcome.set(outcome);
+    this.pending.set(this.paymentChallenge.getPending());
+
     if (outcome !== 'ok') {
-      this.paymentChallenge.clear();
-      void this.router.navigate(['/app/account/payment-methods/recharge']);
+      this.completed.set(true);
       return;
     }
 
-    this.recharge.set(this.paymentChallenge.consumeRecharge());
-    // APK parity: Paycomet's /ok return is considered a successful challenge.
-    // A future backend status endpoint must replace this client-side conclusion.
-    void this.refreshAndShowSuccess();
+    // The provider return only means that the challenge browser flow ended.
+    // Backend reconciliation is required before any UI can claim success.
+    void this.refreshAndShowPending();
   }
 
   finish(): void {
-    this.paymentChallenge.clear();
-    void this.router.navigate(['/app/account/payment-methods/recharge']);
+    const returnUrl = this.pending()?.returnUrl ?? '/app/operations';
+    if (this.outcome() === 'ko') this.paymentChallenge.clear();
+    void this.router.navigateByUrl(returnUrl);
   }
 
-  private async refreshAndShowSuccess(): Promise<void> {
+  private async refreshAndShowPending(): Promise<void> {
     await Promise.allSettled([this.walletService.load(), this.operationsService.load()]);
     this.completed.set(true);
   }
