@@ -19,6 +19,7 @@ import { APP_BRAND } from '../../shared/constants/app-brand';
           <a
             [routerLink]="item.path"
             routerLinkActive="active"
+            ariaCurrentWhenActive="page"
             [routerLinkActiveOptions]="{ exact: isExactPath(item.path) }"
             class="sidebar-link"
           >

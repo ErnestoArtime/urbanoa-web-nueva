@@ -18,6 +18,7 @@ const CHILD_LABELS = new Map(ACCOUNT_MENU.map((m) => [m.path, m.labelKey]));
         <a
           [routerLink]="item.path"
           routerLinkActive="active"
+          ariaCurrentWhenActive="page"
           [routerLinkActiveOptions]="{ exact: isExactPath(item.path) }"
           class="bottom-nav-item"
         >
