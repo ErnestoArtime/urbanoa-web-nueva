@@ -8,6 +8,7 @@ export interface LocationSettings {
   useCurrentLocation: boolean;
   preferredCityId?: string;
   preferredCityName?: string;
+  preferredContractId?: number;
   lastLatitude?: number;
   lastLongitude?: number;
   lastUpdatedAt?: string;
@@ -20,7 +21,8 @@ export interface LocationSetupResult {
 
 @Injectable({ providedIn: 'root' })
 export class LocationSettingsService {
-  private readonly storageKey = 'urbanoa.location-settings';
+  private readonly storagePrefix = 'urbanoa.location-settings';
+  private userScope = this.readUserScope();
   private readonly state = signal<LocationSettings>(this.readSettings());
 
   readonly settings = this.state.asReadonly();
@@ -28,6 +30,13 @@ export class LocationSettingsService {
     const s = this.state();
     return s.permissionState === 'granted' || !!s.preferredCityId;
   });
+
+  setUserScope(userId?: string): void {
+    const nextScope = userId?.trim() ? userId.trim().toLocaleLowerCase() : 'anonymous';
+    if (nextScope === this.userScope) return;
+    this.userScope = nextScope;
+    this.state.set(this.readSettings());
+  }
 
   async refreshPermissionState(): Promise<LocationPermissionState> {
     if (!navigator.geolocation) {
@@ -77,10 +86,12 @@ export class LocationSettingsService {
     }
   }
 
-  setPreferredCity(cityId: string, cityName: string): void {
+  setPreferredCity(cityId: string, cityName: string, contractId?: number): void {
+    if (!cityId.trim() || !cityName.trim()) throw new Error('El municipio preferido es obligatorio');
     this.patch({
       preferredCityId: cityId,
       preferredCityName: cityName,
+      preferredContractId: Number.isFinite(contractId) && contractId! > 0 ? contractId : undefined,
       useCurrentLocation: false,
     });
   }
@@ -113,7 +124,13 @@ export class LocationSettingsService {
 
   private readSettings(): LocationSettings {
     try {
-      const parsed = JSON.parse(localStorage.getItem(this.storageKey) ?? 'null') as LocationSettings | null;
+      const scopedKey = `${this.storagePrefix}.${encodeURIComponent(this.userScope)}`;
+      let raw = localStorage.getItem(scopedKey);
+      if (!raw && this.userScope !== 'anonymous') {
+        raw = localStorage.getItem(this.storagePrefix);
+        if (raw) localStorage.setItem(scopedKey, raw);
+      }
+      const parsed = JSON.parse(raw ?? 'null') as LocationSettings | null;
       if (parsed && typeof parsed === 'object') return { ...this.defaults(), ...parsed };
     } catch {
       // Fall back to defaults when storage is unavailable or malformed.
@@ -128,9 +145,21 @@ export class LocationSettingsService {
     };
   }
 
+  private readUserScope(): string {
+    try {
+      const session = JSON.parse(localStorage.getItem('urbanoa.auth.session') ?? 'null') as {
+        user?: { id?: string; email?: string };
+      } | null;
+      const user = session?.user;
+      return (user?.id?.trim() || user?.email?.trim() || 'anonymous').toLocaleLowerCase();
+    } catch {
+      return 'anonymous';
+    }
+  }
+
   private persist(): void {
     try {
-      localStorage.setItem(this.storageKey, JSON.stringify(this.state()));
+      localStorage.setItem(`${this.storagePrefix}.${encodeURIComponent(this.userScope)}`, JSON.stringify(this.state()));
     } catch {
       // Storage can be unavailable in private or restricted contexts.
     }

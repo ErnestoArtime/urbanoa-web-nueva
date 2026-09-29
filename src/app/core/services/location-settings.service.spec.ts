@@ -25,4 +25,18 @@ describe('LocationSettingsService', () => {
     expect(service.settings().useCurrentLocation).toBeFalse();
     expect(service.isConfigured()).toBeTrue();
   });
+
+  it('isolates the preferred city per authenticated user', () => {
+    const service = new LocationSettingsService();
+
+    service.setUserScope('user-a');
+    service.setPreferredCity('donostia', 'Donostia', 1);
+    service.setUserScope('user-b');
+
+    expect(service.settings().preferredCityId).toBeUndefined();
+    service.setPreferredCity('zarautz', 'Zarautz', 3);
+    service.setUserScope('user-a');
+
+    expect(service.settings()).toEqual(jasmine.objectContaining({ preferredCityId: 'donostia', preferredContractId: 1 }));
+  });
 });

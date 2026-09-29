@@ -9,6 +9,7 @@ import { readStorage, writeStorage } from '../storage/signal-storage';
 import { AccountApiService } from './account-api.service';
 import { TranslationService } from './translation.service';
 import { UserData, UserService } from './user.service';
+import { LocationSettingsService } from './location-settings.service';
 
 export interface AuthUser extends UserData {
   id: string;
@@ -73,6 +74,7 @@ export class AuthService {
   private readonly accountApi = inject(AccountApiService);
   private readonly translation = inject(TranslationService);
   private readonly userService = inject(UserService);
+  private readonly locationSettings = inject(LocationSettingsService);
   private readonly storageKey = 'urbanoa.auth.session';
   private readonly legacyStorageKey = 'urbanoa.auth.user';
   private readonly session = signal<AuthSession | null>(readStorage<AuthSession | null>(this.storageKey, null));
@@ -86,6 +88,7 @@ export class AuthService {
   constructor() {
     if (this.token().startsWith('mock-')) this.clearSession();
     this.syncOpsSession(this.token());
+    this.locationSettings.setUserScope(this.userIdentity(this.user()));
     window.addEventListener('urbanoa:session-expired', this.handleSessionExpired);
   }
 
@@ -271,6 +274,7 @@ export class AuthService {
     writeStorage(this.storageKey, session);
     writeStorage(this.legacyStorageKey, { ...session.user, token: session.token });
     this.syncOpsSession(session.token);
+    this.locationSettings.setUserScope(this.userIdentity(session.user));
     this.userService.updateLocal({
       name: session.user.name,
       surname: session.user.surname,
@@ -292,12 +296,17 @@ export class AuthService {
       // Storage may be unavailable in private or restricted contexts.
     }
     this.syncOpsSession('');
+    this.locationSettings.setUserScope();
     this.source.set('idle');
   }
 
   private syncOpsSession(token: string): void {
     if (token) this.opsSession.setToken(token);
     else this.opsSession.clear();
+  }
+
+  private userIdentity(user: Pick<AuthUser, 'id' | 'email'>): string {
+    return user.id.trim() || user.email.trim();
   }
 
   private errorMessage(error: unknown): string {
