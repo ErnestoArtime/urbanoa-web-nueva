@@ -24,7 +24,11 @@ export const routes: Routes = [
         path: '',
         loadComponent: () => import('./features/app-entry/app-entry.component').then((m) => m.AppEntryComponent),
       },
-      { path: 'home', loadComponent: () => import('./features/home/home.component').then((m) => m.HomeComponent) },
+      {
+        path: 'home',
+        title: 'nav.home',
+        loadComponent: () => import('./features/home/home.component').then((m) => m.HomeComponent),
+      },
       {
         path: 'parking',
         loadChildren: () => import('./features/parking/parking.routes').then((m) => m.PARKING_ROUTES),
@@ -39,6 +43,7 @@ export const routes: Routes = [
       },
       {
         path: 'paycomet/ok',
+        title: 'payment.challenge.pendingTitle',
         loadComponent: () =>
           import('./features/account/payment-challenge-return/payment-challenge-return.component').then(
             (m) => m.PaymentChallengeReturnComponent,
@@ -47,6 +52,7 @@ export const routes: Routes = [
       },
       {
         path: 'paycomet/ko',
+        title: 'payment.challenge.failedTitle',
         loadComponent: () =>
           import('./features/account/payment-challenge-return/payment-challenge-return.component').then(
             (m) => m.PaymentChallengeReturnComponent,
