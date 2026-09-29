@@ -16,13 +16,13 @@ import { formatOpsDate } from '../../../core/utils/ops-date';
 import { ReportArtifactService } from '../../../core/services/report-artifact.service';
 
 type ReportRange = 'last7' | 'last14' | 'last30' | 'last6m' | 'last12m' | 'last5y';
-type ReportFilterKey = 'parks' | 'extends' | 'refunds' | 'recharges' | 'balanceRefunds' | 'fines';
+type ReportFilterKey = 'parkingOperations' | 'recharges' | 'balanceRefunds' | 'fines';
 
 interface ReportFilterItem {
   key: ReportFilterKey;
   labelKey: string;
   descKey: string;
-  type: OperationType;
+  types: readonly OperationType[];
 }
 
 interface ReportRangeItem {
@@ -264,9 +264,7 @@ export class ReportComponent {
 
   readonly form = this.fb.nonNullable.group({
     customDates: [false],
-    parks: [true],
-    extends: [true],
-    refunds: [true],
+    parkingOperations: [true],
     recharges: [true],
     balanceRefunds: [true],
     fines: [true],
@@ -285,17 +283,20 @@ export class ReportComponent {
     { key: 'last5y', labelKey: 'ops.report.last5Years', years: 5 },
   ];
   readonly filters: ReportFilterItem[] = [
-    { key: 'parks', labelKey: 'ops.report.parking', descKey: 'ops.report.parkingDesc', type: OperationType.PARKING },
-    { key: 'extends', labelKey: 'ops.report.extension', descKey: 'ops.report.extensionDesc', type: OperationType.PARKING_EXTENSION },
-    { key: 'refunds', labelKey: 'ops.report.refunds', descKey: 'ops.report.refundsDesc', type: OperationType.REFUND },
-    { key: 'recharges', labelKey: 'ops.report.topUps', descKey: 'ops.report.topUpsDesc', type: OperationType.TOP_UP },
+    {
+      key: 'parkingOperations',
+      labelKey: 'ops.report.parkingOperations',
+      descKey: 'ops.report.parkingOperationsDesc',
+      types: [OperationType.PARKING, OperationType.PARKING_EXTENSION, OperationType.REFUND],
+    },
+    { key: 'recharges', labelKey: 'ops.report.topUps', descKey: 'ops.report.topUpsDesc', types: [OperationType.TOP_UP] },
     {
       key: 'balanceRefunds',
       labelKey: 'ops.report.balanceRefunds',
       descKey: 'ops.report.balanceRefundsDesc',
-      type: OperationType.BALANCE_REFUND,
+      types: [OperationType.BALANCE_REFUND],
     },
-    { key: 'fines', labelKey: 'ops.report.fines', descKey: 'ops.report.finesDesc', type: OperationType.FINE_PAYMENT },
+    { key: 'fines', labelKey: 'ops.report.fines', descKey: 'ops.report.finesDesc', types: [OperationType.FINE_PAYMENT] },
   ];
   readonly isGenerating = signal(false);
   readonly reportError = signal(false);
@@ -352,7 +353,7 @@ export class ReportComponent {
           contractId: 0,
           dateStart: this.toBackendDate(range.start),
           dateEnd: this.toBackendDate(range.end),
-          operationTypeList: this.filters.filter((filter) => this.isFilterEnabled(filter.key)).map((filter) => filter.type),
+          operationTypeList: this.filters.filter((filter) => this.isFilterEnabled(filter.key)).flatMap((filter) => filter.types),
           mail: email,
           reportFormat: 1,
         },
@@ -413,11 +414,9 @@ export class ReportComponent {
   private filterKeyForType(type: OperationType): ReportFilterKey {
     switch (type) {
       case OperationType.PARKING:
-        return 'parks';
       case OperationType.PARKING_EXTENSION:
-        return 'extends';
       case OperationType.REFUND:
-        return 'refunds';
+        return 'parkingOperations';
       case OperationType.TOP_UP:
         return 'recharges';
       case OperationType.BALANCE_REFUND:
@@ -425,7 +424,7 @@ export class ReportComponent {
       case OperationType.FINE_PAYMENT:
         return 'fines';
       default:
-        return 'parks';
+        return 'parkingOperations';
     }
   }
 
