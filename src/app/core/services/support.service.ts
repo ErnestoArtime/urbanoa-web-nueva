@@ -16,6 +16,32 @@ export interface SupportAttachment {
   name: string;
   type: string;
   dataUrl: string;
+  size?: number;
+}
+
+export const SUPPORT_ATTACHMENT_MAX_BYTES = 4 * 1024 * 1024;
+
+const SUPPORT_ATTACHMENT_MIME_BY_EXTENSION: Readonly<Record<string, string>> = {
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  gif: 'image/gif',
+  webp: 'image/webp',
+  pdf: 'application/pdf',
+};
+
+const SUPPORT_UPLOAD_MIME_TYPES = new Set(['image/png', 'image/jpeg', 'image/gif', 'image/webp']);
+
+function base64DecodedSize(payload: string): number | null {
+  if (!payload || !/^[A-Za-z0-9+/]*={0,2}$/.test(payload) || payload.length % 4 === 1) return null;
+  return Math.floor((payload.length * 3) / 4) - (payload.endsWith('==') ? 2 : payload.endsWith('=') ? 1 : 0);
+}
+
+export function supportImageFileError(file: Pick<File, 'name' | 'type' | 'size'>): 'type' | 'size' | null {
+  const extension = file.name.toLowerCase().split('.').pop() ?? '';
+  const expectedType = SUPPORT_ATTACHMENT_MIME_BY_EXTENSION[extension];
+  if (!expectedType || !SUPPORT_UPLOAD_MIME_TYPES.has(expectedType) || file.type !== expectedType) return 'type';
+  return file.size > SUPPORT_ATTACHMENT_MAX_BYTES ? 'size' : null;
 }
 
 export interface SupportMessage {
@@ -156,6 +182,9 @@ export class SupportService {
   async reply(id: string, message: string, attachment?: SupportAttachment): Promise<boolean> {
     const thread = this.getById(id);
     if (!thread) return false;
+    if (thread.status === 'closed') {
+      return this.fail(new OpsApiError('invalid-response', OPS_ENDPOINTS.support.add, 'La conversación está cerrada'));
+    }
     id = thread.id;
     const result = await this.send(
       {
@@ -197,9 +226,9 @@ export class SupportService {
     try {
       for (const memberId of this.unreadMembers.get(id) ?? [remoteId]) {
         await this.api.post<string>(
-        OPS_ENDPOINTS.support.update,
-        { id: memberId, contractId: Number(thread.cityId) || 0, read: 1 },
-        { token },
+          OPS_ENDPOINTS.support.update,
+          { id: memberId, contractId: Number(thread.cityId) || 0, read: 1 },
+          { token },
         );
       }
       this.unreadMembers.delete(id);
@@ -232,9 +261,15 @@ export class SupportService {
       this.fail(new OpsApiError('invalid-response', OPS_ENDPOINTS.support.add, 'El municipio es obligatorio'));
       return null;
     }
-    const files: FeedbackFileRequestDto[] = input.attachment
-      ? [{ filename: input.attachment.name, title: input.attachment.name, payload: input.attachment.dataUrl.split(',').pop() ?? '' }]
-      : [];
+    const files: FeedbackFileRequestDto[] = [];
+    if (input.attachment) {
+      const file = this.outgoingFile(input.attachment);
+      if (!file) {
+        this.fail(new OpsApiError('invalid-response', OPS_ENDPOINTS.support.add, 'El archivo adjunto no es válido'));
+        return null;
+      }
+      files.push(file);
+    }
     try {
       const result = await this.api.post<string>(
         OPS_ENDPOINTS.support.add,
@@ -291,8 +326,8 @@ export class SupportService {
     const supportMessage = replyRecord
       ? this.messageWithAttachments(`${item.id}-support`, 'support', item.response ?? '', responseDate, supportFiles)
       : item.response || supportFiles.length
-      ? this.messageWithAttachments(`${item.id}-support`, 'support', item.response ?? '', responseDate, supportFiles)
-      : null;
+        ? this.messageWithAttachments(`${item.id}-support`, 'support', item.response ?? '', responseDate, supportFiles)
+        : null;
     return {
       id: String(item.id),
       type: this.localType(item.type),
@@ -316,7 +351,7 @@ export class SupportService {
   private groupRemoteThreads(items: RemoteFeedbackDto[]): SupportThread[] {
     this.aliases.clear();
     this.unreadMembers.clear();
-    const byId = new Map(items.map(item => [item.id, item]));
+    const byId = new Map(items.map((item) => [item.id, item]));
     const groups = new Map<number, RemoteFeedbackDto[]>();
     for (const item of items) {
       let root = item;
@@ -331,22 +366,27 @@ export class SupportService {
       const rootId = root.baseId && visited.has(root.baseId) ? Math.min(...visited) : root.id;
       groups.set(rootId, [...(groups.get(rootId) ?? []), item]);
     }
-    return [...groups.entries()].map(([id, records]) => {
-      for (const record of records) this.aliases.set(String(record.id), String(id));
-      this.unreadMembers.set(String(id), records.filter(record => record.read === 0).map(record => record.id));
-      const mapped = records.map(record => this.mapRemoteThread(record, record.baseId != null));
-      mapped.sort((a, b) => a.updatedAt.localeCompare(b.updatedAt));
-      const root = mapped.find(thread => thread.id === String(id)) ?? mapped[0];
-      const latest = mapped[mapped.length - 1];
-      return {
-        ...root,
-        id: String(id),
-        status: latest.status,
-        updatedAt: latest.updatedAt,
-        unread: mapped.some(thread => thread.unread),
-        messages: mapped.flatMap(thread => thread.messages).sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
-      };
-    }).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+    return [...groups.entries()]
+      .map(([id, records]) => {
+        for (const record of records) this.aliases.set(String(record.id), String(id));
+        this.unreadMembers.set(
+          String(id),
+          records.filter((record) => record.read === 0).map((record) => record.id),
+        );
+        const mapped = records.map((record) => this.mapRemoteThread(record, record.baseId != null));
+        mapped.sort((a, b) => a.updatedAt.localeCompare(b.updatedAt));
+        const root = mapped.find((thread) => thread.id === String(id)) ?? mapped[0];
+        const latest = mapped[mapped.length - 1];
+        return {
+          ...root,
+          id: String(id),
+          status: latest.status,
+          updatedAt: latest.updatedAt,
+          unread: mapped.some((thread) => thread.unread),
+          messages: mapped.flatMap((thread) => thread.messages).sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
+        };
+      })
+      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   }
 
   private messageWithAttachments(
@@ -367,28 +407,33 @@ export class SupportService {
 
   private mapRemoteFile(file: RemoteFileDto): SupportAttachment | null {
     const name = file.filename?.trim() || file.title?.trim() || `adjunto-${file.id ?? 'soporte'}`;
-    const externalUrl = [file.url?.trim(), file.path?.trim()].find(url => url && /^https?:\/\//i.test(url));
+    const externalUrl = [file.url?.trim(), file.path?.trim()].find((url) => url && /^https:\/\//i.test(url));
     const payload = file.payload?.trim();
     const type = this.fileMimeType(name);
-    const rawPayload = payload?.startsWith('data:') ? payload.slice(payload.indexOf(',') + 1) : payload;
-    const dataUrl = rawPayload && /^[A-Za-z0-9+/\s]*={0,2}$/.test(rawPayload)
-      ? `data:${type};base64,${rawPayload}` : externalUrl || '';
+    if (type === 'application/octet-stream') return null;
+    const dataUrlMatch = payload?.match(/^data:([^;,]+);base64,(.*)$/is);
+    if (dataUrlMatch && dataUrlMatch[1].toLowerCase() !== type) return null;
+    const rawPayload = (dataUrlMatch?.[2] ?? payload ?? '').replace(/\s/g, '');
+    const decodedSize = base64DecodedSize(rawPayload);
+    const dataUrl =
+      decodedSize !== null && decodedSize <= SUPPORT_ATTACHMENT_MAX_BYTES ? `data:${type};base64,${rawPayload}` : externalUrl || '';
     if (!dataUrl) return null;
-    return { name, type: this.fileMimeType(name), dataUrl };
+    return { name, type, dataUrl, ...(decodedSize !== null && dataUrl.startsWith('data:') ? { size: decodedSize } : {}) };
+  }
+
+  private outgoingFile(attachment: SupportAttachment): FeedbackFileRequestDto | null {
+    const match = attachment.dataUrl.match(/^data:([^;,]+);base64,(.*)$/is);
+    if (!match || match[1].toLowerCase() !== attachment.type.toLowerCase()) return null;
+    const payload = match[2].replace(/\s/g, '');
+    const size = base64DecodedSize(payload);
+    if (size === null) return null;
+    if (supportImageFileError({ name: attachment.name, type: attachment.type, size })) return null;
+    return { filename: attachment.name, title: attachment.name, payload };
   }
 
   private fileMimeType(name: string): string {
     const extension = name.toLowerCase().split('.').pop();
-    return (
-      {
-        png: 'image/png',
-        jpg: 'image/jpeg',
-        jpeg: 'image/jpeg',
-        gif: 'image/gif',
-        webp: 'image/webp',
-        pdf: 'application/pdf',
-      } as Record<string, string>
-    )[extension ?? ''] ?? 'application/octet-stream';
+    return SUPPORT_ATTACHMENT_MIME_BY_EXTENSION[extension ?? ''] ?? 'application/octet-stream';
   }
 
   private feedbackType(type: FeedbackType): number {

@@ -2,7 +2,13 @@ import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { LucideCamera, LucideImage, LucidePaperclip, LucideTrash2 } from '@lucide/angular';
-import { SupportService, type FeedbackSubtype, type FeedbackType, type SupportAttachment } from '../../../core/services/support.service';
+import {
+  supportImageFileError,
+  SupportService,
+  type FeedbackSubtype,
+  type FeedbackType,
+  type SupportAttachment,
+} from '../../../core/services/support.service';
 import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
 import { ResultModalComponent } from '../../../shared/components/result-modal/result-modal.component';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
@@ -62,7 +68,13 @@ const FEEDBACK_SUBTYPES: SelectOption<FeedbackSubtype>[] = [
           <div class="form-grid">
             <div class="form-group">
               <label class="form-label" for="support-category">{{ 'account.support.category' | translate }}</label>
-              <select id="support-category" class="form-input" formControlName="type">
+              <select
+                id="support-category"
+                class="form-input"
+                formControlName="type"
+                required
+                [attr.aria-invalid]="form.controls.type.invalid && form.controls.type.touched"
+              >
                 <option value="">{{ 'account.support.selectCategory' | translate }}</option>
                 @for (option of types; track option.value) {
                   <option [value]="option.value">{{ option.labelKey | translate }}</option>
@@ -71,7 +83,13 @@ const FEEDBACK_SUBTYPES: SelectOption<FeedbackSubtype>[] = [
             </div>
             <div class="form-group">
               <label class="form-label" for="support-subcategory">{{ 'account.support.subcategory' | translate }}</label>
-              <select id="support-subcategory" class="form-input" formControlName="subtype">
+              <select
+                id="support-subcategory"
+                class="form-input"
+                formControlName="subtype"
+                required
+                [attr.aria-invalid]="form.controls.subtype.invalid && form.controls.subtype.touched"
+              >
                 <option value="">{{ 'account.support.selectSubcategory' | translate }}</option>
                 @for (option of subtypes; track option.value) {
                   <option [value]="option.value">{{ option.labelKey | translate }}</option>
@@ -80,7 +98,13 @@ const FEEDBACK_SUBTYPES: SelectOption<FeedbackSubtype>[] = [
             </div>
             <div class="form-group">
               <label class="form-label" for="support-city">{{ 'account.support.municipio' | translate }}</label>
-              <select id="support-city" class="form-input" formControlName="cityId">
+              <select
+                id="support-city"
+                class="form-input"
+                formControlName="cityId"
+                required
+                [attr.aria-invalid]="form.controls.cityId.invalid && form.controls.cityId.touched"
+              >
                 <option value="">{{ 'account.support.selectMunicipio' | translate }}</option>
                 @for (city of municipios(); track city.id) {
                   <option [value]="city.id">{{ city.nombre }} · {{ city.provincia }}</option>
@@ -102,7 +126,7 @@ const FEEDBACK_SUBTYPES: SelectOption<FeedbackSubtype>[] = [
         <div class="form-group message-field">
           <div class="field-heading">
             <label class="form-label" for="support-message">{{ 'account.support.message' | translate }}</label>
-            <span>{{ form.controls.message.value.length }}/500</span>
+            <span id="support-message-counter">{{ form.controls.message.value.length }}/500</span>
           </div>
           <textarea
             id="support-message"
@@ -110,16 +134,19 @@ const FEEDBACK_SUBTYPES: SelectOption<FeedbackSubtype>[] = [
             rows="7"
             maxlength="500"
             formControlName="message"
+            required
+            aria-describedby="support-message-counter support-message-error"
+            [attr.aria-invalid]="form.controls.message.invalid && form.controls.message.touched"
             [placeholder]="'account.support.messagePlaceholder' | translate"
           ></textarea>
           @if (form.controls.message.invalid && form.controls.message.touched) {
-            <p class="form-error">{{ 'account.support.messageRequired' | translate }}</p>
+            <p id="support-message-error" class="form-error" role="alert">{{ 'account.support.messageRequired' | translate }}</p>
           }
         </div>
 
         <section class="attachment-card" aria-labelledby="attachment-title">
           <div class="attachment-heading">
-            <span class="attachment-icon"><svg lucidePaperclip size="18"></svg></span>
+            <span class="attachment-icon"><svg lucidePaperclip size="18" aria-hidden="true"></svg></span>
             <div>
               <strong id="attachment-title">{{ 'account.support.attachment' | translate }}</strong
               ><small>{{ 'account.support.attachmentHint' | translate }}</small>
@@ -127,33 +154,44 @@ const FEEDBACK_SUBTYPES: SelectOption<FeedbackSubtype>[] = [
           </div>
           <div class="attachment-actions">
             <label class="attachment-button">
-              <svg lucideImage size="19"></svg><span>{{ 'account.support.gallery' | translate }}</span>
-              <input type="file" accept="image/*" (change)="selectFile($event)" />
+              <svg lucideImage size="19" aria-hidden="true"></svg><span>{{ 'account.support.gallery' | translate }}</span>
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/gif,image/webp"
+                aria-describedby="attachment-title attachment-error"
+                (change)="selectFile($event)"
+              />
             </label>
             <label class="attachment-button">
-              <svg lucideCamera size="19"></svg><span>{{ 'account.support.camera' | translate }}</span>
-              <input type="file" accept="image/*" capture="environment" (change)="selectFile($event)" />
+              <svg lucideCamera size="19" aria-hidden="true"></svg><span>{{ 'account.support.camera' | translate }}</span>
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/gif,image/webp"
+                capture="environment"
+                aria-describedby="attachment-title attachment-error"
+                (change)="selectFile($event)"
+              />
             </label>
           </div>
           @if (attachment(); as file) {
-            <div class="attachment-preview">
+            <div class="attachment-preview" role="status" aria-live="polite">
               <img [src]="file.dataUrl" [alt]="file.name" />
               <div>
                 <strong>{{ file.name }}</strong
                 ><span>{{ 'account.support.imageReady' | translate }}</span>
               </div>
               <button type="button" (click)="attachment.set(null)" [attr.aria-label]="'account.support.removeAttachment' | translate">
-                <svg lucideTrash2 size="19"></svg>
+                <svg lucideTrash2 size="19" aria-hidden="true"></svg>
               </button>
             </div>
           }
           @if (attachmentError()) {
-            <p class="form-error">{{ attachmentError()! | translate }}</p>
+            <p id="attachment-error" class="form-error" role="alert">{{ attachmentError()! | translate }}</p>
           }
         </section>
 
         <div class="sticky-actions">
-          <button type="submit" class="btn btn-primary btn-block" [disabled]="submitting()">
+          <button type="submit" class="btn btn-primary btn-block" [disabled]="submitting()" [attr.aria-busy]="submitting()">
             {{ (isReply() ? 'account.support.sendReply' : 'account.support.send') | translate }}
           </button>
         </div>
@@ -268,6 +306,10 @@ const FEEDBACK_SUBTYPES: SelectOption<FeedbackSubtype>[] = [
     .attachment-button:hover {
       background: var(--color-active);
     }
+    .attachment-button:has(input:focus-visible) {
+      outline: 2px solid var(--color-primary);
+      outline-offset: 2px;
+    }
     .attachment-button input {
       position: absolute;
       width: 1px;
@@ -340,7 +382,7 @@ export class AccountSupportFormComponent implements OnInit {
   readonly subtypes = FEEDBACK_SUBTYPES;
   readonly municipios = signal<ParkingMunicipio[]>([]);
   readonly vehicles = this.vehicleService.vehicles;
-  readonly replyThread = computed(() => (this.threadId ? this.support.threads().find((thread) => thread.id === this.threadId) : undefined));
+  readonly replyThread = computed(() => (this.threadId ? this.support.getById(this.threadId) : undefined));
   readonly attachment = signal<SupportAttachment | null>(null);
   readonly attachmentError = signal<string | null>(null);
   readonly showError = signal(false);
@@ -359,6 +401,16 @@ export class AccountSupportFormComponent implements OnInit {
 
   async ngOnInit(): Promise<void> {
     try {
+      if (this.threadId && !this.support.getById(this.threadId)) await this.support.load();
+      const replyThread = this.threadId ? this.support.getById(this.threadId) : undefined;
+      if (this.threadId && !replyThread) {
+        await this.router.navigate(['/app/account/support']);
+        return;
+      }
+      if (replyThread?.status === 'closed') {
+        await this.router.navigate(['/app/account/support', replyThread.id]);
+        return;
+      }
       const citiesRequest = this.cities.getCities();
       if (!this.vehicleService.vehicles().length) await this.vehicleService.load();
       this.municipios.set((await citiesRequest).data);
@@ -375,16 +427,13 @@ export class AccountSupportFormComponent implements OnInit {
     input.value = '';
     this.attachmentError.set(null);
     if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      this.attachmentError.set('account.support.attachmentTypeError');
-      return;
-    }
-    if (file.size > 4 * 1024 * 1024) {
-      this.attachmentError.set('account.support.attachmentSizeError');
+    const validationError = supportImageFileError(file);
+    if (validationError) {
+      this.attachmentError.set(validationError === 'size' ? 'account.support.attachmentSizeError' : 'account.support.attachmentTypeError');
       return;
     }
     const reader = new FileReader();
-    reader.onload = () => this.attachment.set({ name: file.name, type: file.type, dataUrl: String(reader.result) });
+    reader.onload = () => this.attachment.set({ name: file.name, type: file.type, dataUrl: String(reader.result), size: file.size });
     reader.onerror = () => this.attachmentError.set('account.support.attachmentReadError');
     reader.readAsDataURL(file);
   }

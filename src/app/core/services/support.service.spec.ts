@@ -4,26 +4,41 @@ import { OpsApiClient } from '../api/ops-api-client.service';
 import { OPS_ENDPOINTS } from '../api/ops-endpoints';
 import { OpsSessionService } from '../api/ops-session.service';
 import { CitiesService } from './cities.service';
-import { SupportService } from './support.service';
+import { SUPPORT_ATTACHMENT_MAX_BYTES, SupportService, supportImageFileError } from './support.service';
 import { UserService } from './user.service';
 
 describe('SupportService', () => {
   it('reconstructs replies, normalizes OPS dates and retains attachment-only responses', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
     const base = { contractId: 1, type: 1, subtype: 1, status: 1, read: 1 };
-    api.post.and.resolveTo({ feedback: [
-      { ...base, id: 14, baseId: 12, read: 0, date: '130000260826', message: 'Reply', response: '', files: [{ filename: 'answer.pdf', direction: 1, payload: 'JVBERi0=', path: 'C:\\private\\answer.pdf' }] },
-      { ...base, id: 12, date: '120000260826', message: 'Original' },
-    ] });
-    TestBed.configureTestingModule({ providers: [provideZonelessChangeDetection(),
-      { provide: OpsApiClient, useValue: api }, { provide: OpsSessionService, useValue: { token: () => 'token' } },
-      { provide: CitiesService, useValue: { nameFor: () => 'City' } },
-      { provide: UserService, useValue: {} },
-    ] });
+    api.post.and.resolveTo({
+      feedback: [
+        {
+          ...base,
+          id: 14,
+          baseId: 12,
+          read: 0,
+          date: '130000260826',
+          message: 'Reply',
+          response: '',
+          files: [{ filename: 'answer.pdf', direction: 1, payload: 'JVBERi0=', path: 'C:\\private\\answer.pdf' }],
+        },
+        { ...base, id: 12, date: '120000260826', message: 'Original' },
+      ],
+    });
+    TestBed.configureTestingModule({
+      providers: [
+        provideZonelessChangeDetection(),
+        { provide: OpsApiClient, useValue: api },
+        { provide: OpsSessionService, useValue: { token: () => 'token' } },
+        { provide: CitiesService, useValue: { nameFor: () => 'City' } },
+        { provide: UserService, useValue: {} },
+      ],
+    });
     const service = TestBed.inject(SupportService);
     await service.load();
     expect(service.threads().length).toBe(1);
-    expect(service.getById('12')?.messages.map(message => message.body)).toEqual(['Original', 'Reply', '']);
+    expect(service.getById('12')?.messages.map((message) => message.body)).toEqual(['Original', 'Reply', '']);
     expect(service.getById('12')?.messages[0].createdAt).toBe('2026-08-26T10:00:00.000Z');
     expect(service.getById('12')?.messages[2].attachments?.[0].dataUrl).toBe('data:application/pdf;base64,JVBERi0=');
     expect(service.getById('14')?.id).toBe('12');
@@ -103,6 +118,101 @@ describe('SupportService', () => {
     expect(messages[1].attachments?.[0]).toEqual(
       jasmine.objectContaining({ name: 'respuesta.pdf', type: 'application/pdf', dataUrl: 'https://example.test/respuesta.pdf' }),
     );
+  });
+
+  it('ignores remote attachments with unsafe types, mismatched MIME or non-HTTPS URLs', async () => {
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
+    api.post.and.resolveTo({
+      feedback: [
+        {
+          id: 13,
+          contractId: 1,
+          date: '120000260826',
+          type: 1,
+          subtype: 1,
+          message: 'Con archivo',
+          status: 1,
+          read: 1,
+          files: [
+            { filename: 'contenido.png', payload: 'data:text/html;base64,PGgxPk5vPC9oMT4=', direction: 0 },
+            { filename: 'script.svg', payload: 'PHN2Zz48L3N2Zz4=', direction: 0 },
+            { filename: 'inseguro.pdf', url: 'http://example.test/inseguro.pdf', direction: 0 },
+          ],
+        },
+      ],
+    });
+    TestBed.configureTestingModule({
+      providers: [
+        provideZonelessChangeDetection(),
+        { provide: OpsApiClient, useValue: api },
+        { provide: OpsSessionService, useValue: { token: () => 'token' } },
+        { provide: CitiesService, useValue: { nameFor: () => 'Durango' } },
+        { provide: UserService, useValue: {} },
+      ],
+    });
+
+    const service = TestBed.inject(SupportService);
+    await service.load();
+
+    expect(service.threads()[0].messages[0].attachments).toBeUndefined();
+  });
+
+  it('marks every unread remote record in a grouped conversation', async () => {
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
+    api.post.and.resolveTo({
+      feedback: [
+        { id: 20, contractId: 4, date: '120000260826', type: 1, subtype: 1, message: 'Original', status: 1, read: 0 },
+        { id: 21, baseId: 20, contractId: 4, date: '130000260826', type: 1, subtype: 1, message: 'Reply', status: 2, read: 0 },
+      ],
+    });
+    TestBed.configureTestingModule({
+      providers: [
+        provideZonelessChangeDetection(),
+        { provide: OpsApiClient, useValue: api },
+        { provide: OpsSessionService, useValue: { token: () => 'token' } },
+        { provide: CitiesService, useValue: { nameFor: () => 'Durango' } },
+        { provide: UserService, useValue: {} },
+      ],
+    });
+
+    const service = TestBed.inject(SupportService);
+    await service.load();
+    await service.markAsRead('21');
+
+    expect(api.post).toHaveBeenCalledWith(OPS_ENDPOINTS.support.update, { id: 20, contractId: 4, read: 1 }, { token: 'token' });
+    expect(api.post).toHaveBeenCalledWith(OPS_ENDPOINTS.support.update, { id: 21, contractId: 4, read: 1 }, { token: 'token' });
+    expect(service.unreadCount()).toBe(0);
+  });
+
+  it('does not reopen a closed conversation when replying', async () => {
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
+    api.post.and.resolveTo({
+      feedback: [{ id: 30, contractId: 1, date: '120000260826', type: 1, subtype: 1, message: 'Closed', status: 3, read: 1 }],
+    });
+    TestBed.configureTestingModule({
+      providers: [
+        provideZonelessChangeDetection(),
+        { provide: OpsApiClient, useValue: api },
+        { provide: OpsSessionService, useValue: { token: () => 'token' } },
+        { provide: CitiesService, useValue: { nameFor: () => 'Durango' } },
+        { provide: UserService, useValue: {} },
+      ],
+    });
+
+    const service = TestBed.inject(SupportService);
+    await service.load();
+    api.post.calls.reset();
+
+    expect(await service.reply('30', 'Should not be sent')).toBeFalse();
+    expect(api.post).not.toHaveBeenCalled();
+    expect(service.getById('30')?.status).toBe('closed');
+  });
+
+  it('validates upload MIME, extension and size consistently', () => {
+    expect(supportImageFileError({ name: 'photo.jpg', type: 'image/jpeg', size: SUPPORT_ATTACHMENT_MAX_BYTES })).toBeNull();
+    expect(supportImageFileError({ name: 'photo.jpg', type: 'image/png', size: 10 })).toBe('type');
+    expect(supportImageFileError({ name: 'photo.svg', type: 'image/svg+xml', size: 10 })).toBe('type');
+    expect(supportImageFileError({ name: 'photo.webp', type: 'image/webp', size: SUPPORT_ATTACHMENT_MAX_BYTES + 1 })).toBe('size');
   });
 
   it('allows feedback without a plate because only contractId is required by Swagger', async () => {

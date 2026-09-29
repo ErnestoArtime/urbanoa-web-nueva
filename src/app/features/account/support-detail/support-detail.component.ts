@@ -35,9 +35,9 @@ import { TranslationService } from '../../../core/services/translation.service';
             <article class="message" [class.from-support]="message.author === 'support'">
               <span class="message-avatar">
                 @if (message.author === 'support') {
-                  <svg lucideHeadphones size="19" strokeWidth="2"></svg>
+                  <svg lucideHeadphones size="19" strokeWidth="2" aria-hidden="true"></svg>
                 } @else {
-                  <svg lucideUserRound size="19" strokeWidth="2"></svg>
+                  <svg lucideUserRound size="19" strokeWidth="2" aria-hidden="true"></svg>
                 }
               </span>
               <div class="message-bubble">
@@ -47,11 +47,17 @@ import { TranslationService } from '../../../core/services/translation.service';
                 </div>
                 <p>{{ message.body }}</p>
                 @for (attachment of attachmentsFor(message); track $index) {
-                  <a class="message-attachment" [href]="attachment.dataUrl" [attr.download]="attachment.dataUrl.startsWith('data:') ? attachment.name : null" target="_blank" rel="noopener">
+                  <a
+                    class="message-attachment"
+                    [href]="attachment.dataUrl"
+                    [attr.download]="attachment.dataUrl.startsWith('data:') ? attachment.name : null"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
                     @if (attachment.type.startsWith('image/')) {
                       <img [src]="attachment.dataUrl" [alt]="attachment.name" />
                     } @else {
-                      <svg lucideImage size="18"></svg><span>{{ attachment.name }}</span>
+                      <svg lucideImage size="18" aria-hidden="true"></svg><span>{{ attachment.name }}</span>
                     }
                   </a>
                 }
@@ -60,12 +66,14 @@ import { TranslationService } from '../../../core/services/translation.service';
           }
         </section>
 
-        <div class="reply-bar">
-          <a class="btn btn-primary" [routerLink]="['/app/account/support', item.id, 'reply']">
-            <svg lucideMessageSquareReply size="18" strokeWidth="2.2"></svg>
-            {{ 'account.support.reply' | translate }}
-          </a>
-        </div>
+        @if (item.status !== 'closed') {
+          <div class="reply-bar">
+            <a class="btn btn-primary" [routerLink]="['/app/account/support', item.id, 'reply']">
+              <svg lucideMessageSquareReply size="18" strokeWidth="2.2" aria-hidden="true"></svg>
+              {{ 'account.support.reply' | translate }}
+            </a>
+          </div>
+        }
       } @else {
         <section class="missing-thread card">
           <h1>{{ 'account.support.notFoundTitle' | translate }}</h1>
@@ -239,7 +247,15 @@ export class AccountSupportDetailComponent {
     const date = new Date(value);
     if (!Number.isFinite(date.getTime())) return '';
     const lang = this.translations.currentLang$();
-    return new Intl.DateTimeFormat(lang === 'uk' ? 'en-GB' : lang, { timeZone: 'Europe/Madrid', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(date);
+    return new Intl.DateTimeFormat(lang === 'uk' ? 'en-GB' : lang, {
+      timeZone: 'Europe/Madrid',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
+    }).format(date);
   }
 
   constructor() {

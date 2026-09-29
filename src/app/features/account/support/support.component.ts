@@ -28,7 +28,9 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
           <p class="support-intro">{{ 'account.support.inboxIntro' | translate }}</p>
         </div>
         @if (support.unreadCount()) {
-          <span class="unread-summary">{{ 'account.support.unreadCount' | translate: { count: support.unreadCount() } }}</span>
+          <span class="unread-summary" role="status" aria-live="polite">{{
+            'account.support.unreadCount' | translate: { count: support.unreadCount() }
+          }}</span>
         }
       </div>
 
@@ -51,29 +53,30 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
         }
       } @else {
         <section class="support-empty card">
-          <span class="empty-icon"><svg lucideMessageCircle size="34" strokeWidth="1.8"></svg></span>
+          <span class="empty-icon"><svg lucideMessageCircle size="34" strokeWidth="1.8" aria-hidden="true"></svg></span>
           <h2>{{ 'account.support.emptyTitle' | translate }}</h2>
           <p>{{ 'account.support.emptyDetail' | translate }}</p>
         </section>
       }
 
       <a class="support-fab" routerLink="/app/account/support/new" [attr.aria-label]="'account.support.newMessage' | translate">
-        <svg lucidePlus size="24" strokeWidth="2.4"></svg>
+        <svg lucidePlus size="24" strokeWidth="2.4" aria-hidden="true"></svg>
         <span>{{ 'account.support.newMessage' | translate }}</span>
       </a>
     </div>
 
     <ng-template #threadCard let-thread>
       <a class="thread-card" [class.unread]="thread.unread" [routerLink]="['/app/account/support', thread.id]">
-        <span class="thread-icon"><svg lucideMessageCircle size="20" strokeWidth="2"></svg></span>
+        <span class="thread-icon"><svg lucideMessageCircle size="20" strokeWidth="2" aria-hidden="true"></svg></span>
         <span class="thread-copy">
           <span class="thread-title-row">
             <strong>{{ typeKey(thread) | translate }}</strong>
             @if (thread.unread) {
-              <span class="unread-dot" [attr.aria-label]="'account.support.unread' | translate"></span>
+              <span class="visually-hidden">{{ 'account.support.unread' | translate }}</span>
+              <span class="unread-dot" aria-hidden="true"></span>
             }
           </span>
-          <span class="thread-preview">{{ thread.messages.at(-1)?.body }}</span>
+          <span class="thread-preview">{{ thread.messages.at(-1)?.body || ('account.support.attachment' | translate) }}</span>
           <span class="thread-meta">
             {{ statusKey(thread) | translate }}
             @if (thread.cityName) {
@@ -85,7 +88,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
           </span>
         </span>
         <span class="thread-date">{{ thread.updatedAt | date: 'dd/MM/yy' }}</span>
-        <svg class="thread-chevron" lucideChevronRight size="18" strokeWidth="2"></svg>
+        <svg class="thread-chevron" lucideChevronRight size="18" strokeWidth="2" aria-hidden="true"></svg>
       </a>
     </ng-template>
   `,
@@ -192,6 +195,17 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
       flex: none;
       border-radius: 50%;
       background: var(--color-primary);
+    }
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
     }
     .thread-preview {
       overflow: hidden;
