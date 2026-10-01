@@ -1,5 +1,4 @@
-import { inject, Injectable } from '@angular/core';
-import { readStorage, writeStorage } from '../storage/signal-storage';
+import { Injectable } from '@angular/core';
 
 export interface ActiveTicketRecord {
   plate: string;
@@ -9,14 +8,15 @@ export interface ActiveTicketRecord {
   savedAt: number;
 }
 
-const STORAGE_KEY = 'urbanoa.parking.active-tickets';
-
 @Injectable({ providedIn: 'root' })
 export class ParkingTicketStoreService {
-  private readonly records = readStorage<Record<string, ActiveTicketRecord>>(STORAGE_KEY, {});
+  private userScope = '';
+  private records: Record<string, ActiveTicketRecord> = {};
 
-  private persist(): void {
-    writeStorage(STORAGE_KEY, this.records);
+  setUserScope(identity = ''): void {
+    const scope = identity.trim().toLowerCase();
+    if (scope !== this.userScope || !scope) this.records = {};
+    this.userScope = scope;
   }
 
   private normalize(plate: string): string {
@@ -24,6 +24,7 @@ export class ParkingTicketStoreService {
   }
 
   save(input: { plate: string; ticketId: number; sectorId?: number; contractId?: number }): void {
+    if (!this.userScope) return;
     this.records[this.normalize(input.plate)] = {
       plate: input.plate,
       ticketId: input.ticketId,
@@ -31,15 +32,15 @@ export class ParkingTicketStoreService {
       contractId: input.contractId,
       savedAt: Date.now(),
     };
-    this.persist();
   }
 
   getByPlate(plate: string): ActiveTicketRecord | undefined {
-    return this.records[this.normalize(plate)];
+    if (!this.userScope) return undefined;
+    const record = this.records[this.normalize(plate)];
+    return record ? { ...record } : undefined;
   }
 
   clearByPlate(plate: string): void {
     delete this.records[this.normalize(plate)];
-    this.persist();
   }
 }
