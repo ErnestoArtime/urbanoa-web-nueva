@@ -6,7 +6,7 @@ import { OpsSessionService } from '../api/ops-session.service';
 import { ParkingApiService } from './parking-api.service';
 import { TranslationService } from './translation.service';
 
-function serviceWith(api: jasmine.SpyObj<OpsApiClient>): ParkingApiService {
+function serviceWith(api: jasmine.SpyObj<OpsApiClient>, language: 'es' | 'eu' | 'fr' | 'uk' = 'es'): ParkingApiService {
   TestBed.configureTestingModule({
     providers: [
       provideZonelessChangeDetection(),
@@ -14,6 +14,7 @@ function serviceWith(api: jasmine.SpyObj<OpsApiClient>): ParkingApiService {
       {
         provide: TranslationService,
         useValue: {
+          currentLang$: () => language,
           translate: (key: string) =>
             key === 'parking.unparking.noRights' ? 'La matrícula no tiene derechos al desaparcar' : 'No se pudo calcular el desaparcar.',
         },
@@ -25,6 +26,26 @@ function serviceWith(api: jasmine.SpyObj<OpsApiClient>): ParkingApiService {
 
 describe('ParkingApiService', () => {
   beforeEach(() => localStorage.clear());
+
+  for (const [webLanguage, opsLanguage] of [
+    ['es', 'es'],
+    ['eu', 'eu'],
+    ['fr', 'fr'],
+    ['uk', 'en'],
+  ] as const) {
+    it(`requests tariff descriptions in ${opsLanguage} when the web language is ${webLanguage}`, async () => {
+      const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
+      api.post.and.resolveTo({ ticketlist: [] });
+      const service = serviceWith(api, webLanguage);
+      TestBed.inject(OpsSessionService).setToken('token');
+
+      await service.tickets({ contractId: 3, plate: '1234ABC', zone: 22002, date: '183423260826' });
+
+      expect(api.post).toHaveBeenCalledOnceWith('OPSWebServicesAPI/QueryTicketsAPI', jasmine.objectContaining({ language: opsLanguage }), {
+        token: 'token',
+      });
+    });
+  }
 
   it('uses the exact APK contract to confirm parking', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
@@ -250,7 +271,7 @@ describe('ParkingApiService', () => {
 
     expect(api.post).toHaveBeenCalledOnceWith(
       'OPSWebServicesAPI/QueryTicketsAPI',
-      { contractId: 3, plate: '1234567', date: '183423260826', zone: 22002, language: 'ES' },
+      { contractId: 3, plate: '1234567', date: '183423260826', zone: 22002, language: 'es' },
       { token: 'token' },
     );
     expect(result.data[0]).toEqual(

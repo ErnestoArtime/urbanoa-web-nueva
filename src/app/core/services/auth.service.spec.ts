@@ -15,9 +15,11 @@ describe('AuthService', () => {
   let opsApi: jasmine.SpyObj<OpsApiClient>;
   let opsSession: jasmine.SpyObj<OpsSessionService>;
   let userService: jasmine.SpyObj<UserService>;
+  let currentLanguage: 'es' | 'eu' | 'fr' | 'uk';
 
   beforeEach(() => {
     localStorage.clear();
+    currentLanguage = 'es';
     opsApi = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'post']);
     opsSession = jasmine.createSpyObj<OpsSessionService>('OpsSessionService', ['token', 'setToken', 'clear']);
     userService = jasmine.createSpyObj<UserService>('UserService', ['updateLocal']);
@@ -31,12 +33,33 @@ describe('AuthService', () => {
         { provide: OpsSessionService, useValue: opsSession },
         { provide: UserService, useValue: userService },
         { provide: AccountApiService, useValue: jasmine.createSpyObj('AccountApiService', ['cancelAccount']) },
-        { provide: TranslationService, useValue: { currentLang$: () => 'es' } },
+        { provide: TranslationService, useValue: { currentLang$: () => currentLanguage } },
         { provide: Router, useValue: jasmine.createSpyObj('Router', { navigate: Promise.resolve(true) }) },
       ],
     });
     service = TestBed.inject(AuthService);
   });
+
+  for (const [webLanguage, opsLanguage] of [
+    ['es', 'es'],
+    ['eu', 'eu'],
+    ['fr', 'fr'],
+    ['uk', 'en'],
+  ] as const) {
+    it(`sends ${opsLanguage} to LoginUserAPI when the web language is ${webLanguage}`, async () => {
+      currentLanguage = webLanguage;
+      opsApi.post.and.resolveTo({ token: 'real-token', firstLogin: 0 });
+      opsApi.get.and.resolveTo({ contractId: '42', email: 'user@example.com' });
+
+      await service.login('user@example.com', 'secret');
+
+      expect(opsApi.post).toHaveBeenCalledOnceWith(
+        OPS_ENDPOINTS.auth.login,
+        jasmine.objectContaining({ language: opsLanguage }),
+        jasmine.any(Object),
+      );
+    });
+  }
 
   it('uses the Postman login contract and hydrates the profile with the returned token', async () => {
     opsApi.post.and.resolveTo({ token: 'real-token', firstLogin: 1 });

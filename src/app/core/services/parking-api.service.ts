@@ -272,7 +272,7 @@ export class ParkingApiService {
         plate: input.plate,
         date: this.formatOpsDate(input.date),
         zone: input.zone,
-        language: 'ES',
+        language: this.opsLanguage(),
       },
       { token },
     );
@@ -329,6 +329,11 @@ export class ParkingApiService {
   async mapStretches(contractId: number, version = '0'): Promise<{ version: string; data: string }> {
     const requestedVersion = version.trim() || '0';
     return this.api.post(OPS_ENDPOINTS.parking.mapStretches, { contractId, version: requestedVersion });
+  }
+
+  private opsLanguage(): 'es' | 'eu' | 'fr' | 'en' {
+    const language = this.translation.currentLang$();
+    return language === 'uk' ? 'en' : language;
   }
 
   async sectors(input: { contractId: number; streetId?: number; latitude: number; longitude: number }): Promise<ParkingSectorOption[]> {
