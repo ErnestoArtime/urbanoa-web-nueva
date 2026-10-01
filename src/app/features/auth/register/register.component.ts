@@ -138,6 +138,9 @@ function passwordsMatch(control: AbstractControl): ValidationErrors | null {
         display: block;
         width: 190px;
         max-width: 60%;
+        height: auto;
+        aspect-ratio: 885 / 240;
+        object-fit: contain;
         margin: 0 auto 1.25rem;
       }
       .register-panel header {

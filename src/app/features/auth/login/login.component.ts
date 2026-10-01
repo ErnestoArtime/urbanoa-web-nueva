@@ -80,6 +80,8 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
         width: 230px;
         max-width: 75%;
         height: auto;
+        aspect-ratio: 885 / 240;
+        object-fit: contain;
         margin: 0 auto 2rem;
       }
       .auth-panel h1 {
