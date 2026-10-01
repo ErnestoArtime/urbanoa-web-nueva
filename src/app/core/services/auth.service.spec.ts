@@ -10,6 +10,9 @@ import { AuthService } from './auth.service';
 import { TranslationService } from './translation.service';
 import { UserService } from './user.service';
 import { WindowSessionService } from './window-session.service';
+import { WalletService } from './wallet.service';
+import { VehicleService } from './vehicle.service';
+import { ParkingTicketStoreService } from './parking-ticket-store.service';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -113,6 +116,35 @@ describe('AuthService', () => {
     expect(localStorage.getItem('urbanoa.auth.session')).toBeNull();
     expect(localStorage.getItem('urbanoa.auth.user')).toBeNull();
     expect(sessionStorage.getItem('urbanoa.auth.session')).toBeNull();
+  });
+
+  it('purges legacy business data while retaining language and location preferences', async () => {
+    const keys = ['urbanoa.wallet.balance', 'urbanoa.wallet.movements', 'urbanoa.payment-cards',
+      'urbanoa.default-payment-card', 'urbanoa.vehicles', 'urbanoa.parking.active-tickets'];
+    keys.forEach(key => localStorage.setItem(key, 'private-data'));
+    localStorage.setItem('urbanoa.location-settings.user', 'preference');
+    localStorage.setItem('unrelated-preference', 'keep');
+    service.adoptToken('first-token', 'first@example.com');
+    keys.forEach(key => expect(localStorage.getItem(key)).toBeNull());
+    const wallet = TestBed.inject(WalletService);
+    const vehicles = TestBed.inject(VehicleService);
+    const tickets = TestBed.inject(ParkingTicketStoreService);
+    wallet.credit(10, { type: 'top-up', descriptionKey: 'wallet.movement.topUp' });
+    wallet.cards.set([{ id: '1', brand: 'Visa', last4: '1234', expiryDate: '12/30', cardholderName: 'First' }]);
+    wallet.defaultCardId.set('1');
+    tickets.save({ plate: 'ABC', ticketId: 10 });
+    service.adoptToken('second-token', 'second@example.com');
+    expect(wallet.balance()).toBe(0);
+    expect(wallet.movements()).toEqual([]);
+    expect(wallet.cards()).toEqual([]);
+    expect(wallet.defaultCardId()).toBe('');
+    expect(vehicles.vehicles()).toEqual([]);
+    expect(tickets.getByPlate('ABC')).toBeUndefined();
+    tickets.save({ plate: 'ABC', ticketId: 20 });
+    await service.logout();
+    expect(tickets.getByPlate('ABC')).toBeUndefined();
+    expect(localStorage.getItem('urbanoa.location-settings.user')).toBe('preference');
+    expect(localStorage.getItem('unrelated-preference')).toBe('keep');
   });
 
   it('invalidates the authenticated window when another window claims ownership', () => {

@@ -10,6 +10,9 @@ import { TranslationService } from './translation.service';
 import { UserData, UserService } from './user.service';
 import { LocationSettingsService } from './location-settings.service';
 import { WindowSessionService } from './window-session.service';
+import { WalletService } from './wallet.service';
+import { VehicleService } from './vehicle.service';
+import { ParkingTicketStoreService } from './parking-ticket-store.service';
 
 export interface AuthUser extends UserData {
   id: string;
@@ -76,6 +79,9 @@ export class AuthService {
   private readonly userService = inject(UserService);
   private readonly locationSettings = inject(LocationSettingsService);
   private readonly windowSession = inject(WindowSessionService);
+  private readonly wallet = inject(WalletService);
+  private readonly vehicles = inject(VehicleService);
+  private readonly ticketStore = inject(ParkingTicketStoreService);
   private readonly storageKey = 'urbanoa.auth.session';
   private readonly legacyStorageKey = 'urbanoa.auth.user';
   private readonly session = signal<AuthSession | null>(null);
@@ -89,6 +95,7 @@ export class AuthService {
 
   constructor() {
     this.removeStoredCredentials();
+    this.clearBusinessData();
     this.syncOpsSession('');
     this.locationSettings.setUserScope();
     window.addEventListener('urbanoa:session-expired', this.handleSessionExpired);
@@ -296,6 +303,8 @@ export class AuthService {
   }
 
   private storeSession(session: AuthSession): void {
+    this.clearBusinessData();
+    this.ticketStore.setUserScope(session.user.email);
     this.session.set(session);
     this.syncOpsSession(session.token);
     this.locationSettings.setUserScope(this.userIdentity(session.user));
@@ -316,9 +325,28 @@ export class AuthService {
     this.session.set(null);
     this.windowSession.release();
     this.removeStoredCredentials();
+    this.clearBusinessData();
     this.syncOpsSession('');
     this.locationSettings.setUserScope();
     this.source.set('idle');
+  }
+
+  private clearBusinessData(): void {
+    this.wallet.reset();
+    this.vehicles.reset();
+    this.ticketStore.setUserScope();
+    const keys = [
+      'urbanoa.wallet.balance', 'urbanoa.wallet.movements',
+      'urbanoa.payment-cards', 'urbanoa.default-payment-card',
+      'urbanoa.vehicles', 'urbanoa.parking.active-tickets',
+    ];
+    for (const key of keys) {
+      try {
+        localStorage.removeItem(key);
+      } catch {
+        // Restricted storage must not prevent clearing in-memory account data.
+      }
+    }
   }
 
   private removeStoredCredentials(): void {
