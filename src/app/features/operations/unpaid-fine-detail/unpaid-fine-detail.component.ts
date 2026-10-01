@@ -4,6 +4,7 @@ import { DecimalPipe } from '@angular/common';
 import { canMoveFineToHistory, FineStatus, UnpaidFinesService } from '../../../core/services/unpaid-fines.service';
 import { WalletService } from '../../../core/services/wallet.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { LoaderComponent } from '../../../shared/components/loader/loader.component';
 import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
 import { ResultModalComponent } from '../../../shared/components/result-modal/result-modal.component';
 import { TranslationService } from '../../../core/services/translation.service';
@@ -26,6 +27,7 @@ import { PaymentChallengeService } from '../../../core/services/payment-challeng
     RouterLink,
     DecimalPipe,
     TranslatePipe,
+    LoaderComponent,
     DetailPanelHeaderComponent,
     ResultModalComponent,
     LocationMap,
@@ -33,6 +35,7 @@ import { PaymentChallengeService } from '../../../core/services/payment-challeng
     OperationIconComponent,
   ],
   template: `
+    <app-loader [visible]="paying() || movingToHistory()" [message]="'common.loading' | translate" />
     @if (errorMessage(); as error) {
       <app-result-modal
         type="error"
@@ -155,7 +158,12 @@ import { PaymentChallengeService } from '../../../core/services/payment-challeng
           </div>
           <footer class="fine-detail-footer">
             @if (fine.status === fineStatus.PAYABLE) {
-              <button type="button" class="btn btn-primary btn-block" (click)="pay()" [disabled]="insufficientFunds() && !selectedCardId()">
+              <button
+                type="button"
+                class="btn btn-primary btn-block"
+                (click)="pay()"
+                [disabled]="paying() || (insufficientFunds() && !selectedCardId())"
+              >
                 {{ 'ops.fineDetail.pay' | translate }} {{ fine.amount }}
               </button>
             } @else if (canMoveToHistory()) {
@@ -351,6 +359,7 @@ export class UnpaidFineDetailComponent {
   readonly acknowledged = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly movingToHistory = signal(false);
+  readonly paying = signal(false);
   readonly canMoveToHistory = computed(() => {
     const fine = this.fine;
     return Boolean(
@@ -425,33 +434,41 @@ export class UnpaidFineDetailComponent {
   };
 
   async pay(): Promise<void> {
+    if (this.paying() || this.movingToHistory() || this.paid()) return;
     const fine = this.fine;
     if (!fine) return;
     const walletAmt = this.walletAmount();
     const cardAmt = this.cardAmount();
-    const result = await this.unpaidFinesService.payFine(fine.id, this.selectedCardId());
-    if (this.fineId !== fine.id) return;
-    if (result.challengeUrl) {
-      this.paymentChallenge.begin({
-        kind: 'fine',
-        returnUrl: `/app/operations/unpaid-fines/${encodeURIComponent(fine.id)}`,
-        amount: this.numericAmount(),
-      });
-      window.location.assign(result.challengeUrl);
-      return;
+    this.paying.set(true);
+    try {
+      const result = await this.unpaidFinesService.payFine(fine.id, this.selectedCardId());
+      if (this.fineId !== fine.id) return;
+      if (result.challengeUrl) {
+        this.paymentChallenge.begin({
+          kind: 'fine',
+          returnUrl: `/app/operations/unpaid-fines/${encodeURIComponent(fine.id)}`,
+          amount: this.numericAmount(),
+        });
+        window.location.assign(result.challengeUrl);
+        return;
+      }
+      if (result.success) {
+        this.paidFine.set(fine);
+        this.capturedWalletAmount.set(walletAmt);
+        this.capturedCardAmount.set(cardAmt);
+        this.paid.set(true);
+        return;
+      }
+      this.errorMessage.set(this.failureMessage('ops.fineDetail.payFailed', result.error));
+    } catch {
+      this.errorMessage.set(this.failureMessage('ops.fineDetail.payFailed'));
+    } finally {
+      this.paying.set(false);
     }
-    if (result.success) {
-      this.paidFine.set(fine);
-      this.capturedWalletAmount.set(walletAmt);
-      this.capturedCardAmount.set(cardAmt);
-      this.paid.set(true);
-      return;
-    }
-    this.errorMessage.set(this.failureMessage('ops.fineDetail.payFailed', result.error));
   }
 
   async acknowledgeExpired(): Promise<void> {
-    if (!this.fine) return;
+    if (!this.fine || this.movingToHistory() || this.paying()) return;
     this.movingToHistory.set(true);
     try {
       const result = await this.unpaidFinesService.acknowledgeExpired(this.fineId);

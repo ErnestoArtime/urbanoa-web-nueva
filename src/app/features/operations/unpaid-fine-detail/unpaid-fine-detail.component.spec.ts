@@ -4,11 +4,7 @@ import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/route
 import { BehaviorSubject } from 'rxjs';
 import { OpsApiError } from '../../../core/api/ops-api.types';
 import { OperationsService } from '../../../core/services/operations.service';
-import {
-  FineStatus,
-  UnpaidFine,
-  UnpaidFinesService,
-} from '../../../core/services/unpaid-fines.service';
+import { FineStatus, UnpaidFine, UnpaidFinesService } from '../../../core/services/unpaid-fines.service';
 import { TranslationService } from '../../../core/services/translation.service';
 import { WalletService } from '../../../core/services/wallet.service';
 import { UnpaidFineDetailComponent } from './unpaid-fine-detail.component';
@@ -16,6 +12,20 @@ import { UnpaidFineDetailComponent } from './unpaid-fine-detail.component';
 describe('UnpaidFineDetailComponent', () => {
   let fixture: ComponentFixture<UnpaidFineDetailComponent>;
   let translate: jasmine.Spy;
+
+  it('locks payment during a delayed response and releases it on failure', async () => {
+    let reject!: (error: unknown) => void;
+    const request = new Promise<never>((_resolve, fail) => (reject = fail));
+    const payFine = jasmine.createSpy('payFine').and.returnValue(request);
+    configure(payableFine, { payFine });
+    const first = fixture.componentInstance.pay();
+    const duplicate = fixture.componentInstance.pay();
+    expect(payFine).toHaveBeenCalledTimes(1);
+    reject(new Error('network'));
+    await first;
+    await duplicate;
+    expect(fixture.componentInstance.errorMessage()).toBeTruthy();
+  });
 
   const payableFine: UnpaidFine = {
     id: 'fine-1',

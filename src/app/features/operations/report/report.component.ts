@@ -3,6 +3,7 @@ import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { TranslationService } from '../../../core/services/translation.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { LoaderComponent } from '../../../shared/components/loader/loader.component';
 import { OperationType } from '../../../shared/models/operation-type';
 import { OperationsService } from '../../../core/services/operations.service';
 import { DateRangeFilterComponent, type DateRange } from '../../../shared/components/date-range-filter/date-range-filter.component';
@@ -35,8 +36,9 @@ interface ReportRangeItem {
 
 @Component({
   selector: 'app-report',
-  imports: [ReactiveFormsModule, TranslatePipe, DateRangeFilterComponent],
+  imports: [ReactiveFormsModule, TranslatePipe, DateRangeFilterComponent, LoaderComponent],
   template: `
+    <app-loader [visible]="isGenerating()" [message]="'common.loading' | translate" />
     <div class="report-page has-sticky-actions" [formGroup]="form">
       <div class="report-scroll">
         <h1 class="page-title">{{ 'ops.report' | translate }}</h1>
