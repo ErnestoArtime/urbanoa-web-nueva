@@ -1,7 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { Router, RouterOutlet, NavigationEnd, NavigationStart, NavigationCancel, NavigationError } from '@angular/router';
 import { filter, map, startWith } from 'rxjs/operators';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { SidebarComponent } from '../sidebar/sidebar.component';
 import { BottomNavComponent } from '../bottom-nav/bottom-nav.component';
 import { AppHeaderComponent } from '../app-header/app-header.component';
@@ -243,9 +243,6 @@ export class AppShellComponent {
   });
   readonly connectedUserEmail = computed(() => this.userService.user().email || this.authService.user().email);
   readonly routeTransitionLoading = signal(false);
-  private readonly routeTransitionMinMs = 1000;
-  private routeTransitionStartedAt = 0;
-  private routeTransitionHideTimer?: ReturnType<typeof setTimeout>;
 
   private readonly url = toSignal(
     this.router.events.pipe(
@@ -263,31 +260,18 @@ export class AppShellComponent {
       .pipe(
         filter((e): e is NavigationEnd => e instanceof NavigationEnd),
         startWith({ urlAfterRedirects: this.router.url } as NavigationEnd),
+        takeUntilDestroyed(),
       )
       .subscribe((e) => {
         this.breadcrumbService.setFromUrl(e.urlAfterRedirects);
       });
 
-    this.router.events.subscribe((event) => {
+    this.router.events.pipe(takeUntilDestroyed()).subscribe((event) => {
       if (event instanceof NavigationStart) {
-        if (this.routeTransitionHideTimer !== undefined) {
-          clearTimeout(this.routeTransitionHideTimer);
-          this.routeTransitionHideTimer = undefined;
-        }
-        this.routeTransitionStartedAt = Date.now();
         this.routeTransitionLoading.set(true);
       }
       if (event instanceof NavigationEnd || event instanceof NavigationCancel || event instanceof NavigationError) {
-        const elapsed = Date.now() - this.routeTransitionStartedAt;
-        const remaining = Math.max(this.routeTransitionMinMs - elapsed, 0);
-        if (remaining === 0) {
-          this.routeTransitionLoading.set(false);
-          return;
-        }
-        this.routeTransitionHideTimer = setTimeout(() => {
-          this.routeTransitionLoading.set(false);
-          this.routeTransitionHideTimer = undefined;
-        }, remaining);
+        this.routeTransitionLoading.set(false);
       }
     });
   }
