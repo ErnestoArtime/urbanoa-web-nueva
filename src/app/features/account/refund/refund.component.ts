@@ -5,11 +5,13 @@ import { WalletService } from '../../../core/services/wallet.service';
 import { OperationsService } from '../../../core/services/operations.service';
 import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
 import { ResultModalComponent } from '../../../shared/components/result-modal/result-modal.component';
+import { LoaderComponent } from '../../../shared/components/loader/loader.component';
 
 @Component({
   selector: 'app-account-refund',
-  imports: [TranslatePipe, DecimalPipe, DetailPanelHeaderComponent, ResultModalComponent],
+  imports: [TranslatePipe, DecimalPipe, DetailPanelHeaderComponent, ResultModalComponent, LoaderComponent],
   template: `
+    <app-loader [visible]="requesting() && !refundQuote()" [message]="'common.loading' | translate" />
     <div class="page account-static-page">
       @if (!embedded()) {
         <app-detail-panel-header [title]="'account.refund.title' | translate" backRoute="/app/account/payment-methods" />

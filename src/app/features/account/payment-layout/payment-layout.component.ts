@@ -7,6 +7,7 @@ import { NavigationEnd, Router } from '@angular/router';
 import { filter, map, startWith } from 'rxjs/operators';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { LoaderComponent } from '../../../shared/components/loader/loader.component';
 import { SplitViewComponent } from '../../../layout/split-view/split-view.component';
 import { UserService } from '../../../core/services/user.service';
 import { WalletService } from '../../../core/services/wallet.service';
@@ -23,8 +24,10 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
     TranslatePipe,
     DecimalPipe,
     ResultModalComponent,
+    LoaderComponent,
   ],
   template: `
+    <app-loader [visible]="updating()" [message]="'common.loading' | translate" />
     @if (embedded()) {
       @if (screen() !== 'list') {
         <button type="button" class="btn btn-ghost" [disabled]="busy()" (click)="screen.set('list')">
@@ -380,9 +383,12 @@ export class PaymentLayoutComponent implements OnInit {
   async setAsDefault(id: string): Promise<void> {
     if (this.updating()) return;
     this.updating.set(true);
-    await this.walletService.setDefaultCard(id);
-    this.updating.set(false);
-    this.activeCardMenu.set(null);
+    try {
+      await this.walletService.setDefaultCard(id);
+      this.activeCardMenu.set(null);
+    } finally {
+      this.updating.set(false);
+    }
   }
   requestDelete(id: string): void {
     this.activeCardMenu.set(null);
@@ -404,10 +410,13 @@ export class PaymentLayoutComponent implements OnInit {
   async confirmDelete(): Promise<void> {
     if (this.updating()) return;
     this.updating.set(true);
-    const id = this.cardToDelete();
-    if (id) await this.walletService.removeCard(id);
-    this.cardToDelete.set(null);
-    this.updating.set(false);
+    try {
+      const id = this.cardToDelete();
+      if (id) await this.walletService.removeCard(id);
+      this.cardToDelete.set(null);
+    } finally {
+      this.updating.set(false);
+    }
   }
   brandAsset(brand: string): string | null {
     const normalized = brand.toLowerCase();

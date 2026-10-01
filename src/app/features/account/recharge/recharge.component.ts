@@ -12,12 +12,14 @@ import { WalletService } from '../../../core/services/wallet.service';
 import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
 import { ResultModalComponent } from '../../../shared/components/result-modal/result-modal.component';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { LoaderComponent } from '../../../shared/components/loader/loader.component';
 import { isCardUsable } from '../../../core/utils/card-expiry';
 
 @Component({
   selector: 'app-account-recharge',
-  imports: [ReactiveFormsModule, RouterLink, TranslatePipe, DetailPanelHeaderComponent, ResultModalComponent, DecimalPipe],
+  imports: [ReactiveFormsModule, RouterLink, TranslatePipe, DetailPanelHeaderComponent, ResultModalComponent, DecimalPipe, LoaderComponent],
   template: `
+    <app-loader [visible]="saving()" [message]="'common.loading' | translate" />
     <div class="page account-static-page">
       @if (!embedded()) {
         <app-detail-panel-header [title]="'account.recharge.title' | translate" backRoute="/app/account/payment-methods" />
