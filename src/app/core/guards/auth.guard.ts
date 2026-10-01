@@ -6,7 +6,7 @@ export const requireSession: CanActivateFn = (route, state) => {
   const authService = inject(AuthService);
   const router = inject(Router);
 
-  if (authService.isAuthenticated()) return true;
+  if (authService.ensureActiveSession()) return true;
   return router.createUrlTree(['/auth/login'], { queryParams: { returnUrl: state.url } });
 };
 
@@ -14,5 +14,5 @@ export const redirectIfSession: CanActivateFn = () => {
   const authService = inject(AuthService);
   const router = inject(Router);
 
-  return authService.isAuthenticated() ? router.createUrlTree(['/app']) : true;
+  return authService.ensureActiveSession() ? router.createUrlTree(['/app']) : true;
 };

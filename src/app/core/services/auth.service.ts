@@ -1,15 +1,15 @@
-import { computed, inject, Injectable, signal } from '@angular/core';
+import { computed, DestroyRef, inject, Injectable, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { OpsLoginRequest, OpsLoginResponse, OpsRegisterRequest, OpsUserResponse } from '../api/ops-auth.types';
 import { OpsApiClient } from '../api/ops-api-client.service';
 import { getOpsCloudToken, OPS_APP_VERSION, OPS_PARKING_SESSION_OPERATING_SYSTEM } from '../api/ops-client.constants';
 import { OPS_ENDPOINTS } from '../api/ops-endpoints';
 import { OpsSessionService } from '../api/ops-session.service';
-import { readStorage, writeStorage } from '../storage/signal-storage';
 import { AccountApiService } from './account-api.service';
 import { TranslationService } from './translation.service';
 import { UserData, UserService } from './user.service';
 import { LocationSettingsService } from './location-settings.service';
+import { WindowSessionService } from './window-session.service';
 
 export interface AuthUser extends UserData {
   id: string;
@@ -75,9 +75,11 @@ export class AuthService {
   private readonly translation = inject(TranslationService);
   private readonly userService = inject(UserService);
   private readonly locationSettings = inject(LocationSettingsService);
+  private readonly windowSession = inject(WindowSessionService);
   private readonly storageKey = 'urbanoa.auth.session';
   private readonly legacyStorageKey = 'urbanoa.auth.user';
-  private readonly session = signal<AuthSession | null>(readStorage<AuthSession | null>(this.storageKey, null));
+  private readonly session = signal<AuthSession | null>(null);
+  private loginAttempt = 0;
 
   readonly currentSession = this.session.asReadonly();
   readonly token = computed(() => this.session()?.token ?? '');
@@ -86,36 +88,59 @@ export class AuthService {
   readonly source = signal<'idle' | 'remote' | 'error'>(this.token() ? 'remote' : 'idle');
 
   constructor() {
-    if (this.token().startsWith('mock-')) this.clearSession();
-    this.syncOpsSession(this.token());
-    this.locationSettings.setUserScope(this.userIdentity(this.user()));
+    this.removeStoredCredentials();
+    this.syncOpsSession('');
+    this.locationSettings.setUserScope();
     window.addEventListener('urbanoa:session-expired', this.handleSessionExpired);
+    const pageHide = () => this.clearSession();
+    const pageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) this.handleSessionExpired();
+    };
+    window.addEventListener('pagehide', pageHide);
+    window.addEventListener('pageshow', pageShow);
+    const unsubscribe = this.windowSession.onInvalidated(this.handleSessionExpired);
+    inject(DestroyRef).onDestroy(() => {
+      window.removeEventListener('urbanoa:session-expired', this.handleSessionExpired);
+      window.removeEventListener('pagehide', pageHide);
+      window.removeEventListener('pageshow', pageShow);
+      unsubscribe();
+      this.clearSession();
+    });
   }
 
   private readonly handleSessionExpired = (): void => {
-    if (!this.isAuthenticated()) return;
     this.clearSession();
     void this.router.navigate(['/auth/login'], { queryParams: { sessionExpired: '1' } });
   };
+
+  ensureActiveSession(): boolean {
+    return this.isAuthenticated() && this.windowSession.ensureActive();
+  }
 
   async login(input: LoginInput): Promise<AuthUser>;
   async login(email: string, password: string): Promise<AuthUser>;
   async login(inputOrEmail: LoginInput | string, password = ''): Promise<AuthUser> {
     const input = typeof inputOrEmail === 'string' ? { email: inputOrEmail, password } : inputOrEmail;
     const email = input.email.trim();
+    const attempt = ++this.loginAttempt;
 
     try {
       const response = await this.opsApi.post<OpsLoginResponse>(OPS_ENDPOINTS.auth.login, this.loginRequest(email, input.password), {
         headers: this.languageHeaders(),
       });
       if (!response.token?.trim()) throw new Error('LoginUserAPI no devolvió token');
+      if (attempt !== this.loginAttempt) throw new Error('Login cancelled');
+      this.windowSession.activate();
+      this.syncOpsSession(response.token);
 
       // QueryUserAPI is secondary: a profile failure must not discard a
       // valid login token needed by every other OPS request.
       const user = await this.loadAuthenticatedUser(email, response);
+      if (attempt !== this.loginAttempt || !this.windowSession.ensureActive()) throw new Error('Login cancelled');
       this.storeSession({ token: response.token, refreshToken: '', user });
       return user;
     } catch (error) {
+      if (attempt === this.loginAttempt) this.clearSession();
       this.source.set('error');
       throw error;
     }
@@ -200,6 +225,7 @@ export class AuthService {
   }
 
   adoptToken(token: string, email: string): void {
+    this.windowSession.activate();
     this.storeSession({ token, refreshToken: '', user: { ...EMPTY_USER, email } });
   }
 
@@ -271,8 +297,6 @@ export class AuthService {
 
   private storeSession(session: AuthSession): void {
     this.session.set(session);
-    writeStorage(this.storageKey, session);
-    writeStorage(this.legacyStorageKey, { ...session.user, token: session.token });
     this.syncOpsSession(session.token);
     this.locationSettings.setUserScope(this.userIdentity(session.user));
     this.userService.updateLocal({
@@ -288,16 +312,24 @@ export class AuthService {
   }
 
   private clearSession(): void {
+    this.loginAttempt++;
     this.session.set(null);
-    writeStorage<AuthSession | null>(this.storageKey, null);
-    try {
-      localStorage.removeItem(this.legacyStorageKey);
-    } catch {
-      // Storage may be unavailable in private or restricted contexts.
-    }
+    this.windowSession.release();
+    this.removeStoredCredentials();
     this.syncOpsSession('');
     this.locationSettings.setUserScope();
     this.source.set('idle');
+  }
+
+  private removeStoredCredentials(): void {
+    for (const storage of [() => localStorage, () => sessionStorage]) {
+      try {
+        storage().removeItem(this.storageKey);
+        storage().removeItem(this.legacyStorageKey);
+      } catch {
+        // Restricted storage does not allow restoring a session either.
+      }
+    }
   }
 
   private syncOpsSession(token: string): void {

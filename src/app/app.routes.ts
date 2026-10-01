@@ -13,11 +13,14 @@ export const routes: Routes = [
   },
   {
     path: 'onboarding',
+    canActivate: [requireSession],
+    canActivateChild: [requireSession],
     loadChildren: () => import('./features/onboarding/onboarding.routes').then((m) => m.ONBOARDING_ROUTES),
   },
   {
     path: 'app',
     canActivate: [requireSession],
+    canActivateChild: [requireSession],
     loadComponent: () => import('./layout/app-shell/app-shell.component').then((m) => m.AppShellComponent),
     children: [
       {

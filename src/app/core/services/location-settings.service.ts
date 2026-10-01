@@ -22,7 +22,7 @@ export interface LocationSetupResult {
 @Injectable({ providedIn: 'root' })
 export class LocationSettingsService {
   private readonly storagePrefix = 'urbanoa.location-settings';
-  private userScope = this.readUserScope();
+  private userScope = 'anonymous';
   private readonly state = signal<LocationSettings>(this.readSettings());
 
   readonly settings = this.state.asReadonly();
@@ -143,18 +143,6 @@ export class LocationSettingsService {
       permissionState: 'unknown',
       useCurrentLocation: false,
     };
-  }
-
-  private readUserScope(): string {
-    try {
-      const session = JSON.parse(localStorage.getItem('urbanoa.auth.session') ?? 'null') as {
-        user?: { id?: string; email?: string };
-      } | null;
-      const user = session?.user;
-      return (user?.id?.trim() || user?.email?.trim() || 'anonymous').toLocaleLowerCase();
-    } catch {
-      return 'anonymous';
-    }
   }
 
   private persist(): void {

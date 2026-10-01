@@ -3,6 +3,7 @@ import { environment } from '../../../environments/environment';
 import { OpsApiEnvelope, OpsApiError } from './ops-api.types';
 import { OpsSessionService } from './ops-session.service';
 import { TranslationService } from '../services/translation.service';
+import { WindowSessionService } from '../services/window-session.service';
 
 const SESSION_EXPIRED_ERROR_CODES = new Set([-23, -231]);
 
@@ -21,6 +22,7 @@ export class OpsApiClient {
 
   private readonly session = inject(OpsSessionService);
   private readonly translation = inject(TranslationService);
+  private readonly windowSession = inject(WindowSessionService);
 
   get<T>(endpoint: string, options: Omit<OpsRequestOptions, 'body'> = {}): Promise<T> {
     return this.request<T>('GET', endpoint, options);
@@ -60,12 +62,14 @@ export class OpsApiClient {
     if (options.token) headers['Authorization'] = `Bearer ${options.token}`;
 
     try {
+      this.verifyWindowSession(endpoint, options.token);
       const response = await fetch(`${environment.opsApiBaseUrl}/${endpoint}`, {
         method,
         headers,
         body: method === 'POST' ? JSON.stringify(options.body) : undefined,
         signal: controller.signal,
       });
+      this.verifyWindowSession(endpoint, options.token);
 
       if (!response.ok) {
         const responseBody = await response.text().catch(() => '');
@@ -85,6 +89,7 @@ export class OpsApiClient {
       } catch {
         throw new OpsApiError('invalid-response', endpoint, `${endpoint}: la respuesta no es JSON válido`, response.status);
       }
+      this.verifyWindowSession(endpoint, options.token);
 
       if (!this.isEnvelope<T>(payload)) {
         throw new OpsApiError('invalid-response', endpoint, `${endpoint}: contrato de respuesta inesperado`, response.status);
@@ -116,6 +121,12 @@ export class OpsApiClient {
     } finally {
       clearTimeout(timeout);
       this.session?.unregisterRequest(controller);
+    }
+  }
+
+  private verifyWindowSession(endpoint: string, token?: string | null): void {
+    if (token && (this.session.token() !== token || !this.windowSession.ensureActive())) {
+      throw new OpsApiError('abort', endpoint, `${endpoint}: session no longer active in this window`);
     }
   }
 

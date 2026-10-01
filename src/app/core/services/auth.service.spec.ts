@@ -9,6 +9,7 @@ import { AccountApiService } from './account-api.service';
 import { AuthService } from './auth.service';
 import { TranslationService } from './translation.service';
 import { UserService } from './user.service';
+import { WindowSessionService } from './window-session.service';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -19,6 +20,10 @@ describe('AuthService', () => {
 
   beforeEach(() => {
     localStorage.clear();
+    sessionStorage.clear();
+    localStorage.setItem('urbanoa.auth.session', JSON.stringify({ token: 'previous-token', user: { email: 'old@example.com' } }));
+    localStorage.setItem('urbanoa.auth.user', JSON.stringify({ token: 'previous-token' }));
+    sessionStorage.setItem('urbanoa.auth.session', JSON.stringify({ token: 'previous-token' }));
     currentLanguage = 'es';
     opsApi = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'post']);
     opsSession = jasmine.createSpyObj<OpsSessionService>('OpsSessionService', ['token', 'setToken', 'clear']);
@@ -97,7 +102,62 @@ describe('AuthService', () => {
     expect(opsSession.setToken).toHaveBeenCalledWith('real-token');
     expect(user).toEqual(jasmine.objectContaining({ id: '42', name: 'Ada', surname: 'Lovelace', firstLogin: true }));
     expect(service.currentSession()?.token).toBe('real-token');
-    expect(localStorage.getItem('urbanoa.auth.session')).toContain('real-token');
+    expect(localStorage.getItem('urbanoa.auth.session')).toBeNull();
+    expect(localStorage.getItem('urbanoa.auth.user')).toBeNull();
+    expect(sessionStorage.getItem('urbanoa.auth.session')).toBeNull();
+  });
+
+  it('starts unauthenticated and deletes persisted credentials from the previous version', () => {
+    expect(service.isAuthenticated()).toBeFalse();
+    expect(service.token()).toBe('');
+    expect(localStorage.getItem('urbanoa.auth.session')).toBeNull();
+    expect(localStorage.getItem('urbanoa.auth.user')).toBeNull();
+    expect(sessionStorage.getItem('urbanoa.auth.session')).toBeNull();
+  });
+
+  it('invalidates the authenticated window when another window claims ownership', () => {
+    service.adoptToken('real-token', 'user@example.com');
+    localStorage.setItem('urbanoa.auth.active-window', 'other-window');
+    window.dispatchEvent(new StorageEvent('storage', { key: 'urbanoa.auth.active-window' }));
+
+    expect(service.isAuthenticated()).toBeFalse();
+    expect(service.token()).toBe('');
+    expect(opsSession.clear).toHaveBeenCalled();
+    expect(TestBed.inject(Router).navigate).toHaveBeenCalledWith(['/auth/login'], { queryParams: { sessionExpired: '1' } });
+    expect(localStorage.getItem('urbanoa.auth.active-window')).toBe('other-window');
+  });
+
+  it('does not restore authentication after leaving the page and returning via browser history', () => {
+    service.adoptToken('real-token', 'user@example.com');
+    window.dispatchEvent(new PageTransitionEvent('pagehide', { persisted: true }));
+    window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true }));
+
+    expect(service.isAuthenticated()).toBeFalse();
+    expect(TestBed.inject(Router).navigate).toHaveBeenCalledWith(['/auth/login'], { queryParams: { sessionExpired: '1' } });
+  });
+
+  it('does not resurrect a login whose profile finishes after the window lost ownership', async () => {
+    opsApi.post.and.resolveTo({ token: 'real-token', firstLogin: 0 });
+    let finishProfile!: (value: object) => void;
+    opsApi.get.and.returnValue(
+      new Promise((resolve) => {
+        finishProfile = resolve;
+      }),
+    );
+    const login = service.login('user@example.com', 'secret');
+    await Promise.resolve();
+    localStorage.setItem('urbanoa.auth.active-window', 'other-window');
+    window.dispatchEvent(new StorageEvent('storage', { key: 'urbanoa.auth.active-window' }));
+    finishProfile({ email: 'user@example.com' });
+
+    await expectAsync(login).toBeRejectedWithError('Login cancelled');
+    expect(service.isAuthenticated()).toBeFalse();
+  });
+
+  it('checks ownership again before admitting an authenticated route', () => {
+    service.adoptToken('real-token', 'user@example.com');
+    TestBed.inject(WindowSessionService).release();
+    expect(service.ensureActiveSession()).toBeFalse();
   });
 
   it('keeps a valid OPS session when QueryUserAPI fails', async () => {

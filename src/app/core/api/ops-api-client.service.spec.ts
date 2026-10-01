@@ -3,6 +3,7 @@ import { OpsApiError } from './ops-api.types';
 import { OpsSessionService } from './ops-session.service';
 import { provideZonelessChangeDetection } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { WindowSessionService } from '../services/window-session.service';
 
 describe('OpsApiClient', () => {
   let client: OpsApiClient;
@@ -21,6 +22,33 @@ describe('OpsApiClient', () => {
     );
 
     await expectAsync(client.get<{ count: number }>('test')).toBeResolvedTo({ count: 2 });
+  });
+
+  it('rejects an authenticated request before sending it from an inactive window', async () => {
+    const fetchSpy = spyOn(globalThis, 'fetch');
+    await expectAsync(client.get('private-endpoint', { token: 'old-token' })).toBeRejectedWith(jasmine.objectContaining({ kind: 'abort' }));
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('rejects a late authenticated response after another window takes ownership', async () => {
+    TestBed.inject(WindowSessionService).activate();
+    TestBed.inject(OpsSessionService).setToken('old-token');
+    spyOn(globalThis, 'fetch').and.callFake(async () => {
+      localStorage.setItem('urbanoa.auth.active-window', 'other-window');
+      return new Response(JSON.stringify({ value: { balance: 999 }, isSuccess: true, error: null }), { status: 200 });
+    });
+    await expectAsync(client.get('private-endpoint', { token: 'old-token' })).toBeRejectedWith(jasmine.objectContaining({ kind: 'abort' }));
+  });
+
+  it('does not admit a response from a previous account after a token change in the same window', async () => {
+    TestBed.inject(WindowSessionService).activate();
+    const session = TestBed.inject(OpsSessionService);
+    session.setToken('old-token');
+    spyOn(globalThis, 'fetch').and.callFake(async () => {
+      session.setToken('new-token');
+      return new Response(JSON.stringify({ value: { privateData: true }, isSuccess: true, error: null }), { status: 200 });
+    });
+    await expectAsync(client.get('private-endpoint', { token: 'old-token' })).toBeRejectedWith(jasmine.objectContaining({ kind: 'abort' }));
   });
 
   it('rejects an HTTP 200 backend error', async () => {

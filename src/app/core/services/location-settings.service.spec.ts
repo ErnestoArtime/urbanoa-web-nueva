@@ -15,6 +15,12 @@ describe('LocationSettingsService', () => {
     expect(service.settings().useCurrentLocation).toBeFalse();
   });
 
+  it('does not inherit the previous stored authentication identity before login', () => {
+    localStorage.setItem('urbanoa.auth.session', JSON.stringify({ user: { id: 'previous-user' } }));
+    localStorage.setItem('urbanoa.location-settings.previous-user', JSON.stringify({ preferredCityId: 'private-city' }));
+    expect(new LocationSettingsService().settings().preferredCityId).toBeUndefined();
+  });
+
   it('disables current location without clearing preferred city', () => {
     const service = new LocationSettingsService();
 
