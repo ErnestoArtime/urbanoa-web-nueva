@@ -102,11 +102,6 @@
   background: transparent;
 }
 
-/* La APK aplica colorPrimary como filtro global al Lottie del diálogo de carga. */
-app-loader .loader-lottie svg path {
-  fill: var(--color-primary) !important;
-}
-
 html,
 body {
   margin: 0;
