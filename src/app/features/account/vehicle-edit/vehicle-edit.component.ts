@@ -7,18 +7,25 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
 import { VehicleService } from '../../../core/services/vehicle.service';
 import { ParkingSessionService } from '../../../core/services/parking-session.service';
 import { OperationsService } from '../../../core/services/operations.service';
+import { LoaderComponent } from '../../../shared/components/loader/loader.component';
 
 @Component({
   selector: 'app-vehicle-edit',
-  imports: [TranslatePipe, DetailPanelHeaderComponent, ResultModalComponent],
+  imports: [TranslatePipe, DetailPanelHeaderComponent, ResultModalComponent, LoaderComponent],
   template: `
+    <app-loader [visible]="saving()" [message]="'common.loading' | translate" />
     <div class="page account-static-page">
       <app-detail-panel-header backRoute="/app/account/vehicles" [title]="'account.vehicleEdit.title' | translate" [backDesktop]="true" />
       @if (result() !== 'deleted') {
         <div class="card">
           <div class="form-group">
-            <label>{{ 'account.vehicleEdit.plate' | translate }}</label
-            ><input class="form-input" [value]="plate()" readonly />
+            <input
+              class="form-input"
+              [attr.aria-label]="'account.vehicleEdit.plate' | translate"
+              [placeholder]="'account.vehicleEdit.plate' | translate"
+              [value]="plate()"
+              readonly
+            />
           </div>
           <label class="switch-row"
             ><span>{{ 'account.vehicleEdit.favorite' | translate }}</span
@@ -59,6 +66,15 @@ import { OperationsService } from '../../../core/services/operations.service';
           [message]="'account.vehicleEdit.activeParkingMessage' | translate"
           [primaryText]="'common.accept' | translate"
           (primaryAction)="blockedDelete.set(false)"
+        />
+      }
+      @if (deleteFailed()) {
+        <app-result-modal
+          type="error"
+          [title]="'errors.server' | translate"
+          [message]="deleteErrorMessage() || ('errors.server' | translate)"
+          [primaryText]="'common.accept' | translate"
+          (primaryAction)="deleteFailed.set(false)"
         />
       }
     </div>
@@ -147,16 +163,27 @@ export class VehicleEditComponent implements OnInit {
   }
 
   async save(): Promise<void> {
+    if (this.saving()) return;
     this.saving.set(true);
-    const mutation = await this.vehicleService.update(this.id(), { isDefault: this.favorite() });
-    this.saving.set(false);
-    if (mutation.success) {
-      await this.operationsService.load();
-      this.result.set('saved');
+    try {
+      const mutation = await this.vehicleService.update(this.id(), { isDefault: this.favorite() });
+      if (mutation.success) {
+        await this.operationsService.load();
+        this.result.set('saved');
+      } else {
+        this.deleteErrorMessage.set(mutation.error?.backendError ? mutation.error.message : null);
+        this.deleteFailed.set(true);
+      }
+    } catch {
+      this.deleteErrorMessage.set(null);
+      this.deleteFailed.set(true);
+    } finally {
+      this.saving.set(false);
     }
   }
 
   remove(): void {
+    if (this.saving()) return;
     const current = this.vehicle();
     const isActive =
       this.parkingSessionService.isVehicleParked(this.id()) ||
@@ -169,17 +196,24 @@ export class VehicleEditComponent implements OnInit {
   }
 
   async confirmRemove(): Promise<void> {
+    if (this.saving()) return;
     this.confirmDelete.set(false);
     this.saving.set(true);
-    const mutation = await this.vehicleService.remove(this.id());
-    this.saving.set(false);
-    if (mutation.success) {
-      this.deletedId = this.id();
-      await this.operationsService.load();
-      this.result.set('deleted');
-    } else {
-      this.deleteErrorMessage.set(mutation.error?.backendError ? mutation.error.message : null);
+    try {
+      const mutation = await this.vehicleService.remove(this.id());
+      if (mutation.success) {
+        this.deletedId = this.id();
+        await this.operationsService.load();
+        this.result.set('deleted');
+      } else {
+        this.deleteErrorMessage.set(mutation.error?.backendError ? mutation.error.message : null);
+        this.deleteFailed.set(true);
+      }
+    } catch {
+      this.deleteErrorMessage.set(null);
       this.deleteFailed.set(true);
+    } finally {
+      this.saving.set(false);
     }
   }
 

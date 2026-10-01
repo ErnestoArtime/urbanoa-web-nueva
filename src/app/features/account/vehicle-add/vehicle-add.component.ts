@@ -6,18 +6,21 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
 import { VehicleService } from '../../../core/services/vehicle.service';
 import { FOREIGN_PLATE_MAX_LENGTH, isValidPlate } from '../../../shared/utils/plate-validation';
 import { OperationsService } from '../../../core/services/operations.service';
+import { LoaderComponent } from '../../../shared/components/loader/loader.component';
 
 @Component({
   selector: 'app-vehicle-add',
-  imports: [TranslatePipe, DetailPanelHeaderComponent, ResultModalComponent],
+  imports: [TranslatePipe, DetailPanelHeaderComponent, ResultModalComponent, LoaderComponent],
   template: `
+    <app-loader [visible]="saving()" [message]="'common.loading' | translate" />
     <div class="page account-static-page">
       <app-detail-panel-header backRoute="/app/account/vehicles" [title]="'account.vehicleAdd.title' | translate" [backDesktop]="true" />
       <div class="card">
         <div class="form-group">
-          <label>{{ 'account.vehicleAdd.plate' | translate }} <span class="text-error">*</span></label
-          ><input
+          <input
             class="form-input"
+            [attr.aria-label]="'account.vehicleAdd.plate' | translate"
+            aria-required="true"
             [class.invalid]="plateError() || plateInvalid() || plateDuplicate()"
             [value]="plate()"
             (input)="setPlate($event)"
@@ -55,7 +58,11 @@ import { OperationsService } from '../../../core/services/operations.service';
         <app-result-modal
           type="error"
           [title]="'account.vehicleAdd.addErrorTitle' | translate"
-          [message]="addErrorMessage() ? ('account.vehicleAdd.addErrorPrefix' | translate) + addErrorMessage() : ('account.vehicleAdd.addErrorDetail' | translate)"
+          [message]="
+            addErrorMessage()
+              ? ('account.vehicleAdd.addErrorPrefix' | translate) + addErrorMessage()
+              : ('account.vehicleAdd.addErrorDetail' | translate)
+          "
           [primaryText]="'common.accept' | translate"
           (primaryAction)="addFailed.set(false)"
         />
@@ -138,6 +145,7 @@ export class VehicleAddComponent {
   }
 
   async save(): Promise<void> {
+    if (this.saving()) return;
     const plate = this.plate().trim();
     if (!plate) {
       this.plateError.set(true);
@@ -152,19 +160,25 @@ export class VehicleAddComponent {
       return;
     }
     this.saving.set(true);
-    const mutation = await this.vehicleService.add({
-      plate,
-      isDefault: false,
-      isForeign: this.foreignPlate(),
-      label: this.foreignPlate() ? 'account.vehicle.foreignPlate' : undefined,
-    });
-    this.saving.set(false);
-    if (mutation.success) {
-      await this.operationsService.load();
-      this.saved.set(true);
-    } else {
-      this.addErrorMessage.set(mutation.error?.backendError ? mutation.error.message : null);
+    try {
+      const mutation = await this.vehicleService.add({
+        plate,
+        isDefault: false,
+        isForeign: this.foreignPlate(),
+        label: this.foreignPlate() ? 'account.vehicle.foreignPlate' : undefined,
+      });
+      if (mutation.success) {
+        await this.operationsService.load();
+        this.saved.set(true);
+      } else {
+        this.addErrorMessage.set(mutation.error?.backendError ? mutation.error.message : null);
+        this.addFailed.set(true);
+      }
+    } catch {
+      this.addErrorMessage.set(null);
       this.addFailed.set(true);
+    } finally {
+      this.saving.set(false);
     }
   }
 
