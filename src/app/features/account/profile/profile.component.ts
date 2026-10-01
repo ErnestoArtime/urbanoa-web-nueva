@@ -2,14 +2,16 @@ import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { LoaderComponent } from '../../../shared/components/loader/loader.component';
 import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
 import { UserService } from '../../../core/services/user.service';
 import { ResultModalComponent } from '../../../shared/components/result-modal/result-modal.component';
 
 @Component({
   selector: 'app-account-profile',
-  imports: [ReactiveFormsModule, RouterLink, TranslatePipe, DetailPanelHeaderComponent, ResultModalComponent],
+  imports: [ReactiveFormsModule, RouterLink, TranslatePipe, DetailPanelHeaderComponent, ResultModalComponent, LoaderComponent],
   template: `
+    <app-loader [visible]="saving()" [message]="'common.loading' | translate" />
     <div class="page account-static-page">
       <app-detail-panel-header [title]="'account.profile.title' | translate" backRoute="/app/account" />
       <form [formGroup]="form" (ngSubmit)="onSave()">
@@ -113,12 +115,17 @@ export class AccountProfileComponent {
     if (this.form.invalid || this.saving()) return;
 
     this.saving.set(true);
-    const result = await this.userService.save(this.form.getRawValue());
-    this.saving.set(false);
-    if (result.success) {
-      this.saved.set(true);
-    } else {
+    try {
+      const result = await this.userService.save(this.form.getRawValue());
+      if (result.success) {
+        this.saved.set(true);
+      } else {
+        this.saveFailed.set(true);
+      }
+    } catch {
       this.saveFailed.set(true);
+    } finally {
+      this.saving.set(false);
     }
   }
 }

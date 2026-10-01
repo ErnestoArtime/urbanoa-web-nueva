@@ -3,6 +3,7 @@ import { LucideLocateFixed } from '@lucide/angular';
 import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
 import { LocationSettingsService, type LocationPermissionState } from '../../../core/services/location-settings.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { LoaderComponent } from '../../../shared/components/loader/loader.component';
 import { CitiesService } from '../../../core/services/cities.service';
 import { UserService } from '../../../core/services/user.service';
 import type { Municipio } from '../../../shared/models/municipio';
@@ -14,8 +15,9 @@ interface LocationMessage {
 
 @Component({
   selector: 'app-account-settings',
-  imports: [TranslatePipe, DetailPanelHeaderComponent, LucideLocateFixed],
+  imports: [TranslatePipe, DetailPanelHeaderComponent, LucideLocateFixed, LoaderComponent],
   template: `
+    <app-loader [visible]="savingCity()" [message]="'common.loading' | translate" />
     <div class="page account-static-page settings-page">
       <app-detail-panel-header [title]="'account.settings.title' | translate" backRoute="/app/account" />
 
@@ -248,6 +250,7 @@ export class AccountSettingsComponent {
   private readonly userService = inject(UserService);
   readonly municipios = signal<Municipio[]>([]);
   readonly showCityPicker = signal(false);
+  readonly savingCity = signal(false);
   readonly locationMessage = signal<LocationMessage | null>(null);
 
   constructor() {
@@ -285,14 +288,22 @@ export class AccountSettingsComponent {
     });
   }
   async selectCity(id: string, name: string): Promise<void> {
-    const contractId = this.citiesService.contractIdFor(id);
-    this.locationService.setPreferredCity(id, name, contractId);
-    const result = await this.userService.updatePreferredContract(contractId);
-    if (!result.success) {
+    if (this.savingCity()) return;
+    this.savingCity.set(true);
+    try {
+      const contractId = this.citiesService.contractIdFor(id);
+      this.locationService.setPreferredCity(id, name, contractId);
+      const result = await this.userService.updatePreferredContract(contractId);
+      if (!result.success) {
+        this.locationMessage.set({ key: 'account.settings.location.citySaveError' });
+        return;
+      }
+      this.showCityPicker.set(false);
+      this.locationMessage.set({ key: 'account.settings.location.citySavedMessage', params: { city: name } });
+    } catch {
       this.locationMessage.set({ key: 'account.settings.location.citySaveError' });
-      return;
+    } finally {
+      this.savingCity.set(false);
     }
-    this.showCityPicker.set(false);
-    this.locationMessage.set({ key: 'account.settings.location.citySavedMessage', params: { city: name } });
   }
 }

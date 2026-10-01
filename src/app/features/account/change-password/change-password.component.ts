@@ -3,13 +3,15 @@ import { LucideEye, LucideEyeOff } from '@lucide/angular';
 import { apiErrorKey } from '../../../core/http/api-error-key';
 import { PasswordService } from '../../../core/services/password.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { LoaderComponent } from '../../../shared/components/loader/loader.component';
 import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
 import { ResultModalComponent } from '../../../shared/components/result-modal/result-modal.component';
 
 @Component({
   selector: 'app-account-change-password',
-  imports: [TranslatePipe, DetailPanelHeaderComponent, ResultModalComponent, LucideEye, LucideEyeOff],
+  imports: [TranslatePipe, DetailPanelHeaderComponent, ResultModalComponent, LucideEye, LucideEyeOff, LoaderComponent],
   template: `
+    <app-loader [visible]="saving()" [message]="'common.loading' | translate" />
     <div class="page account-static-page">
       <app-detail-panel-header [title]="'account.changePassword.title' | translate" backRoute="/app/account" />
       <div class="card">

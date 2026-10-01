@@ -1,13 +1,15 @@
 import { Component, inject, signal } from '@angular/core';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { LoaderComponent } from '../../../shared/components/loader/loader.component';
 import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
 import { ResultModalComponent } from '../../../shared/components/result-modal/result-modal.component';
 import { UserService, type UserAddress } from '../../../core/services/user.service';
 
 @Component({
   selector: 'app-account-tax-data',
-  imports: [TranslatePipe, DetailPanelHeaderComponent, ResultModalComponent],
+  imports: [TranslatePipe, DetailPanelHeaderComponent, ResultModalComponent, LoaderComponent],
   template: `
+    <app-loader [visible]="saving()" [message]="'common.loading' | translate" />
     <div class="page account-static-page">
       <app-detail-panel-header [title]="'account.taxData.title' | translate" backRoute="/app/account" />
       <div class="card">
@@ -189,12 +191,17 @@ export class AccountTaxDataComponent {
     if (this.saving()) return;
 
     this.saving.set(true);
-    const result = await this.userService.save({ nif: this.nif(), address: current });
-    this.saving.set(false);
-    if (result.success) {
-      this.saved.set(true);
-    } else {
+    try {
+      const result = await this.userService.save({ nif: this.nif(), address: current });
+      if (result.success) {
+        this.saved.set(true);
+      } else {
+        this.saveFailed.set(true);
+      }
+    } catch {
       this.saveFailed.set(true);
+    } finally {
+      this.saving.set(false);
     }
   }
 }

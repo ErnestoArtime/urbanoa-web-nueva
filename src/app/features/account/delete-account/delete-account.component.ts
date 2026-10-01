@@ -5,11 +5,13 @@ import { apiErrorKey } from '../../../core/http/api-error-key';
 import { AuthService } from '../../../core/services/auth.service';
 import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { LoaderComponent } from '../../../shared/components/loader/loader.component';
 
 @Component({
   selector: 'app-account-delete-account',
-  imports: [ReactiveFormsModule, TranslatePipe, DetailPanelHeaderComponent],
+  imports: [ReactiveFormsModule, TranslatePipe, DetailPanelHeaderComponent, LoaderComponent],
   template: `
+    <app-loader [visible]="submitting()" [message]="'common.loading' | translate" />
     <div class="page account-static-page">
       <app-detail-panel-header [title]="'account.deleteAccount.title' | translate" backRoute="/app/account" />
       <form [formGroup]="form" (ngSubmit)="onSubmit()">

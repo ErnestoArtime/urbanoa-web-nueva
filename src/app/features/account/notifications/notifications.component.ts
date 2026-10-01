@@ -1,12 +1,14 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { LoaderComponent } from '../../../shared/components/loader/loader.component';
 import { ResultModalComponent } from '../../../shared/components/result-modal/result-modal.component';
 import { NotificationsService } from '../../../core/services/notifications.service';
 
 @Component({
   selector: 'app-account-notifications',
-  imports: [TranslatePipe, ResultModalComponent],
+  imports: [TranslatePipe, ResultModalComponent, LoaderComponent],
   template: `
+    <app-loader [visible]="saving()" [message]="'common.loading' | translate" />
     <div class="page account-static-page">
       <h1 class="page-title">{{ 'account.notifications.title' | translate }}</h1>
       @if (notifications.source() === 'error') {
@@ -132,22 +134,26 @@ export class AccountNotificationsComponent implements OnInit {
   }
 
   async save(): Promise<void> {
+    if (this.saving()) return;
     this.saving.set(true);
-    const current = this.notifications.preferences();
-    const result = await this.notifications.save({
-      ...current,
-      unparkingNotifications: Number(this.appNotifications[0].enabled),
-      fineNotifications: Number(this.appNotifications[1].enabled),
-      rechargeNotifications: Number(this.appNotifications[2].enabled),
-      emailParkingNotifications: Number(this.emailNotifications[0].enabled),
-      emailUnparkingNotifications: Number(this.emailNotifications[1].enabled),
-      emailFineNotifications: Number(this.emailNotifications[2].enabled),
-      emailRechargeNotifications: Number(this.emailNotifications[3].enabled),
-      feedbackNotifications: Number(this.feedbackApp),
-      emailFeedbackNotifications: Number(this.feedbackEmail),
-    });
-    this.saving.set(false);
-    this.saved.set(result === 'remote');
+    try {
+      const current = this.notifications.preferences();
+      const result = await this.notifications.save({
+        ...current,
+        unparkingNotifications: Number(this.appNotifications[0].enabled),
+        fineNotifications: Number(this.appNotifications[1].enabled),
+        rechargeNotifications: Number(this.appNotifications[2].enabled),
+        emailParkingNotifications: Number(this.emailNotifications[0].enabled),
+        emailUnparkingNotifications: Number(this.emailNotifications[1].enabled),
+        emailFineNotifications: Number(this.emailNotifications[2].enabled),
+        emailRechargeNotifications: Number(this.emailNotifications[3].enabled),
+        feedbackNotifications: Number(this.feedbackApp),
+        emailFeedbackNotifications: Number(this.feedbackEmail),
+      });
+      this.saved.set(result === 'remote');
+    } finally {
+      this.saving.set(false);
+    }
   }
 
   checked(event: Event): boolean {

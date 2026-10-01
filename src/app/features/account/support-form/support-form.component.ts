@@ -12,6 +12,7 @@ import {
 import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
 import { ResultModalComponent } from '../../../shared/components/result-modal/result-modal.component';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { LoaderComponent } from '../../../shared/components/loader/loader.component';
 import { CitiesService, type ParkingMunicipio } from '../../../core/services/cities.service';
 import { VehicleService } from '../../../core/services/vehicle.service';
 
@@ -50,9 +51,11 @@ const FEEDBACK_SUBTYPES: SelectOption<FeedbackSubtype>[] = [
     LucideTrash2,
     DetailPanelHeaderComponent,
     ResultModalComponent,
+    LoaderComponent,
     TranslatePipe,
   ],
   template: `
+    <app-loader [visible]="submitting()" [message]="'common.loading' | translate" />
     <div class="page account-static-page has-sticky-actions support-form-page">
       <app-detail-panel-header [title]="titleKey() | translate" [backRoute]="backRoute()" />
       @if (replyThread(); as thread) {
@@ -446,26 +449,31 @@ export class AccountSupportFormComponent implements OnInit {
       return;
     }
     this.submitting.set(true);
-    const values = this.form.getRawValue();
-    let success = false;
-    if (this.threadId) {
-      success = await this.support.reply(this.threadId, values.message, this.attachment() ?? undefined);
-    } else {
-      const city = this.municipios().find((item) => item.id === values.cityId);
-      success = Boolean(
-        await this.support.create({
-          type: values.type as FeedbackType,
-          subtype: values.subtype as FeedbackSubtype,
-          cityId: values.cityId,
-          cityName: city?.nombre ?? '',
-          plate: values.plate,
-          message: values.message,
-          attachment: this.attachment() ?? undefined,
-        }),
-      );
+    try {
+      const values = this.form.getRawValue();
+      let success = false;
+      if (this.threadId) {
+        success = await this.support.reply(this.threadId, values.message, this.attachment() ?? undefined);
+      } else {
+        const city = this.municipios().find((item) => item.id === values.cityId);
+        success = Boolean(
+          await this.support.create({
+            type: values.type as FeedbackType,
+            subtype: values.subtype as FeedbackSubtype,
+            cityId: values.cityId,
+            cityName: city?.nombre ?? '',
+            plate: values.plate,
+            message: values.message,
+            attachment: this.attachment() ?? undefined,
+          }),
+        );
+      }
+      if (success) void this.router.navigate(['/app/account/support-success']);
+      else this.showError.set(true);
+    } catch {
+      this.showError.set(true);
+    } finally {
+      this.submitting.set(false);
     }
-    this.submitting.set(false);
-    if (success) void this.router.navigate(['/app/account/support-success']);
-    else this.showError.set(true);
   }
 }
