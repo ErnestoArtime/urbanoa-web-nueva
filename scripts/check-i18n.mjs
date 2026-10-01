@@ -3,7 +3,9 @@ import { join } from 'node:path';
 
 const i18nDir = join(process.cwd(), 'public', 'assets', 'i18n');
 const srcDir = join(process.cwd(), 'src');
-const files = readdirSync(i18nDir).filter((name) => name.endsWith('.json')).sort();
+const files = readdirSync(i18nDir)
+  .filter((name) => name.endsWith('.json'))
+  .sort();
 
 if (!files.includes('es.json')) {
   console.error('Missing baseline locale file: es.json');
@@ -42,7 +44,7 @@ const collectFiles = (dir, matcher, output = []) => {
 const readUsedKeys = () => {
   const filesToScan = collectFiles(
     srcDir,
-    (filePath) => filePath.endsWith('.html') || filePath.endsWith('.ts')
+    (filePath) => filePath.endsWith('.html') || (filePath.endsWith('.ts') && !filePath.endsWith('.spec.ts')),
   );
 
   const keys = new Set();

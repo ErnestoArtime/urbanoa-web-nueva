@@ -37,6 +37,7 @@ const DEFAULT_CONFIG = {
   translationKeyPrefixes: [],
   simpleTranslationKeyPrefixes: [],
   ignoredDirectLiterals: [],
+  ignoredDirectLiteralFiles: [],
   sheetRules: [],
 };
 let config = structuredClone(DEFAULT_CONFIG);
@@ -67,6 +68,9 @@ async function loadConfig(options) {
   }
   if (!Array.isArray(config.ignoredDirectLiterals)) {
     throw new Error('ignoredDirectLiterals debe ser un array.');
+  }
+  if (!Array.isArray(config.ignoredDirectLiteralFiles)) {
+    throw new Error('ignoredDirectLiteralFiles debe ser un array.');
   }
   if (!Array.isArray(config.sheetRules)) {
     throw new Error('sheetRules debe ser un array.');
@@ -558,7 +562,10 @@ async function scanSource(sourceDirectory) {
       if (!isIgnoredKey(key)) keys.add(key);
     });
     potential.prefixes.forEach((prefix) => dynamicPrefixes.add(prefix));
-    literals.push(...findDirectLiterals(contentWithoutComments, path.relative(process.cwd(), file)));
+    const relativePath = path.relative(process.cwd(), file).replaceAll('\\', '/');
+    if (!config.ignoredDirectLiteralFiles.includes(relativePath)) {
+      literals.push(...findDirectLiterals(contentWithoutComments, relativePath));
+    }
   }
   return { keys, dynamicPrefixes, objectLookupPrefixes, literals };
 }

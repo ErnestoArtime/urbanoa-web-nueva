@@ -61,7 +61,25 @@
     "CIF: A95158895",
     "Recarga de saldo",
     "Devolución de saldo",
-    "Pago de denuncia"
+    "Pago de denuncia",
+    "Paycomet",
+    "window.parent.postMessage('urbanoa-card-added', '*'); window.Urbanoa.finish()"
+  ],
+  "ignoredDirectLiteralFiles": [
+    "src/app/core/api/app-api-client.service.ts",
+    "src/app/core/api/ops-api-client.service.ts",
+    "src/app/core/services/auth.service.ts",
+    "src/app/core/services/navigation-to-car.service.ts",
+    "src/app/core/services/operations.service.ts",
+    "src/app/core/services/parking-api.service.ts",
+    "src/app/core/services/parking-session.service.ts",
+    "src/app/core/services/support.service.ts",
+    "src/app/core/services/unpaid-fines.service.ts",
+    "src/app/core/services/user.service.ts",
+    "src/app/core/services/vehicle.service.ts",
+    "src/app/core/services/wallet.service.ts",
+    "src/app/features/parking/parking-time-steps.service.ts",
+    "src/app/shared/directives/ticket-cut-align.directive.ts"
   ],
   "sheetRules": [
     {
