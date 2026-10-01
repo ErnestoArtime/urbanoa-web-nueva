@@ -56,7 +56,7 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
           <h1 class="page-title">{{ 'account.menu.paymentMethods' | translate }}</h1>
         }
         @if (walletService.source() === 'error') {
-          <p class="data-notice" role="alert">No se pudieron cargar la billetera y las tarjetas.</p>
+          <p class="data-notice" role="alert">{{ 'account.paymentMethods.loadError' | translate }}</p>
         }
         <div class="wallet-card payment-wallet-card mb-2">
           <div class="wallet-section">

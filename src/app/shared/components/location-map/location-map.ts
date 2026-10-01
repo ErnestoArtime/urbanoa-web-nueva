@@ -55,7 +55,7 @@ export class LocationMap implements AfterViewInit, OnDestroy {
 
   readonly latitude = input.required<number>();
   readonly longitude = input.required<number>();
-  readonly label = input('Ubicación de la operación');
+  readonly label = input.required<string>();
 
   private readonly googleMapsLoader = inject(GoogleMapsLoaderService);
   private leafletMap?: L.Map;

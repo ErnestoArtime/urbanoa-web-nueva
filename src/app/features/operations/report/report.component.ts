@@ -103,7 +103,7 @@ interface ReportRangeItem {
           {{ isGenerating() ? ('ops.report.generating' | translate) : ('ops.report.generateButton' | translate) }}
         </button>
         @if (reportError()) {
-          <p class="form-error" role="alert">No se pudo generar el informe PDF.</p>
+          <p class="form-error" role="alert">{{ 'ops.report.pdfError' | translate }}</p>
         }
       </div>
     </div>

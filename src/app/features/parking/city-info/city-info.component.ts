@@ -42,7 +42,7 @@ import { LucideMail, LucideMapPin, LucidePhone } from '@lucide/angular';
           >{{ 'parking.selectStreet' | translate }}</a
         >
       } @else if (error()) {
-        <p class="card" role="alert">No se pudo cargar la información del municipio.</p>
+        <p class="card" role="alert">{{ 'parking.cityInfo.loadError' | translate }}</p>
       }
     </div>
   `,

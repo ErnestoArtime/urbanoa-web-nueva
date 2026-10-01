@@ -21,7 +21,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
         'auth.resetCode.enterCode' | translate
       }}</a>
       <button type="button" class="btn-text mt-2" (click)="onResend()" [disabled]="resending() || !email()">
-        {{ (resending() ? 'auth.confirm.resending' : 'auth.confirm.resend') | translate }}
+        {{ (resending() ? 'auth.confirm.resending' : 'auth.resetCode.resend') | translate }}
       </button>
     </div>
   `,

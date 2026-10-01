@@ -37,7 +37,7 @@ import { UserService } from '../../../core/services/user.service';
           {{ saving() ? ('common.saving' | translate) : ('onboarding.next' | translate) }}
         </button>
       </form>
-      <a routerLink="/auth/login" class="btn btn-ghost btn-block mt-1">{{ 'common.cancel' | translate }}</a>
+      <a routerLink="/auth/login" class="btn btn-ghost btn-block mt-1">{{ 'onboarding.user.cancel' | translate }}</a>
     </div>
   `,
 })

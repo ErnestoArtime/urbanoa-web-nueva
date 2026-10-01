@@ -36,7 +36,7 @@ const EMPTY_CITY: ParkingMunicipio = {
       />
       <h1 class="page-title">{{ 'parking.selectMunicipio' | translate }}</h1>
       @if (dataSource() === 'error') {
-        <p class="data-notice" role="alert">No se pudieron cargar los municipios.</p>
+        <p class="data-notice" role="alert">{{ 'parking.cities.loadError' | translate }}</p>
       }
       <label class="municipio-search">
         <span aria-hidden="true">⌕</span>

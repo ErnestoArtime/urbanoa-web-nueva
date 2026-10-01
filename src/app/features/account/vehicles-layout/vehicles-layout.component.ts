@@ -51,7 +51,7 @@ import type { Vehicle } from '../../../shared/models/vehicle';
           </div>
         } @else {
           <div class="card empty-vehicles">
-            <p>Aún no tiene vehículos guardados.</p>
+            <p>{{ 'account.vehicles.noneSaved' | translate }}</p>
             <a routerLink="/app/account/vehicles/add" class="btn btn-primary btn-block">{{ 'account.addVehicle' | translate }}</a>
           </div>
         }

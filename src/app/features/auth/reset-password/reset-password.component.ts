@@ -11,6 +11,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
   template: `
     <div class="page auth-page">
       <h1 class="page-title">{{ 'auth.reset.title' | translate }}</h1>
+      <p class="page-subtitle">{{ 'auth.reset.subtitle' | translate }}</p>
       <form [formGroup]="form" (ngSubmit)="onSubmit()">
         <div class="form-group">
           <label class="form-label">{{ 'account.profile.email' | translate }}</label>

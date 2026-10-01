@@ -363,7 +363,7 @@ export class ParkingConfirmComponent implements OnInit {
         await this.finishConfirmation(walletAmount, recovered.id, recovered);
         return;
       }
-      this.submitError.set(result.error instanceof Error ? result.error.message : 'No se pudo confirmar la operación.');
+      this.submitError.set(this.translations.translate('parking.confirm.operationError'));
       this.loading.set(false);
       this.confirmationPending = false;
       this.swipePay.reset();

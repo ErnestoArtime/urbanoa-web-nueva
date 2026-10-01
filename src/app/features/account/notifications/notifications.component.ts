@@ -10,7 +10,7 @@ import { NotificationsService } from '../../../core/services/notifications.servi
     <div class="page account-static-page">
       <h1 class="page-title">{{ 'account.notifications.title' | translate }}</h1>
       @if (notifications.source() === 'error') {
-        <p class="data-notice" role="alert">No se pudieron sincronizar las preferencias con el servicio.</p>
+        <p class="data-notice" role="alert">{{ 'account.notifications.syncError' | translate }}</p>
       }
       <div class="card">
         <p class="section-title">{{ 'account.notifications.app' | translate }}</p>

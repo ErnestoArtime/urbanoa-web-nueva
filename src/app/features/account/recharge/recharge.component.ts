@@ -25,7 +25,7 @@ import { isCardUsable } from '../../../core/utils/card-expiry';
         <h2>{{ 'account.recharge.title' | translate }}</h2>
       }
       @if (walletService.source() === 'error') {
-        <p class="data-notice" role="alert">No se pudo conectar con el servicio de pagos.</p>
+        <p class="data-notice" role="alert">{{ 'account.recharge.serviceError' | translate }}</p>
       }
       @if (submitError(); as error) {
         <p class="data-notice" role="alert">{{ error }}</p>
@@ -201,7 +201,7 @@ export class AccountRechargeComponent {
   });
 
   private readonly syncCard = effect(() => {
-    if (this.usableCards().some(card => card.id === this.cardId())) this.form.controls.cardId.setValue(this.cardId());
+    if (this.usableCards().some((card) => card.id === this.cardId())) this.form.controls.cardId.setValue(this.cardId());
   });
 
   selectedAmount(): number {
@@ -228,7 +228,7 @@ export class AccountRechargeComponent {
 
   async confirm(): Promise<void> {
     if (this.done() || this.saving()) return;
-    if (!this.usableCards().some(card => card.id === this.selectedCardId())) {
+    if (!this.usableCards().some((card) => card.id === this.selectedCardId())) {
       this.form.controls.cardId.setErrors({ unavailable: true });
       this.form.controls.cardId.markAsTouched();
       return;
@@ -261,6 +261,8 @@ export class AccountRechargeComponent {
 
   private initialCardId(): string {
     const requested = this.queryCardId();
-    return requested && this.usableCards().some((card) => card.id === requested) ? requested : (this.walletService.defaultCard?.()?.id ?? this.walletService.defaultCardId());
+    return requested && this.usableCards().some((card) => card.id === requested)
+      ? requested
+      : (this.walletService.defaultCard?.()?.id ?? this.walletService.defaultCardId());
   }
 }

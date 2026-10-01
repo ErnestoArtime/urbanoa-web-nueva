@@ -19,7 +19,7 @@ import { ParkingApiService, ParkingTicketOption } from '../../../core/services/p
         <div>
           <strong>{{ query().street }}</strong>
           <p>{{ query().zone }} · {{ query().cityName }}</p>
-          <small>{{ 'parking.tickets.vehicle' | translate: { plate: query().plate } }}</small>
+          <small>{{ 'parking.tickets.vehicle' | translate }} {{ query().plate }}</small>
         </div>
       </div>
       <div class="tariff-list">

@@ -9,13 +9,14 @@ import { NotificationsService } from '../../../core/services/notifications.servi
   imports: [RouterLink, TranslatePipe],
   template: `
     <div class="page">
+      <h1 class="page-title">{{ 'onboarding.notification.title' | translate }}</h1>
       <p class="page-subtitle">{{ 'onboarding.notification.subtitle' | translate }}</p>
       <p class="text-muted">{{ 'onboarding.notification.webNotice' | translate }}</p>
       @if (failed()) { <p class="form-error" role="alert">{{ 'onboarding.notification.saveError' | translate }}</p> }
       <button type="button" class="btn btn-primary btn-block mt-2" [disabled]="saving()" (click)="activate()">
         {{ 'onboarding.notification.savePreferences' | translate }}
       </button>
-      <a routerLink="/app" class="btn btn-ghost btn-block mt-1">{{ 'common.cancel' | translate }}</a>
+      <a routerLink="/app" class="btn btn-ghost btn-block mt-1">{{ 'onboarding.notification.cancel' | translate }}</a>
     </div>
   `,
 })

@@ -10,7 +10,7 @@ export const ONBOARDING_ROUTES: Routes = [
   },
   {
     path: 'payment',
-    title: 'account.paymentMethods',
+    title: 'onboarding.payment.title',
     loadComponent: () => import('./payment/payment.component').then((m) => m.OnboardingPaymentComponent),
   },
   {
@@ -20,7 +20,7 @@ export const ONBOARDING_ROUTES: Routes = [
   },
   {
     path: 'notification',
-    title: 'account.notifications.title',
+    title: 'onboarding.notification.title',
     loadComponent: () => import('./notification/notification.component').then((m) => m.OnboardingNotificationComponent),
   },
   {

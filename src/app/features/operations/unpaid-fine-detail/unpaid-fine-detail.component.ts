@@ -85,7 +85,7 @@ import { PaymentChallengeService } from '../../../core/services/payment-challeng
                 <p>{{ 'ops.fineDetail.statusMessage.' + fine.status | translate }}</p>
               </div>
             }
-            <section class="fine-detail-info" aria-label="Detalle de la sanción">
+            <section class="fine-detail-info" [attr.aria-label]="'ops.fineDetail.title' | translate">
               <div class="fine-detail-row">
                 <span class="fine-detail-row-icon">#</span>
                 <div>

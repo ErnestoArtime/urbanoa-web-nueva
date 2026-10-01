@@ -22,6 +22,7 @@ import { ParkingTicketCardComponent } from '../../../shared/components/parking-t
 import { ParkingFlowStore } from '../../parking/parking-flow.store';
 import { OpsApiClient } from '../../../core/api/ops-api-client.service';
 import { OPERATION_PERIODS, operationPeriod } from '../operation-period';
+import { TranslationService } from '../../../core/services/translation.service';
 
 @Component({
   selector: 'app-operations-layout',
@@ -713,6 +714,7 @@ export class OperationsLayoutComponent implements OnInit, AfterViewInit {
   private readonly navigationToCar = inject(NavigationToCarService);
   private readonly parkingFlowStore = inject(ParkingFlowStore);
   private readonly vehicleService = inject(VehicleService);
+  private readonly translations = inject(TranslationService);
   private readonly operations = this.operationsService.operations;
   private readonly rangeFilter = signal<DateRange>({ from: '', to: '' });
   readonly historyControlsHeight = signal(0);
@@ -804,7 +806,7 @@ export class OperationsLayoutComponent implements OnInit, AfterViewInit {
       this.pendingUnparkId = parkingId;
       const quote = await this.parkingSessionService.quoteUnparking(parkingId);
       if (!quote.success) {
-        this.unparkError.set(quote.error instanceof Error ? quote.error.message : 'No se pudo calcular el desaparcar.');
+        this.unparkError.set(this.translations.translate('parking.unparking.quoteError'));
         return;
       }
       this.pendingUnparkQuote = quote;

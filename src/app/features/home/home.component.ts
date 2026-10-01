@@ -19,6 +19,7 @@ import { LoaderComponent } from '../../shared/components/loader/loader.component
 import { VehicleService } from '../../core/services/vehicle.service';
 import { DashboardApiService } from '../../core/services/dashboard-api.service';
 import { ParkingFlowStore } from '../parking/parking-flow.store';
+import { TranslationService } from '../../core/services/translation.service';
 
 @Component({
   selector: 'app-home',
@@ -412,6 +413,7 @@ export class HomeComponent {
   private readonly vehicleService = inject(VehicleService);
   private readonly dashboardApi = inject(DashboardApiService);
   private readonly parkingFlowStore = inject(ParkingFlowStore);
+  private readonly translations = inject(TranslationService);
   readonly user = this.userService.user;
   readonly fullName = computed(() => `${this.user().name} ${this.user().surname}`);
   readonly activeParkings = this.parkingSessionService.activeParkings;
@@ -451,7 +453,7 @@ export class HomeComponent {
       this.pendingUnparkId = parking.id;
       const quote = await this.parkingSessionService.quoteUnparking(parking.id);
       if (!quote.success) {
-        this.unparkError.set(quote.error instanceof Error ? quote.error.message : 'No se pudo calcular el desaparcar.');
+        this.unparkError.set(this.translations.translate('parking.unparking.quoteError'));
         return;
       }
       this.pendingUnparkQuote = quote;
