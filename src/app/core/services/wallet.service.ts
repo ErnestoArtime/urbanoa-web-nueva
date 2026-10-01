@@ -78,11 +78,6 @@ const LEGACY_DESCRIPTION_KEYS: Record<string, string> = {
 
 @Injectable({ providedIn: 'root' })
 export class WalletService {
-  private readonly balanceStorageKey = 'urbanoa.wallet.balance';
-  private readonly movementsStorageKey = 'urbanoa.wallet.movements';
-  private readonly cardsStorageKey = 'urbanoa.payment-cards';
-  private readonly defaultCardStorageKey = 'urbanoa.default-payment-card';
-
   readonly source = signal<'idle' | 'remote' | 'error'>('idle');
   readonly loading = signal(false);
   readonly lastError = signal<string | null>(null);
@@ -134,16 +129,15 @@ export class WalletService {
         this.api.get<number>(OPS_ENDPOINTS.wallet.credit, { token }),
         this.api.get<PaymentMethodsDto>(OPS_ENDPOINTS.wallet.paymentMethods, { token }),
       ]);
+      if (this.session.token() !== token) return;
       if (creditResult.status === 'fulfilled') {
         this.balance.set(this.fromCents(creditResult.value));
-        this.persistWallet();
       }
       if (paymentMethodsResult.status === 'fulfilled') {
         const methods = paymentMethodsResult.value.payMethods ?? [];
         const cards = methods.map((method) => this.mapPaymentMethod(method));
         this.cards.set(cards);
         this.defaultCardId.set(String(methods.find((method) => method.favorite === 1)?.id ?? cards[0]?.id ?? ''));
-        this.persistCards();
       }
       const failure =
         creditResult.status === 'rejected'
@@ -306,7 +300,6 @@ export class WalletService {
       },
       ...list,
     ]);
-    this.persistWallet();
   }
 
   private normalizeMovement(input: WalletMovementInput | string, type: WalletMovementType): WalletMovementInput {
@@ -318,22 +311,14 @@ export class WalletService {
     };
   }
 
-  private persistWallet(): void {
-    this.writeStorage(this.balanceStorageKey, String(this.balance()));
-    this.writeStorage(this.movementsStorageKey, JSON.stringify(this.movements()));
-  }
-
-  private persistCards(): void {
-    this.writeStorage(this.cardsStorageKey, JSON.stringify(this.cards()));
-    this.writeStorage(this.defaultCardStorageKey, this.defaultCardId());
-  }
-
-  private writeStorage(key: string, value: string): void {
-    try {
-      localStorage.setItem(key, value);
-    } catch {
-      // Storage can be unavailable in private or restricted contexts.
-    }
+  reset(): void {
+    this.balance.set(0);
+    this.movements.set([]);
+    this.cards.set([]);
+    this.defaultCardId.set('');
+    this.source.set('idle');
+    this.loading.set(false);
+    this.lastError.set(null);
   }
 
   private mapPaymentMethod(method: PaymentMethodDto): MainCard {
@@ -349,13 +334,11 @@ export class WalletService {
 
   private setDefaultCardLocal(id: string): void {
     this.defaultCardId.set(id);
-    this.writeStorage(this.defaultCardStorageKey, id);
   }
 
   private removeCardLocal(id: string): void {
     this.cards.update((cards) => cards.filter((card) => card.id !== id));
     if (this.defaultCardId() === id) this.defaultCardId.set(this.cards()[0]?.id ?? '');
-    this.persistCards();
   }
 
   private recordRefund(amount: number): void {

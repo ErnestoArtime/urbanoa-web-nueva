@@ -99,6 +99,31 @@ describe('WalletService', () => {
     expect(service.balance()).toBe(15);
   });
 
+  it('keeps movements in memory without writing business data to browser storage', () => {
+    const service = TestBed.inject(WalletService);
+    const write = spyOn(Storage.prototype, 'setItem');
+    service.credit(10, { type: 'top-up', descriptionKey: 'wallet.movement.topUp' });
+    expect(service.balance()).toBe(10);
+    expect(write).not.toHaveBeenCalled();
+  });
+
+  it('does not repopulate cleared account data when an old load finishes', async () => {
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'post']);
+    let finishCredit!: (value: number) => void;
+    api.get.and.returnValues(new Promise<number>(resolve => { finishCredit = resolve; }), Promise.resolve({ payMethods: [] }));
+    const service = serviceWith(api);
+    const session = TestBed.inject(OpsSessionService);
+    session.setToken('old-token');
+    const pending = service.load();
+    session.clear();
+    service.reset();
+    finishCredit(1250);
+    await pending;
+    expect(service.balance()).toBe(0);
+    expect(service.cards()).toEqual([]);
+    expect(service.source()).toBe('idle');
+  });
+
   it('keeps loaded wallet data available when a recharge is rejected by the backend', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'post']);
     api.post.and.rejectWith(new OpsApiError('backend', 'RechargeUserCreditAPI', 'Error genérico'));
