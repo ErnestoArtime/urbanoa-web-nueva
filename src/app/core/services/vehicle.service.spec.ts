@@ -13,6 +13,22 @@ function serviceWith(api: jasmine.SpyObj<OpsApiClient>): VehicleService {
 describe('VehicleService', () => {
   beforeEach(() => localStorage.clear());
 
+  it('does not repopulate cleared vehicles from a previous account request', async () => {
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['getOrNull', 'post']);
+    let finish!: (value: { plates: { plate: string; favorite: boolean }[] }) => void;
+    api.getOrNull.and.returnValue(new Promise(resolve => { finish = resolve; }));
+    const service = serviceWith(api);
+    const session = TestBed.inject(OpsSessionService);
+    session.setToken('old-token');
+    const pending = service.load();
+    session.setToken('new-token');
+    service.reset();
+    finish({ plates: [{ plate: 'OLD', favorite: true }] });
+    await pending;
+    expect(service.vehicles()).toEqual([]);
+    expect(service.source()).toBe('idle');
+  });
+
   it('loads plates using the APK response contract when a token exists', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'getOrNull', 'post']);
     api.getOrNull.and.resolveTo({ plates: [{ plate: '1234ABC', favorite: true }] });

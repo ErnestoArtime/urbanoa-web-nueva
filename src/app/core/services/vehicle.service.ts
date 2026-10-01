@@ -23,7 +23,6 @@ export interface VehicleMutationResult {
 
 @Injectable({ providedIn: 'root' })
 export class VehicleService {
-  private readonly storageKey = 'urbanoa.vehicles';
   private readonly state = signal<Vehicle[]>([]);
   private readonly sourceState = signal<'idle' | 'remote' | 'error'>('idle');
   private readonly errorState = signal<OpsApiError | null>(null);
@@ -39,11 +38,12 @@ export class VehicleService {
 
   async load(): Promise<void> {
     if (this.loadPromise) return this.loadPromise;
-    this.loadPromise = this.loadRemote();
+    const pending = this.loadRemote();
+    this.loadPromise = pending;
     try {
-      await this.loadPromise;
+      await pending;
     } finally {
-      this.loadPromise = null;
+      if (this.loadPromise === pending) this.loadPromise = null;
     }
   }
 
@@ -57,6 +57,7 @@ export class VehicleService {
 
     try {
       const value = await this.fetchPlates(token);
+      if (this.session.token() !== token) return;
       if (value === null || !Array.isArray(value.plates)) {
         this.state.set([]);
       } else {
@@ -105,7 +106,6 @@ export class VehicleService {
 
     const vehicle: Vehicle = { ...input, plate, isDefault: false, id: generateUuid() };
     this.state.update((vehicles) => [...vehicles, vehicle]);
-    this.persist();
 
     if (input.isDefault) return this.setDefault(vehicle.id);
     return result;
@@ -125,7 +125,6 @@ export class VehicleService {
     }
 
     this.state.update((vehicles) => vehicles.map((vehicle) => (vehicle.id === id ? { ...vehicle, isDefault: nextIsDefault } : vehicle)));
-    this.persist();
 
     await this.refreshFromServer();
 
@@ -141,7 +140,6 @@ export class VehicleService {
     if (!result.success) return result;
 
     this.state.update((vehicles) => vehicles.map((vehicle) => ({ ...vehicle, isDefault: vehicle.id === id })));
-    this.persist();
     return result;
   }
 
@@ -157,7 +155,6 @@ export class VehicleService {
       return previous.get(vehicle.plate) ? { ...vehicle, label: previous.get(vehicle.plate)!.label } : vehicle;
     });
     this.state.set(merged);
-    this.persist();
   }
 
   async remove(id: string): Promise<VehicleMutationResult> {
@@ -168,7 +165,6 @@ export class VehicleService {
 
     const remaining = this.state().filter((vehicle) => vehicle.id !== id);
     this.state.set(remaining);
-    this.persist();
     return result;
   }
 
@@ -212,11 +208,10 @@ export class VehicleService {
       : new OpsApiError('invalid-response', endpoint, error instanceof Error ? error.message : 'Error desconocido');
   }
 
-  private persist(): void {
-    try {
-      localStorage.setItem(this.storageKey, JSON.stringify(this.state()));
-    } catch {
-      // Storage can be unavailable in private or restricted contexts.
-    }
+  reset(): void {
+    this.state.set([]);
+    this.sourceState.set('idle');
+    this.errorState.set(null);
+    this.loadPromise = null;
   }
 }
