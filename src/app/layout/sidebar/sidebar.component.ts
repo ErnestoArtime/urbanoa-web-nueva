@@ -70,7 +70,9 @@ import { APP_BRAND } from '../../shared/constants/app-brand';
         display: block;
         width: 78px;
         height: auto;
+        aspect-ratio: 885 / 240;
         object-fit: contain;
+        transform: scale(1.5);
       }
       .sidebar-nav {
         display: flex;
