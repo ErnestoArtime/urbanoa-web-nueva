@@ -137,12 +137,21 @@ export class AuthService {
     const pending = this.paymentChallenge.getPending();
     const session = this.session();
     const owner = this.windowSession.paymentOwner();
-    if (url.protocol !== 'https:' || !(url.hostname === 'paycomet.com' || url.hostname.endsWith('.paycomet.com')) || !pending || !session || !owner) {
+    if (
+      url.protocol !== 'https:' ||
+      !(url.hostname === 'paycomet.com' || url.hostname.endsWith('.paycomet.com')) ||
+      !pending ||
+      !session ||
+      !owner
+    ) {
       throw new Error(this.translation.translate('errors.server'));
     }
     // Only this tab retains a short-lived, single-use continuation for the
     // external challenge. Ordinary refreshes never restore authentication.
-    sessionStorage.setItem(this.paymentSessionKey, JSON.stringify({ session, owner, startedAt: pending.startedAt, departureUrl: location.pathname }));
+    sessionStorage.setItem(
+      this.paymentSessionKey,
+      JSON.stringify({ session, owner, startedAt: pending.startedAt, departureUrl: location.pathname }),
+    );
     this.paymentDepartureArmed = true;
   }
 
@@ -155,11 +164,17 @@ export class AuthService {
       const saved = JSON.parse(raw) as { session: AuthSession; owner: string; startedAt: number; departureUrl: string };
       const pending = this.paymentChallenge.getPending();
       const callback = /^\/(?:ok|ko|app\/paycomet\/(?:ok|ko))\/?$/.test(location.pathname);
-      if ((!callback && !(backFromPayment && location.pathname === saved.departureUrl)) ||
-          !pending || pending.startedAt !== saved.startedAt ||
-          typeof saved.session?.token !== 'string' || !saved.session.token.trim() ||
-          typeof saved.session.user?.email !== 'string' || typeof saved.session.user?.id !== 'string' ||
-          !this.windowSession.resumePayment(saved.owner)) return false;
+      if (
+        (!callback && !(backFromPayment && location.pathname === saved.departureUrl)) ||
+        !pending ||
+        pending.startedAt !== saved.startedAt ||
+        typeof saved.session?.token !== 'string' ||
+        !saved.session.token.trim() ||
+        typeof saved.session.user?.email !== 'string' ||
+        typeof saved.session.user?.id !== 'string' ||
+        !this.windowSession.resumePayment(saved.owner, this.userIdentity(saved.session.user))
+      )
+        return false;
       this.storeSession(saved.session);
       return true;
     } catch {
@@ -180,13 +195,19 @@ export class AuthService {
       });
       if (!response.token?.trim()) throw new Error('LoginUserAPI no devolvió token');
       if (attempt !== this.loginAttempt) throw new Error('Login cancelled');
-      this.windowSession.activate();
+      // Claim ownership by the login identity while the profile is loading so
+      // request validation remains active during the whole login flow.
+      this.windowSession.activate(email);
       this.syncOpsSession(response.token);
 
       // QueryUserAPI is secondary: a profile failure must not discard a
       // valid login token needed by every other OPS request.
       const user = await this.loadAuthenticatedUser(email, response);
       if (attempt !== this.loginAttempt || !this.windowSession.ensureActive()) throw new Error('Login cancelled');
+      // Rebind to the stable backend identity once the profile is available.
+      // This prevents different email aliases from creating separate slots for
+      // the same account while keeping U1 and U2 independent.
+      this.windowSession.activate(this.userIdentity(user));
       this.storeSession({ token: response.token, refreshToken: '', user });
       return user;
     } catch (error) {
@@ -275,7 +296,7 @@ export class AuthService {
   }
 
   adoptToken(token: string, email: string): void {
-    this.windowSession.activate();
+    this.windowSession.activate(email);
     this.storeSession({ token, refreshToken: '', user: { ...EMPTY_USER, email } });
   }
 
@@ -365,7 +386,11 @@ export class AuthService {
 
   private clearSession(): void {
     this.paymentDepartureArmed = false;
-    try { sessionStorage.removeItem(this.paymentSessionKey); } catch { /* Storage may be unavailable. */ }
+    try {
+      sessionStorage.removeItem(this.paymentSessionKey);
+    } catch {
+      /* Storage may be unavailable. */
+    }
     this.loginAttempt++;
     this.session.set(null);
     this.windowSession.release();
@@ -381,9 +406,12 @@ export class AuthService {
     this.vehicles.reset();
     this.ticketStore.setUserScope();
     const keys = [
-      'urbanoa.wallet.balance', 'urbanoa.wallet.movements',
-      'urbanoa.payment-cards', 'urbanoa.default-payment-card',
-      'urbanoa.vehicles', 'urbanoa.parking.active-tickets',
+      'urbanoa.wallet.balance',
+      'urbanoa.wallet.movements',
+      'urbanoa.payment-cards',
+      'urbanoa.default-payment-card',
+      'urbanoa.vehicles',
+      'urbanoa.parking.active-tickets',
     ];
     for (const key of keys) {
       try {

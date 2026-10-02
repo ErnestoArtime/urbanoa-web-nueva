@@ -3,14 +3,15 @@ import { DestroyRef, inject, Injectable } from '@angular/core';
 /** Coordinates ownership only. This marker contains no token, identity or credentials. */
 @Injectable({ providedIn: 'root' })
 export class WindowSessionService {
-  private readonly key = 'urbanoa.auth.active-window';
+  private readonly keyPrefix = 'urbanoa.auth.active-window.';
   private owner: string | null = null;
+  private scope: string | null = null;
   private readonly invalidationListeners = new Set<() => void>();
 
   constructor() {
     const check = () => this.ensureActive();
     const storage = (event: StorageEvent) => {
-      if (event.key === this.key || event.key === null) check();
+      if (event.key === null || (this.scope && event.key === this.keyFor(this.scope))) check();
     };
     window.addEventListener('storage', storage);
     window.addEventListener('focus', check);
@@ -24,21 +25,27 @@ export class WindowSessionService {
     });
   }
 
-  activate(): void {
+  activate(identity = 'anonymous'): void {
+    const scope = this.normalize(identity);
+    if (!scope) throw new Error('Window identity is required');
+    this.release();
     const owner = this.createOwner();
     // Fail closed if coordination storage is unavailable; never fall back to persistent auth.
-    localStorage.setItem(this.key, owner);
+    localStorage.setItem(this.keyFor(scope), owner);
     this.owner = owner;
+    this.scope = scope;
   }
 
   paymentOwner(): string | null {
     return this.ensureActive() ? this.owner : null;
   }
 
-  resumePayment(owner: string): boolean {
+  resumePayment(owner: string, identity = 'anonymous'): boolean {
     try {
-      if (!owner || localStorage.getItem(this.key) !== owner) return false;
-      this.activate();
+      const scope = this.normalize(identity);
+      if (!owner || !scope || localStorage.getItem(this.keyFor(scope)) !== owner) return false;
+      this.owner = owner;
+      this.scope = scope;
       return true;
     } catch {
       return false;
@@ -56,13 +63,14 @@ export class WindowSessionService {
   }
 
   ensureActive(): boolean {
-    if (!this.owner) return false;
+    if (!this.owner || !this.scope) return false;
     try {
-      if (localStorage.getItem(this.key) === this.owner) return true;
+      if (localStorage.getItem(this.keyFor(this.scope)) === this.owner) return true;
     } catch {
       // Losing the ability to verify ownership must invalidate this window.
     }
     this.owner = null;
+    this.scope = null;
     for (const listener of this.invalidationListeners) listener();
     return false;
   }
@@ -74,10 +82,30 @@ export class WindowSessionService {
 
   release(): void {
     try {
-      if (this.owner && localStorage.getItem(this.key) === this.owner) localStorage.removeItem(this.key);
+      if (this.owner && this.scope && localStorage.getItem(this.keyFor(this.scope)) === this.owner) {
+        localStorage.removeItem(this.keyFor(this.scope));
+      }
     } catch {
       // A stale non-secret marker cannot restore a session.
     }
     this.owner = null;
+    this.scope = null;
+  }
+
+  private normalize(identity: string): string {
+    return identity.trim().toLowerCase();
+  }
+
+  private keyFor(scope: string): string {
+    // Keep the user identifier out of localStorage. This marker is only for
+    // coordination, never an authentication boundary.
+    let first = 2166136261;
+    let second = 16777619;
+    for (const character of scope) {
+      const code = character.codePointAt(0) ?? 0;
+      first = Math.imul(first ^ code, 16777619);
+      second = Math.imul(second ^ (code + 31), 2166136261);
+    }
+    return `${this.keyPrefix}${(first >>> 0).toString(16).padStart(8, '0')}${(second >>> 0).toString(16).padStart(8, '0')}`;
   }
 }
