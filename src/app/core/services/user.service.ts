@@ -139,10 +139,24 @@ export class UserService {
       await this.load();
       if (!this.remoteProfile) return { success: false, source: 'error' };
     }
-    this.remoteProfile = { ...(this.remoteProfile ?? {}), contractId };
-    const result = await this.remoteUpdate(this.state());
-    if (result.success) this.state.update((user) => ({ ...user, preferredContractId: contractId }));
-    return result;
+    const result = await this.remoteUpdate(this.state(), contractId);
+    if (!result.success) return result;
+    try {
+      const profile = await this.api.get<UserApiPayload>(OPS_ENDPOINTS.user.query, { token: this.session.token() });
+      if (!profile || typeof profile !== 'object') {
+        throw new OpsApiError('invalid-response', OPS_ENDPOINTS.user.query, 'OPS no devolvió el perfil actualizado.');
+      }
+      this.remoteProfile = profile;
+      this.state.set(this.fromApi(profile, this.state()));
+      if (Number(profile.contractId) !== contractId) {
+        throw new OpsApiError('invalid-response', OPS_ENDPOINTS.user.update, 'OPS no confirmó el municipio solicitado.');
+      }
+      return { success: true, source: 'remote' };
+    } catch (error) {
+      this.sourceState.set('error');
+      this.errorState.set(error instanceof OpsApiError ? error : new OpsApiError('invalid-response', OPS_ENDPOINTS.user.query, String(error)));
+      return { success: false, source: 'error' };
+    }
   }
 
   updateLocal(changes: Partial<UserData>): void {
@@ -154,7 +168,7 @@ export class UserService {
     });
   }
 
-  private async remoteUpdate(user: UserData): Promise<UserMutationResult> {
+  private async remoteUpdate(user: UserData, contractId?: number): Promise<UserMutationResult> {
     const token = this.session.token();
     if (!token) {
       this.sourceState.set('error');
@@ -162,7 +176,7 @@ export class UserService {
     }
 
     try {
-      await this.api.post<string>(OPS_ENDPOINTS.user.update, this.toApiBody(user), { token });
+      await this.api.post<string>(OPS_ENDPOINTS.user.update, this.toApiBody(user, contractId), { token });
       this.sourceState.set('remote');
       this.errorState.set(null);
       return { success: true, source: 'remote' };
@@ -201,14 +215,14 @@ export class UserService {
     };
   }
 
-  private toApiBody(user: UserData): Record<string, unknown> {
+  private toApiBody(user: UserData, contractId?: number): Record<string, unknown> {
     const profile = this.remoteProfile ?? {};
     return {
       ...profile,
       cloudToken: readString(profile.cloudToken),
       version: readString(profile.version) || OPS_APP_VERSION,
       operatingSystem: OPS_UNVERIFIED_OPERATING_SYSTEM,
-      contractId: Number(profile.contractId ?? user.preferredContractId) || 0,
+      contractId: contractId ?? (Number(profile.contractId ?? user.preferredContractId) || 0),
       userName: readString(profile.userName) || user.email,
       names: user.name,
       firstSurname: user.surname,

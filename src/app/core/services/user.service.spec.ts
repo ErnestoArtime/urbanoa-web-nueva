@@ -119,13 +119,13 @@ describe('UserService', () => {
 
   it('updates the preferred contract id through UpdateUserAPI', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'post']);
-    api.get.and.resolveTo({
+    api.get.and.returnValues(Promise.resolve({
       ...baseUser(),
       contractId: 1,
       names: 'Ane',
       firstSurname: 'Lopez',
       email: 'ane@example.com',
-    });
+    }), Promise.resolve({ names: 'Ane', firstSurname: 'Lopez', email: 'ane@example.com', contractId: 3 }));
     api.post.and.resolveTo('194063');
     const service = serviceWith(api);
     service.updateLocal(baseUser());
@@ -137,6 +137,35 @@ describe('UserService', () => {
     expect(endpoint).toBe('OPSWebServicesAPI/UpdateUserAPI');
     expect(body).toEqual(jasmine.objectContaining({ contractId: 3, names: 'Ane', email: 'ane@example.com' }));
     expect(result.success).toBeTrue();
+    expect(service.user().preferredContractId).toBe(3);
+    expect(api.get.calls.count()).toBe(2);
+  });
+
+  it('does not confirm a municipality when OPS reports success but reads back contractId 0', async () => {
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'post']);
+    api.get.and.resolveTo({ names: 'Ane', email: 'ane@example.com', contractId: 0 });
+    api.post.and.resolveTo('194063');
+    const service = serviceWith(api);
+    TestBed.inject(OpsSessionService).setToken('token');
+
+    expect((await service.updatePreferredContract(3)).success).toBeFalse();
+    expect(service.user().preferredContractId).toBe(0);
+    expect(service.lastError()?.kind).toBe('invalid-response');
+    await service.save({ name: 'Andoni' });
+    expect(api.post.calls.mostRecent().args[1]).toEqual(jasmine.objectContaining({ contractId: 0 }));
+  });
+
+  it('keeps the original municipality when the confirmation query fails', async () => {
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'post']);
+    api.get.and.returnValues(Promise.resolve({ names: 'Ane', contractId: 1 }), Promise.resolve(null));
+    api.post.and.resolveTo('194063');
+    const service = serviceWith(api);
+    TestBed.inject(OpsSessionService).setToken('token');
+
+    expect((await service.updatePreferredContract(3)).success).toBeFalse();
+    expect(service.user().preferredContractId).toBe(1);
+    await service.save({ name: 'Andoni' });
+    expect(api.post.calls.mostRecent().args[1]).toEqual(jasmine.objectContaining({ contractId: 1 }));
   });
 
   it('does not merge changes locally when the remote update fails', async () => {
