@@ -34,7 +34,8 @@ describe('OpsApiClient', () => {
     TestBed.inject(WindowSessionService).activate();
     TestBed.inject(OpsSessionService).setToken('old-token');
     spyOn(globalThis, 'fetch').and.callFake(async () => {
-      localStorage.setItem('urbanoa.auth.active-window', 'other-window');
+      const key = Object.keys(localStorage).find((item) => item.startsWith('urbanoa.auth.active-window.'))!;
+      localStorage.setItem(key, 'other-window');
       return new Response(JSON.stringify({ value: { balance: 999 }, isSuccess: true, error: null }), { status: 200 });
     });
     await expectAsync(client.get('private-endpoint', { token: 'old-token' })).toBeRejectedWith(jasmine.objectContaining({ kind: 'abort' }));

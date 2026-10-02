@@ -15,6 +15,8 @@ import { VehicleService } from './vehicle.service';
 import { ParkingTicketStoreService } from './parking-ticket-store.service';
 import { PaymentChallengeService } from './payment-challenge.service';
 
+const activeWindowKey = (): string | null => Object.keys(localStorage).find((key) => key.startsWith('urbanoa.auth.active-window.')) ?? null;
+
 describe('AuthService', () => {
   let service: AuthService;
   let opsApi: jasmine.SpyObj<OpsApiClient>;
@@ -123,18 +125,21 @@ describe('AuthService', () => {
     opsApi.post.and.resolveTo({ token: 'first-token', firstLogin: 0 });
     opsApi.get.and.resolveTo({ contractId: '42', email: 'user@example.com' });
     await service.login('user@example.com', 'secret');
-    const firstMarker = localStorage.getItem('urbanoa.auth.active-window');
+    const firstKey = activeWindowKey();
+    const firstMarker = firstKey ? localStorage.getItem(firstKey) : null;
 
     await service.logout();
     expect(service.isAuthenticated()).toBeFalse();
-    expect(localStorage.getItem('urbanoa.auth.active-window')).toBeNull();
+    expect(activeWindowKey()).toBeNull();
 
     opsApi.post.and.resolveTo({ token: 'second-token', firstLogin: 0 });
     await service.login('user@example.com', 'secret');
 
     expect(service.token()).toBe('second-token');
     expect(service.ensureActiveSession()).toBeTrue();
-    expect(localStorage.getItem('urbanoa.auth.active-window')).not.toBe(firstMarker);
+    const secondKey = activeWindowKey();
+    expect(secondKey).not.toBeNull();
+    expect(localStorage.getItem(secondKey!)).not.toBe(firstMarker);
     expect(opsApi.get).toHaveBeenCalledTimes(2);
   });
 
@@ -149,13 +154,19 @@ describe('AuthService', () => {
   });
 
   it('purges legacy business data while retaining language and location preferences', async () => {
-    const keys = ['urbanoa.wallet.balance', 'urbanoa.wallet.movements', 'urbanoa.payment-cards',
-      'urbanoa.default-payment-card', 'urbanoa.vehicles', 'urbanoa.parking.active-tickets'];
-    keys.forEach(key => localStorage.setItem(key, 'private-data'));
+    const keys = [
+      'urbanoa.wallet.balance',
+      'urbanoa.wallet.movements',
+      'urbanoa.payment-cards',
+      'urbanoa.default-payment-card',
+      'urbanoa.vehicles',
+      'urbanoa.parking.active-tickets',
+    ];
+    keys.forEach((key) => localStorage.setItem(key, 'private-data'));
     localStorage.setItem('urbanoa.location-settings.user', 'preference');
     localStorage.setItem('unrelated-preference', 'keep');
     service.adoptToken('first-token', 'first@example.com');
-    keys.forEach(key => expect(localStorage.getItem(key)).toBeNull());
+    keys.forEach((key) => expect(localStorage.getItem(key)).toBeNull());
     const wallet = TestBed.inject(WalletService);
     const vehicles = TestBed.inject(VehicleService);
     const tickets = TestBed.inject(ParkingTicketStoreService);
@@ -179,14 +190,15 @@ describe('AuthService', () => {
 
   it('invalidates the authenticated window when another window claims ownership', () => {
     service.adoptToken('real-token', 'user@example.com');
-    localStorage.setItem('urbanoa.auth.active-window', 'other-window');
-    window.dispatchEvent(new StorageEvent('storage', { key: 'urbanoa.auth.active-window' }));
+    const key = activeWindowKey()!;
+    localStorage.setItem(key, 'other-window');
+    window.dispatchEvent(new StorageEvent('storage', { key }));
 
     expect(service.isAuthenticated()).toBeFalse();
     expect(service.token()).toBe('');
     expect(opsSession.clear).toHaveBeenCalled();
     expect(TestBed.inject(Router).navigate).toHaveBeenCalledWith(['/auth/login'], { queryParams: { sessionExpired: '1' } });
-    expect(localStorage.getItem('urbanoa.auth.active-window')).toBe('other-window');
+    expect(localStorage.getItem(key)).toBe('other-window');
   });
 
   it('does not restore authentication after leaving the page and returning via browser history', () => {
@@ -221,7 +233,8 @@ describe('AuthService', () => {
     expect(sessionStorage.getItem('urbanoa.auth.paycomet-resume')).toBeNull();
     service.adoptToken('payment-token', 'user@example.com');
     service.preparePaymentRedirect('https://api.paycomet.com/gateway/sca_challenge.php');
-    localStorage.setItem('urbanoa.auth.active-window', 'another-owner');
+    const key = activeWindowKey()!;
+    localStorage.setItem(key, 'another-owner');
     window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true }));
     expect(service.isAuthenticated()).toBeFalse();
   });
@@ -259,12 +272,13 @@ describe('AuthService', () => {
       service.adoptToken('payment-token', 'user@example.com');
       TestBed.inject(PaymentChallengeService).beginRecharge({ amount: 1 });
       service.preparePaymentRedirect('https://api.paycomet.com/gateway/sca_challenge.php');
-      const owner = localStorage.getItem('urbanoa.auth.active-window');
+      const key = activeWindowKey()!;
+      const owner = localStorage.getItem(key);
       history.replaceState(null, '', '/ok?ret=0');
       const returned = TestBed.runInInjectionContext(() => new AuthService());
       expect(returned.token()).toBe('payment-token');
       expect(returned.ensureActiveSession()).toBeTrue();
-      expect(localStorage.getItem('urbanoa.auth.active-window')).not.toBe(owner);
+      expect(localStorage.getItem(key)).toBe(owner);
       const refreshed = TestBed.runInInjectionContext(() => new AuthService());
       expect(refreshed.isAuthenticated()).toBeFalse();
     } finally {
@@ -282,8 +296,9 @@ describe('AuthService', () => {
     );
     const login = service.login('user@example.com', 'secret');
     await Promise.resolve();
-    localStorage.setItem('urbanoa.auth.active-window', 'other-window');
-    window.dispatchEvent(new StorageEvent('storage', { key: 'urbanoa.auth.active-window' }));
+    const key = activeWindowKey()!;
+    localStorage.setItem(key, 'other-window');
+    window.dispatchEvent(new StorageEvent('storage', { key }));
     finishProfile({ email: 'user@example.com' });
 
     await expectAsync(login).toBeRejectedWithError('Login cancelled');
