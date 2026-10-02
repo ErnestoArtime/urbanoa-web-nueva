@@ -1,7 +1,7 @@
 import { provideZonelessChangeDetection } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { OpsApiClient } from '../api/ops-api-client.service';
-import { OPS_OPERATING_SYSTEM } from '../api/ops-client.constants';
+import { OPS_UNVERIFIED_OPERATING_SYSTEM } from '../api/ops-client.constants';
 import { OpsApiError } from '../api/ops-api.types';
 import { OpsSessionService } from '../api/ops-session.service';
 import { WalletService } from './wallet.service';
@@ -150,7 +150,7 @@ describe('WalletService', () => {
 
     expect(api.post).toHaveBeenCalledWith(
       'OPSWebServicesAPI/RefundUserCreditAPI',
-      { contractId: 0, cloudToken: 'cloud-token', operatingSystem: OPS_OPERATING_SYSTEM, amount: 500, simulate: 0 },
+      { contractId: 0, cloudToken: 'cloud-token', operatingSystem: OPS_UNVERIFIED_OPERATING_SYSTEM, amount: 500, simulate: 0 },
       { token: 'token' },
     );
     expect(result.source).toBe('remote');

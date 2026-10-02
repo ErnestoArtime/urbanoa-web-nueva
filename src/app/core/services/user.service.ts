@@ -1,7 +1,7 @@
 import { inject, Injectable, signal } from '@angular/core';
 import { OpsApiClient } from '../api/ops-api-client.service';
 import { OpsApiError } from '../api/ops-api.types';
-import { OPS_APP_VERSION, OPS_OPERATING_SYSTEM } from '../api/ops-client.constants';
+import { OPS_APP_VERSION, OPS_UNVERIFIED_OPERATING_SYSTEM } from '../api/ops-client.constants';
 import { OPS_ENDPOINTS } from '../api/ops-endpoints';
 import { OpsSessionService } from '../api/ops-session.service';
 
@@ -207,7 +207,7 @@ export class UserService {
       ...profile,
       cloudToken: readString(profile.cloudToken),
       version: readString(profile.version) || OPS_APP_VERSION,
-      operatingSystem: OPS_OPERATING_SYSTEM,
+      operatingSystem: OPS_UNVERIFIED_OPERATING_SYSTEM,
       contractId: Number(profile.contractId ?? user.preferredContractId) || 0,
       userName: readString(profile.userName) || user.email,
       names: user.name,

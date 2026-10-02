@@ -117,7 +117,7 @@ export class ParkingApiService {
           quantity: input.quantity,
           tariffType: input.tariffType,
           cloudToken: getOpsCloudToken(),
-          // Compatibility with the current OPS/Swagger parking contract.
+          // Web identifier verified against OPS; Swagger is pending an update.
           operatingSystem: OPS_PARKING_SESSION_OPERATING_SYSTEM,
           date: input.date,
           time: input.time,
@@ -207,7 +207,7 @@ export class ParkingApiService {
           groupId: input.groupId,
           ticketId: input.ticketId,
           cloudToken: getOpsCloudToken(),
-          // Compatibility with the current OPS/Swagger parking contract.
+          // Web identifier verified against OPS; Swagger is pending an update.
           operatingSystem: OPS_PARKING_SESSION_OPERATING_SYSTEM,
           date,
         },

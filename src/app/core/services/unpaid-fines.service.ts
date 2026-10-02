@@ -3,7 +3,7 @@ import { OperationType } from '../../shared/models/operation-type';
 import type { Operation } from '../../shared/models/operation';
 import { OpsApiClient } from '../api/ops-api-client.service';
 import { OpsApiError } from '../api/ops-api.types';
-import { OPS_OPERATING_SYSTEM } from '../api/ops-client.constants';
+import { OPS_UNVERIFIED_OPERATING_SYSTEM } from '../api/ops-client.constants';
 import { OPS_ENDPOINTS } from '../api/ops-endpoints';
 import { OpsSessionService } from '../api/ops-session.service';
 import { OperationsService } from './operations.service';
@@ -118,7 +118,7 @@ export class UnpaidFinesService {
           quantity: Math.round(numericAmount * 100),
           date: this.opsDate(new Date()),
           cloudToken: '',
-          operatingSystem: OPS_OPERATING_SYSTEM,
+          operatingSystem: OPS_UNVERIFIED_OPERATING_SYSTEM,
           payMethodId: Number.isInteger(payMethodId) ? payMethodId : 0,
         },
         { token },

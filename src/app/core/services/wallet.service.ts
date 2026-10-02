@@ -1,7 +1,7 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { OpsApiClient } from '../api/ops-api-client.service';
 import { OpsApiError } from '../api/ops-api.types';
-import { OPS_OPERATING_SYSTEM } from '../api/ops-client.constants';
+import { OPS_UNVERIFIED_OPERATING_SYSTEM } from '../api/ops-client.constants';
 import { OPS_ENDPOINTS } from '../api/ops-endpoints';
 import { OpsSessionService } from '../api/ops-session.service';
 import { generateUuid } from '../utils/generate-uuid';
@@ -244,7 +244,7 @@ export class WalletService {
     try {
       const response = await this.api.post<BalanceRefundResponseDto>(
         OPS_ENDPOINTS.wallet.refund,
-        { contractId: 0, cloudToken, operatingSystem: OPS_OPERATING_SYSTEM, amount: this.toCents(value), simulate: 0 },
+        { contractId: 0, cloudToken, operatingSystem: OPS_UNVERIFIED_OPERATING_SYSTEM, amount: this.toCents(value), simulate: 0 },
         { token },
       );
       if (response.result !== 1 || response.refundAmount == null || String(response.refundAmount).trim() === '' || !Number.isFinite(Number(response.refundAmount)) || Number(response.refundAmount) < 0) {

@@ -6,10 +6,12 @@ export const OPS_OPERATING_SYSTEMS = {
 
 export const OPS_OPERATING_SYSTEM = OPS_OPERATING_SYSTEMS.web;
 
-// Temporary OPS compatibility: parking confirmations only accept the mobile
-// contract and validate it against the operating system used to create the
-// session. Login and parking confirmations must therefore use the same value.
-export const OPS_PARKING_SESSION_OPERATING_SYSTEM = OPS_OPERATING_SYSTEMS.android;
+// Keep the legacy value for flows without a verified successful web operation.
+export const OPS_UNVERIFIED_OPERATING_SYSTEM = OPS_OPERATING_SYSTEMS.android;
+
+// Web login, parking, extension and unparking were verified against OPS on
+// 2026-10-02. Swagger still needs to document web support for confirmations.
+export const OPS_PARKING_SESSION_OPERATING_SYSTEM = OPS_OPERATING_SYSTEM;
 export const OPS_APP_VERSION = '4.0.0';
 
 const DEVICE_TOKEN_KEY = 'urbanoa.deviceToken';
