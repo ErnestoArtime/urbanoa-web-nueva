@@ -50,4 +50,23 @@ describe('WindowSessionService', () => {
     first.release();
     expect(localStorage.getItem('urbanoa.auth.active-window')).toBeNull();
   });
+
+  it('can activate again without randomUUID on an HTTP network origin', () => {
+    const descriptor = Object.getOwnPropertyDescriptor(crypto, 'randomUUID');
+    // HTTP network origins expose getRandomValues but not randomUUID.
+    Object.defineProperty(crypto, 'randomUUID', { value: undefined, configurable: true });
+    try {
+      first.activate();
+      const marker = localStorage.getItem('urbanoa.auth.active-window');
+      expect(marker).toMatch(/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/);
+      expect(first.ensureActive()).toBeTrue();
+      first.release();
+      first.activate();
+      expect(first.ensureActive()).toBeTrue();
+      expect(localStorage.getItem('urbanoa.auth.active-window')).not.toBe(marker);
+    } finally {
+      if (descriptor) Object.defineProperty(crypto, 'randomUUID', descriptor);
+      else Reflect.deleteProperty(crypto, 'randomUUID');
+    }
+  });
 });

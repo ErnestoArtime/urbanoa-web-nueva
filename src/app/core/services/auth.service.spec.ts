@@ -118,6 +118,35 @@ describe('AuthService', () => {
     expect(sessionStorage.getItem('urbanoa.auth.session')).toBeNull();
   });
 
+  it('allows a second login in the same window after logout', async () => {
+    opsApi.post.and.resolveTo({ token: 'first-token', firstLogin: 0 });
+    opsApi.get.and.resolveTo({ contractId: '42', email: 'user@example.com' });
+    await service.login('user@example.com', 'secret');
+    const firstMarker = localStorage.getItem('urbanoa.auth.active-window');
+
+    await service.logout();
+    expect(service.isAuthenticated()).toBeFalse();
+    expect(localStorage.getItem('urbanoa.auth.active-window')).toBeNull();
+
+    opsApi.post.and.resolveTo({ token: 'second-token', firstLogin: 0 });
+    await service.login('user@example.com', 'secret');
+
+    expect(service.token()).toBe('second-token');
+    expect(service.ensureActiveSession()).toBeTrue();
+    expect(localStorage.getItem('urbanoa.auth.active-window')).not.toBe(firstMarker);
+    expect(opsApi.get).toHaveBeenCalledTimes(2);
+  });
+
+  it('rejects a successful backend login before querying the profile if window activation fails', async () => {
+    opsApi.post.and.resolveTo({ token: 'real-token', firstLogin: 0 });
+    spyOn(TestBed.inject(WindowSessionService), 'activate').and.throwError('Window activation unavailable');
+
+    await expectAsync(service.login('user@example.com', 'secret')).toBeRejectedWithError('Window activation unavailable');
+
+    expect(opsApi.get).not.toHaveBeenCalled();
+    expect(service.isAuthenticated()).toBeFalse();
+  });
+
   it('purges legacy business data while retaining language and location preferences', async () => {
     const keys = ['urbanoa.wallet.balance', 'urbanoa.wallet.movements', 'urbanoa.payment-cards',
       'urbanoa.default-payment-card', 'urbanoa.vehicles', 'urbanoa.parking.active-tickets'];
