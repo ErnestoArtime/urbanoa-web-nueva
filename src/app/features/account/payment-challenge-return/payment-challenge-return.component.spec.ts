@@ -1,13 +1,13 @@
 import { provideZonelessChangeDetection } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
 import { OperationsService } from '../../../core/services/operations.service';
 import { PaymentChallengeService } from '../../../core/services/payment-challenge.service';
 import { WalletService } from '../../../core/services/wallet.service';
 import { PaymentChallengeReturnComponent } from './payment-challenge-return.component';
 
 describe('PaymentChallengeReturnComponent', () => {
-  async function create(outcome: 'ok' | 'ko') {
+  async function create(outcome: 'ok' | 'ko', params: Record<string, string> = {}) {
     const router = jasmine.createSpyObj<Router>('Router', ['navigateByUrl']);
     const wallet = jasmine.createSpyObj<WalletService>('WalletService', ['load']);
     const operations = jasmine.createSpyObj<OperationsService>('OperationsService', ['load']);
@@ -25,7 +25,7 @@ describe('PaymentChallengeReturnComponent', () => {
       imports: [PaymentChallengeReturnComponent],
       providers: [
         provideZonelessChangeDetection(),
-        { provide: ActivatedRoute, useValue: { snapshot: { data: { outcome } } } },
+        { provide: ActivatedRoute, useValue: { snapshot: { data: { outcome }, queryParamMap: convertToParamMap(params) } } },
         { provide: Router, useValue: router },
         { provide: WalletService, useValue: wallet },
         { provide: OperationsService, useValue: operations },
@@ -42,6 +42,25 @@ describe('PaymentChallengeReturnComponent', () => {
   }
 
   afterEach(() => TestBed.resetTestingModule());
+
+  it('accepts the OPS return parameters in cents without claiming settlement', async () => {
+    const { component, wallet } = await create('ok', { r: 'WLT-test', h: 'provider-signature', ret: '0', i: '1000' });
+    expect(component.providerReturn()).toEqual({ reference: 'WLT-test', returnCode: '0', amountCents: 1000 });
+    expect(component.outcome()).toBe('ok');
+    expect(wallet.load).toHaveBeenCalled();
+  });
+
+  it('treats a nonzero provider code as failure even on /ok', async () => {
+    const { component, wallet } = await create('ok', { ret: '101', i: 'invalid' });
+    expect(component.outcome()).toBe('ko');
+    expect(component.providerReturn().amountCents).toBeNull();
+    expect(wallet.load).not.toHaveBeenCalled();
+  });
+
+  it('does not turn /ko into success when ret is zero', async () => {
+    const { component } = await create('ko', { r: 'WLT-test', h: 'signature', ret: '0', i: '1000' });
+    expect(component.outcome()).toBe('ko');
+  });
 
   it('treats /ok as pending verification, refreshes server-backed data and resumes the originating flow', async () => {
     const { component, router, wallet, operations, challenge } = await create('ok');

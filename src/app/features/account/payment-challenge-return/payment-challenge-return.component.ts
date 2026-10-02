@@ -31,9 +31,25 @@ export class PaymentChallengeReturnComponent implements OnInit {
   readonly completed = signal(false);
   readonly pending = signal<PendingPaymentChallenge | null>(null);
   readonly outcome = signal<'ok' | 'ko'>('ko');
+  readonly providerReturn = signal<{ reference: string | null; amountCents: number | null; returnCode: string | null }>({
+    reference: null,
+    amountCents: null,
+    returnCode: null,
+  });
 
   ngOnInit(): void {
-    const outcome = this.route.snapshot.data['outcome'] === 'ok' ? 'ok' : 'ko';
+    // OPS uses /ok?r=<reference>&h=<signature>&ret=0&i=<cents> (or /ko).
+    // The signature is preserved in the URL for backend verification, never
+    // interpreted as proof of settlement by the browser.
+    const params = this.route.snapshot.queryParamMap;
+    const returnCode = params.get('ret');
+    const amount = params.get('i');
+    this.providerReturn.set({
+      reference: params.get('r'),
+      returnCode,
+      amountCents: amount !== null && /^\d+$/.test(amount) && Number.isSafeInteger(Number(amount)) ? Number(amount) : null,
+    });
+    const outcome = this.route.snapshot.data['outcome'] === 'ok' && (returnCode === null || returnCode === '0') ? 'ok' : 'ko';
     this.outcome.set(outcome);
     this.pending.set(this.paymentChallenge.getPending());
 
