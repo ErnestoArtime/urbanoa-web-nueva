@@ -157,6 +157,19 @@ describe('WalletService', () => {
     expect(service.balance()).toBe(7.5);
   });
 
+  it('sends the session device token when the refund screen does not supply a cloud token', async () => {
+    localStorage.setItem('urbanoa.deviceToken', 'login-device-token');
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'post']);
+    api.post.and.resolveTo({ result: 1, refundAmount: 100 });
+    const service = serviceWith(api);
+    TestBed.inject(OpsSessionService).setToken('token');
+    service.balance.set(10);
+
+    await service.refund(1);
+
+    expect(api.post.calls.mostRecent().args[1]).toEqual(jasmine.objectContaining({ cloudToken: 'login-device-token', amount: 100, simulate: 0 }));
+  });
+
   for (const response of [{ result: 1 }, { result: -9, refundAmount: 500 }, { result: 1, refundAmount: '' }]) {
     it(`rejects an unconfirmed refund response ${JSON.stringify(response)}`, async () => {
       const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'post']);
