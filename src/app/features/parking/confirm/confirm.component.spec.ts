@@ -1,4 +1,5 @@
 import { provideZonelessChangeDetection, signal } from '@angular/core';
+import { AuthService } from '../../../core/services/auth.service';
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ParkingApiService } from '../../../core/services/parking-api.service';
@@ -10,6 +11,9 @@ import { ParkingFlowStore } from '../parking-flow.store';
 import { ParkingConfirmComponent } from './confirm.component';
 
 describe('ParkingConfirmComponent', () => {
+  beforeEach(() => TestBed.configureTestingModule({ providers: [
+    { provide: AuthService, useValue: { preparePaymentRedirect: jasmine.createSpy('preparePaymentRedirect') } },
+  ] }));
   it('blocks payment without funds or cards and opens wallet management without leaving parking', async () => {
     const confirmParking = jasmine.createSpy();
     const navigate = jasmine.createSpy();

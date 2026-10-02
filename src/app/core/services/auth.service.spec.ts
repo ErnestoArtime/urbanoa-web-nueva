@@ -13,6 +13,7 @@ import { WindowSessionService } from './window-session.service';
 import { WalletService } from './wallet.service';
 import { VehicleService } from './vehicle.service';
 import { ParkingTicketStoreService } from './parking-ticket-store.service';
+import { PaymentChallengeService } from './payment-challenge.service';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -41,7 +42,7 @@ describe('AuthService', () => {
         { provide: OpsSessionService, useValue: opsSession },
         { provide: UserService, useValue: userService },
         { provide: AccountApiService, useValue: jasmine.createSpyObj('AccountApiService', ['cancelAccount']) },
-        { provide: TranslationService, useValue: { currentLang$: () => currentLanguage } },
+        { provide: TranslationService, useValue: { currentLang$: () => currentLanguage, translate: (key: string) => key } },
         { provide: Router, useValue: jasmine.createSpyObj('Router', { navigate: Promise.resolve(true) }) },
       ],
     });
@@ -195,6 +196,80 @@ describe('AuthService', () => {
 
     expect(service.isAuthenticated()).toBeFalse();
     expect(TestBed.inject(Router).navigate).toHaveBeenCalledWith(['/auth/login'], { queryParams: { sessionExpired: '1' } });
+  });
+
+  it('keeps the session for a prepared Paycomet round trip and consumes its continuation on history return', () => {
+    service.adoptToken('payment-token', 'user@example.com');
+    TestBed.inject(PaymentChallengeService).beginRecharge({ amount: 1, order: 'order' });
+    service.preparePaymentRedirect('https://api.paycomet.com/gateway/sca_challenge.php');
+    window.dispatchEvent(new PageTransitionEvent('pagehide', { persisted: true }));
+    expect(service.isAuthenticated()).toBeTrue();
+    window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true }));
+    expect(service.token()).toBe('payment-token');
+    expect(service.ensureActiveSession()).toBeTrue();
+    expect(sessionStorage.getItem('urbanoa.auth.paycomet-resume')).toBeNull();
+    expect(localStorage.getItem('urbanoa.auth.session')).toBeNull();
+    window.dispatchEvent(new PageTransitionEvent('pagehide', { persisted: true }));
+    expect(service.isAuthenticated()).toBeFalse();
+  });
+
+  it('does not restore a payment session after logout or after another window signs in', async () => {
+    service.adoptToken('payment-token', 'user@example.com');
+    TestBed.inject(PaymentChallengeService).beginRecharge({ amount: 1 });
+    service.preparePaymentRedirect('https://api.paycomet.com/gateway/sca_challenge.php');
+    await service.logout();
+    expect(sessionStorage.getItem('urbanoa.auth.paycomet-resume')).toBeNull();
+    service.adoptToken('payment-token', 'user@example.com');
+    service.preparePaymentRedirect('https://api.paycomet.com/gateway/sca_challenge.php');
+    localStorage.setItem('urbanoa.auth.active-window', 'another-owner');
+    window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true }));
+    expect(service.isAuthenticated()).toBeFalse();
+  });
+
+  it('rejects an expired payment continuation and a new document loaded outside a payment return', () => {
+    service.adoptToken('payment-token', 'user@example.com');
+    TestBed.inject(PaymentChallengeService).beginRecharge({ amount: 1 });
+    service.preparePaymentRedirect('https://api.paycomet.com/gateway/sca_challenge.php');
+    const saved = JSON.parse(sessionStorage.getItem('urbanoa.paycomet.pending-payment-v1')!);
+    saved.startedAt = Date.now() - 31 * 60_000;
+    sessionStorage.setItem('urbanoa.paycomet.pending-payment-v1', JSON.stringify(saved));
+    window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true }));
+    expect(service.isAuthenticated()).toBeFalse();
+    service.adoptToken('payment-token', 'user@example.com');
+    TestBed.inject(PaymentChallengeService).beginRecharge({ amount: 1 });
+    service.preparePaymentRedirect('https://api.paycomet.com/gateway/sca_challenge.php');
+    spyOn(performance, 'getEntriesByType').and.returnValue([]);
+    const refreshed = TestBed.runInInjectionContext(() => new AuthService());
+    expect(refreshed.isAuthenticated()).toBeFalse();
+    expect(sessionStorage.getItem('urbanoa.auth.paycomet-resume')).toBeNull();
+  });
+
+  it('only prepares a continuation for an active session, pending challenge and HTTPS Paycomet destination', () => {
+    service.adoptToken('payment-token', 'user@example.com');
+    expect(() => service.preparePaymentRedirect('https://api.paycomet.com/gateway')).toThrow();
+    TestBed.inject(PaymentChallengeService).beginRecharge({ amount: 1 });
+    expect(() => service.preparePaymentRedirect('https://paycomet.com.attacker.example/gateway')).toThrow();
+    expect(() => service.preparePaymentRedirect('http://api.paycomet.com/gateway')).toThrow();
+    expect(sessionStorage.getItem('urbanoa.auth.paycomet-resume')).toBeNull();
+  });
+
+  it('restores a new document at the web payment callback only once', () => {
+    const originalUrl = location.href;
+    try {
+      service.adoptToken('payment-token', 'user@example.com');
+      TestBed.inject(PaymentChallengeService).beginRecharge({ amount: 1 });
+      service.preparePaymentRedirect('https://api.paycomet.com/gateway/sca_challenge.php');
+      const owner = localStorage.getItem('urbanoa.auth.active-window');
+      history.replaceState(null, '', '/ok?ret=0');
+      const returned = TestBed.runInInjectionContext(() => new AuthService());
+      expect(returned.token()).toBe('payment-token');
+      expect(returned.ensureActiveSession()).toBeTrue();
+      expect(localStorage.getItem('urbanoa.auth.active-window')).not.toBe(owner);
+      const refreshed = TestBed.runInInjectionContext(() => new AuthService());
+      expect(refreshed.isAuthenticated()).toBeFalse();
+    } finally {
+      history.replaceState(null, '', originalUrl);
+    }
   });
 
   it('does not resurrect a login whose profile finishes after the window lost ownership', async () => {

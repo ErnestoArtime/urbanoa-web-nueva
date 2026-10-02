@@ -19,6 +19,7 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
 import { isCardUsable } from '../../../core/utils/card-expiry';
 import { TranslationService } from '../../../core/services/translation.service';
 import { PaymentChallengeService } from '../../../core/services/payment-challenge.service';
+import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   selector: 'app-parking-confirm',
@@ -276,6 +277,7 @@ export class ParkingConfirmComponent implements OnInit {
   private readonly operations = inject(OperationsService);
   private readonly translations = inject(TranslationService);
   private readonly paymentChallenge = inject(PaymentChallengeService);
+  private readonly authService = inject(AuthService);
   @ViewChild(SwipeToPayComponent) swipePay!: SwipeToPayComponent;
   private readonly initialQuery = readParkingFlowQuery(this.route);
   readonly query = computed(() =>
@@ -375,6 +377,7 @@ export class ParkingConfirmComponent implements OnInit {
         returnUrl: '/app/operations',
         amount,
       });
+      this.authService.preparePaymentRedirect(result.challengeUrl);
       window.location.assign(result.challengeUrl);
       return;
     }

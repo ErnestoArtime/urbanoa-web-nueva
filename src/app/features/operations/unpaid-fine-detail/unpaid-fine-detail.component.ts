@@ -20,6 +20,7 @@ import { AppIconComponent } from '../../../shared/icons/app-icon.component';
 import { OperationIconComponent } from '../../../shared/components/operation-icon/operation-icon.component';
 import { formatFineDate } from '../../../shared/utils/fine-date';
 import { PaymentChallengeService } from '../../../core/services/payment-challenge.service';
+import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   selector: 'app-unpaid-fine-detail',
@@ -344,6 +345,7 @@ export class UnpaidFineDetailComponent {
   private readonly unpaidFinesService = inject(UnpaidFinesService);
   private readonly translationService = inject(TranslationService);
   private readonly paymentChallenge = inject(PaymentChallengeService);
+  private readonly authService = inject(AuthService);
   readonly walletService = inject(WalletService);
   readonly fineStatus = FineStatus;
   readonly operationType = OperationType;
@@ -449,6 +451,7 @@ export class UnpaidFineDetailComponent {
           returnUrl: `/app/operations/unpaid-fines/${encodeURIComponent(fine.id)}`,
           amount: this.numericAmount(),
         });
+        this.authService.preparePaymentRedirect(result.challengeUrl);
         window.location.assign(result.challengeUrl);
         return;
       }

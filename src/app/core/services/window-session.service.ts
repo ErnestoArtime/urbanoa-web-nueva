@@ -31,6 +31,20 @@ export class WindowSessionService {
     this.owner = owner;
   }
 
+  paymentOwner(): string | null {
+    return this.ensureActive() ? this.owner : null;
+  }
+
+  resumePayment(owner: string): boolean {
+    try {
+      if (!owner || localStorage.getItem(this.key) !== owner) return false;
+      this.activate();
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   private createOwner(): string {
     if (typeof crypto.randomUUID === 'function') return crypto.randomUUID();
     // HTTP network origins still support secure random bytes for this non-secret marker.

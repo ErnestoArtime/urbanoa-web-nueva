@@ -1,4 +1,5 @@
 import { provideZonelessChangeDetection, signal } from '@angular/core';
+import { AuthService } from '../../../core/services/auth.service';
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { BehaviorSubject } from 'rxjs';
@@ -7,6 +8,9 @@ import { WalletService } from '../../../core/services/wallet.service';
 import { AccountRechargeComponent } from './recharge.component';
 
 describe('AccountRechargeComponent', () => {
+  beforeEach(() => TestBed.configureTestingModule({ providers: [
+    { provide: AuthService, useValue: { preparePaymentRedirect: jasmine.createSpy('preparePaymentRedirect') } },
+  ] }));
   it('rejects a selected expired card even when another card is usable', async () => {
     const wallet = TestBed.inject(WalletService);
     wallet.cards.update(cards => cards.map((card, index) => index === 0 ? { ...card, expiryDate: '01/20' } : card));

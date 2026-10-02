@@ -13,6 +13,7 @@ import { WindowSessionService } from './window-session.service';
 import { WalletService } from './wallet.service';
 import { VehicleService } from './vehicle.service';
 import { ParkingTicketStoreService } from './parking-ticket-store.service';
+import { PaymentChallengeService } from './payment-challenge.service';
 
 export interface AuthUser extends UserData {
   id: string;
@@ -82,6 +83,9 @@ export class AuthService {
   private readonly wallet = inject(WalletService);
   private readonly vehicles = inject(VehicleService);
   private readonly ticketStore = inject(ParkingTicketStoreService);
+  private readonly paymentChallenge = inject(PaymentChallengeService);
+  private readonly paymentSessionKey = 'urbanoa.auth.paycomet-resume';
+  private paymentDepartureArmed = false;
   private readonly storageKey = 'urbanoa.auth.session';
   private readonly legacyStorageKey = 'urbanoa.auth.user';
   private readonly session = signal<AuthSession | null>(null);
@@ -98,10 +102,14 @@ export class AuthService {
     this.clearBusinessData();
     this.syncOpsSession('');
     this.locationSettings.setUserScope();
+    const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
+    this.resumePaymentSession(navigation?.type === 'back_forward');
     window.addEventListener('urbanoa:session-expired', this.handleSessionExpired);
-    const pageHide = () => this.clearSession();
+    const pageHide = () => {
+      if (!this.paymentDepartureArmed || !this.windowSession.ensureActive()) this.clearSession();
+    };
     const pageShow = (event: PageTransitionEvent) => {
-      if (event.persisted) this.handleSessionExpired();
+      if (event.persisted && !this.resumePaymentSession(true)) this.handleSessionExpired();
     };
     window.addEventListener('pagehide', pageHide);
     window.addEventListener('pageshow', pageShow);
@@ -122,6 +130,41 @@ export class AuthService {
 
   ensureActiveSession(): boolean {
     return this.isAuthenticated() && this.windowSession.ensureActive();
+  }
+
+  preparePaymentRedirect(challengeUrl: string): void {
+    const url = new URL(challengeUrl);
+    const pending = this.paymentChallenge.getPending();
+    const session = this.session();
+    const owner = this.windowSession.paymentOwner();
+    if (url.protocol !== 'https:' || !(url.hostname === 'paycomet.com' || url.hostname.endsWith('.paycomet.com')) || !pending || !session || !owner) {
+      throw new Error(this.translation.translate('errors.server'));
+    }
+    // Only this tab retains a short-lived, single-use continuation for the
+    // external challenge. Ordinary refreshes never restore authentication.
+    sessionStorage.setItem(this.paymentSessionKey, JSON.stringify({ session, owner, startedAt: pending.startedAt, departureUrl: location.pathname }));
+    this.paymentDepartureArmed = true;
+  }
+
+  private resumePaymentSession(backFromPayment: boolean): boolean {
+    try {
+      const raw = sessionStorage.getItem(this.paymentSessionKey);
+      sessionStorage.removeItem(this.paymentSessionKey);
+      this.paymentDepartureArmed = false;
+      if (!raw) return false;
+      const saved = JSON.parse(raw) as { session: AuthSession; owner: string; startedAt: number; departureUrl: string };
+      const pending = this.paymentChallenge.getPending();
+      const callback = /^\/(?:ok|ko|app\/paycomet\/(?:ok|ko))\/?$/.test(location.pathname);
+      if ((!callback && !(backFromPayment && location.pathname === saved.departureUrl)) ||
+          !pending || pending.startedAt !== saved.startedAt ||
+          typeof saved.session?.token !== 'string' || !saved.session.token.trim() ||
+          typeof saved.session.user?.email !== 'string' || typeof saved.session.user?.id !== 'string' ||
+          !this.windowSession.resumePayment(saved.owner)) return false;
+      this.storeSession(saved.session);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   async login(input: LoginInput): Promise<AuthUser>;
@@ -321,6 +364,8 @@ export class AuthService {
   }
 
   private clearSession(): void {
+    this.paymentDepartureArmed = false;
+    try { sessionStorage.removeItem(this.paymentSessionKey); } catch { /* Storage may be unavailable. */ }
     this.loginAttempt++;
     this.session.set(null);
     this.windowSession.release();

@@ -7,6 +7,7 @@ import { RouterLink } from '@angular/router';
 import { map } from 'rxjs/operators';
 import { OperationsService } from '../../../core/services/operations.service';
 import { PaymentChallengeService } from '../../../core/services/payment-challenge.service';
+import { AuthService } from '../../../core/services/auth.service';
 import { TranslationService } from '../../../core/services/translation.service';
 import { WalletService } from '../../../core/services/wallet.service';
 import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
@@ -180,6 +181,7 @@ export class AccountRechargeComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly operationsService = inject(OperationsService);
   private readonly paymentChallenge = inject(PaymentChallengeService);
+  private readonly authService = inject(AuthService);
   private readonly translationService = inject(TranslationService);
   private readonly fb = inject(FormBuilder);
   readonly rechargeAmounts = [1, 2, 5, 10, 20, 30, 40] as const;
@@ -247,6 +249,7 @@ export class AccountRechargeComponent {
       const result = await this.walletService.recharge(amount, this.selectedCardId());
       if (result.challengeUrl) {
         this.paymentChallenge.beginRecharge({ amount, ...(result.order ? { order: result.order } : {}) });
+        this.authService.preparePaymentRedirect(result.challengeUrl);
         window.location.assign(result.challengeUrl);
         return;
       }

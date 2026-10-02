@@ -1,4 +1,5 @@
 import { provideZonelessChangeDetection, signal } from '@angular/core';
+import { AuthService } from '../../../core/services/auth.service';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { BehaviorSubject } from 'rxjs';
@@ -10,6 +11,9 @@ import { WalletService } from '../../../core/services/wallet.service';
 import { UnpaidFineDetailComponent } from './unpaid-fine-detail.component';
 
 describe('UnpaidFineDetailComponent', () => {
+  beforeEach(() => TestBed.configureTestingModule({ providers: [
+    { provide: AuthService, useValue: { preparePaymentRedirect: jasmine.createSpy('preparePaymentRedirect') } },
+  ] }));
   let fixture: ComponentFixture<UnpaidFineDetailComponent>;
   let translate: jasmine.Spy;
 
