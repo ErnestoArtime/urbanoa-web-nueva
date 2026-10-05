@@ -85,8 +85,8 @@ describe('WalletService', () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'post']);
     api.post.and.resolveTo({ payMethodId: 7, amountRecharged: 250, newBalance: 1500, order: 'order-123', challengeUrl: null });
     const service = serviceWith(api);
-    service.cards.set([{ id: '7', brand: 'Visa', last4: '1234', expiryDate: '12/99', cardholderName: 'Test' }]);
     TestBed.inject(OpsSessionService).setToken('token');
+    service.cards.set([{ id: '7', brand: 'Visa', last4: '1234', expiryDate: '12/99', cardholderName: 'Test' }]);
 
     const result = await service.recharge(2.5, '7');
 

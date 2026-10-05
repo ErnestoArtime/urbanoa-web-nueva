@@ -90,8 +90,8 @@ describe('UserService', () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'post']);
     api.post.and.resolveTo('194063');
     const service = serviceWith(api);
-    service.updateLocal(baseUser());
     TestBed.inject(OpsSessionService).setToken('token');
+    service.updateLocal(baseUser());
 
     const result = await service.save({ name: 'Andoni', address: { ...baseUser().address, street: 'Calle Nueva', city: 'Bilbao' } });
 
@@ -128,8 +128,8 @@ describe('UserService', () => {
     }), Promise.resolve({ names: 'Ane', firstSurname: 'Lopez', email: 'ane@example.com', contractId: 3 }));
     api.post.and.resolveTo('194063');
     const service = serviceWith(api);
-    service.updateLocal(baseUser());
     TestBed.inject(OpsSessionService).setToken('token');
+    service.updateLocal(baseUser());
 
     const result = await service.updatePreferredContract(3);
 
@@ -172,8 +172,8 @@ describe('UserService', () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'post']);
     api.post.and.rejectWith(new Error('backend down'));
     const service = serviceWith(api);
-    service.updateLocal(baseUser());
     TestBed.inject(OpsSessionService).setToken('token');
+    service.updateLocal(baseUser());
 
     const result = await service.save({ name: 'Changed' });
 

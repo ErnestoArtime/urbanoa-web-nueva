@@ -1,4 +1,4 @@
-import { computed, inject, Injectable, signal } from '@angular/core';
+import { DestroyRef, computed, inject, Injectable, signal } from '@angular/core';
 import { OpsApiClient } from '../api/ops-api-client.service';
 import { OpsApiError } from '../api/ops-api.types';
 import { OPS_ENDPOINTS } from '../api/ops-endpoints';
@@ -134,8 +134,25 @@ export class SupportService {
   readonly source = signal<'idle' | 'remote' | 'error'>('idle');
   readonly loading = signal(false);
   readonly lastError = signal<OpsApiError | null>(null);
+  private generation = 0;
+
+  constructor() {
+    const unsubscribe = this.session.onChange?.(() => this.reset());
+    inject(DestroyRef).onDestroy(() => unsubscribe?.());
+  }
+
+  reset(): void {
+    this.generation++;
+    this.aliases.clear();
+    this.unreadMembers.clear();
+    this.state.set([]);
+    this.source.set('idle');
+    this.loading.set(false);
+    this.lastError.set(null);
+  }
 
   async load(): Promise<boolean> {
+    const generation = this.generation;
     const token = this.session.token();
     if (!token) return this.fail(new OpsApiError('transport', OPS_ENDPOINTS.support.query, 'Se requiere una sesión válida'));
     this.loading.set(true);
@@ -145,16 +162,18 @@ export class SupportService {
         { contractId: 0, startDate: '000000010100', endDate: this.backendDate(new Date()) },
         { token },
       );
+      if (generation !== this.generation) return false;
       const items = Array.isArray(response) ? response : (response.feedback ?? response.feedbackList ?? []);
       this.state.set(this.groupRemoteThreads(items));
       this.source.set('remote');
       this.lastError.set(null);
       return true;
     } catch (error) {
+      if (generation !== this.generation) return false;
       this.state.set([]);
       return this.fail(this.toError(error, OPS_ENDPOINTS.support.query));
     } finally {
-      this.loading.set(false);
+      if (generation === this.generation) this.loading.set(false);
     }
   }
 
@@ -163,7 +182,9 @@ export class SupportService {
   }
 
   async create(input: NewSupportThread): Promise<SupportThread | null> {
+    const generation = this.generation;
     const result = await this.send(input);
+    if (generation !== this.generation) return null;
     if (!result?.trim()) {
       this.fail(
         new OpsApiError(
@@ -180,6 +201,7 @@ export class SupportService {
   }
 
   async reply(id: string, message: string, attachment?: SupportAttachment): Promise<boolean> {
+    const generation = this.generation;
     const thread = this.getById(id);
     if (!thread) return false;
     if (thread.status === 'closed') {
@@ -198,7 +220,7 @@ export class SupportService {
       },
       Number(id),
     );
-    if (!result) return false;
+    if (generation !== this.generation || !result) return false;
     const now = new Date().toISOString();
     this.state.update((threads) =>
       threads.map((item) =>
@@ -217,6 +239,7 @@ export class SupportService {
   }
 
   async markAsRead(id: string): Promise<boolean> {
+    const generation = this.generation;
     const thread = this.getById(id);
     if (!thread?.unread) return true;
     id = thread.id;
@@ -230,6 +253,7 @@ export class SupportService {
           { id: memberId, contractId: Number(thread.cityId) || 0, read: 1 },
           { token },
         );
+        if (generation !== this.generation) return false;
       }
       this.unreadMembers.delete(id);
       this.state.update((threads) => threads.map((item) => (item.id === id ? { ...item, unread: false } : item)));
@@ -237,11 +261,13 @@ export class SupportService {
       this.lastError.set(null);
       return true;
     } catch (error) {
+      if (generation !== this.generation) return false;
       return this.fail(this.toError(error, OPS_ENDPOINTS.support.update));
     }
   }
 
   private async send(input: NewSupportThread, baseId?: number): Promise<string | null> {
+    const generation = this.generation;
     const token = this.session.token();
     if (!token) {
       this.fail(new OpsApiError('transport', OPS_ENDPOINTS.support.add, 'Se requiere una sesión válida'));
@@ -255,6 +281,7 @@ export class SupportService {
         userEmail = '';
       }
     }
+    if (generation !== this.generation) return null;
     const contractId = this.cities.contractIdFor(input.cityId);
     const plate = input.plate.trim().toUpperCase();
     if (contractId <= 0) {
@@ -289,10 +316,12 @@ export class SupportService {
         },
         { token },
       );
+      if (generation !== this.generation) return null;
       this.source.set('remote');
       this.lastError.set(null);
       return result;
     } catch (error) {
+      if (generation !== this.generation) return null;
       this.fail(this.toError(error, OPS_ENDPOINTS.support.add));
       return null;
     }

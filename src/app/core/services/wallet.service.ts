@@ -1,4 +1,4 @@
-import { computed, inject, Injectable, signal } from '@angular/core';
+import { DestroyRef, computed, inject, Injectable, signal } from '@angular/core';
 import { OpsApiClient } from '../api/ops-api-client.service';
 import { OpsApiError } from '../api/ops-api.types';
 import { getOpsCloudToken, OPS_UNVERIFIED_OPERATING_SYSTEM } from '../api/ops-client.constants';
@@ -94,6 +94,11 @@ export class WalletService {
   private readonly api = inject(OpsApiClient);
   private readonly session = inject(OpsSessionService);
 
+  constructor() {
+    const unsubscribe = this.session.onChange?.(() => this.reset());
+    inject(DestroyRef).onDestroy(() => unsubscribe?.());
+  }
+
   get mainCard(): MainCard {
     return this.defaultCard() ?? { id: '', brand: '', last4: '', expiryDate: '', cardholderName: '' };
   }
@@ -103,10 +108,12 @@ export class WalletService {
     if (!token) return null;
     try {
       const html = await this.api.get<string>(OPS_ENDPOINTS.wallet.loadPaymentForm, { token });
+      if (this.session.token() !== token) return null;
       this.source.set('remote');
       this.lastError.set(null);
       return html;
     } catch (error) {
+      if (this.session.token() !== token) return null;
       this.useError(error);
       return null;
     }
@@ -154,9 +161,9 @@ export class WalletService {
         this.lastError.set(failure instanceof Error ? failure.message : null);
       }
     } catch (error) {
-      this.useError(error);
+      if (this.session.token() === token) this.useError(error);
     } finally {
-      this.loading.set(false);
+      if (this.session.token() === token) this.loading.set(false);
     }
   }
 
@@ -167,9 +174,11 @@ export class WalletService {
     if (token && this.api && remoteId !== null) {
       try {
         await this.api.post<string>(OPS_ENDPOINTS.wallet.updatePaymentMethod, { id: remoteId }, { token });
+        if (this.session.token() !== token) return false;
         this.source.set('remote');
         this.lastError.set(null);
       } catch (error) {
+        if (this.session.token() !== token) return false;
         this.useError(error);
         return false;
       }
@@ -188,9 +197,11 @@ export class WalletService {
     if (token && this.api && remoteId !== null) {
       try {
         await this.api.post<string>(OPS_ENDPOINTS.wallet.removePaymentMethod, { id: remoteId }, { token });
+        if (this.session.token() !== token) return false;
         this.source.set('remote');
         this.lastError.set(null);
       } catch (error) {
+        if (this.session.token() !== token) return false;
         this.useError(error);
         return false;
       }
@@ -214,6 +225,7 @@ export class WalletService {
         { contractId: 0, amount: this.toCents(value), payMethodId },
         { token },
       );
+      if (this.session.token() !== token) return { success: false, source: 'error' };
       this.source.set('remote');
       this.lastError.set(null);
       const order = response.order?.trim() || undefined;
@@ -247,6 +259,7 @@ export class WalletService {
         { contractId: 0, cloudToken: cloudToken.trim() || getOpsCloudToken(), operatingSystem: OPS_UNVERIFIED_OPERATING_SYSTEM, amount: this.toCents(value), simulate: 0 },
         { token },
       );
+      if (this.session.token() !== token) return { success: false, source: 'error' };
       if (response.result !== 1 || response.refundAmount == null || String(response.refundAmount).trim() === '' || !Number.isFinite(Number(response.refundAmount)) || Number(response.refundAmount) < 0) {
         throw new OpsApiError('invalid-response', OPS_ENDPOINTS.wallet.refund, 'El servicio no confirmó el importe de la devolución.');
       }
@@ -256,6 +269,7 @@ export class WalletService {
       this.lastError.set(null);
       return { success: true, source: 'remote', amount: refunded };
     } catch (error) {
+      if (this.session.token() !== token) return { success: false, source: 'error' };
       return { success: false, source: 'error', error: this.useError(error) };
     }
   }

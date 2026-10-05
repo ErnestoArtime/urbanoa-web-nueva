@@ -1,4 +1,4 @@
-import { Injectable, computed, inject, signal } from '@angular/core';
+import { DestroyRef, Injectable, computed, inject, signal } from '@angular/core';
 import { OperationType } from '../../shared/models/operation-type';
 import type { Operation } from '../../shared/models/operation';
 import { OPS_ENDPOINTS } from '../api/ops-endpoints';
@@ -115,6 +115,28 @@ export class OperationsService {
   private readonly operationsLoadsInFlight = new Map<string, Promise<void>>();
   private activeLoadingRequests = 0;
   private lastLoadParameters: [string?, string?, number[]?] = [];
+  private generation = 0;
+
+  constructor() {
+    const unsubscribe = this.session.onChange?.(() => this.reset());
+    inject(DestroyRef).onDestroy(() => unsubscribe?.());
+  }
+
+  reset(): void {
+    this.generation++;
+    this._operations.set([]);
+    this._activeParkings.set([]);
+    this.operationsLoadsInFlight.clear();
+    this.locallyEndedOperationIds.clear();
+    try { sessionStorage.removeItem(ENDED_PARKINGS_SESSION_KEY); } catch { /* Storage may be unavailable. */ }
+    this.lastLoadParameters = [];
+    this.activeLoadingRequests = 0;
+    this._activeLoading.set(false);
+    this.loading.set(false);
+    this.source.set('idle');
+    this.activeSource.set('idle');
+    this.lastError.set(null);
+  }
 
   readonly operations = this._operations.asReadonly();
   readonly activeParkings = this._activeParkings.asReadonly();
@@ -156,6 +178,7 @@ export class OperationsService {
   }
 
   private async loadRemote(effectiveStart: string, effectiveEnd: string, operationTypeList: number[]): Promise<void> {
+    const generation = this.generation;
     const token = this.session.token();
     if (!token) {
       this._operations.set([]);
@@ -175,6 +198,7 @@ export class OperationsService {
     this.lastError.set(null);
     try {
       const response = await this.api.post<OperationResponseDto[]>(OPS_ENDPOINTS.user.operations, requestBody, { token });
+      if (generation !== this.generation) return;
       const operations = response.map((item) => this.mapRemoteOperation(item));
       this.reconcileLocallyEndedOperations(operations);
       this._operations.set(
@@ -184,6 +208,7 @@ export class OperationsService {
       );
       this.source.set('remote');
     } catch (error) {
+      if (generation !== this.generation) return;
       this.lastError.set(error instanceof Error ? error.message : 'Error desconocido al cargar las operaciones');
       const errorDetails =
         error instanceof OpsApiError
@@ -192,23 +217,27 @@ export class OperationsService {
       console.warn('[OPS API] No se pudieron cargar las operaciones', JSON.stringify({ requestBody, error: errorDetails }));
       this.source.set('error');
     } finally {
-      this.loading.set(false);
+      if (generation === this.generation) this.loading.set(false);
     }
   }
 
   async loadDetail(id: string): Promise<Operation | undefined> {
+    const generation = this.generation;
     if (!id) return undefined;
     await this.load(...this.lastLoadParameters);
+    if (generation !== this.generation) return undefined;
     return this.getOperationById(id);
   }
 
   async loadParkingStatuses(vehicles: readonly { id: string; plate: string }[], contractId?: number): Promise<void> {
+    const generation = this.generation;
     this.beginActiveLoading();
     try {
       await this.load();
+      if (generation !== this.generation) return;
       this.syncActiveParkingsFromOperations(vehicles, contractId);
     } finally {
-      this.endActiveLoading();
+      if (generation === this.generation) this.endActiveLoading();
     }
   }
 

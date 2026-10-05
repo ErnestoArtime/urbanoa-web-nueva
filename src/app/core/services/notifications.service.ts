@@ -1,4 +1,4 @@
-import { inject, Injectable, signal } from '@angular/core';
+import { DestroyRef, inject, Injectable, signal } from '@angular/core';
 import { OPS_ENDPOINTS } from '../api/ops-endpoints';
 import { OpsApiClient } from '../api/ops-api-client.service';
 import { OpsSessionService } from '../api/ops-session.service';
@@ -42,8 +42,21 @@ export class NotificationsService {
 
   private readonly api = inject(OpsApiClient);
   private readonly session = inject(OpsSessionService);
+  private generation = 0;
+
+  constructor() {
+    const unsubscribe = this.session.onChange?.(() => this.reset());
+    inject(DestroyRef).onDestroy(() => unsubscribe?.());
+  }
+
+  reset(): void {
+    this.generation++;
+    this.preferences.set({ ...DEFAULTS });
+    this.source.set('idle');
+  }
 
   async load(): Promise<NotificationPreferences> {
+    const generation = this.generation;
     const token = this.session.token();
     if (!token) {
       this.source.set('error');
@@ -51,9 +64,11 @@ export class NotificationsService {
     }
     try {
       const response = await this.api.get<{ notifications: NotificationPreferences }>(OPS_ENDPOINTS.user.notifications, { token });
+      if (generation !== this.generation) return this.preferences();
       this.preferences.set({ ...DEFAULTS, ...response.notifications });
       this.source.set('remote');
     } catch (error) {
+      if (generation !== this.generation) return this.preferences();
       console.warn('[OPS API] No se pudieron cargar las notificaciones', error);
       this.source.set('error');
     }
@@ -61,6 +76,7 @@ export class NotificationsService {
   }
 
   async save(preferences: NotificationPreferences): Promise<'remote' | 'error'> {
+    const generation = this.generation;
     const token = this.session.token();
     if (!token) {
       this.source.set('error');
@@ -68,9 +84,11 @@ export class NotificationsService {
     }
     try {
       await this.api.post<string>(OPS_ENDPOINTS.user.updateNotifications, { contractId: 0, notifications: preferences }, { token });
+      if (generation !== this.generation) return 'error';
       this.preferences.set(preferences);
       this.source.set('remote');
     } catch (error) {
+      if (generation !== this.generation) return 'error';
       console.warn('[OPS API] No se pudieron guardar las notificaciones', error);
       this.source.set('error');
     }
