@@ -1,3 +1,11 @@
+# Cache only successful responses for files whose names change with the build.
+# HTML and missing chunks must never be reused across deployments.
+map "$status:$uri" $urbanoa_cache_control {
+  default "no-store";
+  "~*^(200|304):/.*-[a-z0-9]{8,}\.(js|css)$" "public, max-age=31536000, immutable";
+  ~*^(200|304):/.*\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2)$ "no-cache";
+}
+
 server {
   listen       10213;
   server_name  _;
@@ -17,6 +25,7 @@ server {
   add_header X-Frame-Options DENY;
   add_header X-Content-Type-Options nosniff;
   add_header X-XSS-Protection "1; mode=block";
+  add_header Cache-Control $urbanoa_cache_control always;
 
   location = /healthz {
     return 200 'ok';
@@ -49,7 +58,6 @@ server {
   }
 
   location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2)$ {
-    expires 1y;
-    add_header Cache-Control "public, immutable";
+    try_files $uri =404;
   }
 }
