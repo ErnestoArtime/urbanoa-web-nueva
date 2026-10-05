@@ -23,7 +23,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
       <button type="button" class="btn btn-primary btn-block mt-2" (click)="grantPermission()">
         {{ 'onboarding.location.grant' | translate }}
       </button>
-      <button type="button" class="btn btn-ghost btn-block mt-1" (click)="showCityPicker.set(true)">
+      <button type="button" class="btn btn-ghost btn-block mt-1" (click)="openCityPicker()">
         {{ 'onboarding.location.chooseCity' | translate }}
       </button>
       <button type="button" class="btn btn-ghost btn-block mt-1" (click)="skip()">
@@ -35,19 +35,25 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
       }
 
       @if (showCityPicker()) {
-        <div class="city-picker-overlay" (click)="showCityPicker.set(false)">
+        <div class="city-picker-overlay" (click)="closeCityPicker()">
           <div class="city-picker" (click)="$event.stopPropagation()">
             <h3>{{ 'onboarding.location.cityPickerTitle' | translate }}</h3>
             <p class="city-picker-desc">{{ 'onboarding.location.cityPickerDesc' | translate }}</p>
             <div class="city-list">
               @for (city of municipios(); track city.id) {
-                <button type="button" class="city-option" (click)="selectCity(city.id, city.nombre)">
+                <button type="button" class="city-option" [class.selected]="selectedCity()?.id === city.id" [attr.aria-pressed]="selectedCity()?.id === city.id" [disabled]="savingCity()" (click)="selectedCity.set(city)">
                   {{ city.nombre }}
                   <small>{{ city.provincia }}</small>
                 </button>
               }
             </div>
-            <button type="button" class="btn btn-ghost btn-block mt-1" (click)="showCityPicker.set(false)">
+            @if (message()) {
+              <p class="location-feedback" role="status">{{ message() | translate }}</p>
+            }
+            <button type="button" class="btn btn-primary btn-block mt-1" [disabled]="!selectedCity() || savingCity()" (click)="saveCity()">
+              {{ 'common.save' | translate }}
+            </button>
+            <button type="button" class="btn btn-ghost btn-block mt-1" [disabled]="savingCity()" (click)="closeCityPicker()">
               {{ 'common.cancel' | translate }}
             </button>
           </div>
@@ -73,6 +79,9 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
         padding: 1rem;
       }
       .city-picker {
+        display: flex;
+        flex-direction: column;
+        max-height: calc(100dvh - 2rem);
         width: min(100%, 380px);
         padding: 1.5rem;
         border-radius: 20px;
@@ -87,6 +96,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
         margin-bottom: 0.8rem;
       }
       .city-list {
+        min-height: 0;
         display: flex;
         flex-direction: column;
         gap: 0.3rem;
@@ -109,6 +119,10 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
       .city-option small {
         color: var(--color-text-muted);
       }
+      .city-option.selected {
+        border-color: var(--color-primary);
+        background: var(--color-active);
+      }
     `,
   ],
 })
@@ -120,6 +134,8 @@ export class OnboardingLocationComponent {
   readonly brand = APP_BRAND;
   readonly municipios = signal<Municipio[]>([]);
   readonly showCityPicker = signal(false);
+  readonly selectedCity = signal<Municipio | null>(null);
+  readonly savingCity = signal(false);
   readonly message = signal('');
 
   constructor() {
@@ -132,7 +148,7 @@ export class OnboardingLocationComponent {
   async grantPermission(): Promise<void> {
     this.message.set('');
     const ok = await this.locationService.requestCurrentLocation();
-    if (ok) {
+    if (ok.ok) {
       this.message.set('onboarding.location.enabledRedirect');
       setTimeout(() => void this.router.navigate(['/onboarding/notification']), 1000);
     } else {
@@ -141,16 +157,40 @@ export class OnboardingLocationComponent {
   }
 
   async selectCity(id: string, name: string): Promise<void> {
-    const contractId = this.citiesService.contractIdFor(id);
-    this.locationService.setPreferredCity(id, name, contractId);
-    const result = await this.userService.updatePreferredContract(contractId);
-    if (!result.success) {
+    if (this.savingCity()) return;
+    this.savingCity.set(true);
+    this.message.set('');
+    try {
+      const contractId = this.citiesService.contractIdFor(id);
+      this.locationService.setPreferredCity(id, name, contractId);
+      const result = await this.userService.updatePreferredContract(contractId);
+      if (!result.success) {
+        this.message.set('onboarding.location.citySaveError');
+        return;
+      }
+      this.showCityPicker.set(false);
+      this.message.set('onboarding.location.citySavedRedirect');
+      setTimeout(() => void this.router.navigate(['/onboarding/notification']), 1000);
+    } catch {
       this.message.set('onboarding.location.citySaveError');
-      return;
+    } finally {
+      this.savingCity.set(false);
     }
-    this.showCityPicker.set(false);
-    this.message.set('onboarding.location.citySavedRedirect');
-    setTimeout(() => void this.router.navigate(['/onboarding/notification']), 1000);
+  }
+
+  openCityPicker(): void {
+    this.selectedCity.set(this.municipios().find(city => city.id === this.locationService.settings().preferredCityId) ?? null);
+    this.message.set('');
+    this.showCityPicker.set(true);
+  }
+
+  closeCityPicker(): void {
+    if (!this.savingCity()) this.showCityPicker.set(false);
+  }
+
+  async saveCity(): Promise<void> {
+    const city = this.selectedCity();
+    if (city) await this.selectCity(city.id, city.nombre);
   }
 
   skip(): void {

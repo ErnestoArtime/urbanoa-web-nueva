@@ -52,7 +52,7 @@ interface LocationMessage {
                 (change)="locationService.toggleUseCurrentLocation($any($event.target).checked)" /><span class="switch"></span
             ></label>
           }
-          <button type="button" class="btn btn-secondary btn-sm" (click)="showCityPicker.set(true)">
+          <button type="button" class="btn btn-secondary btn-sm" (click)="openCityPicker()">
             {{
               (locationService.settings().preferredCityId ? 'account.settings.location.changeCity' : 'account.settings.location.chooseCity')
                 | translate
@@ -65,7 +65,7 @@ interface LocationMessage {
       </section>
 
       @if (showCityPicker()) {
-        <div class="modal-overlay" (click)="showCityPicker.set(false)">
+        <div class="modal-overlay" (click)="closeCityPicker()">
           <div class="modal city-picker-modal" (click)="$event.stopPropagation()">
             <h3>{{ 'account.settings.location.cityPickerTitle' | translate }}</h3>
             <p>{{ 'account.settings.location.cityPickerDesc' | translate }}</p>
@@ -74,15 +74,23 @@ interface LocationMessage {
                 <button
                   type="button"
                   class="city-option"
-                  [class.selected]="locationService.settings().preferredCityId === city.id"
-                  (click)="selectCity(city.id, city.nombre)"
+                  [class.selected]="selectedCity()?.id === city.id"
+                  [attr.aria-pressed]="selectedCity()?.id === city.id"
+                  [disabled]="savingCity()"
+                  (click)="selectedCity.set(city)"
                 >
                   <span>{{ city.nombre }}</span
                   ><small>{{ city.provincia }}</small>
                 </button>
               }
             </div>
-            <button type="button" class="btn btn-ghost btn-block" (click)="showCityPicker.set(false)">
+            @if (locationMessage(); as msg) {
+              <p class="inline-message" role="status">{{ msg.key | translate: msg.params }}</p>
+            }
+            <button type="button" class="btn btn-primary btn-block" [disabled]="!selectedCity() || savingCity()" (click)="saveCity()">
+              {{ 'common.save' | translate }}
+            </button>
+            <button type="button" class="btn btn-ghost btn-block" [disabled]="savingCity()" (click)="closeCityPicker()">
               {{ 'common.cancel' | translate }}
             </button>
           </div>
@@ -209,6 +217,9 @@ interface LocationMessage {
         backdrop-filter: blur(3px);
       }
       .modal {
+        display: flex;
+        flex-direction: column;
+        max-height: calc(100dvh - 2rem);
         width: min(100%, 390px);
         padding: 1.4rem;
         border-radius: var(--radius-lg);
@@ -219,6 +230,7 @@ interface LocationMessage {
         margin-bottom: 1rem;
       }
       .city-list {
+        min-height: 0;
         display: grid;
         gap: 0.35rem;
         max-height: 300px;
@@ -251,6 +263,7 @@ export class AccountSettingsComponent {
   readonly municipios = signal<Municipio[]>([]);
   readonly showCityPicker = signal(false);
   readonly savingCity = signal(false);
+  readonly selectedCity = signal<Municipio | null>(null);
   readonly locationMessage = signal<LocationMessage | null>(null);
 
   constructor() {
@@ -275,6 +288,20 @@ export class AccountSettingsComponent {
       unsupported: 'account.settings.location.statusUnsupported',
     };
     return map[this.locationService.settings().permissionState];
+  }
+  openCityPicker(): void {
+    this.selectedCity.set(this.municipios().find(city => city.id === this.locationService.settings().preferredCityId) ?? null);
+    this.locationMessage.set(null);
+    this.showCityPicker.set(true);
+  }
+
+  closeCityPicker(): void {
+    if (!this.savingCity()) this.showCityPicker.set(false);
+  }
+
+  async saveCity(): Promise<void> {
+    const city = this.selectedCity();
+    if (city) await this.selectCity(city.id, city.nombre);
   }
   async requestLocation(): Promise<void> {
     this.locationMessage.set(null);
