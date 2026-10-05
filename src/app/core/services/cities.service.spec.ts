@@ -4,6 +4,19 @@ import { OpsApiClient } from '../api/ops-api-client.service';
 import { CitiesService } from './cities.service';
 
 describe('CitiesService', () => {
+  it('does not cache failed zone loads as municipalities with no parking', async () => {
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'post']);
+    api.get.and.resolveTo({ contractlist: [{ contractId: 3, description1: 'Zarautz' }] });
+    api.post.and.rejectWith(new Error('Connection failed'));
+    TestBed.configureTestingModule({ providers: [provideZonelessChangeDetection(), { provide: OpsApiClient, useValue: api }] });
+    const service = TestBed.inject(CitiesService);
+    await expectAsync(service.getCities()).toBeRejectedWithError('Connection failed');
+    expect(service.cities()).toEqual([]);
+    api.post.and.resolveTo({ streetsFulllist: [{ zone: 7, zoneDesc: 'AZUL' }] });
+    const recovered = await service.getCities();
+    expect(api.get).toHaveBeenCalledTimes(2);
+    expect(service.selectableCities(recovered.data).length).toBe(1);
+  });
   it('does not invent municipality names when the backend omits them', () => {
     TestBed.configureTestingModule({ providers: [provideZonelessChangeDetection(), { provide: OpsApiClient, useValue: {} }] });
     const service = TestBed.inject(CitiesService);

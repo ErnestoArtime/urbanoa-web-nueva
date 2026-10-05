@@ -70,12 +70,14 @@ export class CitiesService {
     const enriched = await Promise.all(
       cities.map(async (city) => {
         const zones = new Map<number, string>();
+        let zoneLoadError: unknown;
         try {
           const streets = await this.api.post<StreetsApiValue>(OPS_ENDPOINTS.parking.streets, { contractId: city.contractId });
           for (const street of streets.streetsFulllist ?? []) {
             if (street.zone > 0) zones.set(street.zone, street.zoneDesc || `Zona ${street.zone}`);
           }
-        } catch {
+        } catch (error) {
+          zoneLoadError = error;
           // QueryMapStretchesAPI se usa como respaldo más abajo.
         }
 
@@ -84,11 +86,13 @@ export class CitiesService {
             for (const zone of await this.getZonesFromMap(city.contractId)) {
               zones.set(zone.id, zone.name);
             }
-          } catch {
-            // El municipio se mantiene visible aunque su información de zonas falle.
+          } catch (error) {
+            zoneLoadError = error;
           }
         }
 
+        // An unavailable catalogue must not be cached as a municipality without parking.
+        if (!zones.size && zoneLoadError) throw zoneLoadError;
         const zoneList = [...zones.entries()].map(([id, name]) => ({ id, name }));
         return { ...city, zones: zoneList, zonas: zoneList.length };
       }),
