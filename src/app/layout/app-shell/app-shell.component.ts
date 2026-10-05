@@ -81,7 +81,7 @@ const TITLE_KEYS: Record<string, string> = {
               }
               <span>{{ connectedUserEmail() }}</span>
             </div>
-            <button type="button" class="toolbar-logout" (click)="logout()">{{ 'account.logout' | translate }}</button>
+            <button type="button" class="toolbar-logout toolbar-control" (click)="logout()">{{ 'account.logout' | translate }}</button>
             <app-lang-selector />
           </div>
         </div>
@@ -200,22 +200,6 @@ const TITLE_KEYS: Record<string, string> = {
       .connected-user span {
         color: var(--color-text-muted);
         font-size: var(--text-2xs);
-      }
-      .toolbar-logout {
-        min-height: 34px;
-        padding: 0.35rem 0.65rem;
-        border: 1px solid var(--color-border);
-        border-radius: var(--radius-pill);
-        background: var(--color-surface);
-        color: var(--color-primary);
-        cursor: pointer;
-        font: inherit;
-        font-size: var(--text-xs);
-        font-weight: var(--font-bold);
-      }
-      .toolbar-logout:hover,
-      .toolbar-logout:focus-visible {
-        border-color: var(--color-primary);
       }
       app-lang-selector {
         display: block;
