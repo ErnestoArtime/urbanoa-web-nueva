@@ -12,7 +12,7 @@ import { APP_BRAND } from '../../shared/constants/app-brand';
   template: `
     <aside class="sidebar">
       <div class="sidebar-brand">
-        <img src="/assets/brand/arinpark-logo.png" [alt]="brand.name" class="brand-logo" />
+        <img [src]="brand.logoPath" [alt]="brand.name" class="brand-logo" />
       </div>
       <nav class="sidebar-nav">
         @for (item of navItems; track item.path) {

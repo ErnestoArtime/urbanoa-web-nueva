@@ -20,7 +20,7 @@ function passwordsMatch(control: AbstractControl): ValidationErrors | null {
   template: `
     <main class="auth-page register-page">
       <section class="register-panel">
-        <img src="/assets/brand/arinpark-logo.png" [alt]="brand.name" class="register-logo" />
+        <img [src]="brand.logoPath" [alt]="brand.name" class="register-logo" />
         <header>
           <a routerLink="/auth/login" [attr.aria-label]="'common.back' | translate">←</a>
           <div>

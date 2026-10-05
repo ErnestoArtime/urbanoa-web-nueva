@@ -15,7 +15,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
   template: `
     <main class="auth-page apk-auth-page">
       <section class="auth-panel">
-        <img src="/assets/brand/arinpark-logo.png" [alt]="brand.name" class="apk-auth-logo" />
+        <img [src]="brand.logoPath" [alt]="brand.name" class="apk-auth-logo" />
         <h1>{{ 'auth.login.title' | translate }}</h1>
         <p class="auth-intro">{{ 'auth.login.subtitle' | translate }}</p>
         <form [formGroup]="form" (ngSubmit)="onSubmit()">

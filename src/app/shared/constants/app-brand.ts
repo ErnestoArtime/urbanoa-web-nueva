@@ -6,5 +6,5 @@ export const APP_BRAND = {
   versionName: '1.0',
   versionCode: '1',
   storeUrl: environment.storeUrl,
-  logoPath: '/assets/brand/arinpark-logo.png',
+  logoPath: '/assets/brand/arinpark-logo.png?v=b153be4e2dcb',
 };
