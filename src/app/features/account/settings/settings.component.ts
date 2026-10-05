@@ -274,7 +274,9 @@ export class AccountSettingsComponent {
         this.municipios.set(cities);
         const remoteContractId = this.userService.user().preferredContractId;
         const remoteCity = cities.find((city) => city.contractId === remoteContractId);
-        if (remoteCity) this.locationService.setPreferredCity(remoteCity.id, remoteCity.nombre, remoteCity.contractId);
+        if (remoteCity && !this.locationService.settings().preferredCitySyncPending) {
+          this.locationService.setPreferredCity(remoteCity.id, remoteCity.nombre, remoteCity.contractId);
+        }
       })
       .catch(() => this.municipios.set([]));
   }
@@ -319,11 +321,15 @@ export class AccountSettingsComponent {
     this.savingCity.set(true);
     try {
       const contractId = this.citiesService.contractIdFor(id);
-      this.locationService.setPreferredCity(id, name, contractId);
-      const result = await this.userService.updatePreferredContract(contractId);
-      if (!result.success) {
-        this.locationMessage.set({ key: 'account.settings.location.citySaveError' });
-        return;
+      this.locationService.setPreferredCity(id, name, contractId, true);
+      const savedSettings = this.locationService.settings();
+      // TODO(OPS): QueryUserAPI still returns contractId=0 after a successful update.
+      // Keep the account-scoped local preference pending until OPS confirms it.
+      try {
+        const result = await this.userService.updatePreferredContract(contractId);
+        if (result.success) this.locationService.confirmPreferredCitySync(savedSettings);
+      } catch {
+        // Remote failure must not block a municipality already saved locally.
       }
       this.showCityPicker.set(false);
       this.locationMessage.set({ key: 'account.settings.location.citySavedMessage', params: { city: name } });

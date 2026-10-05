@@ -823,7 +823,10 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
       const requestedContractId = Number(this.query.cityId);
       const preferredId = this.locationSettings.settings().preferredCityId;
       const preferredContractId = this.locationSettings.settings().preferredContractId;
-      const remotePreferredContractId = this.userService.user().preferredContractId;
+      // A locally saved choice takes priority while OPS synchronization is pending.
+      const remotePreferredContractId = this.locationSettings.settings().preferredCitySyncPending
+        ? undefined
+        : this.userService.user().preferredContractId;
       const selected =
         selectableCities.find((city) => city.contractId === requestedContractId) ??
         selectableCities.find((city) => city.id === this.query.city) ??

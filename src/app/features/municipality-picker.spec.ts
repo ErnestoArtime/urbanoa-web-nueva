@@ -33,7 +33,7 @@ for (const componentType of [AccountSettingsComponent, OnboardingLocationCompone
       return fixture;
     }
 
-    it('selects a draft and saves only when Guardar is pressed, keeping errors inside the modal', async () => {
+    it('saves locally and closes the picker when OPS cannot confirm the municipality', async () => {
       const fixture = await open();
       const root = fixture.nativeElement as HTMLElement;
       const save = Array.from(root.querySelectorAll('button')).find(button => button.textContent?.trim() === 'Guardar')!;
@@ -47,12 +47,13 @@ for (const componentType of [AccountSettingsComponent, OnboardingLocationCompone
       await fixture.whenStable();
       fixture.detectChanges();
       expect(update).toHaveBeenCalledOnceWith(1);
-      expect(fixture.componentInstance.showCityPicker()).toBeTrue();
-      expect(root.querySelector('.city-picker-modal [role="status"], .city-picker [role="status"]')?.textContent).toContain('citySaveError');
-      expect(save.disabled).toBeFalse();
-      save.click();
-      await fixture.whenStable();
-      expect(update).toHaveBeenCalledTimes(2);
+      expect(fixture.componentInstance.showCityPicker()).toBeFalse();
+      expect(TestBed.inject(LocationSettingsService).settings()).toEqual(jasmine.objectContaining({
+        preferredCityId: city.id, preferredCitySyncPending: true,
+      }));
+      expect(root.textContent).toContain('citySaved');
+      fixture.componentInstance.openCityPicker();
+      expect(fixture.componentInstance.selectedCity()?.id).toBe(city.id);
     });
 
     it('discards the draft when cancelled without changing the saved municipality', async () => {
@@ -72,6 +73,16 @@ for (const componentType of [AccountSettingsComponent, OnboardingLocationCompone
       await fixture.componentInstance.saveCity();
       expect(fixture.componentInstance.showCityPicker()).toBeFalse();
       expect(update).toHaveBeenCalledOnceWith(1);
+      expect(TestBed.inject(LocationSettingsService).settings().preferredCitySyncPending).toBeFalse();
+    });
+
+    it('keeps the local choice and closes when the OPS request throws', async () => {
+      const fixture = await open();
+      fixture.componentInstance.selectedCity.set(city);
+      update.and.rejectWith(new Error('OPS unavailable'));
+      await fixture.componentInstance.saveCity();
+      expect(fixture.componentInstance.showCityPicker()).toBeFalse();
+      expect(TestBed.inject(LocationSettingsService).settings().preferredCitySyncPending).toBeTrue();
     });
   });
 }

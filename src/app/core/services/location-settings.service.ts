@@ -9,6 +9,7 @@ export interface LocationSettings {
   preferredCityId?: string;
   preferredCityName?: string;
   preferredContractId?: number;
+  preferredCitySyncPending?: boolean;
   lastLatitude?: number;
   lastLongitude?: number;
   lastUpdatedAt?: string;
@@ -92,14 +93,20 @@ export class LocationSettingsService {
     }
   }
 
-  setPreferredCity(cityId: string, cityName: string, contractId?: number): void {
+  setPreferredCity(cityId: string, cityName: string, contractId?: number, syncPending = false): void {
     if (!cityId.trim() || !cityName.trim()) throw new Error('El municipio preferido es obligatorio');
     this.patch({
       preferredCityId: cityId,
       preferredCityName: cityName,
       preferredContractId: Number.isFinite(contractId) && contractId! > 0 ? contractId : undefined,
+      preferredCitySyncPending: syncPending,
       useCurrentLocation: false,
     });
+  }
+
+  confirmPreferredCitySync(savedSettings: LocationSettings): void {
+    // Ignore confirmations for a different account or a newer local selection.
+    if (this.state() === savedSettings) this.patch({ preferredCitySyncPending: false });
   }
 
   disableCurrentLocation(): void {

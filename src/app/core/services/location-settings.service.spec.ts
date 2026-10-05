@@ -15,6 +15,20 @@ describe('LocationSettingsService', () => {
     expect(service.settings().useCurrentLocation).toBeFalse();
   });
 
+  it('persists pending synchronization per account and ignores stale confirmations', () => {
+    const service = new LocationSettingsService();
+    service.setUserScope('user-a');
+    service.setPreferredCity('zarautz', 'Zarautz', 3, true);
+    const saved = service.settings();
+    service.setUserScope('user-b');
+    service.confirmPreferredCitySync(saved);
+    expect(service.settings().preferredCityId).toBeUndefined();
+    service.setUserScope('user-a');
+    expect(service.settings().preferredCitySyncPending).toBeTrue();
+    service.confirmPreferredCitySync(service.settings());
+    expect(service.settings().preferredCitySyncPending).toBeFalse();
+  });
+
   it('does not inherit the previous stored authentication identity before login', () => {
     localStorage.setItem('urbanoa.auth.session', JSON.stringify({ user: { id: 'previous-user' } }));
     localStorage.setItem('urbanoa.location-settings.previous-user', JSON.stringify({ preferredCityId: 'private-city' }));

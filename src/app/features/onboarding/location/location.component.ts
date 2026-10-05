@@ -162,11 +162,14 @@ export class OnboardingLocationComponent {
     this.message.set('');
     try {
       const contractId = this.citiesService.contractIdFor(id);
-      this.locationService.setPreferredCity(id, name, contractId);
-      const result = await this.userService.updatePreferredContract(contractId);
-      if (!result.success) {
-        this.message.set('onboarding.location.citySaveError');
-        return;
+      this.locationService.setPreferredCity(id, name, contractId, true);
+      const savedSettings = this.locationService.settings();
+      // TODO(OPS): Leave synchronization pending while OPS does not retain contractId.
+      try {
+        const result = await this.userService.updatePreferredContract(contractId);
+        if (result.success) this.locationService.confirmPreferredCitySync(savedSettings);
+      } catch {
+        // The local choice remains usable even when OPS cannot synchronize it.
       }
       this.showCityPicker.set(false);
       this.message.set('onboarding.location.citySavedRedirect');
