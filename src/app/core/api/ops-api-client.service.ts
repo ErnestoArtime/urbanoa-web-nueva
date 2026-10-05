@@ -4,8 +4,29 @@ import { OpsApiEnvelope, OpsApiError } from './ops-api.types';
 import { OpsSessionService } from './ops-session.service';
 import { TranslationService } from '../services/translation.service';
 import { WindowSessionService } from '../services/window-session.service';
+import { OPS_ENDPOINTS } from './ops-endpoints';
 
 const SESSION_EXPIRED_ERROR_CODES = new Set([-23, -231]);
+// Explicit read-only operations: POST is also used for queries by OPS.
+const RETRYABLE_QUERIES = new Set<string>([
+  OPS_ENDPOINTS.parking.contracts,
+  OPS_ENDPOINTS.parking.mapStretches,
+  OPS_ENDPOINTS.parking.sectors,
+  OPS_ENDPOINTS.parking.zone,
+  OPS_ENDPOINTS.parking.place,
+  OPS_ENDPOINTS.parking.streets,
+  OPS_ENDPOINTS.parking.tickets,
+  OPS_ENDPOINTS.parking.parkingStatus,
+  OPS_ENDPOINTS.user.query,
+  OPS_ENDPOINTS.user.plates,
+  OPS_ENDPOINTS.user.notifications,
+  OPS_ENDPOINTS.user.operations,
+  OPS_ENDPOINTS.wallet.credit,
+  OPS_ENDPOINTS.wallet.paymentMethods,
+  OPS_ENDPOINTS.support.query,
+]);
+const RETRY_DELAYS_MS = [250, 500, 1000];
+const RETRYABLE_HTTP_STATUSES = new Set([408, 429, 500, 502, 503, 504]);
 
 interface OpsRequestOptions {
   body?: unknown;
@@ -45,6 +66,51 @@ export class OpsApiClient {
   }
 
   private async request<T>(method: 'GET' | 'POST', endpoint: string, options: OpsRequestOptions): Promise<T> {
+    const lifecycle = new AbortController();
+    this.session.registerRequest(lifecycle);
+    try {
+      for (let attempt = 0; ; attempt++) {
+        if (lifecycle.signal.aborted) throw new OpsApiError('abort', endpoint, `${endpoint}: la solicitud fue cancelada`);
+        this.verifyWindowSession(endpoint, options.token);
+        try {
+          const value = await this.requestOnce<T>(method, endpoint, options);
+          if (lifecycle.signal.aborted) throw new OpsApiError('abort', endpoint, `${endpoint}: la solicitud fue cancelada`);
+          return value;
+        } catch (error) {
+          if (lifecycle.signal.aborted) throw new OpsApiError('abort', endpoint, `${endpoint}: la solicitud fue cancelada`);
+          if (!RETRYABLE_QUERIES.has(endpoint) || attempt >= RETRY_DELAYS_MS.length || !this.isTransient(error)) throw error;
+          await this.waitForRetry(RETRY_DELAYS_MS[attempt], lifecycle.signal, endpoint);
+        }
+      }
+    } finally {
+      this.session.unregisterRequest(lifecycle);
+    }
+  }
+
+  private isTransient(error: unknown): boolean {
+    return (
+      error instanceof OpsApiError &&
+      (error.kind === 'transport' || error.kind === 'timeout' || (error.kind === 'http' && RETRYABLE_HTTP_STATUSES.has(error.status ?? 0)))
+    );
+  }
+
+  private waitForRetry(delay: number, signal: AbortSignal, endpoint: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const abort = () => {
+        clearTimeout(timer);
+        signal.removeEventListener('abort', abort);
+        reject(new OpsApiError('abort', endpoint, `${endpoint}: la solicitud fue cancelada`));
+      };
+      const timer = setTimeout(() => {
+        signal.removeEventListener('abort', abort);
+        resolve();
+      }, delay);
+      signal.addEventListener('abort', abort, { once: true });
+      if (signal.aborted) abort();
+    });
+  }
+
+  private async requestOnce<T>(method: 'GET' | 'POST', endpoint: string, options: OpsRequestOptions): Promise<T> {
     const controller = new AbortController();
     this.session?.registerRequest(controller);
     let timedOut = false;
@@ -69,6 +135,7 @@ export class OpsApiClient {
         body: method === 'POST' ? JSON.stringify(options.body) : undefined,
         signal: controller.signal,
       });
+      controller.signal.throwIfAborted();
       this.verifyWindowSession(endpoint, options.token);
 
       if (!response.ok) {
@@ -86,7 +153,9 @@ export class OpsApiClient {
       let payload: unknown;
       try {
         payload = await response.json();
-      } catch {
+        controller.signal.throwIfAborted();
+      } catch (error) {
+        if (controller.signal.aborted) throw error;
         throw new OpsApiError('invalid-response', endpoint, `${endpoint}: la respuesta no es JSON válido`, response.status);
       }
       this.verifyWindowSession(endpoint, options.token);
