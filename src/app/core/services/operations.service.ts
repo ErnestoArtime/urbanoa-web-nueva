@@ -151,7 +151,9 @@ export class OperationsService {
   readonly hasActiveParkingOperations = computed(() => this.activeParkingOperations().length > 0);
   readonly operationsBadgeCount = computed(
     () =>
-      this._activeParkings().length +
+      new Set(this._activeParkings().map((parking) =>
+        parking.plate ? `${parking.contractId}:${parking.sectorId}:${this.normalizePlate(parking.plate)}` : parking.id,
+      )).size +
       this._operations().filter((operation) => operation.type === OperationType.UNPAID_FINES && operation.fineStatus === 1).length,
   );
   readonly activeLoading = this._activeLoading.asReadonly();
