@@ -818,18 +818,20 @@ export class OperationsLayoutComponent implements OnInit, AfterViewInit {
   }
 
   async confirmUnparkAction(): Promise<void> {
-    if (this.unparking()) return;
+    if (!this.confirmUnpark() || this.unparking()) return;
     this.unparking.set(true);
     try {
       if (await this.parkingSessionService.leaveParking(this.pendingUnparkId, this.pendingUnparkQuote)) {
         this.unparkedRefundAmount.set(this.pendingUnparkAmount() ?? 0);
-        this.confirmUnpark.set(false);
-        this.pendingUnparkId = '';
-        this.pendingUnparkQuote = undefined;
-        this.pendingUnparkAmount.set(null);
         this.unparked.set(true);
       }
+    } catch (error) {
+      this.unparkError.set(error instanceof Error ? error.message : this.translations.translate('dashboard.unparkError'));
     } finally {
+      this.confirmUnpark.set(false);
+      this.pendingUnparkId = '';
+      this.pendingUnparkQuote = undefined;
+      this.pendingUnparkAmount.set(null);
       this.unparking.set(false);
     }
   }
