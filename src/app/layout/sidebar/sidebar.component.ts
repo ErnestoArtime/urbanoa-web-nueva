@@ -94,11 +94,24 @@ import { APP_BRAND } from '../../shared/constants/app-brand';
         font-weight: var(--font-medium);
         font-size: var(--text-2xs);
         text-align: center;
-        transition: background 0.15s;
+        border-radius: var(--radius-md);
+        transition: color 0.15s;
       }
       .sidebar-link:hover {
-        background: var(--color-background);
+        color: var(--color-primary);
         text-decoration: none;
+      }
+      .sidebar-link:focus-visible {
+        outline: 2px solid var(--color-primary);
+        outline-offset: -2px;
+      }
+      .sidebar-link:hover:not(.active) .nav-icon-pill,
+      .sidebar-link:focus-visible:not(.active) .nav-icon-pill {
+        background: var(--color-accent-soft);
+      }
+      .sidebar-link:hover .sidebar-icon,
+      .sidebar-link:focus-visible .sidebar-icon {
+        color: var(--color-primary);
       }
       .sidebar-link.active {
         color: var(--color-primary);
@@ -133,6 +146,7 @@ import { APP_BRAND } from '../../shared/constants/app-brand';
         width: 22px;
         height: 22px;
         color: var(--color-secondary);
+        transition: color 0.15s;
       }
       .sidebar-link.active .sidebar-icon {
         color: var(--color-primary);
