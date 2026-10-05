@@ -64,7 +64,7 @@ describe('OperationsService stored data migration', () => {
     expect(service.operations()).toEqual([]);
   });
 
-  it('counts displayed active parkings plus only payable fines', async () => {
+  it('counts each non-past parking and extension plus only payable fines as in the APK', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
     api.post.and.resolveTo([
       { operationNumber: 1, operationType: 1, timePeriod: 2, opDate: '120000070926', plate: 'AAA111', contractId: 3, sectorId: 10 },
@@ -82,7 +82,7 @@ describe('OperationsService stored data migration', () => {
       { id: 'vehicle-a', plate: 'AAA111' },
       { id: 'vehicle-b', plate: 'BBB222' },
     ]);
-    expect(service.operationsBadgeCount()).toBe(3);
+    expect(service.operationsBadgeCount()).toBe(5);
   });
 
   it('maps operation type 7 as a balance refund', async () => {

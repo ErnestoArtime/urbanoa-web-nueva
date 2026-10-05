@@ -152,10 +152,13 @@ export class OperationsService {
   readonly hasActiveParkingOperations = computed(() => this.activeParkingOperations().length > 0);
   readonly operationsBadgeCount = computed(
     () =>
-      new Set(this._activeParkings().map((parking) =>
-        parking.plate ? `${parking.contractId}:${parking.sectorId}:${this.normalizePlate(parking.plate)}` : parking.id,
-      )).size +
-      this._operations().filter((operation) => operation.type === OperationType.UNPAID_FINES && operation.fineStatus === 1).length,
+      // APK GetLiveOperationsSizeUseCase counts each non-past operation,
+      // including extensions and future parking, without grouping by vehicle.
+      this._operations().filter((operation) =>
+        ((operation.type === OperationType.PARKING || operation.type === OperationType.PARKING_EXTENSION) &&
+          (operation.timePeriod === 2 || operation.timePeriod === 3)) ||
+        (operation.type === OperationType.UNPAID_FINES && operation.fineStatus === 1),
+      ).length,
   );
   readonly activeLoading = this._activeLoading.asReadonly();
   readonly source = signal<'idle' | 'remote' | 'error'>('idle');
