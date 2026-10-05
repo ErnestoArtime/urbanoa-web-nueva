@@ -39,6 +39,7 @@ export class LocationSettingsService {
   }
 
   async refreshPermissionState(): Promise<LocationPermissionState> {
+    const scope = this.userScope;
     if (!navigator.geolocation) {
       this.patch({ permissionState: 'unsupported', useCurrentLocation: false });
       return 'unsupported';
@@ -46,6 +47,7 @@ export class LocationSettingsService {
 
     try {
       const permission = await navigator.permissions.query({ name: 'geolocation' });
+      if (scope !== this.userScope) return this.state().permissionState;
       const permissionState = permission.state as LocationPermissionState;
       this.patch({ permissionState });
       return permissionState;
@@ -55,6 +57,7 @@ export class LocationSettingsService {
   }
 
   async requestCurrentLocation(): Promise<LocationSetupResult> {
+    const scope = this.userScope;
     if (!navigator.geolocation) {
       this.patch({ permissionState: 'unsupported', useCurrentLocation: false });
       return { ok: false, status: 'unsupported' };
@@ -69,6 +72,7 @@ export class LocationSettingsService {
         });
       });
 
+      if (scope !== this.userScope) return { ok: false, status: 'error' };
       this.patch({
         permissionState: 'granted',
         useCurrentLocation: true,
@@ -78,7 +82,9 @@ export class LocationSettingsService {
       });
       return { ok: true, status: 'granted' };
     } catch {
+      if (scope !== this.userScope) return { ok: false, status: 'error' };
       const permissionState = await this.refreshPermissionState();
+      if (scope !== this.userScope) return { ok: false, status: 'error' };
       if (permissionState !== 'granted') {
         this.patch({ useCurrentLocation: false, lastLatitude: undefined, lastLongitude: undefined });
       }
@@ -125,11 +131,7 @@ export class LocationSettingsService {
   private readSettings(): LocationSettings {
     try {
       const scopedKey = `${this.storagePrefix}.${encodeURIComponent(this.userScope)}`;
-      let raw = localStorage.getItem(scopedKey);
-      if (!raw && this.userScope !== 'anonymous') {
-        raw = localStorage.getItem(this.storagePrefix);
-        if (raw) localStorage.setItem(scopedKey, raw);
-      }
+      const raw = localStorage.getItem(scopedKey);
       const parsed = JSON.parse(raw ?? 'null') as LocationSettings | null;
       if (parsed && typeof parsed === 'object') return { ...this.defaults(), ...parsed };
     } catch {

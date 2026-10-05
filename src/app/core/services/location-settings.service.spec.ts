@@ -45,4 +45,25 @@ describe('LocationSettingsService', () => {
 
     expect(service.settings()).toEqual(jasmine.objectContaining({ preferredCityId: 'donostia', preferredContractId: 1 }));
   });
+
+  it('never assigns unowned legacy municipality settings to a newly signed-in account', () => {
+    localStorage.setItem('urbanoa.location-settings', JSON.stringify({ preferredCityId: 'old-city', preferredContractId: 3 }));
+    const service = new LocationSettingsService();
+    service.setUserScope('u2');
+    expect(service.settings().preferredCityId).toBeUndefined();
+    expect(localStorage.getItem('urbanoa.location-settings.u2')).toBeNull();
+  });
+
+  it('discards a geolocation result requested by the previous user', async () => {
+    let resolve!: PositionCallback;
+    spyOn(navigator.geolocation, 'getCurrentPosition').and.callFake(callback => { resolve = callback; });
+    const service = new LocationSettingsService();
+    service.setUserScope('u1');
+    const old = service.requestCurrentLocation();
+    service.setUserScope('u2');
+    resolve({ coords: { latitude: 43, longitude: -2 }, timestamp: Date.now() } as GeolocationPosition);
+    expect((await old).ok).toBeFalse();
+    expect(service.settings().lastLatitude).toBeUndefined();
+    expect(service.settings().useCurrentLocation).toBeFalse();
+  });
 });
