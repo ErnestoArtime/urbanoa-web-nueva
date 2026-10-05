@@ -7,6 +7,8 @@ export const routes: Routes = [
   // aliases so the provider can return to the web app using the same contract.
   { path: 'ok', redirectTo: 'app/paycomet/ok', pathMatch: 'full' },
   { path: 'ko', redirectTo: 'app/paycomet/ko', pathMatch: 'full' },
+  { path: 'web-ui/ok', redirectTo: 'app/paycomet/ok', pathMatch: 'full' },
+  { path: 'web-ui/ko', redirectTo: 'app/paycomet/ko', pathMatch: 'full' },
   {
     path: 'auth',
     loadChildren: () => import('./features/auth/auth.routes').then((m) => m.AUTH_ROUTES),

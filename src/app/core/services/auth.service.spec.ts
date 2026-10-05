@@ -323,25 +323,27 @@ describe('AuthService', () => {
     expect(sessionStorage.getItem('urbanoa.auth.paycomet-resume')).toBeNull();
   });
 
-  it('restores a new document at the web payment callback only once', () => {
-    const originalUrl = location.href;
-    try {
-      service.adoptToken('payment-token', 'user@example.com');
-      TestBed.inject(PaymentChallengeService).beginRecharge({ amount: 1 });
-      service.preparePaymentRedirect('https://api.paycomet.com/gateway/sca_challenge.php');
-      const key = activeWindowKey()!;
-      const owner = localStorage.getItem(key);
-      history.replaceState(null, '', '/ok?ret=0');
-      const returned = TestBed.runInInjectionContext(() => new AuthService());
-      expect(returned.token()).toBe('payment-token');
-      expect(returned.ensureActiveSession()).toBeTrue();
-      expect(localStorage.getItem(key)).toBe(owner);
-      const refreshed = TestBed.runInInjectionContext(() => new AuthService());
-      expect(refreshed.isAuthenticated()).toBeFalse();
-    } finally {
-      history.replaceState(null, '', originalUrl);
-    }
-  });
+  for (const callback of ['/ok', '/ko', '/web-ui/ok', '/web-ui/ko', '/web-ui/ok/', '/web-ui/ko/']) {
+    it(`restores a new document at ${callback} only once`, () => {
+      const originalUrl = location.href;
+      try {
+        service.adoptToken('payment-token', 'user@example.com');
+        TestBed.inject(PaymentChallengeService).beginRecharge({ amount: 1 });
+        service.preparePaymentRedirect('https://api.paycomet.com/gateway/sca_challenge.php');
+        const key = activeWindowKey()!;
+        const owner = localStorage.getItem(key);
+        history.replaceState(null, '', `${callback}?r=WLT-test&h=signature&ret=0&i=1000`);
+        const returned = TestBed.runInInjectionContext(() => new AuthService());
+        expect(returned.token()).toBe('payment-token');
+        expect(returned.ensureActiveSession()).toBeTrue();
+        expect(localStorage.getItem(key)).toBe(owner);
+        const refreshed = TestBed.runInInjectionContext(() => new AuthService());
+        expect(refreshed.isAuthenticated()).toBeFalse();
+      } finally {
+        history.replaceState(null, '', originalUrl);
+      }
+    });
+  }
 
   it('does not resurrect a login whose profile finishes after the window lost ownership', async () => {
     opsApi.post.and.resolveTo({ token: 'real-token', firstLogin: 0 });

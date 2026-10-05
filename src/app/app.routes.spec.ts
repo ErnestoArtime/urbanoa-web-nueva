@@ -8,17 +8,18 @@ import { routes } from './app.routes';
 class ReturnRouteTestComponent {}
 
 describe('Paycomet return aliases', () => {
-  for (const outcome of ['ok', 'ko']) {
-    it(`preserves the OPS query parameters through /${outcome}`, async () => {
+  for (const callback of ['ok', 'ko', 'web-ui/ok', 'web-ui/ko']) {
+    const outcome = callback.endsWith('ok') ? 'ok' : 'ko';
+    it(`preserves the OPS query parameters through /${callback}`, async () => {
       TestBed.configureTestingModule({ providers: [
         provideZonelessChangeDetection(),
         provideRouter([
-          ...routes.filter(route => route.path === 'ok' || route.path === 'ko'),
+          ...routes.filter(route => ['ok', 'ko', 'web-ui/ok', 'web-ui/ko'].includes(route.path ?? '')),
           { path: 'app/paycomet/:outcome', component: ReturnRouteTestComponent },
         ]),
       ] });
       const harness = await RouterTestingHarness.create();
-      await harness.navigateByUrl(`/${outcome}?r=WLT-test&h=signature&ret=0&i=1000`);
+      await harness.navigateByUrl(`/${callback}?r=WLT-test&h=signature&ret=0&i=1000`);
       const router = TestBed.inject(Router);
       expect(router.url).toBe(`/app/paycomet/${outcome}?r=WLT-test&h=signature&ret=0&i=1000`);
     });

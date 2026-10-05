@@ -202,7 +202,7 @@ export class AuthService {
       if (!raw) return false;
       const saved = JSON.parse(raw) as { session: AuthSession; owner: string; startedAt: number; departureUrl: string };
       const pending = this.paymentChallenge.getPending();
-      const callback = /^\/(?:ok|ko|app\/paycomet\/(?:ok|ko))\/?$/.test(location.pathname);
+      const callback = /^\/(?:(?:web-ui\/)?(?:ok|ko)|app\/paycomet\/(?:ok|ko))\/?$/.test(location.pathname);
       if (
         (!callback && !(backFromPayment && location.pathname === saved.departureUrl)) ||
         !pending ||
