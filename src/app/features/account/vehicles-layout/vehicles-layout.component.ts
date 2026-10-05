@@ -14,7 +14,7 @@ import type { Vehicle } from '../../../shared/models/vehicle';
   selector: 'app-vehicles-layout',
   imports: [RouterLink, SplitViewComponent, TranslatePipe, AppIconComponent],
   template: `
-    <app-split-view [hideList]="isChildRoute()" [hideDetail]="!isChildRoute()">
+    <app-split-view class="vehicles-split" [hideList]="isChildRoute()" [hideDetail]="!isChildRoute()">
       <div splitList class="page has-sticky-actions" [attr.aria-busy]="loadingVehicles()">
         <h1 class="page-title">{{ 'account.menu.vehicles' | translate }}</h1>
         @if (loadingVehicles()) {

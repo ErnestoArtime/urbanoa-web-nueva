@@ -17,7 +17,7 @@ import { TranslationService } from '../../../core/services/translation.service';
   selector: 'app-account-shell',
   imports: [RouterLink, RouterLinkActive, AppIconComponent, SplitViewComponent, TranslatePipe, DecimalPipe],
   template: `
-    <app-split-view [hideList]="!isRootRoute()" [hideDetail]="isRootRoute()">
+    <app-split-view [class.account-split]="isVehicleRoute()" [hideList]="!isRootRoute()" [hideDetail]="isRootRoute()">
       <div splitList class="account-master">
         <h1 class="page-title">{{ 'account.title' | translate }}</h1>
         <div class="account-profile">
@@ -243,6 +243,7 @@ export class AccountShellComponent implements OnInit {
   );
 
   readonly isRootRoute = () => this.url() === '/app/account';
+  readonly isVehicleRoute = () => this.url().startsWith('/app/account/vehicles');
 
   ngOnInit(): void {
     void this.userService.load();

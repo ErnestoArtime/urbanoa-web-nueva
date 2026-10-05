@@ -549,6 +549,26 @@ a:hover {
   }
 }
 
+/* Keep vehicle navigation visible when the editor fits beside it. */
+@media (min-width: 960px) {
+  .vehicles-split > .split-view > .split-view-list {
+    display: block;
+    width: clamp(260px, 24vw, 420px);
+  }
+  .vehicles-split > .split-view > .split-view-detail {
+    min-width: 0;
+  }
+}
+@media (min-width: 1280px) {
+  .account-split > .split-view > .split-view-list {
+    display: block;
+    width: clamp(250px, 22vw, 420px);
+  }
+  .account-split > .split-view > .split-view-detail {
+    display: block;
+    min-width: 0;
+  }
+}
 /* Auth page */
 .auth-page {
   min-height: 100dvh;
