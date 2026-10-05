@@ -12,7 +12,7 @@ import { LoaderComponent } from '../../../shared/components/loader/loader.compon
   template: `
     <div class="page">
       <app-loader [visible]="loading()" [message]="'parking.streets.loading' | translate" imageSrc="/assets/brand/login-logo.jpg" />
-      <a [routerLink]="['/app/parking/city-info']" [queryParams]="{ id: cityId }" class="back-link">{{
+      <a [routerLink]="['/app/parking/cities']" [queryParams]="{ city: cityId, cityName, vehicleId, plate }" class="back-link">{{
         'parking.streets.back' | translate
       }}</a>
       <h1 class="page-title">{{ 'parking.selectStreet' | translate }}</h1>
