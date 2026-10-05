@@ -210,6 +210,61 @@ describe('AuthService', () => {
     expect(TestBed.inject(Router).navigate).toHaveBeenCalledWith(['/auth/login'], { queryParams: { sessionExpired: '1' } });
   });
 
+  it('restores the current tab on reload before checking authenticated routes', () => {
+    service.adoptToken('reload-token', 'user@example.com');
+    const owner = localStorage.getItem(activeWindowKey()!);
+    window.dispatchEvent(new PageTransitionEvent('pagehide'));
+    spyOn(performance, 'getEntriesByType').and.returnValue([{ type: 'reload' } as PerformanceNavigationTiming]);
+    const refreshed = TestBed.runInInjectionContext(() => new AuthService());
+    expect(refreshed.token()).toBe('reload-token');
+    expect(refreshed.ensureActiveSession()).toBeTrue();
+    expect(localStorage.getItem(activeWindowKey()!)).toBe(owner);
+    expect(opsSession.setToken).toHaveBeenCalledWith('reload-token');
+    expect(sessionStorage.getItem('urbanoa.auth.reload-resume')).toBeNull();
+  });
+
+  it('rejects reload after another window claims the account', () => {
+    service.adoptToken('reload-token', 'user@example.com');
+    const key = activeWindowKey()!;
+    window.dispatchEvent(new PageTransitionEvent('pagehide'));
+    localStorage.setItem(key, 'another-window');
+    spyOn(performance, 'getEntriesByType').and.returnValue([{ type: 'reload' } as PerformanceNavigationTiming]);
+    const refreshed = TestBed.runInInjectionContext(() => new AuthService());
+    expect(refreshed.isAuthenticated()).toBeFalse();
+    expect(localStorage.getItem(key)).toBe('another-window');
+  });
+
+  it('discards the reload continuation on ordinary navigation', () => {
+    service.adoptToken('reload-token', 'user@example.com');
+    window.dispatchEvent(new PageTransitionEvent('pagehide'));
+    spyOn(performance, 'getEntriesByType').and.returnValue([{ type: 'navigate' } as PerformanceNavigationTiming]);
+    const opened = TestBed.runInInjectionContext(() => new AuthService());
+    expect(opened.isAuthenticated()).toBeFalse();
+    expect(sessionStorage.getItem('urbanoa.auth.reload-resume')).toBeNull();
+  });
+
+  it('does not resume after logout even when the next document is a reload', async () => {
+    service.adoptToken('reload-token', 'user@example.com');
+    window.dispatchEvent(new PageTransitionEvent('pagehide'));
+    await service.logout();
+    spyOn(performance, 'getEntriesByType').and.returnValue([{ type: 'reload' } as PerformanceNavigationTiming]);
+    const refreshed = TestBed.runInInjectionContext(() => new AuthService());
+    expect(refreshed.isAuthenticated()).toBeFalse();
+    expect(sessionStorage.getItem('urbanoa.auth.reload-resume')).toBeNull();
+  });
+
+  it('rejects malformed or expired reload continuations', () => {
+    service.adoptToken('reload-token', 'user@example.com');
+    window.dispatchEvent(new PageTransitionEvent('pagehide'));
+    const saved = JSON.parse(sessionStorage.getItem('urbanoa.auth.reload-resume')!);
+    saved.savedAt = Date.now() - 61_000;
+    sessionStorage.setItem('urbanoa.auth.reload-resume', JSON.stringify(saved));
+    spyOn(performance, 'getEntriesByType').and.returnValue([{ type: 'reload' } as PerformanceNavigationTiming]);
+    expect(TestBed.runInInjectionContext(() => new AuthService()).isAuthenticated()).toBeFalse();
+    sessionStorage.setItem('urbanoa.auth.reload-resume', '{broken');
+    expect(TestBed.runInInjectionContext(() => new AuthService()).isAuthenticated()).toBeFalse();
+  });
+
   it('keeps the session for a prepared Paycomet round trip and consumes its continuation on history return', () => {
     service.adoptToken('payment-token', 'user@example.com');
     TestBed.inject(PaymentChallengeService).beginRecharge({ amount: 1, order: 'order' });
@@ -231,7 +286,9 @@ describe('AuthService', () => {
     service.preparePaymentRedirect('https://api.paycomet.com/gateway/sca_challenge.php');
     await service.logout();
     expect(sessionStorage.getItem('urbanoa.auth.paycomet-resume')).toBeNull();
+    expect(TestBed.inject(PaymentChallengeService).getPending()).toBeNull();
     service.adoptToken('payment-token', 'user@example.com');
+    TestBed.inject(PaymentChallengeService).beginRecharge({ amount: 1 });
     service.preparePaymentRedirect('https://api.paycomet.com/gateway/sca_challenge.php');
     const key = activeWindowKey()!;
     localStorage.setItem(key, 'another-owner');

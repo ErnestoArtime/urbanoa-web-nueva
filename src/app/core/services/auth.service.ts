@@ -85,6 +85,7 @@ export class AuthService {
   private readonly ticketStore = inject(ParkingTicketStoreService);
   private readonly paymentChallenge = inject(PaymentChallengeService);
   private readonly paymentSessionKey = 'urbanoa.auth.paycomet-resume';
+  private readonly reloadSessionKey = 'urbanoa.auth.reload-resume';
   private paymentDepartureArmed = false;
   private readonly storageKey = 'urbanoa.auth.session';
   private readonly legacyStorageKey = 'urbanoa.auth.user';
@@ -103,10 +104,13 @@ export class AuthService {
     this.syncOpsSession('');
     this.locationSettings.setUserScope();
     const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
-    this.resumePaymentSession(navigation?.type === 'back_forward');
+    if (!this.resumeReloadSession(navigation?.type === 'reload')) {
+      this.resumePaymentSession(navigation?.type === 'back_forward');
+    }
     window.addEventListener('urbanoa:session-expired', this.handleSessionExpired);
-    const pageHide = () => {
-      if (!this.paymentDepartureArmed || !this.windowSession.ensureActive()) this.clearSession();
+    const pageHide = (event: PageTransitionEvent) => {
+      if (this.paymentDepartureArmed && this.windowSession.ensureActive()) return;
+      if (event.persisted || !this.saveReloadSession()) this.clearSession();
     };
     const pageShow = (event: PageTransitionEvent) => {
       if (event.persisted && !this.resumePaymentSession(true)) this.handleSessionExpired();
@@ -132,6 +136,41 @@ export class AuthService {
     return this.isAuthenticated() && this.windowSession.ensureActive();
   }
 
+  private saveReloadSession(): boolean {
+    const session = this.session();
+    const owner = this.windowSession.paymentOwner();
+    if (!session || !owner) return false;
+    try {
+      // pagehide cannot distinguish reload from closing/leaving. Only a new
+      // document explicitly classified as reload may consume this tab-local record.
+      sessionStorage.setItem(this.reloadSessionKey, JSON.stringify({ session, owner, savedAt: Date.now(), url: location.href }));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  private resumeReloadSession(reload: boolean): boolean {
+    try {
+      const raw = sessionStorage.getItem(this.reloadSessionKey);
+      sessionStorage.removeItem(this.reloadSessionKey);
+      if (!reload || !raw) return false;
+      const saved = JSON.parse(raw) as { session: AuthSession; owner: string; savedAt: number; url: string };
+      const age = Date.now() - saved.savedAt;
+      if (
+        saved.url !== location.href || !Number.isFinite(age) || age < 0 || age > 60_000 ||
+        typeof saved.owner !== 'string' ||
+        typeof saved.session?.token !== 'string' || !saved.session.token.trim() ||
+        typeof saved.session.user?.email !== 'string' || typeof saved.session.user?.id !== 'string' ||
+        !this.windowSession.resumePayment(saved.owner, this.userIdentity(saved.session.user))
+      ) return false;
+      this.storeSession(saved.session);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   preparePaymentRedirect(challengeUrl: string): void {
     const url = new URL(challengeUrl);
     const pending = this.paymentChallenge.getPending();
@@ -147,7 +186,7 @@ export class AuthService {
       throw new Error(this.translation.translate('errors.server'));
     }
     // Only this tab retains a short-lived, single-use continuation for the
-    // external challenge. Ordinary refreshes never restore authentication.
+    // external challenge. Reload uses a separate, tab-local continuation.
     sessionStorage.setItem(
       this.paymentSessionKey,
       JSON.stringify({ session, owner, startedAt: pending.startedAt, departureUrl: location.pathname }),
@@ -195,6 +234,7 @@ export class AuthService {
       });
       if (!response.token?.trim()) throw new Error('LoginUserAPI no devolvió token');
       if (attempt !== this.loginAttempt) throw new Error('Login cancelled');
+      this.paymentChallenge.clear();
       // Claim ownership by the login identity while the profile is loading so
       // request validation remains active during the whole login flow.
       this.windowSession.activate(email);
@@ -385,8 +425,10 @@ export class AuthService {
   }
 
   private clearSession(): void {
+    this.paymentChallenge.clear();
     this.paymentDepartureArmed = false;
     try {
+      sessionStorage.removeItem(this.reloadSessionKey);
       sessionStorage.removeItem(this.paymentSessionKey);
     } catch {
       /* Storage may be unavailable. */
@@ -413,6 +455,7 @@ export class AuthService {
       'urbanoa.vehicles',
       'urbanoa.parking.active-tickets',
     ];
+    try { sessionStorage.removeItem('urbanoa.operations.ended'); } catch { /* Storage may be unavailable. */ }
     for (const key of keys) {
       try {
         localStorage.removeItem(key);
