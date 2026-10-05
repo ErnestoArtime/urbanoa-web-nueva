@@ -83,6 +83,7 @@ export class WalletService {
   readonly lastError = signal<string | null>(null);
 
   readonly balance = signal(0);
+  readonly balanceAvailable = signal(false);
   readonly movements = signal<WalletMovement[]>([]);
   readonly cards = signal<MainCard[]>([]);
   readonly defaultCardId = signal('');
@@ -122,6 +123,7 @@ export class WalletService {
   async load(): Promise<void> {
     const token = this.session?.token();
     if (!token) {
+      this.balanceAvailable.set(false);
       this.balance.set(0);
       this.cards.set([]);
       this.source.set('error');
@@ -140,6 +142,7 @@ export class WalletService {
       if (creditResult.status === 'fulfilled') {
         this.balance.set(this.fromCents(creditResult.value));
       }
+      this.balanceAvailable.set(creditResult.status === 'fulfilled');
       if (paymentMethodsResult.status === 'fulfilled') {
         const methods = paymentMethodsResult.value.payMethods ?? [];
         const cards = methods.map((method) => this.mapPaymentMethod(method));
@@ -152,9 +155,8 @@ export class WalletService {
           : paymentMethodsResult.status === 'rejected'
             ? paymentMethodsResult.reason
             : null;
-      if (creditResult.status === 'rejected' && paymentMethodsResult.status === 'rejected') {
-        this.balance.set(0);
-        this.cards.set([]);
+      if (creditResult.status === 'rejected') {
+        if (paymentMethodsResult.status === 'rejected') this.cards.set([]);
         this.useError(failure);
       } else {
         this.source.set('remote');
@@ -236,6 +238,7 @@ export class WalletService {
       const recharged = this.fromCents(Number(response.amountRecharged ?? this.toCents(value)) || 0);
       if (response.newBalance !== null) {
         this.balance.set(this.fromCents(Number(response.newBalance) || 0));
+        this.balanceAvailable.set(true);
         this.pushMovement(recharged, { type: 'top-up', descriptionKey: 'wallet.movement.topUp' });
       } else {
         this.credit(recharged, { type: 'top-up', descriptionKey: 'wallet.movement.topUp' });
@@ -327,6 +330,7 @@ export class WalletService {
 
   reset(): void {
     this.balance.set(0);
+    this.balanceAvailable.set(false);
     this.movements.set([]);
     this.cards.set([]);
     this.defaultCardId.set('');

@@ -12,6 +12,16 @@ function serviceWith(api: jasmine.SpyObj<OpsApiClient>): WalletService {
 }
 
 describe('WalletService', () => {
+  it('does not report a confirmed zero balance when credit fails but cards load', async () => {
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'post']);
+    api.get.and.returnValues(Promise.reject(new Error('credit unavailable')) as Promise<never>, Promise.resolve({ payMethods: [] }) as Promise<never>);
+    const service = serviceWith(api);
+    TestBed.inject(OpsSessionService).setToken('token');
+    await service.load();
+    expect(service.source()).toBe('error');
+    expect(service.lastError()).toBe('credit unavailable');
+    expect(service.balanceAvailable()).toBeFalse();
+  });
   beforeEach(() => {
     localStorage.clear();
     TestBed.configureTestingModule({ providers: [provideZonelessChangeDetection()] });
@@ -63,6 +73,7 @@ describe('WalletService', () => {
     await service.load();
 
     expect(service.balance()).toBe(12.5);
+    expect(service.balanceAvailable()).toBeTrue();
     expect(service.cards()).toEqual([{ id: '7', brand: 'Visa', last4: '4321', expiryDate: '12/28', cardholderName: 'Personal' }]);
     expect(service.defaultCardId()).toBe('7');
     expect(service.source()).toBe('remote');

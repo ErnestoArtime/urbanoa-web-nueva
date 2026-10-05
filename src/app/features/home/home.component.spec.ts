@@ -50,7 +50,7 @@ describe('HomeComponent parking status progress', () => {
         },
         {
           provide: WalletService,
-          useValue: { balance: signal(0), cards: signal([]), mainCard: undefined },
+          useValue: { balance: signal(0), balanceAvailable: signal(false), lastError: signal(null), cards: signal([]), mainCard: undefined },
         },
         {
           provide: DashboardApiService,

@@ -121,9 +121,12 @@ import { TranslationService } from '../../core/services/translation.service';
             <app-vehicle-summary-card [vehicle]="vehicle()" />
             <app-wallet-summary-card
               [balance]="walletService.balance()"
+              [balanceAvailable]="walletService.balanceAvailable()"
+              [balanceError]="!walletService.balanceAvailable() && !!walletService.lastError()"
               [mainCard]="walletService.mainCard"
               [hasCards]="walletService.cards().length > 0"
               (recharge)="onRecharge()"
+              (retry)="walletService.load()"
             />
             <app-profile-progress-card />
           </div>

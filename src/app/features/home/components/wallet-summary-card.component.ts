@@ -13,10 +13,14 @@ import { APP_BRAND } from '../../../shared/constants/app-brand';
     <div class="card wallet-shell-card">
       <div class="wallet-card-inline">
         <p class="wallet-inline-title">{{ 'account.wallet' | translate }}</p>
-        <p class="wallet-inline-balance">{{ balance() | number: '1.2-2' }} €</p>
+        <p class="wallet-inline-balance">@if (balanceAvailable()) { {{ balance() | number: '1.2-2' }} € } @else { — }</p>
         <span class="wallet-inline-brand">ap</span>
         <span class="wallet-inline-mark" aria-hidden="true">{{ brand.name }}</span>
       </div>
+      @if (balanceError()) {
+        <p role="alert">{{ 'account.paymentMethods.loadError' | translate }}</p>
+        <button type="button" class="btn btn-secondary btn-sm" (click)="retry.emit()">{{ 'common.retry' | translate }}</button>
+      }
       <div class="wallet-main-card-row">
         <app-icon name="card" class="wallet-card-icon" [stroke]="false" />
         @if (hasCards()) {
@@ -100,8 +104,11 @@ import { APP_BRAND } from '../../../shared/constants/app-brand';
 })
 export class WalletSummaryCardComponent {
   readonly balance = input.required<number>();
+  readonly balanceAvailable = input(true);
+  readonly balanceError = input(false);
   readonly mainCard = input.required<{ brand: string; last4: string; cardholderName: string; expiryDate: string }>();
   readonly hasCards = input(false);
   readonly recharge = output<void>();
+  readonly retry = output<void>();
   readonly brand = APP_BRAND;
 }
