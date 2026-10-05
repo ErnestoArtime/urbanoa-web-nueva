@@ -8,6 +8,23 @@ import { WalletService } from './wallet.service';
 import { OperationType } from '../../shared/models/operation-type';
 
 describe('OperationsService stored data migration', () => {
+  it('uses the APK payment method instead of treating the first slot as wallet credit', async () => {
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
+    api.post.and.resolveTo([
+      { operationNumber: 1, operationType: 1, paymentMethod: 7, paymentAmount: 500, opDate: '164300051026',
+        idPaymentMethod1: 44, descPaymentMethod1: 'VISA 4021', amountPaymentMethod1: 500 },
+      { operationNumber: 2, operationType: 1, paymentMethod: 8, paymentAmount: 500, opDate: '164300051026', amountPaymentMethod1: 500 },
+      { operationNumber: 3, operationType: 1, paymentMethod: 9, paymentAmount: 500, opDate: '164300051026',
+        amountPaymentMethod1: 200, amountPaymentMethod2: 300, descPaymentMethod2: 'VISA 4021' },
+    ]);
+    TestBed.overrideProvider(OpsApiClient, { useValue: api });
+    TestBed.overrideProvider(OpsSessionService, { useValue: { token: () => 'token' } });
+    const service = TestBed.inject(OperationsService);
+    await service.load();
+    expect(service.getOperationById('1')?.paymentBreakdown).toEqual({ walletAmount: 0, cardAmount: 5, cardLabel: 'VISA 4021' });
+    expect(service.getOperationById('2')?.paymentBreakdown).toEqual(jasmine.objectContaining({ walletAmount: 5, cardAmount: 0 }));
+    expect(service.getOperationById('3')?.paymentBreakdown).toEqual({ walletAmount: 2, cardAmount: 3, cardLabel: 'VISA 4021' });
+  });
   it('refreshes cached details using the current history filters', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
     api.post.and.resolveTo([{ operationNumber: 17, operationType: 7, paymentAmount: 500, opDate: '120000260825' }]);

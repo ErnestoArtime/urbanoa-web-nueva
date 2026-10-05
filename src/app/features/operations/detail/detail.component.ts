@@ -680,12 +680,20 @@ export class OperationsDetailComponent {
         this.cardPaymentLabel()
       );
     if (card > 0) return this.cardPaymentLabel();
-    return this.translationService.translate('ops.detail.wallet');
+    if (wallet > 0) return this.translationService.translate('ops.detail.wallet');
+    if (this.op()?.paymentMethod === 8) return this.translationService.translate('ops.detail.wallet');
+    if (this.op()?.paymentMethod === 7) return this.cardPaymentLabel();
+    if (this.op()?.paymentMethod === 9) return this.translationService.translate('payment.mixed');
+    return this.op()?.cardLabel || '—';
   });
   readonly finePaymentMethodLabel = computed(() => {
     if (this.walletPaymentAmount() > 0 && this.cardPaymentAmount() > 0) return this.translationService.translate('payment.mixed');
     if (this.cardPaymentAmount() > 0) return this.cardPaymentLabel();
-    return this.translationService.translate('ops.detail.wallet');
+    if (this.walletPaymentAmount() > 0) return this.translationService.translate('ops.detail.wallet');
+    if (this.op()?.paymentMethod === 8) return this.translationService.translate('ops.detail.wallet');
+    if (this.op()?.paymentMethod === 7) return this.cardPaymentLabel();
+    if (this.op()?.paymentMethod === 9) return this.translationService.translate('payment.mixed');
+    return this.op()?.cardLabel || '—';
   });
   readonly topUpPaymentMethod = computed(() => this.op()?.cardLabel || '—');
   readonly balanceAfterTopUp = computed(() => {

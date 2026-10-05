@@ -24,6 +24,7 @@ interface OperationResponseDto {
   operationNumber?: number | string | null;
   operationType: number;
   paymentAmount?: number | null;
+  paymentMethod?: number;
   opDate: string;
   plate?: string | null;
   zoneDesc?: string | null;
@@ -484,6 +485,15 @@ export class OperationsService {
   }
 
   private mapRemoteOperation(item: OperationResponseDto): Operation {
+    // APK PaymentMethodType: 7 = card, 8 = wallet, 9 = mixed.
+    // A single card payment can occupy slot 1; slot order is not its type.
+    const firstAmount = Math.abs(item.amountPaymentMethod1 ?? 0) / 100;
+    const secondAmount = Math.abs(item.amountPaymentMethod2 ?? 0) / 100;
+    const paymentBreakdown: Operation['paymentBreakdown'] = {
+      walletAmount: item.paymentMethod === 8 ? firstAmount + secondAmount : item.paymentMethod === 9 ? firstAmount : 0,
+      cardAmount: item.paymentMethod === 7 ? firstAmount + secondAmount : item.paymentMethod === 9 ? secondAmount : 0,
+      cardLabel: (item.paymentMethod === 7 ? item.descPaymentMethod1 || item.descPaymentMethod2 : item.descPaymentMethod2) ?? undefined,
+    };
     const remoteAmount =
       item.operationType === OperationType.UNPAID_FINES && !item.paymentAmount ? (item.fineAmount ?? 0) : (item.paymentAmount ?? 0);
     const amount = remoteAmount / 100;
@@ -513,6 +523,7 @@ export class OperationsService {
       operationDate: item.opDate,
       operationTime,
       amount: [OperationType.TOP_UP, OperationType.REFUND].includes(item.operationType) ? amount : -Math.abs(amount),
+      paymentMethod: item.paymentMethod,
       newBalance: item.newBalance == null ? undefined : item.newBalance / 100,
       zone: item.sectorDesc ?? item.zoneDesc ?? null,
       startTime,
@@ -536,11 +547,7 @@ export class OperationsService {
         (item.operationType === OperationType.TOP_UP
           ? (item.descPaymentMethod1 ?? item.descPaymentMethod2)
           : (item.descPaymentMethod2 ?? item.descPaymentMethod1)) ?? undefined,
-      paymentBreakdown: {
-        walletAmount: Math.abs(item.amountPaymentMethod1 ?? 0) / 100,
-        cardAmount: Math.abs(item.amountPaymentMethod2 ?? 0) / 100,
-        cardLabel: item.descPaymentMethod2 ?? undefined,
-      },
+      paymentBreakdown,
       contractId: item.contractId,
       contractName: item.contractName ?? undefined,
       fineNumber: item.fineNumber ?? undefined,

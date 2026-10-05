@@ -10,6 +10,12 @@ import { OperationType } from '../../../shared/models/operation-type';
 import { Operation } from '../../../shared/models/operation';
 
 describe('OperationsDetailComponent navigation', () => {
+  it('does not invent wallet payment when OPS provides no payment information', async () => {
+    operations.update(items => items.map(op => ({ ...op, type: OperationType.PARKING, amount: -5 })));
+    const fixture = TestBed.createComponent(OperationsDetailComponent);
+    await fixture.whenStable();
+    expect(fixture.componentInstance.paymentMethodLabel()).toBe('—');
+  });
   it('does not invent a payment method for top-ups', async () => {
     operations.update(items => items.map(op => ({ ...op, type: OperationType.TOP_UP })));
     const fixture = TestBed.createComponent(OperationsDetailComponent);
