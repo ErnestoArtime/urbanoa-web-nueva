@@ -12,9 +12,44 @@ function serviceWith(api: jasmine.SpyObj<OpsApiClient>): WalletService {
 }
 
 describe('WalletService', () => {
+  it('rejects a malformed recharge without inventing a credited amount or balance', async () => {
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'post']);
+    api.post.and.resolveTo({ challengeUrl: null, newBalance: 'bad' });
+    const wallet = serviceWith(api);
+    TestBed.inject(OpsSessionService).setToken('token');
+    wallet.balance.set(10);
+    wallet.cards.set([{ id: '7', brand: 'Visa', last4: '1234', expiryDate: '12/99', cardholderName: 'Test' }]);
+    const result = await wallet.recharge(2, '7');
+    expect(result.success).toBeFalse();
+    expect(result.error?.kind).toBe('invalid-response');
+    expect(wallet.balance()).toBe(10);
+    expect(wallet.movements()).toEqual([]);
+  });
+
+  it('does not let a read started before a recharge overwrite its confirmed balance', async () => {
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'post']);
+    let completeOld!: (value: number) => void;
+    api.get.and.returnValues(
+      new Promise<number>((resolve) => (completeOld = resolve)) as Promise<never>,
+      Promise.resolve({ payMethods: [] }) as Promise<never>,
+    );
+    api.post.and.resolveTo({ amountRecharged: 200, newBalance: 1200, challengeUrl: null });
+    const wallet = serviceWith(api);
+    TestBed.inject(OpsSessionService).setToken('token');
+    wallet.balance.set(10);
+    wallet.cards.set([{ id: '7', brand: 'Visa', last4: '1234', expiryDate: '12/99', cardholderName: 'Test' }]);
+    const olderLoad = wallet.load();
+    await wallet.recharge(2, '7');
+    completeOld(1000);
+    await olderLoad;
+    expect(wallet.balance()).toBe(12);
+  });
   it('does not report a confirmed zero balance when credit fails but cards load', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'post']);
-    api.get.and.returnValues(Promise.reject(new Error('credit unavailable')) as Promise<never>, Promise.resolve({ payMethods: [] }) as Promise<never>);
+    api.get.and.returnValues(
+      Promise.reject(new Error('credit unavailable')) as Promise<never>,
+      Promise.resolve({ payMethods: [] }) as Promise<never>,
+    );
     const service = serviceWith(api);
     TestBed.inject(OpsSessionService).setToken('token');
     await service.load();
@@ -121,7 +156,12 @@ describe('WalletService', () => {
   it('does not repopulate cleared account data when an old load finishes', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'post']);
     let finishCredit!: (value: number) => void;
-    api.get.and.returnValues(new Promise<number>(resolve => { finishCredit = resolve; }), Promise.resolve({ payMethods: [] }));
+    api.get.and.returnValues(
+      new Promise<number>((resolve) => {
+        finishCredit = resolve;
+      }),
+      Promise.resolve({ payMethods: [] }),
+    );
     const service = serviceWith(api);
     const session = TestBed.inject(OpsSessionService);
     session.setToken('old-token');
@@ -178,7 +218,9 @@ describe('WalletService', () => {
 
     await service.refund(1);
 
-    expect(api.post.calls.mostRecent().args[1]).toEqual(jasmine.objectContaining({ cloudToken: 'login-device-token', amount: 100, simulate: 0 }));
+    expect(api.post.calls.mostRecent().args[1]).toEqual(
+      jasmine.objectContaining({ cloudToken: 'login-device-token', amount: 100, simulate: 0 }),
+    );
   });
 
   for (const response of [{ result: 1 }, { result: -9, refundAmount: 500 }, { result: 1, refundAmount: '' }]) {
@@ -219,8 +261,10 @@ describe('WalletService', () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'post']);
     const service = serviceWith(api);
     TestBed.inject(OpsSessionService).setToken('token');
-    service.cards.set([{ id: '1', brand: 'Visa', last4: '1234', expiryDate: '01/20', cardholderName: 'Test' },
-      { id: '2', brand: 'Visa', last4: '5678', expiryDate: '12/99', cardholderName: 'Test' }]);
+    service.cards.set([
+      { id: '1', brand: 'Visa', last4: '1234', expiryDate: '01/20', cardholderName: 'Test' },
+      { id: '2', brand: 'Visa', last4: '5678', expiryDate: '12/99', cardholderName: 'Test' },
+    ]);
     expect((await service.recharge(5, '1')).success).toBeFalse();
     expect((await service.recharge(5, '3')).success).toBeFalse();
     expect(api.post).not.toHaveBeenCalled();

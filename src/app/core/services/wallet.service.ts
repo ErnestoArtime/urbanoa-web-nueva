@@ -78,6 +78,7 @@ const LEGACY_DESCRIPTION_KEYS: Record<string, string> = {
 
 @Injectable({ providedIn: 'root' })
 export class WalletService {
+  private loadRevision = 0;
   readonly source = signal<'idle' | 'remote' | 'error'>('idle');
   readonly loading = signal(false);
   readonly lastError = signal<string | null>(null);
@@ -88,9 +89,7 @@ export class WalletService {
   readonly cards = signal<MainCard[]>([]);
   readonly defaultCardId = signal('');
   readonly usableCards = computed(() => this.cards().filter((card) => isCardUsable(card)));
-  readonly defaultCard = computed(
-    () => this.usableCards().find((card) => card.id === this.defaultCardId()) ?? this.usableCards()[0],
-  );
+  readonly defaultCard = computed(() => this.usableCards().find((card) => card.id === this.defaultCardId()) ?? this.usableCards()[0]);
 
   private readonly api = inject(OpsApiClient);
   private readonly session = inject(OpsSessionService);
@@ -121,6 +120,7 @@ export class WalletService {
   }
 
   async load(): Promise<void> {
+    const revision = ++this.loadRevision;
     const token = this.session?.token();
     if (!token) {
       this.balanceAvailable.set(false);
@@ -138,8 +138,12 @@ export class WalletService {
         this.api.get<number>(OPS_ENDPOINTS.wallet.credit, { token }),
         this.api.get<PaymentMethodsDto>(OPS_ENDPOINTS.wallet.paymentMethods, { token }),
       ]);
-      if (this.session.token() !== token) return;
+      if (this.session.token() !== token || revision !== this.loadRevision) return;
       if (creditResult.status === 'fulfilled') {
+        if (typeof creditResult.value !== 'number' || !Number.isFinite(creditResult.value) || creditResult.value < 0) {
+          this.balanceAvailable.set(false);
+          throw new OpsApiError('invalid-response', OPS_ENDPOINTS.wallet.credit, 'Invalid credit response');
+        }
         this.balance.set(this.fromCents(creditResult.value));
       }
       this.balanceAvailable.set(creditResult.status === 'fulfilled');
@@ -163,9 +167,9 @@ export class WalletService {
         this.lastError.set(failure instanceof Error ? failure.message : null);
       }
     } catch (error) {
-      if (this.session.token() === token) this.useError(error);
+      if (this.session.token() === token && revision === this.loadRevision) this.useError(error);
     } finally {
-      if (this.session.token() === token) this.loading.set(false);
+      if (this.session.token() === token && revision === this.loadRevision) this.loading.set(false);
     }
   }
 
@@ -219,7 +223,9 @@ export class WalletService {
     const value = Math.abs(amount);
     const token = this.session?.token();
     const payMethodId = this.remoteId(cardId);
-    if (!token || payMethodId === null || !Number.isFinite(amount) || amount <= 0 || !this.usableCards().some(card => card.id === cardId)) return { success: false, source: 'error' };
+    if (!token || payMethodId === null || !Number.isFinite(amount) || amount <= 0 || !this.usableCards().some((card) => card.id === cardId))
+      return { success: false, source: 'error' };
+    this.invalidateLoad();
 
     try {
       const response = await this.api.post<RechargeUserCreditResponseDto>(
@@ -235,9 +241,23 @@ export class WalletService {
         return { success: true, source: 'remote', ...(order ? { order } : {}), challengeUrl: response.challengeUrl };
       }
 
-      const recharged = this.fromCents(Number(response.amountRecharged ?? this.toCents(value)) || 0);
+      if (
+        response.amountRecharged == null ||
+        String(response.amountRecharged).trim() === '' ||
+        !Number.isFinite(Number(response.amountRecharged)) ||
+        Number(response.amountRecharged) <= 0 ||
+        (response.newBalance !== null &&
+          (response.newBalance == null ||
+            String(response.newBalance).trim() === '' ||
+            !Number.isFinite(Number(response.newBalance)) ||
+            Number(response.newBalance) < 0))
+      ) {
+        throw new OpsApiError('invalid-response', OPS_ENDPOINTS.wallet.recharge, 'Invalid recharge response');
+      }
+      const recharged = this.fromCents(Number(response.amountRecharged));
       if (response.newBalance !== null) {
-        this.balance.set(this.fromCents(Number(response.newBalance) || 0));
+        this.invalidateLoad();
+        this.balance.set(this.fromCents(Number(response.newBalance)));
         this.balanceAvailable.set(true);
         this.pushMovement(recharged, { type: 'top-up', descriptionKey: 'wallet.movement.topUp' });
       } else {
@@ -259,11 +279,23 @@ export class WalletService {
     try {
       const response = await this.api.post<BalanceRefundResponseDto>(
         OPS_ENDPOINTS.wallet.refund,
-        { contractId: 0, cloudToken: cloudToken.trim() || getOpsCloudToken(), operatingSystem: OPS_UNVERIFIED_OPERATING_SYSTEM, amount: this.toCents(value), simulate: 0 },
+        {
+          contractId: 0,
+          cloudToken: cloudToken.trim() || getOpsCloudToken(),
+          operatingSystem: OPS_UNVERIFIED_OPERATING_SYSTEM,
+          amount: this.toCents(value),
+          simulate: 0,
+        },
         { token },
       );
       if (this.session.token() !== token) return { success: false, source: 'error' };
-      if (response.result !== 1 || response.refundAmount == null || String(response.refundAmount).trim() === '' || !Number.isFinite(Number(response.refundAmount)) || Number(response.refundAmount) < 0) {
+      if (
+        response.result !== 1 ||
+        response.refundAmount == null ||
+        String(response.refundAmount).trim() === '' ||
+        !Number.isFinite(Number(response.refundAmount)) ||
+        Number(response.refundAmount) < 0
+      ) {
         throw new OpsApiError('invalid-response', OPS_ENDPOINTS.wallet.refund, 'El servicio no confirmó el importe de la devolución.');
       }
       const refunded = this.fromCents(Number(response.refundAmount));
@@ -288,6 +320,7 @@ export class WalletService {
   credit(amount: number, movement: WalletMovementInput): void;
   credit(amount: number, description: string, type: WalletMovementType): void;
   credit(amount: number, movementOrDescription: WalletMovementInput | string, type?: WalletMovementType): void {
+    this.invalidateLoad();
     const value = Math.abs(amount);
     this.balance.update((balance) => balance + value);
     this.pushMovement(value, this.normalizeMovement(movementOrDescription, type ?? 'top-up'));
@@ -298,6 +331,7 @@ export class WalletService {
   debit(amount: number, movementOrDescription: WalletMovementInput | string, type?: WalletMovementType): boolean {
     const value = Math.abs(amount);
     if (this.balance() < value) return false;
+    this.invalidateLoad();
     this.balance.update((balance) => balance - value);
     this.pushMovement(-value, this.normalizeMovement(movementOrDescription, type ?? 'parking-payment'));
     return true;
@@ -329,6 +363,7 @@ export class WalletService {
   }
 
   reset(): void {
+    this.invalidateLoad();
     this.balance.set(0);
     this.balanceAvailable.set(false);
     this.movements.set([]);
@@ -351,15 +386,18 @@ export class WalletService {
   }
 
   private setDefaultCardLocal(id: string): void {
+    this.invalidateLoad();
     this.defaultCardId.set(id);
   }
 
   private removeCardLocal(id: string): void {
+    this.invalidateLoad();
     this.cards.update((cards) => cards.filter((card) => card.id !== id));
     if (this.defaultCardId() === id) this.defaultCardId.set(this.cards()[0]?.id ?? '');
   }
 
   private recordRefund(amount: number): void {
+    this.invalidateLoad();
     const value = Math.min(Math.abs(amount), this.balance());
     this.balance.update((balance) => Math.max(0, balance - value));
     this.pushMovement(-value, { type: 'balance-refund', descriptionKey: 'wallet.movement.balanceRefund' });
@@ -383,6 +421,11 @@ export class WalletService {
   private remoteId(id: string): number | null {
     const parsed = Number(id);
     return Number.isInteger(parsed) && parsed >= 0 ? parsed : null;
+  }
+
+  private invalidateLoad(): void {
+    this.loadRevision++;
+    this.loading.set(false);
   }
 
   private toCents(amount: number): number {
