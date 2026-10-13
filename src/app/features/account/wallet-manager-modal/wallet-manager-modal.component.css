@@ -1,0 +1,52 @@
+dialog {
+  width: min(600px, calc(100vw - 2rem));
+  max-height: calc(100dvh - 2rem);
+  padding: 0;
+  margin: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: var(--shadow-md);
+}
+dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+dialog::backdrop {
+  background: var(--color-wallet-manager-modal-surface);
+}
+header,
+footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.8rem 1rem;
+  flex: none;
+}
+header {
+  border-bottom: 1px solid var(--color-border);
+}
+h2 {
+  margin: 0;
+  font-size: var(--text-lg);
+}
+footer {
+  justify-content: flex-end;
+  border-top: 1px solid var(--color-border);
+}
+.wallet-content {
+  overflow-y: auto;
+  min-height: 0;
+  padding: 1rem;
+}
+@media (max-width: 480px) {
+  dialog {
+    width: calc(100vw - 1rem);
+    max-height: calc(100dvh - 1rem);
+  }
+  .wallet-content {
+    padding: 0.75rem;
+  }
+}

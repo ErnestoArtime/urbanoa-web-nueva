@@ -11,6 +11,6 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
       <p class="text-muted mt-1">{{ 'account.developedBy' | translate }}</p>
     </div>
   `,
-  styles: [':host{display:block}'],
+  styleUrl: './about.component.css',
 })
 export class AccountAboutComponent {}

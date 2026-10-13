@@ -10,12 +10,13 @@ import { UserService, type UserAddress } from '../../../core/services/user.servi
   imports: [TranslatePipe, DetailPanelHeaderComponent, ResultModalComponent, LoaderComponent],
   template: `
     <app-loader [visible]="saving()" [message]="'common.loading' | translate" />
-    <div class="page account-static-page">
+    <div class="page account-static-page account-form-page">
       <app-detail-panel-header [title]="'account.taxData.title' | translate" backRoute="/app/account" />
       <div class="card">
         <div class="form-group">
-          <label>{{ 'account.taxData.nif' | translate }} <span class="text-error">*</span></label
+          <label for="tax-data-field-1">{{ 'account.taxData.nif' | translate }} <span class="text-error">*</span></label
           ><input
+            id="tax-data-field-1"
             class="form-input"
             [value]="nif()"
             (input)="nif.set($any($event.target).value)"
@@ -26,8 +27,9 @@ import { UserService, type UserAddress } from '../../../core/services/user.servi
           }
         </div>
         <div class="form-group">
-          <label>{{ 'account.taxData.street' | translate }} <span class="text-error">*</span></label
+          <label for="tax-data-field-2">{{ 'account.taxData.street' | translate }} <span class="text-error">*</span></label
           ><input
+            id="tax-data-field-2"
             class="form-input"
             [value]="address().street"
             (input)="setAddress('street', $any($event.target).value)"
@@ -38,8 +40,9 @@ import { UserService, type UserAddress } from '../../../core/services/user.servi
           }
         </div>
         <div class="form-group">
-          <label>{{ 'account.taxData.number' | translate }} <span class="text-error">*</span></label
+          <label for="tax-data-field-3">{{ 'account.taxData.number' | translate }} <span class="text-error">*</span></label
           ><input
+            id="tax-data-field-3"
             class="form-input"
             [value]="address().number"
             (input)="setAddress('number', $any($event.target).value)"
@@ -51,8 +54,9 @@ import { UserService, type UserAddress } from '../../../core/services/user.servi
         </div>
         <div class="row">
           <div class="form-group">
-            <label>{{ 'account.taxData.floor' | translate }}</label
+            <label for="tax-data-field-4">{{ 'account.taxData.floor' | translate }}</label
             ><input
+              id="tax-data-field-4"
               class="form-input"
               [value]="address().floor"
               (input)="setAddress('floor', $any($event.target).value)"
@@ -60,8 +64,9 @@ import { UserService, type UserAddress } from '../../../core/services/user.servi
             />
           </div>
           <div class="form-group">
-            <label>{{ 'account.taxData.door' | translate }}</label
+            <label for="tax-data-field-5">{{ 'account.taxData.door' | translate }}</label
             ><input
+              id="tax-data-field-5"
               class="form-input"
               [value]="address().door"
               (input)="setAddress('door', $any($event.target).value)"
@@ -71,8 +76,9 @@ import { UserService, type UserAddress } from '../../../core/services/user.servi
         </div>
         <div class="row">
           <div class="form-group">
-            <label>{{ 'account.taxData.stair' | translate }}</label
+            <label for="tax-data-field-6">{{ 'account.taxData.stair' | translate }}</label
             ><input
+              id="tax-data-field-6"
               class="form-input"
               [value]="address().stair"
               (input)="setAddress('stair', $any($event.target).value)"
@@ -80,8 +86,9 @@ import { UserService, type UserAddress } from '../../../core/services/user.servi
             />
           </div>
           <div class="form-group">
-            <label>{{ 'account.taxData.letter' | translate }}</label
+            <label for="tax-data-field-7">{{ 'account.taxData.letter' | translate }}</label
             ><input
+              id="tax-data-field-7"
               class="form-input"
               [value]="address().letter"
               (input)="setAddress('letter', $any($event.target).value)"
@@ -90,8 +97,9 @@ import { UserService, type UserAddress } from '../../../core/services/user.servi
           </div>
         </div>
         <div class="form-group">
-          <label>{{ 'account.taxData.city' | translate }} <span class="text-error">*</span></label
+          <label for="tax-data-field-8">{{ 'account.taxData.city' | translate }} <span class="text-error">*</span></label
           ><input
+            id="tax-data-field-8"
             class="form-input"
             [value]="address().city"
             (input)="setAddress('city', $any($event.target).value)"
@@ -102,8 +110,9 @@ import { UserService, type UserAddress } from '../../../core/services/user.servi
           }
         </div>
         <div class="form-group">
-          <label>{{ 'account.taxData.province' | translate }} <span class="text-error">*</span></label
+          <label for="tax-data-field-9">{{ 'account.taxData.province' | translate }} <span class="text-error">*</span></label
           ><input
+            id="tax-data-field-9"
             class="form-input"
             [value]="address().province"
             (input)="setAddress('province', $any($event.target).value)"
@@ -114,8 +123,9 @@ import { UserService, type UserAddress } from '../../../core/services/user.servi
           }
         </div>
         <div class="form-group">
-          <label>{{ 'account.taxData.postalCode' | translate }} <span class="text-error">*</span></label
+          <label for="tax-data-field-10">{{ 'account.taxData.postalCode' | translate }} <span class="text-error">*</span></label
           ><input
+            id="tax-data-field-10"
             class="form-input"
             [value]="address().postalCode"
             (input)="setAddress('postalCode', $any($event.target).value)"
@@ -149,18 +159,7 @@ import { UserService, type UserAddress } from '../../../core/services/user.servi
       }
     </div>
   `,
-  styles: [
-    `
-      :host {
-        display: block;
-      }
-      .row {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 1rem;
-      }
-    `,
-  ],
+  styleUrl: './tax-data.component.css',
 })
 export class AccountTaxDataComponent {
   private readonly userService = inject(UserService);

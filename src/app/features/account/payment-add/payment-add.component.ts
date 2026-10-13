@@ -47,56 +47,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
       }
     </div>
   `,
-  styles: `
-    .paycomet-page {
-      padding-bottom: 2rem;
-    }
-    .paycomet-frame {
-      width: 100%;
-      min-height: 560px;
-      margin-top: 1rem;
-      border: 0;
-      border-radius: var(--radius-md);
-      background: #fff;
-    }
-    .state {
-      display: grid;
-      justify-items: center;
-      gap: 1rem;
-      margin-top: 3rem;
-      text-align: center;
-      color: var(--color-text-muted);
-    }
-    .spinner {
-      width: 42px;
-      height: 42px;
-      border: 3px solid var(--color-border);
-      border-top-color: var(--color-primary);
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-    }
-    .success-mark {
-      display: grid;
-      width: 68px;
-      height: 68px;
-      place-items: center;
-      border-radius: 22px;
-      background: var(--color-primary);
-      color: #fff;
-      font-size: 2rem;
-    }
-    .secure-note {
-      margin-top: 0.8rem;
-      color: var(--color-text-muted);
-      font-size: var(--text-xs);
-      text-align: center;
-    }
-    @keyframes spin {
-      to {
-        transform: rotate(360deg);
-      }
-    }
-  `,
+  styleUrl: './payment-add.component.css',
 })
 export class PaymentAddComponent implements OnInit, OnDestroy {
   readonly embedded = input(false);

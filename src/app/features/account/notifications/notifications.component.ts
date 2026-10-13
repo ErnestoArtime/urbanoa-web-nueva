@@ -55,52 +55,7 @@ import { NotificationsService } from '../../../core/services/notifications.servi
       }
     </div>
   `,
-  styles: [
-    `
-      .switch-row {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 1rem;
-        padding: 0.65rem 0;
-        cursor: pointer;
-      }
-      .data-notice {
-        margin: 0 0 1rem;
-        padding: 0.75rem 0.9rem;
-        border: 1px solid #e5b85c;
-        border-radius: var(--radius-md);
-        background: #fff8e7;
-        color: #714b00;
-      }
-      .switch {
-        position: relative;
-        width: 44px;
-        height: 24px;
-        border-radius: 99px;
-        background: var(--color-border);
-        transition: background 0.2s;
-        flex-shrink: 0;
-      }
-      .switch::after {
-        content: '';
-        position: absolute;
-        top: 2px;
-        left: 2px;
-        width: 20px;
-        height: 20px;
-        border-radius: 50%;
-        background: #fff;
-        transition: left 0.2s;
-      }
-      input:checked + .switch {
-        background: var(--color-primary);
-      }
-      input:checked + .switch::after {
-        left: 22px;
-      }
-    `,
-  ],
+  styleUrl: './notifications.component.css',
 })
 export class AccountNotificationsComponent implements OnInit {
   readonly notifications = inject(NotificationsService);

@@ -12,45 +12,61 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
   imports: [ReactiveFormsModule, RouterLink, TranslatePipe, DetailPanelHeaderComponent, ResultModalComponent, LoaderComponent],
   template: `
     <app-loader [visible]="saving()" [message]="'common.loading' | translate" />
-    <div class="page account-static-page">
+    <div class="page account-static-page account-form-page">
       <app-detail-panel-header [title]="'account.profile.title' | translate" backRoute="/app/account" />
       <form [formGroup]="form" (ngSubmit)="onSave()">
         <div class="card">
           <div class="form-group">
-            <label>{{ 'account.profile.name' | translate }} <span aria-hidden="true">*</span></label
-            ><input class="form-input" formControlName="name" [placeholder]="'account.profile.name' | translate" />
+            <label for="profile-field-1">{{ 'account.profile.name' | translate }} <span aria-hidden="true">*</span></label
+            ><input id="profile-field-1" class="form-input" formControlName="name" [placeholder]="'account.profile.name' | translate" />
             @if (form.controls.name.touched && form.controls.name.invalid) {
               <p class="form-error">{{ 'account.profile.nameRequired' | translate }}</p>
             }
           </div>
           <div class="form-group">
-            <label>{{ 'account.profile.surname' | translate }} <span aria-hidden="true">*</span></label
-            ><input class="form-input" formControlName="surname" [placeholder]="'account.profile.surname' | translate" />
+            <label for="profile-field-2">{{ 'account.profile.surname' | translate }} <span aria-hidden="true">*</span></label
+            ><input
+              id="profile-field-2"
+              class="form-input"
+              formControlName="surname"
+              [placeholder]="'account.profile.surname' | translate"
+            />
             @if (form.controls.surname.touched && form.controls.surname.invalid) {
               <p class="form-error">{{ 'account.profile.surnameRequired' | translate }}</p>
             }
           </div>
           <div class="form-group">
-            <label>{{ 'account.profile.secondSurname' | translate }}</label
-            ><input class="form-input" formControlName="secondSurname" [placeholder]="'account.profile.secondSurname' | translate" />
+            <label for="profile-field-3">{{ 'account.profile.secondSurname' | translate }}</label
+            ><input
+              id="profile-field-3"
+              class="form-input"
+              formControlName="secondSurname"
+              [placeholder]="'account.profile.secondSurname' | translate"
+            />
           </div>
           <div class="form-group">
-            <label>{{ 'account.profile.nif' | translate }} <span aria-hidden="true">*</span></label
-            ><input class="form-input" formControlName="nif" [placeholder]="'account.profile.nif' | translate" />
+            <label for="profile-field-4">{{ 'account.profile.nif' | translate }} <span aria-hidden="true">*</span></label
+            ><input id="profile-field-4" class="form-input" formControlName="nif" [placeholder]="'account.profile.nif' | translate" />
             @if (form.controls.nif.touched && form.controls.nif.invalid) {
               <p class="form-error">{{ 'account.profile.nifRequired' | translate }}</p>
             }
           </div>
           <div class="form-group">
-            <label>{{ 'account.profile.phone' | translate }} <span aria-hidden="true">*</span></label
-            ><input class="form-input" formControlName="phone" [placeholder]="'account.profile.phone' | translate" />
+            <label for="profile-field-5">{{ 'account.profile.phone' | translate }} <span aria-hidden="true">*</span></label
+            ><input id="profile-field-5" class="form-input" formControlName="phone" [placeholder]="'account.profile.phone' | translate" />
             @if (form.controls.phone.touched && form.controls.phone.invalid) {
               <p class="form-error">{{ 'common.required' | translate }}</p>
             }
           </div>
           <div class="form-group">
-            <label>{{ 'account.profile.email' | translate }} <span aria-hidden="true">*</span></label
-            ><input class="form-input" type="email" formControlName="email" [placeholder]="'account.profile.email' | translate" />
+            <label for="profile-field-6">{{ 'account.profile.email' | translate }} <span aria-hidden="true">*</span></label
+            ><input
+              id="profile-field-6"
+              class="form-input"
+              type="email"
+              formControlName="email"
+              [placeholder]="'account.profile.email' | translate"
+            />
             @if (form.controls.email.touched && form.controls.email.invalid) {
               <p class="form-error">
                 {{
@@ -88,7 +104,7 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
       }
     </div>
   `,
-  styles: [':host{display:block}'],
+  styleUrl: './profile.component.css',
 })
 export class AccountProfileComponent {
   readonly saved = signal(false);

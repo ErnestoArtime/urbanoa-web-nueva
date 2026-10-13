@@ -14,7 +14,7 @@ import { LoaderComponent } from '../../../shared/components/loader/loader.compon
   imports: [TranslatePipe, DetailPanelHeaderComponent, ResultModalComponent, LoaderComponent],
   template: `
     <app-loader [visible]="saving()" [message]="'common.loading' | translate" />
-    <div class="page account-static-page">
+    <div class="page account-static-page account-form-page">
       <app-detail-panel-header backRoute="/app/account/vehicles" [title]="'account.vehicleEdit.title' | translate" [backDesktop]="true" />
       @if (result() !== 'deleted') {
         <div class="card">
@@ -79,44 +79,7 @@ import { LoaderComponent } from '../../../shared/components/loader/loader.compon
       }
     </div>
   `,
-  styles: [
-    `
-      .switch-row {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 1rem;
-        padding: 0.65rem 0;
-        cursor: pointer;
-      }
-      .switch {
-        position: relative;
-        width: 44px;
-        height: 24px;
-        border-radius: 99px;
-        background: var(--color-border);
-        transition: background 0.2s;
-        flex-shrink: 0;
-      }
-      .switch::after {
-        content: '';
-        position: absolute;
-        top: 2px;
-        left: 2px;
-        width: 20px;
-        height: 20px;
-        border-radius: 50%;
-        background: #fff;
-        transition: left 0.2s;
-      }
-      input:checked + .switch {
-        background: var(--color-primary);
-      }
-      input:checked + .switch::after {
-        left: 22px;
-      }
-    `,
-  ],
+  styleUrl: './vehicle-edit.component.css',
 })
 export class VehicleEditComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);

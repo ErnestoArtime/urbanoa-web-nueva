@@ -12,7 +12,7 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
   imports: [TranslatePipe, DetailPanelHeaderComponent, ResultModalComponent, LucideEye, LucideEyeOff, LoaderComponent],
   template: `
     <app-loader [visible]="saving()" [message]="'common.loading' | translate" />
-    <div class="page account-static-page">
+    <div class="page account-static-page account-form-page">
       <app-detail-panel-header [title]="'account.changePassword.title' | translate" backRoute="/app/account" />
       <div class="card">
         <div class="form-group">
@@ -67,43 +67,7 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
       }
     </div>
   `,
-  styles: [
-    `
-      :host {
-        display: block;
-      }
-      .password-field {
-        position: relative;
-      }
-      .password-field input {
-        padding-right: 3rem;
-      }
-      .password-field button {
-        position: absolute;
-        right: 0;
-        top: 0;
-        bottom: 0;
-        translate: none;
-        width: 44px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border: 0;
-        background: transparent;
-        color: var(--color-text-muted);
-        cursor: pointer;
-        padding: 0;
-      }
-      .password-field button:hover {
-        background: #fde0a4;
-        color: var(--color-primary);
-      }
-      .password-field button svg {
-        width: 22px;
-        height: 22px;
-      }
-    `,
-  ],
+  styleUrl: './change-password.component.css',
 })
 export class AccountChangePasswordComponent {
   private readonly passwordService = inject(PasswordService);
