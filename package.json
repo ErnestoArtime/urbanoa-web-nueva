@@ -24,7 +24,8 @@
     "lint": "ng lint",
     "format": "prettier --write \"src/**/*.{ts,html,css,scss,json}\"",
     "format:check": "prettier --check \"src/**/*.{ts,html,css,scss,json}\"",
-    "check": "npm run i18n:check && npm run lint && npm run format:check && npm run build:prod"
+    "check": "npm run styles:check && npm run i18n:check && npm run lint && npm run format:check && npm run build",
+    "styles:check": "node scripts/check-styles.mjs && stylelint \"src/**/*.css\""
   },
   "private": true,
   "dependencies": {
@@ -58,7 +59,9 @@
     "karma-coverage": "~2.2.0",
     "karma-jasmine": "~5.1.0",
     "karma-jasmine-html-reporter": "~2.1.0",
+    "postcss": "^8.5.15",
     "prettier": "^3.9.4",
+    "stylelint": "^17.16.0",
     "typescript": "~5.8.2",
     "typescript-eslint": "8.46.4"
   }

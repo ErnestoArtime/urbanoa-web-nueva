@@ -21,7 +21,7 @@
   "supportedExtensions": [".html", ".ts"],
   "excludedFileSuffixes": [".spec.ts"],
   "dynamicPrefixes": [],
-  "ignoredKeyPrefixes": ["urbanoa."],
+  "ignoredKeyPrefixes": ["urbanoa.", "paycomet.com"],
   "translationKeyPrefixes": [
     "account",
     "app",
