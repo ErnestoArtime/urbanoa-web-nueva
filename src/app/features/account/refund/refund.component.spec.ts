@@ -5,6 +5,7 @@ import { WalletService } from '../../../core/services/wallet.service';
 import { AccountRefundComponent } from './refund.component';
 
 describe('AccountRefundComponent', () => {
+  beforeEach(() => sessionStorage.clear());
   function mount(): ReturnType<typeof TestBed.createComponent<AccountRefundComponent>> {
     const fixture = TestBed.createComponent(AccountRefundComponent);
     fixture.detectChanges();
@@ -49,7 +50,7 @@ describe('AccountRefundComponent', () => {
     const wallet = TestBed.inject(WalletService);
     let finish!: () => void;
     const operations = TestBed.inject(OperationsService);
-    (operations.load as jasmine.Spy).and.returnValue(new Promise<void>(resolve => finish = resolve));
+    (operations.load as jasmine.Spy).and.returnValue(new Promise<void>((resolve) => (finish = resolve)));
     fixture.componentInstance.refundQuote.set(2);
     const pending = fixture.componentInstance.confirmRefund();
     await Promise.resolve();

@@ -15,13 +15,14 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { LoaderComponent } from '../../../shared/components/loader/loader.component';
 import { isCardUsable } from '../../../core/utils/card-expiry';
+import { isPaymentOutcomeUnknown } from '../../../core/utils/payment-error';
 
 @Component({
   selector: 'app-account-recharge',
   imports: [ReactiveFormsModule, RouterLink, TranslatePipe, DetailPanelHeaderComponent, ResultModalComponent, DecimalPipe, LoaderComponent],
   template: `
     <app-loader [visible]="saving()" [message]="'common.loading' | translate" />
-    <div class="page account-static-page">
+    <div class="page account-static-page account-form-page">
       @if (!embedded()) {
         <app-detail-panel-header [title]="'account.recharge.title' | translate" backRoute="/app/account/payment-methods" />
       } @else {
@@ -85,7 +86,7 @@ import { isCardUsable } from '../../../core/utils/card-expiry';
               {{ 'account.recharge.balanceAfter' | translate }} <strong>{{ balanceAfterRecharge() | number: '1.2-2' }} €</strong>
             </p>
           </div>
-          <button type="submit" class="btn btn-primary btn-block mt-2" [disabled]="saving()">
+          <button type="submit" class="btn btn-primary btn-block mt-2" [disabled]="saving() || paymentUncertain()">
             {{ (saving() ? 'common.loading' : 'account.recharge.button') | translate }}
           </button>
         </form>
@@ -101,75 +102,7 @@ import { isCardUsable } from '../../../core/utils/card-expiry';
       }
     </div>
   `,
-  styles: [
-    `
-      .recharge-options {
-        display: grid;
-        gap: 0;
-        margin: 0.8rem 0;
-        padding: 0;
-        border: 0;
-      }
-      .data-notice {
-        margin: 0 0 1rem;
-        padding: 0.75rem 0.9rem;
-        border: 1px solid #e5b85c;
-        border-radius: var(--radius-md);
-        background: #fff8e7;
-        color: #714b00;
-      }
-      .recharge-options legend {
-        margin-bottom: 0.35rem;
-        font-weight: var(--font-bold);
-      }
-      .recharge-option {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        padding: 0.7rem 0.25rem;
-        border-bottom: 1px solid var(--color-border);
-        cursor: pointer;
-      }
-      .recharge-option input {
-        width: 20px;
-        height: 20px;
-        accent-color: var(--color-primary);
-      }
-      .recharge-option.active {
-        color: var(--color-primary-dark);
-        font-weight: var(--font-bold);
-      }
-      .card-row {
-        display: grid;
-        grid-template-columns: auto 1fr auto;
-        align-items: center;
-        gap: 0.65rem;
-        margin-top: 0.55rem;
-        padding: 0.7rem;
-        border: 1px solid var(--color-border);
-        border-radius: var(--radius-md);
-        cursor: pointer;
-      }
-      .card-row.selected {
-        border-color: var(--color-primary);
-        background: var(--color-active);
-      }
-      .card-row input {
-        accent-color: var(--color-primary);
-      }
-      .card-brand {
-        font-weight: var(--font-bold);
-      }
-      @media (max-width: 480px) {
-        .card-row {
-          grid-template-columns: auto 1fr;
-        }
-        .card-row .text-muted {
-          grid-column: 2;
-        }
-      }
-    `,
-  ],
+  styleUrl: './recharge.component.css',
 })
 export class AccountRechargeComponent {
   readonly cardId = input('');
@@ -187,7 +120,10 @@ export class AccountRechargeComponent {
   readonly rechargeAmounts = [1, 2, 5, 10, 20, 30, 40] as const;
   readonly done = signal(false);
   readonly saving = signal(false);
-  readonly submitError = signal<string | null>(null);
+  readonly submitError = signal<string | null>(
+    this.paymentChallenge.hasPendingPayment() ? this.translationService.translate('payment.uncertain.message') : null,
+  );
+  readonly paymentUncertain = signal(this.paymentChallenge.hasPendingPayment());
   readonly isCardUsable = isCardUsable;
   readonly usableCards = () => this.walletService.cards().filter((card) => isCardUsable(card));
   private readonly queryCardId = toSignal(this.route.queryParamMap.pipe(map((params) => params.get('cardId'))), {
@@ -232,6 +168,11 @@ export class AccountRechargeComponent {
 
   async confirm(): Promise<void> {
     if (this.done() || this.saving()) return;
+    if (this.paymentUncertain() || this.paymentChallenge.hasPendingPayment()) {
+      this.paymentUncertain.set(true);
+      this.submitError.set(this.translationService.translate('payment.uncertain.message'));
+      return;
+    }
     if (!this.usableCards().some((card) => card.id === this.selectedCardId())) {
       this.form.controls.cardId.setErrors({ unavailable: true });
       this.form.controls.cardId.markAsTouched();
@@ -245,20 +186,43 @@ export class AccountRechargeComponent {
     const amount = this.selectedAmount();
     this.submitError.set(null);
     this.saving.set(true);
+    this.paymentChallenge.begin({ kind: 'recharge', returnUrl: '/app/account/payment-methods/recharge', amount, status: 'uncertain' });
     try {
       const result = await this.walletService.recharge(amount, this.selectedCardId());
       if (result.challengeUrl) {
+        this.paymentUncertain.set(true);
         this.paymentChallenge.beginRecharge({ amount, ...(result.order ? { order: result.order } : {}) });
-        this.authService.preparePaymentRedirect(result.challengeUrl);
-        window.location.assign(result.challengeUrl);
+        try {
+          this.authService.preparePaymentRedirect(result.challengeUrl);
+          window.location.assign(result.challengeUrl);
+        } catch (error) {
+          this.paymentChallenge.begin({
+            kind: 'recharge',
+            returnUrl: '/app/account/payment-methods/recharge',
+            amount,
+            status: 'uncertain',
+            ...(result.order ? { order: result.order } : {}),
+          });
+          throw error;
+        }
         return;
       }
       if (!result.success) {
-        this.submitError.set(result.error?.message ?? this.translationService.translate('errors.server'));
+        if (isPaymentOutcomeUnknown(result.error)) {
+          this.paymentUncertain.set(true);
+          this.submitError.set(this.translationService.translate('payment.uncertain.message'));
+        } else {
+          this.paymentChallenge.clear();
+          this.submitError.set(this.translationService.translate('account.recharge.serviceError'));
+        }
         return;
       }
-      await this.operationsService.load();
+      this.paymentChallenge.clear();
       this.done.set(true);
+      await this.operationsService.load();
+    } catch {
+      if (!this.done()) this.paymentUncertain.set(true);
+      this.submitError.set(this.translationService.translate(this.done() ? 'errors.server' : 'payment.uncertain.message'));
     } finally {
       this.saving.set(false);
     }

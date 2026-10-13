@@ -1,3 +1,5 @@
+import { PaymentChallengeService } from '../../../core/services/payment-challenge.service';
+import { isPaymentOutcomeUnknown } from '../../../core/utils/payment-error';
 import { DecimalPipe } from '@angular/common';
 import { Component, input, output, inject, signal } from '@angular/core';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
@@ -12,13 +14,15 @@ import { LoaderComponent } from '../../../shared/components/loader/loader.compon
   imports: [TranslatePipe, DecimalPipe, DetailPanelHeaderComponent, ResultModalComponent, LoaderComponent],
   template: `
     <app-loader [visible]="requesting() && !refundQuote()" [message]="'common.loading' | translate" />
-    <div class="page account-static-page">
+    <div class="page account-static-page account-form-page">
       @if (!embedded()) {
         <app-detail-panel-header [title]="'account.refund.title' | translate" backRoute="/app/account/payment-methods" />
       } @else {
         <h2>{{ 'account.refund.title' | translate }}</h2>
       }
-      @if (failed() || walletService.source() === 'error') {
+      @if (paymentUncertain()) {
+        <p class="data-notice" role="alert">{{ 'payment.uncertain.message' | translate }}</p>
+      } @else if (failed() || walletService.source() === 'error') {
         <p class="data-notice" role="alert">{{ 'account.refund.error' | translate }}</p>
       }
       <div class="card refund-summary">
@@ -31,7 +35,7 @@ import { LoaderComponent } from '../../../shared/components/loader/loader.compon
         <button
           type="button"
           class="btn btn-primary btn-block"
-          [disabled]="requesting() || walletService.balance() <= 0"
+          [disabled]="requesting() || paymentUncertain() || walletService.balance() <= 0"
           (click)="requestRefund()"
         >
           {{ (requesting() ? 'account.refund.calculating' : 'account.refund.request') | translate }}
@@ -60,46 +64,11 @@ import { LoaderComponent } from '../../../shared/components/loader/loader.compon
       }
     </div>
   `,
-  styles: [
-    `
-      :host {
-        display: block;
-      }
-      .refund-summary {
-        display: grid;
-        gap: 0.75rem;
-      }
-      .data-notice {
-        margin: 0 0 1rem;
-        padding: 0.75rem 0.9rem;
-        border: 1px solid #e5b85c;
-        border-radius: var(--radius-md);
-        background: #fff8e7;
-        color: #714b00;
-      }
-      .refund-summary p {
-        margin: 0;
-      }
-      .available-balance {
-        font-size: var(--text-2xl);
-        color: var(--color-primary);
-      }
-      .refund-explanation {
-        color: var(--color-text-muted);
-        font-size: var(--text-sm);
-        line-height: 1.5;
-      }
-      .refund-destination {
-        padding: 0.75rem;
-        border-radius: var(--radius-md);
-        background: var(--color-active);
-        color: var(--color-text-muted);
-        font-size: var(--text-sm);
-      }
-    `,
-  ],
+  styleUrl: './refund.component.css',
 })
 export class AccountRefundComponent {
+  private readonly pendingPayment = inject(PaymentChallengeService);
+  readonly paymentUncertain = signal(this.pendingPayment.hasPendingPayment());
   readonly cardId = input('');
   readonly embedded = input(false);
   readonly back = output<void>();
@@ -112,6 +81,10 @@ export class AccountRefundComponent {
   readonly done = signal(false);
   readonly failed = signal(false);
   requestRefund(): void {
+    if (this.pendingPayment.hasPendingPayment()) {
+      this.paymentUncertain.set(true);
+      return;
+    }
     if (this.requesting() || this.walletService.balance() <= 0) return;
     this.failed.set(false);
     this.refundQuote.set(this.walletService.balance());
@@ -122,20 +95,31 @@ export class AccountRefundComponent {
   async confirmRefund(): Promise<void> {
     const amount = this.refundQuote();
     if (!amount || this.requesting()) return;
+    if (this.pendingPayment.hasPendingPayment()) {
+      this.paymentUncertain.set(true);
+      this.refundQuote.set(null);
+      return;
+    }
     this.requesting.set(true);
     this.failed.set(false);
+    this.pendingPayment.begin({ kind: 'refund', returnUrl: '/app/operations', amount, status: 'uncertain' });
     try {
       const result = await this.walletService.refund(amount);
       this.refundQuote.set(null);
       if (!result.success || result.amount == null) {
+        if (!isPaymentOutcomeUnknown(result.error)) this.pendingPayment.clear();
+        else this.paymentUncertain.set(true);
         this.failed.set(true);
         await this.walletService.load();
         return;
       }
       this.refundedAmount.set(result.amount);
+      this.pendingPayment.clear();
+      this.done.set(true);
       await Promise.all([this.operationsService.load(), this.walletService.load()]);
       this.done.set(true);
     } catch {
+      if (!this.done()) this.paymentUncertain.set(true);
       this.refundQuote.set(null);
       this.failed.set(true);
     } finally {

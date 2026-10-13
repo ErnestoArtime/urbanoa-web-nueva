@@ -6,14 +6,19 @@ import { BehaviorSubject } from 'rxjs';
 import { OperationsService } from '../../../core/services/operations.service';
 import { WalletService } from '../../../core/services/wallet.service';
 import { AccountRechargeComponent } from './recharge.component';
+import { OpsApiError } from '../../../core/api/ops-api.types';
+import { PaymentChallengeService } from '../../../core/services/payment-challenge.service';
 
 describe('AccountRechargeComponent', () => {
-  beforeEach(() => TestBed.configureTestingModule({ providers: [
-    { provide: AuthService, useValue: { preparePaymentRedirect: jasmine.createSpy('preparePaymentRedirect') } },
-  ] }));
+  beforeEach(() => sessionStorage.clear());
+  beforeEach(() =>
+    TestBed.configureTestingModule({
+      providers: [{ provide: AuthService, useValue: { preparePaymentRedirect: jasmine.createSpy('preparePaymentRedirect') } }],
+    }),
+  );
   it('rejects a selected expired card even when another card is usable', async () => {
     const wallet = TestBed.inject(WalletService);
-    wallet.cards.update(cards => cards.map((card, index) => index === 0 ? { ...card, expiryDate: '01/20' } : card));
+    wallet.cards.update((cards) => cards.map((card, index) => (index === 0 ? { ...card, expiryDate: '01/20' } : card)));
     const recharge = jasmine.createSpy().and.resolveTo({ success: false });
     Object.assign(wallet, { recharge });
     const fixture = TestBed.createComponent(AccountRechargeComponent);
@@ -76,5 +81,31 @@ describe('AccountRechargeComponent', () => {
     fixture.componentInstance.form.controls.amount.setValue(40);
 
     expect(fixture.componentInstance.balanceAfterRecharge()).toBe(62.99);
+  });
+
+  it('releases loading but blocks repeat charges after timeout, including a new instance of the form', async () => {
+    const recharge = jasmine.createSpy().and.resolveTo({ success: false, error: new OpsApiError('timeout', 'recharge', 'timeout') });
+    Object.assign(TestBed.inject(WalletService), { recharge });
+    const component = mount().componentInstance;
+    await component.confirm();
+    expect(component.saving()).toBeFalse();
+    expect(component.paymentUncertain()).toBeTrue();
+    await component.confirm();
+    await mount().componentInstance.confirm();
+    expect(recharge).toHaveBeenCalledTimes(1);
+    expect(TestBed.inject(PaymentChallengeService).hasUncertainPayment()).toBeTrue();
+  });
+
+  it('allows a corrected attempt after a definitive business rejection', async () => {
+    const recharge = jasmine
+      .createSpy()
+      .and.resolveTo({ success: false, error: new OpsApiError('backend', 'recharge', 'rejected', 200, { code: -21, type: 1 }) });
+    Object.assign(TestBed.inject(WalletService), { recharge });
+    const component = mount().componentInstance;
+    await component.confirm();
+    expect(component.paymentUncertain()).toBeFalse();
+    expect(TestBed.inject(PaymentChallengeService).hasPendingPayment()).toBeFalse();
+    await component.confirm();
+    expect(recharge).toHaveBeenCalledTimes(2);
   });
 });
