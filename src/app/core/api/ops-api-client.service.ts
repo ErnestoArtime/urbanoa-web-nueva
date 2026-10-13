@@ -139,6 +139,9 @@ export class OpsApiClient {
       this.verifyWindowSession(endpoint, options.token);
 
       if (!response.ok) {
+        if (response.status === 401 && options.token) {
+          window.dispatchEvent(new CustomEvent('urbanoa:session-expired'));
+        }
         const responseBody = await response.text().catch(() => '');
         const detail = responseBody.trim().replace(/\s+/g, ' ').slice(0, 500);
         throw new OpsApiError('http', endpoint, `${endpoint}: HTTP ${response.status}${detail ? ` - ${detail}` : ''}`, response.status);
