@@ -13,7 +13,13 @@ import { APP_BRAND } from '../../../shared/constants/app-brand';
     <div class="card wallet-shell-card">
       <div class="wallet-card-inline">
         <p class="wallet-inline-title">{{ 'account.wallet' | translate }}</p>
-        <p class="wallet-inline-balance">@if (balanceAvailable()) { {{ balance() | number: '1.2-2' }} € } @else { — }</p>
+        <p class="wallet-inline-balance">
+          @if (balanceAvailable()) {
+            {{ balance() | number: '1.2-2' }} €
+          } @else {
+            —
+          }
+        </p>
         <span class="wallet-inline-brand">ap</span>
         <span class="wallet-inline-mark" aria-hidden="true">{{ brand.name }}</span>
       </div>
@@ -36,7 +42,7 @@ import { APP_BRAND } from '../../../shared/constants/app-brand';
           </div>
         }
       </div>
-      <div class="row mt-2 wallet-actions" style="gap:0.5rem;flex-wrap:wrap">
+      <div class="row mt-2 wallet-actions">
         <button type="button" class="btn btn-secondary btn-sm" [disabled]="!hasCards()" (click)="recharge.emit()">
           {{ 'dashboard.recharge' | translate }}
         </button>
@@ -44,63 +50,7 @@ import { APP_BRAND } from '../../../shared/constants/app-brand';
       </div>
     </div>
   `,
-  styles: [
-    `
-    .wallet-shell-card { background: var(--card-bg); }
-    .wallet-card-inline {
-      position:relative;
-      width: 100%;
-      max-width: 225px;
-      border-radius: 10px;
-      padding: .95rem 1rem .75rem;
-      color:#fff;
-      background: linear-gradient(135deg, #4fa6a0 0%, #3f8f8b 55%, #357e7b 100%);
-      box-shadow: 0 6px 14px rgba(40, 105, 103, 0.25);
-      margin-bottom: .8rem;
-      overflow:hidden;
-    }
-    .wallet-inline-title { font-size: var(--text-md); font-weight: var(--font-bold); opacity:.95; }
-    .wallet-inline-balance { font-size: var(--text-display); font-weight: var(--font-bold); letter-spacing: .01em; margin-top: .22rem; }
-    .wallet-inline-mark {
-      position:absolute;
-      right:.85rem;
-      top:.35rem;
-      font-size: var(--text-display)
-      font-weight: var(--font-extra);
-      opacity:.09;
-      transform:rotate(-19deg);
-      pointer-events:none;
-      white-space:nowrap;
-    }
-    .wallet-inline-brand {
-      position:absolute;
-      right:.55rem;
-      bottom:.42rem;
-      font-size: var(--text-md);
-      font-weight: var(--font-bold);
-      opacity:.82;
-      text-transform:lowercase;
-    }
-    .wallet-main-card-row { display:flex; align-items:center; gap:.65rem; }
-    .wallet-card-icon {
-      width:20px;
-      height:20px;
-      color:var(--color-primary);
-      flex-shrink:0;
-    }
-    .wallet-card-icon svg { width:100%; height:100%; fill:currentColor; }
-    .wallet-main-label { color:#49544c; font-size: var(--text-sm); font-weight: var(--font-bold); }
-    .wallet-main-value { font-size: var(--text-base); font-weight: var(--font-bold); line-height: var(--line-tight); margin-top:.1rem; }
-    .wallet-main-expiry { color:var(--color-text-muted); font-size: var(--text-md); margin-top:.14rem; }
-    .wallet-actions .btn { min-width: 136px; }
-    .wallet-actions .btn-primary { background:#2f6f71; }
-    .wallet-actions button:disabled {
-      cursor: not-allowed;
-      opacity: 0.45;
-      filter: grayscale(0.35);
-    }
-  `,
-  ],
+  styleUrl: './wallet-summary-card.component.css',
 })
 export class WalletSummaryCardComponent {
   readonly balance = input.required<number>();

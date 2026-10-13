@@ -1,0 +1,98 @@
+.wallet-shell-card {
+  background: var(--card-bg);
+}
+.wallet-card-inline {
+  position: relative;
+  width: 100%;
+  max-width: 225px;
+  border-radius: 10px;
+  padding: 0.95rem 1rem 0.75rem;
+  color: var(--color-on-primary);
+  background: linear-gradient(
+    135deg,
+    var(--color-wallet-card-inline-surface) 0%,
+    var(--color-wallet-card-inline-surface-2) 55%,
+    var(--color-wallet-card-inline-surface-3) 100%
+  );
+  box-shadow: 0 6px 14px var(--color-wallet-card-inline-shadow);
+  margin-bottom: 0.8rem;
+  overflow: hidden;
+}
+.wallet-inline-title {
+  font-size: var(--text-md);
+  font-weight: var(--font-bold);
+  opacity: 0.95;
+}
+.wallet-inline-balance {
+  font-size: var(--text-display);
+  font-weight: var(--font-bold);
+  letter-spacing: 0.01em;
+  margin-top: 0.22rem;
+}
+.wallet-inline-mark {
+  position: absolute;
+  right: 0.85rem;
+  top: 0.35rem;
+  /* Invalid original font declaration removed; inherited appearance preserved. */
+  opacity: 0.09;
+  transform: rotate(-19deg);
+  pointer-events: none;
+  white-space: nowrap;
+}
+.wallet-inline-brand {
+  position: absolute;
+  right: 0.55rem;
+  bottom: 0.42rem;
+  font-size: var(--text-md);
+  font-weight: var(--font-bold);
+  opacity: 0.82;
+  text-transform: lowercase;
+}
+.wallet-main-card-row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+.wallet-card-icon {
+  width: 20px;
+  height: 20px;
+  color: var(--color-primary);
+  flex-shrink: 0;
+}
+.wallet-card-icon svg {
+  width: 100%;
+  height: 100%;
+  fill: currentColor;
+}
+.wallet-main-label {
+  color: var(--color-wallet-main-label-text);
+  font-size: var(--text-sm);
+  font-weight: var(--font-bold);
+}
+.wallet-main-value {
+  font-size: var(--text-base);
+  font-weight: var(--font-bold);
+  line-height: var(--line-tight);
+  margin-top: 0.1rem;
+}
+.wallet-main-expiry {
+  color: var(--color-text-muted);
+  font-size: var(--text-md);
+  margin-top: 0.14rem;
+}
+.wallet-actions .btn {
+  min-width: 136px;
+}
+.wallet-actions .btn-primary {
+  background: var(--color-wallet-actions-surface);
+}
+.wallet-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+  filter: grayscale(0.35);
+}
+
+.wallet-actions {
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}

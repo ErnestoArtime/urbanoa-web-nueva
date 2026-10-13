@@ -1,0 +1,172 @@
+.active-ticket-shell {
+  border-radius: var(--radius-md);
+  filter: drop-shadow(0 3px 8px var(--color-active-ticket-shell-text));
+}
+.active-ticket-card {
+  --ticket-notch-r: 10px;
+  --ticket-cut-y: 156px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: none;
+  -webkit-mask:
+    radial-gradient(
+        circle at 0 var(--ticket-cut-y),
+        transparent 0 var(--ticket-notch-r),
+        var(--color-mask) calc(var(--ticket-notch-r) + 1px)
+      )
+      left top / 51% 100% no-repeat,
+    radial-gradient(
+        circle at 100% var(--ticket-cut-y),
+        transparent 0 var(--ticket-notch-r),
+        var(--color-mask) calc(var(--ticket-notch-r) + 1px)
+      )
+      right top / 51% 100% no-repeat;
+  mask:
+    radial-gradient(
+        circle at 0 var(--ticket-cut-y),
+        transparent 0 var(--ticket-notch-r),
+        var(--color-mask) calc(var(--ticket-notch-r) + 1px)
+      )
+      left top / 51% 100% no-repeat,
+    radial-gradient(
+        circle at 100% var(--ticket-cut-y),
+        transparent 0 var(--ticket-notch-r),
+        var(--color-mask) calc(var(--ticket-notch-r) + 1px)
+      )
+      right top / 51% 100% no-repeat;
+}
+.active-ticket-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 8px;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  background: var(
+    --ticket-header-color,
+    linear-gradient(
+      90deg,
+      var(--color-active-ticket-card-surface) 0%,
+      var(--color-active-ticket-card-surface-2) 48%,
+      var(--color-active-ticket-card-surface-3) 100%
+    )
+  );
+}
+.ticket-main-row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin-top: 0.25rem;
+}
+.ticket-main-icon {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--color-surface);
+  color: var(--color-primary);
+  flex: 0 0 auto;
+}
+.ticket-progress-track {
+  stroke: var(--color-ticket-progress-track-text);
+  stroke-dasharray: 83 17;
+  stroke-dashoffset: -8;
+}
+.ticket-car-icon {
+  position: relative;
+  z-index: 1;
+  color: var(--color-primary);
+}
+.ticket-timer {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  margin-top: 0.22rem;
+}
+.ticket-location {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  margin-left: auto;
+  padding-left: 0.5rem;
+}
+.ticket-location small {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}
+.ticket-location strong {
+  overflow: hidden;
+  margin-top: 0.1rem;
+  font-size: var(--text-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ticket-time-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 0.55rem;
+  text-align: center;
+}
+.ticket-time-row small {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+.ticket-time-row p {
+  margin: 0 0.35rem;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 0.28rem 0.7rem;
+  color: inherit;
+  font-weight: var(--font-bold);
+  font-size: var(--text-md);
+  white-space: nowrap;
+  background: var(--color-surface);
+}
+.ticket-divider {
+  position: relative;
+  height: 20px;
+  margin: 0.45rem -0.9rem 0.15rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ticket-divider-line {
+  flex: 1;
+  height: 0;
+  border-top: 3px dashed var(--color-ticket-divider-line-border);
+  margin: 0 calc(var(--ticket-notch-r) + 5px);
+}
+.action-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+.action-row .btn-secondary {
+  grid-column: 1/-1;
+}
+.action-row .btn {
+  border-radius: var(--radius-pill);
+  font-weight: var(--font-bold);
+  border: 1px solid transparent;
+}
+.action-btn-icon {
+  flex-shrink: 0;
+}
+.action-row .btn-secondary {
+  background: var(--color-surface);
+  color: var(--color-text);
+  border-color: var(--color-border);
+}
+.action-row .btn-danger {
+  background: var(--color-action-row-surface);
+  color: var(--color-action-row-text);
+  border-color: var(--color-action-row-border);
+}
+.action-row .btn-primary {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}

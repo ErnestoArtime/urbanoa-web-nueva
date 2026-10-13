@@ -14,7 +14,7 @@ import { isAcknowledgedFine } from '../../../core/services/unpaid-fines.service'
   template: `
     <div class="card operation-history-card">
       <p class="card-title">{{ 'dashboard.recentOps' | translate }}</p>
-      <ul class="list" style="margin-top:0.5rem;border-radius:var(--radius-sm);overflow:hidden">
+      <ul class="list recent-operations-list">
         @for (op of operations(); track op.id) {
           <a [routerLink]="['/app/operations/detail', op.id]" class="list-item" [class.historic-fine-item]="isHistoricFine(op)">
             <app-operation-icon [type]="op.type" />
@@ -65,77 +65,7 @@ import { isAcknowledgedFine } from '../../../core/services/unpaid-fines.service'
       <button type="button" class="btn-text view-all-link" (click)="viewAll.emit()">{{ 'dashboard.viewAll' | translate }}</button>
     </div>
   `,
-  styles: [
-    `
-      .operation-history-card .list-item {
-        display: flex;
-        align-items: center;
-        border-bottom-color: #e1e6d9;
-      }
-      .operation-history-card .list-item:hover {
-        background: #f1f4ea;
-      }
-      .operation-history-card .operation-meta {
-        color: var(--color-text-muted);
-        font-size: var(--text-xs);
-      }
-      .operation-history-card .operation-price-date {
-        display: flex;
-        flex-direction: column;
-        align-items: flex-end;
-        gap: 0.2rem;
-        flex-shrink: 0;
-      }
-      .operation-history-card .operation-date,
-      .operation-history-card .operation-time {
-        color: var(--color-text-muted);
-        font-size: var(--text-xs);
-        white-space: nowrap;
-      }
-      .operation-history-card .operation-amount {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        min-width: 4.25rem;
-        padding: 0.28rem 0.55rem;
-        border-radius: var(--radius-pill);
-        font-size: var(--text-xs);
-        font-weight: var(--font-extra);
-        line-height: 1;
-        white-space: nowrap;
-      }
-      .operation-history-card .operation-amount-credit {
-        background: #e8f5e9;
-        color: var(--color-success);
-      }
-      .operation-history-card .operation-amount-debit {
-        background: var(--color-error-bg);
-        color: var(--color-error);
-      }
-      .operation-history-card .historic-fine-badge {
-        display: inline-flex;
-        margin-left: 0.4rem;
-        padding: 0.12rem 0.38rem;
-        border-radius: 999px;
-        background: var(--color-error-bg);
-        color: var(--color-error);
-        font-size: var(--text-xs);
-        font-weight: var(--font-bold);
-      }
-      .operation-history-card .historic-fine-item {
-        border-left: 4px solid var(--color-error);
-        background: var(--color-surface);
-      }
-      .operation-history-card .card-title {
-        margin-bottom: 0.35rem;
-      }
-      .view-all-link {
-        display: block;
-        margin-top: 1rem;
-        text-align: right;
-      }
-    `,
-  ],
+  styleUrl: './recent-operations-card.component.css',
 })
 export class RecentOperationsCardComponent {
   readonly operations = input.required<Operation[]>();

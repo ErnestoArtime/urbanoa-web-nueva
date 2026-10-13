@@ -1,3 +1,4 @@
+import { RuntimeStyleDirective } from '../../../shared/directives/runtime-style.directive';
 import { Component, computed, inject, input, output, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AccountCompletionService } from '../../../core/services/account-completion.service';
@@ -6,7 +7,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 @Component({
   selector: 'app-profile-progress-card',
   standalone: true,
-  imports: [RouterLink, TranslatePipe],
+  imports: [RuntimeStyleDirective, RouterLink, TranslatePipe],
   template: `
     <div class="card profile-progress-card">
       <div class="profile-progress-head">
@@ -21,7 +22,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
         </button>
         <strong>{{ realProgress() }}%</strong>
       </div>
-      <div class="profile-progress"><span [style.width.%]="realProgress()"></span></div>
+      <div class="profile-progress"><span [appRuntimeStyle]="{ width: realProgress() + '%' }"></span></div>
       <p class="card-title">{{ 'dashboard.profileCompletion.title' | translate }}</p>
       <p class="card-subtitle">{{ 'dashboard.profileCompletion.subtitle' | translate }}</p>
       @if (showHelp()) {
@@ -44,74 +45,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
       </div>
     </div>
   `,
-  styles: [
-    `
-      .profile-progress-card {
-        background: #f7f8f1;
-      }
-      .profile-progress-head {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        color: var(--color-text-muted);
-        font-size: var(--text-xs);
-      }
-      .profile-progress {
-        height: 6px;
-        margin: 0.45rem 0 0.8rem;
-        overflow: hidden;
-        border-radius: 999px;
-        background: var(--color-border);
-      }
-      .profile-progress span {
-        display: block;
-        height: 100%;
-        background: var(--color-primary-light);
-      }
-      .progress-help {
-        display: inline-grid;
-        place-items: center;
-        width: 1.15rem;
-        height: 1.15rem;
-        margin-left: auto;
-        margin-right: 0.4rem;
-        border: 1px solid var(--color-primary);
-        border-radius: 50%;
-        background: transparent;
-        color: var(--color-primary);
-        font-size: var(--text-2xs);
-        font-weight: var(--font-extra);
-        cursor: pointer;
-      }
-      .profile-checklist {
-        display: grid;
-        gap: 0.25rem;
-        padding: 0.55rem 0.7rem;
-        border-radius: var(--radius-sm);
-        background: var(--color-background);
-        font-size: var(--text-xs);
-      }
-      .profile-checklist p {
-        display: flex;
-        align-items: center;
-        gap: 0.45rem;
-        margin: 0;
-      }
-      .profile-checklist span {
-        color: var(--color-error);
-        font-weight: var(--font-extra);
-      }
-      .profile-checklist span.done {
-        color: var(--color-success);
-      }
-      .profile-actions {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.65rem;
-        align-items: center;
-      }
-    `,
-  ],
+  styleUrl: './profile-progress-card.component.css',
 })
 export class ProfileProgressCardComponent {
   private readonly accountCompletion = inject(AccountCompletionService);
