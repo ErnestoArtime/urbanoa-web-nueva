@@ -1,3 +1,4 @@
+import { isPaymentOutcomeUnknown } from '../../../core/utils/payment-error';
 import { Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { DecimalPipe } from '@angular/common';
@@ -163,7 +164,7 @@ import { AuthService } from '../../../core/services/auth.service';
                 type="button"
                 class="btn btn-primary btn-block"
                 (click)="pay()"
-                [disabled]="paying() || (insufficientFunds() && !selectedCardId())"
+                [disabled]="paying() || paymentUncertain() || (insufficientFunds() && !selectedCardId())"
               >
                 {{ 'ops.fineDetail.pay' | translate }} {{ fine.amount }}
               </button>
@@ -193,151 +194,7 @@ import { AuthService } from '../../../core/services/auth.service';
       />
     }
   `,
-  styles: [
-    `
-      :host {
-        display: block;
-        height: 100%;
-        min-height: 0;
-      }
-      .fine-detail-page {
-        display: flex;
-        flex-direction: column;
-        height: 100%;
-        min-height: 0;
-        padding: 0;
-        overflow: hidden;
-      }
-      .fine-detail-page app-detail-panel-header {
-        flex: 0 0 auto;
-      }
-      .fine-detail-scroll {
-        flex: 1 1 auto;
-        min-height: 0;
-        overflow-y: auto;
-        padding: 0.4rem 1.4rem 1.5rem;
-      }
-      .fine-detail-intro {
-        padding: 0.9rem 0 1.1rem;
-      }
-      .fine-detail-kind {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        margin-bottom: 1rem;
-      }
-      .fine-detail-amount {
-        display: block;
-        color: #813832;
-        font-size: clamp(2rem, 8vw, 2.5rem);
-        line-height: 1;
-      }
-      .fine-detail-row {
-        display: grid;
-        grid-template-columns: 40px minmax(0, 1fr);
-        gap: 1rem;
-        align-items: start;
-        padding: 0.75rem 0;
-      }
-      .fine-detail-row-icon {
-        display: grid;
-        width: 30px;
-        height: 30px;
-        place-items: center;
-        color: var(--color-text-muted);
-        font-size: 1.6rem;
-        line-height: 1;
-      }
-      .fine-detail-row > div {
-        display: flex;
-        flex-direction: column;
-        gap: 0.15rem;
-        min-width: 0;
-      }
-      .fine-detail-row span:not(.fine-detail-row-icon) {
-        color: var(--color-text-muted);
-      }
-      .fine-detail-row strong {
-        font-size: var(--text-base);
-        font-weight: var(--font-normal);
-        line-height: 1.45;
-        overflow-wrap: anywhere;
-      }
-      .fine-detail-message {
-        display: grid;
-        grid-template-columns: 40px minmax(0, 1fr);
-        gap: 1rem;
-        align-items: start;
-        padding: 0.8rem 0 1rem;
-        color: var(--color-error);
-      }
-      .fine-detail-message p {
-        margin: 0;
-        line-height: 1.5;
-      }
-      .fine-detail-message .fine-detail-row-icon {
-        color: var(--color-error);
-      }
-      .fine-detail-footer {
-        position: sticky;
-        bottom: 0;
-        z-index: 20;
-        flex: 0 0 auto;
-        padding: 0.75rem 1.4rem calc(0.75rem + env(safe-area-inset-bottom));
-        border-top: 1px solid var(--color-border);
-        background: var(--color-surface);
-        box-shadow: 0 -8px 20px rgba(30, 43, 35, 0.08);
-      }
-      .fine-detail-footer .btn {
-        margin: 0;
-      }
-      .payment-breakdown-card {
-        padding: 0.75rem;
-      }
-      .payment-breakdown-row {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 0.3rem 0;
-      }
-      .payment-breakdown-label {
-        font-size: var(--text-sm);
-        color: var(--color-text-muted);
-      }
-      .payment-breakdown-value {
-        font-weight: var(--font-bold);
-        font-size: var(--text-sm);
-      }
-      .payment-breakdown-value.wallet-amount {
-        color: var(--color-primary);
-      }
-      .payment-breakdown-value.card-amount {
-        color: var(--color-error);
-      }
-      .payment-breakdown-divider {
-        height: 1px;
-        background: var(--color-border);
-        margin: 0.2rem 0;
-      }
-      .fine-understood-button {
-        display: block;
-        width: 100%;
-        margin: 1.25rem 0 0;
-        padding: 1rem 1.25rem;
-        border: 0;
-        border-radius: 999px;
-        color: #fff;
-        background: var(--color-primary-dark, #007b78);
-        font: inherit;
-        font-weight: var(--font-bold);
-        cursor: pointer;
-      }
-      .fine-understood-button:disabled {
-        opacity: 0.65;
-        cursor: wait;
-      }
-    `,
-  ],
+  styleUrl: './unpaid-fine-detail.component.css',
 })
 export class UnpaidFineDetailComponent {
   private readonly route = inject(ActivatedRoute);
@@ -345,6 +202,7 @@ export class UnpaidFineDetailComponent {
   private readonly unpaidFinesService = inject(UnpaidFinesService);
   private readonly translationService = inject(TranslationService);
   private readonly paymentChallenge = inject(PaymentChallengeService);
+  readonly paymentUncertain = signal(this.paymentChallenge.hasPendingPayment());
   private readonly authService = inject(AuthService);
   readonly walletService = inject(WalletService);
   readonly fineStatus = FineStatus;
@@ -407,7 +265,9 @@ export class UnpaidFineDetailComponent {
       .subscribe((id) => {
         this.paid.set(false);
         this.acknowledged.set(false);
-        this.errorMessage.set(null);
+        this.errorMessage.set(
+          this.paymentChallenge.hasPendingPayment() ? this.translationService.translate('payment.uncertain.message') : null,
+        );
         this.selectedCardId.set(this.walletService.defaultCardId());
         if (id) void operationsService.loadDetail(id);
       });
@@ -437,34 +297,59 @@ export class UnpaidFineDetailComponent {
 
   async pay(): Promise<void> {
     if (this.paying() || this.movingToHistory() || this.paid()) return;
+    if (this.paymentUncertain() || this.paymentChallenge.hasPendingPayment()) {
+      this.paymentUncertain.set(true);
+      this.errorMessage.set(this.translationService.translate('payment.uncertain.message'));
+      return;
+    }
     const fine = this.fine;
     if (!fine) return;
     const walletAmt = this.walletAmount();
     const cardAmt = this.cardAmount();
     this.paying.set(true);
+    this.paymentChallenge.begin({
+      kind: 'fine',
+      returnUrl: `/app/operations/unpaid-fines/${encodeURIComponent(fine.id)}`,
+      amount: this.numericAmount(),
+      status: 'uncertain',
+    });
     try {
       const result = await this.unpaidFinesService.payFine(fine.id, this.selectedCardId());
       if (this.fineId !== fine.id) return;
       if (result.challengeUrl) {
+        this.paymentUncertain.set(true);
         this.paymentChallenge.begin({
           kind: 'fine',
           returnUrl: `/app/operations/unpaid-fines/${encodeURIComponent(fine.id)}`,
           amount: this.numericAmount(),
         });
-        this.authService.preparePaymentRedirect(result.challengeUrl);
-        window.location.assign(result.challengeUrl);
+        try {
+          this.authService.preparePaymentRedirect(result.challengeUrl);
+          window.location.assign(result.challengeUrl);
+        } catch (error) {
+          this.paymentChallenge.begin({ kind: 'fine', returnUrl: '/app/operations', status: 'uncertain' });
+          throw error;
+        }
         return;
       }
       if (result.success) {
+        this.paymentChallenge.clear();
         this.paidFine.set(fine);
         this.capturedWalletAmount.set(walletAmt);
         this.capturedCardAmount.set(cardAmt);
         this.paid.set(true);
         return;
       }
-      this.errorMessage.set(this.failureMessage('ops.fineDetail.payFailed', result.error));
+      if (result.error && isPaymentOutcomeUnknown(result.error)) {
+        this.paymentUncertain.set(true);
+        this.errorMessage.set(this.translationService.translate('payment.uncertain.message'));
+      } else {
+        this.paymentChallenge.clear();
+        this.errorMessage.set(this.failureMessage('ops.fineDetail.payFailed', result.error));
+      }
     } catch {
-      this.errorMessage.set(this.failureMessage('ops.fineDetail.payFailed'));
+      this.paymentUncertain.set(true);
+      this.errorMessage.set(this.translationService.translate('payment.uncertain.message'));
     } finally {
       this.paying.set(false);
     }

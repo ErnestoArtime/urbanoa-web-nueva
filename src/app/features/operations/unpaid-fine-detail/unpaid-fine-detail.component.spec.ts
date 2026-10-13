@@ -11,9 +11,12 @@ import { WalletService } from '../../../core/services/wallet.service';
 import { UnpaidFineDetailComponent } from './unpaid-fine-detail.component';
 
 describe('UnpaidFineDetailComponent', () => {
-  beforeEach(() => TestBed.configureTestingModule({ providers: [
-    { provide: AuthService, useValue: { preparePaymentRedirect: jasmine.createSpy('preparePaymentRedirect') } },
-  ] }));
+  beforeEach(() => sessionStorage.clear());
+  beforeEach(() =>
+    TestBed.configureTestingModule({
+      providers: [{ provide: AuthService, useValue: { preparePaymentRedirect: jasmine.createSpy('preparePaymentRedirect') } }],
+    }),
+  );
   let fixture: ComponentFixture<UnpaidFineDetailComponent>;
   let translate: jasmine.Spy;
 
@@ -112,13 +115,16 @@ describe('UnpaidFineDetailComponent', () => {
     expect(fixture.nativeElement.querySelector('app-location-map')).not.toBeNull();
   });
 
-  it('shows a generic message when the pay error has no backend payload', async () => {
+  it('keeps a lost payment response pending and prevents another charge', async () => {
     const transportError = new OpsApiError('transport', 'OPSWebServicesAPI/ConfirmPaymentAPI', 'connection lost');
     configure(payableFine, { payFine: jasmine.createSpy('payFine').and.resolveTo({ success: false, error: transportError }) });
     await fixture.componentInstance.pay();
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain('ops.fineDetail.payFailed: errors.network');
+    expect(fixture.nativeElement.textContent).toContain('payment.uncertain.message');
+    expect(fixture.componentInstance.paymentUncertain()).toBeTrue();
+    await fixture.componentInstance.pay();
+    expect(TestBed.inject(UnpaidFinesService).payFine).toHaveBeenCalledTimes(1);
   });
 
   it('shows the failure modal when acknowledging an expired fine fails', async () => {

@@ -21,13 +21,7 @@ import { ReportArtifactService } from '../../../core/services/report-artifact.se
       <a routerLink="/app/operations/report" class="btn btn-ghost btn-block mt-1">{{ 'ops.report.backToReport' | translate }}</a>
     </div>
   `,
-  styles: [
-    `
-      .mt-1 {
-        margin-top: 0.35rem;
-      }
-    `,
-  ],
+  styleUrl: './report-success.component.css',
 })
 export class ReportSuccessComponent {
   readonly reportArtifact = inject(ReportArtifactService);
