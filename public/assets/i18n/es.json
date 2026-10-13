@@ -749,5 +749,6 @@
   "payment.chooseCard": "Selecciona una tarjeta para los {{amount}} € restantes.",
   "payment.insufficient.title": "Atención",
   "payment.insufficient.message": "No dispones de saldo suficiente y no tienes ningún método de pago añadido o los que tienes no son válidos. ¿Quieres añadir uno ahora?",
-  "common.close": "Cerrar"
+  "common.close": "Cerrar",
+  "payment.uncertain.message": "No se ha podido confirmar el resultado de la operación. Revisa tus operaciones o contacta con soporte antes de volver a pagar."
 }

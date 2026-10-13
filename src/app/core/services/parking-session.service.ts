@@ -1,3 +1,6 @@
+import { PaymentChallengeService } from './payment-challenge.service';
+import { TranslationService } from './translation.service';
+import { isPaymentOutcomeUnknown } from '../utils/payment-error';
 import { Injectable, inject, signal } from '@angular/core';
 import { OperationsService, type ActiveParking } from './operations.service';
 import { ParkingApiService, type UnparkingQuoteResult } from './parking-api.service';
@@ -6,6 +9,8 @@ import { WalletService } from './wallet.service';
 
 @Injectable({ providedIn: 'root' })
 export class ParkingSessionService {
+  private readonly paymentChallenge = inject(PaymentChallengeService);
+  private readonly translations = inject(TranslationService);
   private readonly operationsService = inject(OperationsService);
   private readonly parkingApi = inject(ParkingApiService);
   private readonly ticketStore = inject(ParkingTicketStoreService);
@@ -32,6 +37,10 @@ export class ParkingSessionService {
   }
 
   async leaveParking(parkingId: string, preparedQuote?: UnparkingQuoteResult): Promise<boolean> {
+    if (this.paymentChallenge.hasPendingPayment()) {
+      this.unparkError.set(this.translations.translate('payment.uncertain.message'));
+      return false;
+    }
     this.unparkError.set(null);
     const parking = this.operationsService.getActiveParking(parkingId);
     if (!parking?.contractId || parking.refundable !== 2) {
@@ -46,13 +55,26 @@ export class ParkingSessionService {
       ticketId: storedTicket && storedTicket > 0 ? storedTicket : parking.tariffId,
       ...(parking.operationDate ? { datetime: parking.operationDate } : {}),
     };
-    const result = preparedQuote ? await this.parkingApi.unpark(input, preparedQuote) : await this.parkingApi.unpark(input);
-    if (!result.success) {
-      this.operationsService.restoreActiveParking(parking);
-      const error = result.error;
-      this.unparkError.set(error instanceof Error ? error.message : 'No se pudo completar el desaparcar.');
+    this.paymentChallenge.begin({ kind: 'unparking', returnUrl: '/app/operations', status: 'uncertain' });
+    let result;
+    try {
+      result = preparedQuote ? await this.parkingApi.unpark(input, preparedQuote) : await this.parkingApi.unpark(input);
+    } catch {
+      this.unparkError.set(this.translations.translate('payment.uncertain.message'));
       return false;
     }
+    if (!result.success) {
+      const error = result.error;
+      if (isPaymentOutcomeUnknown(error)) {
+        this.unparkError.set(this.translations.translate('payment.uncertain.message'));
+      } else {
+        this.paymentChallenge.clear();
+        this.operationsService.restoreActiveParking(parking);
+        this.unparkError.set(this.translations.translate('errors.server'));
+      }
+      return false;
+    }
+    this.paymentChallenge.clear();
     this.operationsService.markParkingEnded(parking.id);
     await Promise.all([this.operationsService.load(), this.walletService.load()]);
     this.operationsService.syncActiveParkingsFromOperations([{ id: parking.vehicleId, plate: parking.plate }]);

@@ -749,5 +749,6 @@
   "onboarding.payment.addCard": "Add credit card",
   "onboarding.notification.title": "Don't lose track of the time",
   "auth.reset.subtitle": "Enter your Arinpark email address and click \"Generate code\". You will receive a verification code to enter in a later step. If you have any questions, please contact us at soporte@arinpark.eus",
-  "auth.resetCode.resend": "Resend code"
+  "auth.resetCode.resend": "Resend code",
+  "payment.uncertain.message": "uk_No se ha podido confirmar el resultado de la operación. Revisa tus operaciones o contacta con soporte antes de volver a pagar."
 }

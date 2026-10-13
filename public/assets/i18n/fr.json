@@ -749,5 +749,6 @@
   "onboarding.payment.addCard": "Ajouter une carte de paiement",
   "onboarding.notification.title": "Nous vous aidons à ne pas dépasser votre temps de stationnement autorisé!",
   "auth.reset.subtitle": "Saisissez l'adresse e-mail que vous utilisez sur Arinpark et cliquez sur « Générer un code ». Vous recevrez un code unique pour continuer. Pour toute question, veuillez nous contacter à l'adresse soporte@arinpark.eus.",
-  "auth.resetCode.resend": "Renvoyer le code"
+  "auth.resetCode.resend": "Renvoyer le code",
+  "payment.uncertain.message": "fr_No se ha podido confirmar el resultado de la operación. Revisa tus operaciones o contacta con soporte antes de volver a pagar."
 }

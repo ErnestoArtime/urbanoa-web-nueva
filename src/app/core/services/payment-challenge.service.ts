@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 
-export type PaymentChallengeKind = 'recharge' | 'parking' | 'parking-extension' | 'fine';
+export type PaymentChallengeKind = 'recharge' | 'parking' | 'parking-extension' | 'fine' | 'refund' | 'unparking';
 
 export interface PendingPaymentChallenge {
   kind: PaymentChallengeKind;
@@ -8,6 +8,7 @@ export interface PendingPaymentChallenge {
   startedAt: number;
   amount?: number;
   order?: string;
+  status?: 'uncertain';
 }
 
 export interface PendingRechargeChallenge {
@@ -24,12 +25,14 @@ export type PaymentChallengeRequest = Omit<PendingPaymentChallenge, 'startedAt'>
  */
 @Injectable({ providedIn: 'root' })
 export class PaymentChallengeService {
+  private volatilePending: PendingPaymentChallenge | null = null;
   private readonly key = 'urbanoa.paycomet.pending-payment-v1';
   private readonly legacyRechargeKey = 'urbanoa.paycomet.pending-recharge';
   private readonly maxAgeMs = 30 * 60_000;
 
   begin(challenge: PaymentChallengeRequest): void {
     const pending: PendingPaymentChallenge = { ...challenge, startedAt: Date.now() };
+    this.volatilePending = pending;
     this.write(this.key, JSON.stringify(pending));
     this.remove(this.legacyRechargeKey);
   }
@@ -46,6 +49,7 @@ export class PaymentChallengeService {
   getPending(): PendingPaymentChallenge | null {
     const value = this.read(this.key);
     if (value) return this.parsePending(value);
+    if (this.volatilePending) return this.parsePending(JSON.stringify(this.volatilePending));
 
     // Allows an in-flight recharge created by the previous web version to
     // return safely after a deployment. It still is not treated as success.
@@ -79,23 +83,35 @@ export class PaymentChallengeService {
   }
 
   clear(): void {
+    this.volatilePending = null;
     this.remove(this.key);
     this.remove(this.legacyRechargeKey);
+  }
+
+  hasUncertainPayment(): boolean {
+    return this.getPending()?.status === 'uncertain';
+  }
+
+  hasPendingPayment(): boolean {
+    return this.getPending() !== null;
   }
 
   private parsePending(value: string): PendingPaymentChallenge | null {
     try {
       const parsed = JSON.parse(value) as Partial<PendingPaymentChallenge>;
-      const validKinds: PaymentChallengeKind[] = ['recharge', 'parking', 'parking-extension', 'fine'];
+      const validKinds: PaymentChallengeKind[] = ['recharge', 'parking', 'parking-extension', 'fine', 'refund', 'unparking'];
       if (!parsed.kind || !validKinds.includes(parsed.kind)) return null;
       if (typeof parsed.returnUrl !== 'string' || !parsed.returnUrl.startsWith('/app/')) return null;
-      if (!Number.isFinite(parsed.startedAt) || Date.now() - Number(parsed.startedAt) > this.maxAgeMs) return null;
+      const age = Date.now() - Number(parsed.startedAt);
+      if (!Number.isFinite(parsed.startedAt) || age < 0 || (parsed.status !== 'uncertain' && age > this.maxAgeMs)) return null;
+      if (parsed.status !== undefined && parsed.status !== 'uncertain') return null;
       if (parsed.amount !== undefined && (!Number.isFinite(parsed.amount) || Number(parsed.amount) <= 0)) return null;
 
       return {
         kind: parsed.kind,
         returnUrl: parsed.returnUrl,
         startedAt: Number(parsed.startedAt),
+        ...(parsed.status === 'uncertain' ? { status: parsed.status } : {}),
         ...(parsed.amount !== undefined ? { amount: Number(parsed.amount) } : {}),
         ...(typeof parsed.order === 'string' && parsed.order.trim() ? { order: parsed.order.trim() } : {}),
       };

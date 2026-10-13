@@ -5,6 +5,22 @@ import { PaymentChallengeService } from './payment-challenge.service';
 describe('PaymentChallengeService', () => {
   let service: PaymentChallengeService;
 
+  it('keeps uncertain outcomes pending after reload and does not expire them into permission to pay again', () => {
+    service.begin({ kind: 'parking', returnUrl: '/app/operations', status: 'uncertain' });
+    const raw = JSON.parse(sessionStorage.getItem('urbanoa.paycomet.pending-payment-v1')!);
+    raw.startedAt = Date.now() - 31 * 60_000;
+    sessionStorage.setItem('urbanoa.paycomet.pending-payment-v1', JSON.stringify(raw));
+    expect(new PaymentChallengeService().hasUncertainPayment()).toBeTrue();
+  });
+
+  it('retains an in-memory pending write when browser storage is unavailable', () => {
+    spyOn(Storage.prototype, 'setItem').and.throwError('storage blocked');
+    service.begin({ kind: 'recharge', amount: 1, returnUrl: '/app/operations', status: 'uncertain' });
+    expect(service.hasPendingPayment()).toBeTrue();
+    service.clear();
+    expect(service.hasPendingPayment()).toBeFalse();
+  });
+
   beforeEach(() => {
     sessionStorage.clear();
     TestBed.configureTestingModule({ providers: [provideZonelessChangeDetection()] });

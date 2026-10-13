@@ -17,6 +17,7 @@ function serviceWith(api: jasmine.SpyObj<OpsApiClient>): ParkingSessionService {
 }
 
 describe('ParkingSessionService', () => {
+  beforeEach(() => sessionStorage.clear());
   beforeEach(() => {
     localStorage.clear();
     localStorage.setItem('urbanoa.operations.active', '[]');

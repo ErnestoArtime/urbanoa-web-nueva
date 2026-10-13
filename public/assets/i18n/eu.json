@@ -749,5 +749,6 @@
   "onboarding.payment.addCard": "Ordainketa txartela gehitu",
   "onboarding.notification.title": "Zure aparkalekuaren epemuga ez gainditzeko laguntzailea!",
   "auth.reset.subtitle": "Arinpark-en erabiltzen duzun helbide elektronikoa sartu eta kodea sortu klikatu. Bertan aurrera jarraitu ahal izateko erabilera bakarreko kodea jasoko duzu. Dudarik izatekotan, gurekin harremanetan jarri soporte@arinpark.eus",
-  "auth.resetCode.resend": "Kodea berbidali"
+  "auth.resetCode.resend": "Kodea berbidali",
+  "payment.uncertain.message": "eu_No se ha podido confirmar el resultado de la operación. Revisa tus operaciones o contacta con soporte antes de volver a pagar."
 }

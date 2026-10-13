@@ -65,7 +65,7 @@ export class PaymentChallengeReturnComponent implements OnInit {
 
   finish(): void {
     const returnUrl = this.pending()?.returnUrl ?? '/app/operations';
-    if (this.outcome() === 'ko') this.paymentChallenge.clear();
+    if (this.outcome() === 'ko' && this.pending()?.status !== 'uncertain') this.paymentChallenge.clear();
     void this.router.navigateByUrl(returnUrl);
   }
 
