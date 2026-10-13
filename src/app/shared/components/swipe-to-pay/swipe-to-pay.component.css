@@ -1,0 +1,89 @@
+:host {
+  display: block;
+  width: 100%;
+}
+.swipe-area {
+  width: 100%;
+}
+.swipe-track {
+  position: relative;
+  height: 54px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  outline: none;
+}
+.swipe-track:focus-visible {
+  box-shadow: 0 0 0 3px var(--color-swipe-track-shadow);
+}
+.swipe-progress {
+  position: absolute;
+  inset: 0 auto 0 0;
+  min-width: 52px;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--color-primary), var(--color-swipe-progress-surface));
+  transition: width 0.12s ease-out;
+}
+.swipe-thumb {
+  position: absolute;
+  top: 4px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--color-surface-raised);
+  display: grid;
+  place-items: center;
+  cursor: grab;
+  box-shadow: 0 2px 8px var(--color-swipe-thumb-shadow);
+  z-index: 2;
+  transition:
+    left 0.12s ease-out,
+    background 0.2s;
+  touch-action: none;
+}
+.swipe-thumb.dragging {
+  cursor: grabbing;
+  transition: none;
+}
+.swipe-thumb.success {
+  background: var(--color-success);
+  cursor: default;
+}
+.swipe-thumb.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.swipe-thumb svg {
+  display: block;
+  width: 25px;
+  height: 25px;
+  fill: none;
+  stroke: var(--color-primary);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.swipe-thumb.success svg {
+  stroke: var(--color-on-primary);
+}
+.swipe-label {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  padding-left: 48px;
+  text-align: center;
+  color: var(--color-primary-dark);
+  font-weight: var(--font-extra);
+  font-size: var(--text-sm);
+  pointer-events: none;
+  mix-blend-mode: multiply;
+}
+.swipe-disabled-hint {
+  margin-top: 0.4rem;
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  text-align: center;
+}

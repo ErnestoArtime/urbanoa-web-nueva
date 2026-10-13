@@ -1,7 +1,9 @@
+import { RuntimeStyleDirective } from '../directives/runtime-style.directive';
 import { Component, input, computed } from '@angular/core';
 import { ICON_PATHS, type IconName } from './icon-paths';
 
 @Component({
+  imports: [RuntimeStyleDirective],
   selector: 'app-icon',
   standalone: true,
   template: `
@@ -10,29 +12,13 @@ import { ICON_PATHS, type IconName } from './icon-paths';
       viewBox="0 -960 960 960"
       [attr.aria-hidden]="ariaLabel() ? undefined : true"
       [attr.aria-label]="ariaLabel() ?? undefined"
-      [style.width]="size() + 'px'"
-      [style.height]="size() + 'px'"
       [class.app-icon-stroke]="stroke()"
+      [appRuntimeStyle]="{ width: size() + 'px', height: size() + 'px' }"
     >
       <path [attr.d]="path()"></path>
     </svg>
   `,
-  styles: [
-    `
-      .app-icon {
-        display: inline-block;
-        fill: currentColor;
-        flex-shrink: 0;
-      }
-      .app-icon-stroke {
-        fill: none;
-        stroke: currentColor;
-        stroke-width: 72;
-        stroke-linecap: round;
-        stroke-linejoin: round;
-      }
-    `,
-  ],
+  styleUrl: './app-icon.component.css',
 })
 export class AppIconComponent {
   readonly name = input.required<IconName>();

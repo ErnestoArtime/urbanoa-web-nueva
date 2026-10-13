@@ -20,59 +20,7 @@ import { TranslationService } from '../../../core/services/translation.service';
       </button>
     </article>
   `,
-  styles: [
-    `
-      .vehicle-card {
-        display: flex;
-        align-items: center;
-        gap: var(--space-3);
-      }
-      .vehicle-card.parked {
-        border-color: var(--color-warning);
-      }
-      .vehicle-icon {
-        display: grid;
-        place-items: center;
-        width: 38px;
-        height: 38px;
-        flex: none;
-        border-radius: 50%;
-        background: var(--color-accent-soft);
-        color: var(--color-primary-dark);
-      }
-      .vehicle-body {
-        display: flex;
-        min-width: 0;
-        flex: 1;
-        flex-direction: column;
-      }
-      .vehicle-body strong {
-        font-size: var(--text-base);
-        letter-spacing: 0.04em;
-      }
-      .vehicle-body span {
-        overflow: hidden;
-        color: var(--color-text-muted);
-        font-size: var(--text-xs);
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-      .vehicle-edit {
-        display: grid;
-        place-items: center;
-        width: 34px;
-        height: 34px;
-        border: 0;
-        border-radius: 50%;
-        background: transparent;
-        color: var(--color-primary);
-        cursor: pointer;
-      }
-      .vehicle-edit:hover {
-        background: var(--color-active);
-      }
-    `,
-  ],
+  styleUrl: './vehicle-card.component.css',
 })
 export class VehicleCardComponent {
   readonly vehicle = input.required<Vehicle>();

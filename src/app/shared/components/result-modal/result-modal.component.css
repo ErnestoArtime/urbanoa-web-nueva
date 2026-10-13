@@ -1,0 +1,67 @@
+.result-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--color-result-modal-overlay-surface);
+  display: grid;
+  place-items: center;
+  z-index: 3000;
+  padding: 1rem;
+  overflow-y: auto;
+}
+.result-modal {
+  background: var(--color-surface-raised);
+  border-radius: var(--radius-lg);
+  padding: 2rem 1.5rem 1.5rem;
+  max-width: var(--dialog-width);
+  max-height: calc(100dvh - 2rem);
+  overflow-y: auto;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 8px 32px var(--color-loader-dialog-shadow);
+}
+.result-icon {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1rem;
+}
+.result-icon.success {
+  background: var(--color-success-soft);
+  color: var(--color-success-icon);
+}
+.result-icon.error {
+  background: var(--color-error-soft);
+  color: var(--color-error-icon);
+}
+.result-icon.warning {
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
+}
+.result-icon.confirmation {
+  background: var(--color-info-soft);
+  color: var(--color-primary);
+}
+.result-icon.delete {
+  background: var(--color-error-soft);
+  color: var(--color-error-icon);
+}
+.result-title {
+  font-size: var(--text-lg);
+  font-weight: var(--font-bold);
+  margin: 0 0 0.35rem;
+  line-height: var(--line-normal);
+  overflow-wrap: anywhere;
+}
+.result-message {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  margin: 0 0 1.25rem;
+  line-height: var(--line-readable);
+  overflow-wrap: anywhere;
+}
+.result-actions {
+  margin-top: 0.5rem;
+}

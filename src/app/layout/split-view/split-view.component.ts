@@ -24,13 +24,7 @@ import { TranslatePipe } from '../../shared/pipes/translate.pipe';
       </div>
     </div>
   `,
-  styles: `
-    :host {
-      display: block;
-      height: 100%;
-      min-height: 0;
-    }
-  `,
+  styleUrl: './split-view.component.css',
 })
 export class SplitViewComponent {
   hideList = input(false);

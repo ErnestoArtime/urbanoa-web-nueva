@@ -24,59 +24,7 @@ import { TranslatePipe } from '../../pipes/translate.pipe';
       </div>
     </section>
   `,
-  styles: [
-    `
-      .shared-wallet-card {
-        position: relative;
-        overflow: hidden;
-        min-height: 160px;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-        gap: var(--space-4);
-      }
-      .wallet-watermark {
-        position: absolute;
-        right: var(--space-4);
-        bottom: var(--space-3);
-        color: rgba(255, 255, 255, 0.16);
-        font-size: 2.4rem;
-        font-weight: var(--font-extra);
-        pointer-events: none;
-      }
-      .wallet-card-content,
-      .wallet-actions {
-        position: relative;
-        z-index: 1;
-      }
-      .wallet-title {
-        font-size: var(--text-sm);
-        font-weight: var(--font-bold);
-        opacity: 0.95;
-      }
-      .wallet-balance {
-        margin-top: var(--space-1);
-        font-size: var(--text-display);
-        font-weight: var(--font-bold);
-        line-height: var(--line-tight);
-      }
-      .wallet-card-meta {
-        margin-top: var(--space-1);
-        font-size: var(--text-sm);
-        opacity: 0.85;
-      }
-      .wallet-actions {
-        display: flex;
-        gap: var(--space-2);
-        flex-wrap: wrap;
-      }
-      .wallet-actions .btn-secondary {
-        background: rgba(255, 255, 255, 0.12);
-        border-color: rgba(255, 255, 255, 0.55);
-        color: #fff;
-      }
-    `,
-  ],
+  styleUrl: './wallet-card.component.css',
 })
 export class WalletCardComponent {
   private readonly walletService = inject(WalletService);

@@ -1,0 +1,45 @@
+:host {
+  display: block;
+  margin-top: 1.25rem;
+}
+.section-title {
+  margin: 0 0 0.35rem;
+  font-size: var(--text-sm);
+  font-weight: var(--font-extra);
+}
+.wallet-movement {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.65rem 0;
+  border-bottom: 1px solid var(--color-border);
+}
+.wallet-movement:last-child {
+  border-bottom: 0;
+}
+.movement-info {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+.movement-info strong {
+  overflow: hidden;
+  font-size: var(--text-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.movement-info span,
+.empty {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+.movement-amount {
+  flex: none;
+  font-size: var(--text-sm);
+  color: var(--color-error);
+}
+.movement-amount.positive {
+  color: var(--color-success);
+}

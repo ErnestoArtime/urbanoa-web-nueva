@@ -1,3 +1,4 @@
+import { RuntimeStyleDirective } from '../../directives/runtime-style.directive';
 import { Component, OnDestroy, computed, input, output, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { LucideCarFront, LucideMapPin, LucideTimerReset } from '@lucide/angular';
@@ -12,18 +13,18 @@ export type ParkingTicketCardVariant = 'dashboard' | 'operations-current' | 'det
 @Component({
   selector: 'app-parking-ticket-card',
   standalone: true,
-  imports: [RouterLink, TranslatePipe, LucideCarFront, LucideMapPin, LucideTimerReset, TicketCutAlignDirective],
+  imports: [RuntimeStyleDirective, RouterLink, TranslatePipe, LucideCarFront, LucideMapPin, LucideTimerReset, TicketCutAlignDirective],
   template: `
     @if (parking(); as active) {
       <article
         appTicketCutAlign
         class="parking-ticket-card card"
         [class.detail-variant]="variant() === 'detail'"
-        [style.--ticket-header-color]="ticketHeaderColor()"
+        [appRuntimeStyle]="{ '--ticket-header-color': ticketHeaderColor() }"
       >
         <div class="ticket-header">{{ ticketHeaderLabel(active) }}</div>
         <div class="ticket-main-row">
-          <div class="ticket-main-icon" [style.--ticket-progress]="ticketProgress()">
+          <div class="ticket-main-icon" [appRuntimeStyle]="{ '--ticket-progress': ticketProgress() }">
             <svg class="ticket-progress-ring" viewBox="0 0 44 44" aria-hidden="true">
               <circle class="ticket-progress-track" cx="22" cy="22" r="18" pathLength="100"></circle>
               <circle class="ticket-progress-value" cx="22" cy="22" r="18" pathLength="100"></circle>
@@ -94,189 +95,7 @@ export type ParkingTicketCardVariant = 'dashboard' | 'operations-current' | 'det
       </div>
     }
   `,
-  styles: [
-    `
-      :host {
-        display: block;
-        filter: drop-shadow(0 3px 8px rgba(28, 44, 39, 0.07));
-      }
-      .parking-ticket-card {
-        --ticket-notch-r: 10px;
-        --ticket-cut-y: 133px;
-        position: relative;
-        overflow: hidden;
-        padding-top: 0;
-        box-shadow: none;
-        -webkit-mask:
-          radial-gradient(circle at 0 var(--ticket-cut-y), transparent 0 var(--ticket-notch-r), #000 calc(var(--ticket-notch-r) + 1px)) left
-            top / 51% 100% no-repeat,
-          radial-gradient(circle at 100% var(--ticket-cut-y), transparent 0 var(--ticket-notch-r), #000 calc(var(--ticket-notch-r) + 1px))
-            right top / 51% 100% no-repeat;
-        mask:
-          radial-gradient(circle at 0 var(--ticket-cut-y), transparent 0 var(--ticket-notch-r), #000 calc(var(--ticket-notch-r) + 1px)) left
-            top / 51% 100% no-repeat,
-          radial-gradient(circle at 100% var(--ticket-cut-y), transparent 0 var(--ticket-notch-r), #000 calc(var(--ticket-notch-r) + 1px))
-            right top / 51% 100% no-repeat;
-      }
-      .ticket-header {
-        min-height: 1.75rem;
-        margin: 0 calc(0rem - var(--card-padding-inline));
-        padding: 0.3rem var(--space-3);
-        border-radius: var(--radius-md) var(--radius-md) 0 0;
-        background: var(--ticket-header-color, linear-gradient(90deg, #8f84f3 0%, #7971de 48%, #7469d2 100%));
-        color: #fff;
-        font-size: var(--text-sm);
-        font-weight: var(--font-medium);
-        line-height: 1.2;
-        text-align: center;
-        text-transform: uppercase;
-      }
-      .ticket-summary {
-        display: flex;
-        flex: 1;
-        flex-direction: column;
-        align-items: flex-end;
-        gap: 0.25rem;
-        margin-left: auto;
-      }
-      .ticket-amount {
-        font-size: var(--text-lg);
-        font-weight: var(--font-medium);
-        line-height: var(--line-tight);
-        white-space: nowrap;
-      }
-      .ticket-op-id {
-        color: var(--color-text-muted);
-        font-size: var(--text-2xs);
-        font-weight: var(--font-extra);
-        letter-spacing: 0.03em;
-        line-height: 1;
-        white-space: nowrap;
-      }
-      .ticket-street {
-        display: flex;
-        align-items: center;
-        gap: 0.25rem;
-        margin-top: 0.2rem;
-        color: var(--color-text-muted);
-        font-size: var(--text-2xs);
-      }
-      .ticket-street svg {
-        flex: none;
-      }
-      .ticket-main-row {
-        display: flex;
-        align-items: flex-start;
-        gap: var(--space-3);
-        margin-top: var(--space-3);
-      }
-      .ticket-main-icon {
-        position: relative;
-        display: grid;
-        place-items: center;
-        width: 44px;
-        height: 44px;
-        flex: 0 0 auto;
-        border-radius: 50%;
-        background: var(--color-surface);
-        color: var(--color-primary);
-      }
-      .ticket-progress-ring {
-        position: absolute;
-        inset: 0;
-        width: 44px;
-        height: 44px;
-        overflow: visible;
-        transform: rotate(-88deg);
-      }
-      .ticket-progress-ring circle {
-        fill: none;
-        stroke-width: 5.2;
-        stroke-linecap: round;
-      }
-      .ticket-progress-track {
-        stroke: var(--color-active);
-        stroke-dasharray: 83 17;
-        stroke-dashoffset: -8;
-      }
-      .ticket-progress-value {
-        stroke: var(--color-primary);
-        stroke-dasharray: var(--ticket-progress, 28) 100;
-        stroke-dashoffset: -8;
-      }
-      .ticket-car-icon {
-        position: relative;
-        z-index: 1;
-      }
-      .ticket-plate {
-        font-size: var(--text-lg);
-        font-weight: var(--font-bold);
-        letter-spacing: 0.04em;
-        line-height: var(--line-tight);
-      }
-      .ticket-timer,
-      .ticket-location small,
-      .ticket-time-row small,
-      .ticket-day-label {
-        color: var(--color-text-muted);
-        font-size: var(--text-xs);
-      }
-      .ticket-time-row {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-top: var(--space-2);
-        text-align: center;
-      }
-      .ticket-time-row div {
-        display: flex;
-        flex-direction: column;
-      }
-      .ticket-time-row strong {
-        font-size: var(--text-lg);
-        font-weight: var(--font-bold);
-        line-height: var(--line-tight);
-      }
-      .ticket-time-row p {
-        margin: 0 var(--space-1);
-        padding: 0.28rem 0.7rem;
-        border: 1px solid var(--color-border);
-        border-radius: var(--radius-sm);
-        background: var(--color-surface);
-        font-size: var(--text-md);
-        font-weight: var(--font-bold);
-        white-space: nowrap;
-      }
-      .ticket-divider {
-        position: relative;
-        display: flex;
-        align-items: center;
-        height: 20px;
-        margin: 0.45rem -0.9rem 0.15rem;
-      }
-      .ticket-divider-line {
-        flex: 1;
-        height: 0;
-        margin: 0 calc(var(--ticket-notch-r) + 5px);
-        border-top: 3px dashed rgba(149, 156, 146, 0.62);
-      }
-      .ticket-actions {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: var(--space-2);
-        margin-top: var(--space-2);
-      }
-      .ticket-actions > :only-child {
-        grid-column: 1 / -1;
-      }
-      .action-btn-icon {
-        flex: none;
-      }
-      .detail-variant {
-        padding: var(--space-5);
-      }
-    `,
-  ],
+  styleUrls: ['../../styles/parking-ticket.css', './parking-ticket-card.component.css'],
 })
 export class ParkingTicketCardComponent implements OnDestroy {
   readonly variant = input<ParkingTicketCardVariant>('dashboard');

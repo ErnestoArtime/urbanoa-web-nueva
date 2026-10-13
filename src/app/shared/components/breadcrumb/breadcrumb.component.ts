@@ -20,35 +20,7 @@ import { TranslationService } from '../../../core/services/translation.service';
       </nav>
     }
   `,
-  styles: [
-    `
-      .breadcrumb {
-        display: flex;
-        align-items: center;
-        gap: 0.375rem;
-        min-width: 0;
-        padding: 0;
-        font-size: 0.8125rem;
-        background: transparent;
-        border: none;
-        overflow-x: auto;
-        white-space: nowrap;
-      }
-      .breadcrumb-link {
-        color: var(--color-primary, #006a68);
-        text-decoration: none;
-      }
-      .breadcrumb-link:hover {
-        text-decoration: underline;
-      }
-      .breadcrumb-sep {
-        color: var(--color-muted, #9ca3af);
-      }
-      .breadcrumb-current {
-        color: var(--color-muted, #6b7280);
-      }
-    `,
-  ],
+  styleUrl: './breadcrumb.component.css',
 })
 export class AppBreadcrumbComponent {
   private breadcrumbService = inject(BreadcrumbService);

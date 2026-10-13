@@ -67,7 +67,8 @@ describe('ParkingTicketCardComponent', () => {
     await fixture.whenStable();
 
     const ticket = fixture.nativeElement.querySelector('.parking-ticket-card') as HTMLElement;
-    expect(ticket.style.getPropertyValue('--ticket-header-color')).toBe('#1E88E5');
+    expect(getComputedStyle(ticket).getPropertyValue('--ticket-header-color').trim()).toBe('#1E88E5');
+    expect(ticket.hasAttribute('style')).toBeFalse();
   });
 
   it('shows the start and end day labels and uses a location icon for the street', async () => {

@@ -1,0 +1,101 @@
+.sidebar {
+  display: flex;
+  width: var(--sidebar-width);
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-border);
+  flex-direction: column;
+  min-height: 100dvh;
+  position: sticky;
+  top: 0;
+}
+.sidebar-brand {
+  display: flex;
+  justify-content: center;
+  padding: 1.1rem 0.5rem 0.9rem;
+  border-bottom: 1px solid var(--color-border);
+}
+.brand-logo {
+  display: block;
+  width: 78px;
+  height: auto;
+  aspect-ratio: 885 / 240;
+  object-fit: contain;
+  transform: scale(1.5);
+}
+.sidebar-nav {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  padding: 1.1rem 0.35rem;
+}
+.sidebar-link {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-height: 74px;
+  padding: 0.55rem 0.25rem;
+  color: var(--color-text);
+  text-decoration: none;
+  font-weight: var(--font-medium);
+  font-size: var(--text-2xs);
+  text-align: center;
+  border-radius: var(--radius-md);
+  transition: color 0.15s;
+}
+.sidebar-link:hover {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+.sidebar-link:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+}
+.sidebar-link:hover:not(.active) .nav-icon-pill,
+.sidebar-link:focus-visible:not(.active) .nav-icon-pill {
+  background: var(--color-accent-soft);
+}
+.sidebar-link:hover .sidebar-icon,
+.sidebar-link:focus-visible .sidebar-icon {
+  color: var(--color-primary);
+}
+.sidebar-link.active {
+  color: var(--color-primary);
+}
+.nav-icon-pill {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 38px;
+  border-radius: var(--radius-pill);
+  transition: background 0.15s;
+}
+.active-count {
+  position: absolute;
+  top: -2px;
+  right: 6px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: var(--radius-pill);
+  background: var(--color-active-count-surface);
+  color: var(--color-on-primary);
+  font-size: var(--text-2xs);
+  font-weight: var(--font-bold);
+  line-height: 18px;
+}
+.sidebar-link.active .nav-icon-pill {
+  background: var(--color-active);
+}
+.sidebar-icon {
+  width: 22px;
+  height: 22px;
+  color: var(--color-secondary);
+  transition: color 0.15s;
+}
+.sidebar-link.active .sidebar-icon {
+  color: var(--color-primary);
+}

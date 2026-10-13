@@ -25,66 +25,7 @@ import { TranslationService, type SupportedLang } from '../../../core/services/t
       </div>
     </details>
   `,
-  styles: `
-    :host {
-      display: inline-block;
-    }
-    .lang-selector {
-      position: relative;
-    }
-    .lang-trigger {
-      min-width: 64px;
-      list-style: none;
-    }
-    .lang-trigger::-webkit-details-marker {
-      display: none;
-    }
-    .lang-chevron {
-      width: 6px;
-      height: 6px;
-      border-right: 1.5px solid currentColor;
-      border-bottom: 1.5px solid currentColor;
-      transform: translateY(-2px) rotate(45deg);
-    }
-    [open] .lang-chevron {
-      transform: translateY(2px) rotate(225deg);
-    }
-    .lang-options {
-      position: absolute;
-      top: calc(100% + 6px);
-      right: 0;
-      z-index: 2100;
-      min-width: 100px;
-      padding: 4px;
-      border: 1px solid var(--color-border);
-      border-radius: 12px;
-      background: var(--color-surface);
-      box-shadow: var(--shadow-sm);
-    }
-    .lang-option {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 1rem;
-      width: 100%;
-      padding: 0.55rem 0.65rem;
-      border: 0;
-      border-radius: 8px;
-      background: transparent;
-      color: var(--color-primary);
-      font: inherit;
-      font-size: var(--text-xs);
-      cursor: pointer;
-    }
-    .lang-option:hover,
-    .lang-option.selected {
-      background: var(--color-accent-soft);
-    }
-    .lang-option:focus-visible {
-      outline: 2px solid var(--color-primary);
-      outline-offset: -2px;
-    }
-  `,
+  styleUrl: './lang-selector.component.css',
 })
 export class LangSelectorComponent {
   readonly translationService = inject(TranslationService);

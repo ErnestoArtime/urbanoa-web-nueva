@@ -22,7 +22,7 @@ export type PaymentMethod = 'none' | 'balance' | 'card' | 'mixed';
       } @else if (method() === 'none') {
         <div class="payment-summary">
           <div class="payment-summary-row">
-            <app-icon name="check" [stroke]="true" />
+            <app-icon name="check" [stroke]="false" />
             <div class="payment-summary-info">
               <strong>{{ 'payment.free' | translate }}</strong>
               <small>{{ 'payment.freeDesc' | translate }}</small>
@@ -76,101 +76,7 @@ export type PaymentMethod = 'none' | 'balance' | 'card' | 'mixed';
       }
     </div>
   `,
-  styles: [
-    `
-      .payment-section {
-        padding: 0.65rem;
-        margin-top: 0.7rem;
-      }
-      .section-label {
-        font-size: var(--text-xs);
-        font-weight: var(--font-bold);
-        color: var(--color-text-muted);
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-        margin: 0 0.35rem 0.3rem;
-      }
-      .payment-summary {
-        padding: 0.35rem 0.55rem;
-      }
-      .empty-payment {
-        padding: 1rem;
-        color: var(--color-text);
-        font-size: var(--text-sm);
-        line-height: 1.5;
-      }
-      .empty-payment .section-label {
-        margin: 0 0 0.5rem;
-        color: inherit;
-        font-size: inherit;
-        text-transform: none;
-        letter-spacing: normal;
-      }
-      .empty-payment .payment-summary {
-        padding: 0;
-      }
-      .missing-payment p {
-        margin: 0;
-      }
-      .payment-summary-row {
-        display: flex;
-        align-items: center;
-        gap: 0.7rem;
-      }
-      .payment-summary-info {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-      }
-      .payment-summary-info small {
-        color: var(--color-text-muted);
-        font-size: var(--text-xs);
-      }
-      .payment-breakdown {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 0.4rem 0;
-        border-bottom: 1px solid var(--color-border);
-        font-size: var(--text-sm);
-        margin-left: 2.8rem;
-      }
-      .payment-breakdown em {
-        color: var(--color-text-muted);
-        font-style: normal;
-        font-size: var(--text-2xs);
-      }
-      .payment-breakdown-total {
-        border-bottom: none;
-        padding-top: 0.5rem;
-        font-weight: var(--font-bold);
-      }
-      .payment-breakdown-total span {
-        color: var(--color-text-muted);
-      }
-      .payment-icon,
-      .card-brand {
-        width: 38px;
-        height: 28px;
-        display: grid;
-        place-items: center;
-        flex: none;
-      }
-      .payment-icon {
-        width: 38px;
-        height: 28px;
-        display: grid;
-        place-items: center;
-        flex: none;
-        color: var(--color-primary);
-      }
-      .card-brand img {
-        display: block;
-        max-width: 38px;
-        max-height: 25px;
-      }
-    `,
-  ],
+  styleUrl: './payment-summary.component.css',
 })
 export class PaymentSummaryComponent {
   readonly wallet = input.required<Wallet>();

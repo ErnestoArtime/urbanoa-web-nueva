@@ -50,69 +50,7 @@ const CHILD_LABELS = new Map(ACCOUNT_MENU.map((m) => [m.path, m.labelKey]));
       }
     </nav>
   `,
-  styles: [
-    `
-      .bottom-nav {
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        height: var(--bottom-nav-height);
-        background: var(--color-background);
-        border-top: 1px solid var(--color-border);
-        display: flex;
-        z-index: 100;
-        box-shadow: 0 -1px 5px rgba(35, 58, 49, 0.08);
-      }
-      .bottom-nav-item {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 0.12rem;
-        text-decoration: none;
-        color: var(--color-secondary);
-        font-size: var(--text-2xs);
-        font-weight: var(--font-medium);
-        padding: 0.3rem;
-      }
-      .bottom-nav-item.active {
-        color: var(--color-primary);
-      }
-      .bottom-nav-icon {
-        width: 25px;
-        height: 25px;
-        color: currentColor;
-      }
-      .bottom-nav-pill {
-        position: relative;
-        display: grid;
-        place-items: center;
-        width: 52px;
-        height: 32px;
-        border-radius: var(--radius-pill);
-      }
-      .active-count {
-        position: absolute;
-        top: -4px;
-        right: 4px;
-        min-width: 18px;
-        height: 18px;
-        padding: 0 4px;
-        border-radius: var(--radius-pill);
-        background: #7a3f32;
-        color: #fff;
-        font-size: var(--text-2xs);
-        font-weight: var(--font-bold);
-        line-height: 18px;
-        text-align: center;
-      }
-      .bottom-nav-item.active .bottom-nav-pill {
-        background: var(--color-active);
-      }
-    `,
-  ],
+  styleUrl: './bottom-nav.component.css',
 })
 export class BottomNavComponent {
   readonly operationsBadgeCount = inject(OperationsService).operationsBadgeCount;

@@ -19,50 +19,7 @@ import { Router } from '@angular/router';
       </div>
     </header>
   `,
-  styles: `
-    .app-header {
-      display: flex;
-      align-items: center;
-      height: var(--header-height);
-      padding: 0 0.5rem;
-      background: var(--color-background);
-      border-bottom: 1px solid var(--color-border);
-      position: sticky;
-      top: 0;
-      z-index: 50;
-    }
-    .app-header-back {
-      width: 44px;
-      height: 44px;
-      border: none;
-      background: none;
-      font-size: var(--text-2xl);
-      color: var(--color-primary);
-      cursor: pointer;
-      line-height: var(--line-tight);
-      padding: 0;
-    }
-    .app-header-title {
-      flex: 1;
-      text-align: center;
-      font-size: var(--text-base);
-      font-weight: var(--font-medium);
-    }
-    .app-header-right {
-      width: 44px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .app-header-spacer {
-      width: 44px;
-    }
-    @media (min-width: 960px) {
-      .app-header {
-        display: none;
-      }
-    }
-  `,
+  styleUrl: './app-header.component.css',
 })
 export class AppHeaderComponent {
   private readonly translationService = inject(TranslationService);

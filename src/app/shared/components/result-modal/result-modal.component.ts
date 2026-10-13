@@ -9,9 +9,10 @@ export type ResultType = 'success' | 'error' | 'warning' | 'confirmation' | 'del
   template: `
     <app-loader [visible]="busy()" message="Procesando" />
     <div class="result-modal-overlay">
-      <div class="result-modal">
+      <div class="result-modal" role="dialog" aria-modal="true" [attr.aria-label]="title()">
         <div
           class="result-icon"
+          aria-hidden="true"
           [class.success]="type() === 'success' || type() === 'unpark'"
           [class.error]="type() === 'error'"
           [class.warning]="type() === 'warning'"
@@ -101,70 +102,7 @@ export type ResultType = 'success' | 'error' | 'warning' | 'confirmation' | 'del
       </div>
     </div>
   `,
-  styles: [
-    `
-      .result-modal-overlay {
-        position: fixed;
-        inset: 0;
-        background: rgba(0, 0, 0, 0.4);
-        display: grid;
-        place-items: center;
-        z-index: 3000;
-        padding: 1rem;
-      }
-      .result-modal {
-        background: #fff;
-        border-radius: 20px;
-        padding: 2rem 1.5rem 1.5rem;
-        max-width: 340px;
-        width: 100%;
-        text-align: center;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
-      }
-      .result-icon {
-        width: 72px;
-        height: 72px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin: 0 auto 1rem;
-      }
-      .result-icon.success {
-        background: #e8f5e9;
-        color: #2e7d32;
-      }
-      .result-icon.error {
-        background: #fbe9e7;
-        color: #c62828;
-      }
-      .result-icon.warning {
-        background: #fff4db;
-        color: var(--color-warning);
-      }
-      .result-icon.confirmation {
-        background: #e7f3f1;
-        color: var(--color-primary);
-      }
-      .result-icon.delete {
-        background: #fbe9e7;
-        color: #c62828;
-      }
-      .result-title {
-        font-size: var(--text-lg);
-        font-weight: var(--font-bold);
-        margin: 0 0 0.35rem;
-      }
-      .result-message {
-        font-size: var(--text-sm);
-        color: var(--color-text-muted);
-        margin: 0 0 1.25rem;
-      }
-      .result-actions {
-        margin-top: 0.5rem;
-      }
-    `,
-  ],
+  styleUrl: './result-modal.component.css',
 })
 export class ResultModalComponent {
   readonly busy = input(false);

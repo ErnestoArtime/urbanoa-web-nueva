@@ -22,53 +22,7 @@ import { TranslatePipe } from '../../pipes/translate.pipe';
       </button>
     </article>
   `,
-  styles: [
-    `
-      .payment-method-card {
-        display: flex;
-        align-items: center;
-        gap: var(--space-3);
-      }
-      .default-card {
-        border-color: var(--color-primary);
-      }
-      .payment-icon {
-        display: grid;
-        place-items: center;
-        width: 38px;
-        height: 38px;
-        flex: none;
-        border-radius: 50%;
-        background: var(--color-background);
-        color: var(--color-primary);
-      }
-      .payment-body {
-        display: flex;
-        min-width: 0;
-        flex: 1;
-        flex-direction: column;
-      }
-      .payment-body span {
-        color: var(--color-text-muted);
-        font-size: var(--text-xs);
-      }
-      .payment-more {
-        display: grid;
-        place-items: center;
-        width: 34px;
-        height: 34px;
-        border: 0;
-        border-radius: 50%;
-        background: transparent;
-        color: var(--color-text-muted);
-        cursor: pointer;
-      }
-      .payment-more:hover {
-        background: var(--color-active);
-        color: var(--color-text);
-      }
-    `,
-  ],
+  styleUrl: './payment-method-card.component.css',
 })
 export class PaymentMethodCardComponent {
   readonly card = input.required<MainCard>();

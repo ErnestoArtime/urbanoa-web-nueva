@@ -43,47 +43,7 @@ import { OperationType } from '../../models/operation-type';
       }
     </span>
   `,
-  styles: [
-    `
-      .operation-icon {
-        display: grid;
-        place-items: center;
-        flex: 0 0 36px;
-        width: 36px;
-        height: 36px;
-        border-radius: 50%;
-        background: #d8f1f2;
-        color: var(--color-primary);
-      }
-      svg {
-        width: 21px;
-        height: 21px;
-        fill: none;
-        stroke: currentColor;
-        stroke-width: 2;
-        stroke-linecap: round;
-        stroke-linejoin: round;
-      }
-      .operation-icon[data-type='2'] {
-        background: #dff2ef;
-        color: #2b7675;
-      }
-      .operation-icon[data-type='3'],
-      .operation-icon[data-type='8'] {
-        background: #e4f3e9;
-        color: var(--color-success);
-      }
-      .operation-icon[data-type='4'],
-      .operation-icon[data-type='104'] {
-        background: var(--color-error-bg);
-        color: var(--color-error);
-      }
-      .operation-icon[data-type='5'] {
-        background: #e7f6ea;
-        color: var(--color-success);
-      }
-    `,
-  ],
+  styleUrl: './operation-icon.component.css',
 })
 export class OperationIconComponent {
   readonly type = input.required<OperationType>();
