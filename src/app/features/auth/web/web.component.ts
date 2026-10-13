@@ -9,13 +9,7 @@ import { WebContentComponent } from '../../account/web-content/web-content.compo
   selector: 'app-web',
   imports: [WebContentComponent],
   template: ` <app-web-content [title]="title" [url]="url" backLink="/auth/login" /> `,
-  styles: `
-    :host {
-      display: block;
-      height: 100dvh;
-      min-height: 0;
-    }
-  `,
+  styleUrl: './web.component.css',
   standalone: true,
 })
 export class WebComponent {

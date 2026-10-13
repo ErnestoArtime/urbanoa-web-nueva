@@ -8,23 +8,26 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
   selector: 'app-reset-password-code',
   imports: [RouterLink, TranslatePipe],
   template: `
-    <div class="page auth-page">
-      <h1 class="page-title">{{ 'auth.resetCode.title' | translate }}</h1>
-      <p class="page-subtitle">{{ 'auth.resetCode.subtitle' | translate }}</p>
-      @if (noticeKey()) {
-        <p class="text-muted" role="status">{{ noticeKey() | translate }}</p>
-      }
-      @if (errorKey()) {
-        <p class="form-error" role="alert">{{ errorKey() | translate }}</p>
-      }
-      <a [routerLink]="['/auth/reset-password-confirm']" [queryParams]="{ email: email() }" class="btn btn-primary btn-block mt-2">{{
-        'auth.resetCode.enterCode' | translate
-      }}</a>
-      <button type="button" class="btn-text mt-2" (click)="onResend()" [disabled]="resending() || !email()">
-        {{ (resending() ? 'auth.confirm.resending' : 'auth.resetCode.resend') | translate }}
-      </button>
-    </div>
+    <main class="auth-page auth-page-centered">
+      <section class="auth-panel">
+        <h1 class="auth-flow-title">{{ 'auth.resetCode.title' | translate }}</h1>
+        <p class="auth-flow-intro">{{ 'auth.resetCode.subtitle' | translate }}</p>
+        @if (noticeKey()) {
+          <p class="text-muted auth-flow-status" role="status">{{ noticeKey() | translate }}</p>
+        }
+        @if (errorKey()) {
+          <p class="form-error auth-flow-status" role="alert">{{ errorKey() | translate }}</p>
+        }
+        <a [routerLink]="['/auth/reset-password-confirm']" [queryParams]="{ email: email() }" class="btn btn-primary btn-block mt-2">{{
+          'auth.resetCode.enterCode' | translate
+        }}</a>
+        <button type="button" class="btn-text auth-flow-secondary" (click)="onResend()" [disabled]="resending() || !email()">
+          {{ (resending() ? 'auth.confirm.resending' : 'auth.resetCode.resend') | translate }}
+        </button>
+      </section>
+    </main>
   `,
+  styleUrls: ['../../../shared/styles/auth-panel.css', '../../../shared/styles/auth-flow.css'],
 })
 export class ResetPasswordCodeComponent {
   private readonly passwordService = inject(PasswordService);

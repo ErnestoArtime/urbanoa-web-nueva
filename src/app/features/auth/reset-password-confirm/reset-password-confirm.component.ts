@@ -16,26 +16,27 @@ function passwordsMatch(control: AbstractControl): ValidationErrors | null {
   selector: 'app-reset-password-confirm',
   imports: [ReactiveFormsModule, RouterLink, LucideEye, LucideEyeOff, LucideKeyRound, TranslatePipe],
   template: `
-    <div class="auth-page">
-      <div class="auth-form">
+    <main class="auth-page auth-page-centered">
+      <section class="auth-panel">
         <div class="auth-icon" aria-hidden="true"><svg lucideKeyRound size="28"></svg></div>
-        <h1 class="page-title">{{ 'auth.newPassword.title' | translate }}</h1>
-        <p class="page-subtitle">{{ 'auth.newPassword.subtitle' | translate }}</p>
+        <h1 class="auth-flow-title">{{ 'auth.newPassword.title' | translate }}</h1>
+        <p class="auth-flow-intro">{{ 'auth.newPassword.subtitle' | translate }}</p>
         @if (email()) {
           <form [formGroup]="form" (ngSubmit)="onSubmit()">
             <div class="form-group">
-              <label class="form-label">{{ 'auth.newPassword.code' | translate }}</label>
-              <input class="form-input" formControlName="code" inputmode="numeric" />
+              <label class="form-label" for="recovery-code">{{ 'auth.newPassword.code' | translate }}</label>
+              <input id="recovery-code" class="form-input" formControlName="code" inputmode="numeric" autocomplete="one-time-code" />
               @if (form.controls.code.touched && form.controls.code.invalid) {
                 <p class="form-error">{{ 'auth.newPassword.codeRequired' | translate }}</p>
               }
             </div>
             <div class="form-group">
-              <label class="form-label">{{ 'auth.newPassword.password' | translate }}</label>
+              <label class="form-label" for="recovery-password">{{ 'auth.newPassword.password' | translate }}</label>
               <div class="password-field">
                 <input
                   class="form-input"
                   [type]="showPassword() ? 'text' : 'password'"
+                  id="recovery-password"
                   formControlName="password"
                   autocomplete="new-password"
                 /><button type="button" (click)="togglePassword()" [attr.aria-label]="'auth.newPassword.togglePassword' | translate">
@@ -51,11 +52,12 @@ function passwordsMatch(control: AbstractControl): ValidationErrors | null {
               }
             </div>
             <div class="form-group">
-              <label class="form-label">{{ 'auth.newPassword.confirmation' | translate }}</label>
+              <label class="form-label" for="recovery-confirmation">{{ 'auth.newPassword.confirmation' | translate }}</label>
               <div class="password-field">
                 <input
                   class="form-input"
                   [type]="showConfirmation() ? 'text' : 'password'"
+                  id="recovery-confirmation"
                   formControlName="confirmation"
                   autocomplete="new-password"
                 /><button type="button" (click)="toggleConfirmation()" [attr.aria-label]="'auth.newPassword.togglePassword' | translate">
@@ -71,33 +73,20 @@ function passwordsMatch(control: AbstractControl): ValidationErrors | null {
               }
             </div>
             @if (errorKey()) {
-              <p class="form-error" role="alert">{{ errorKey() | translate }}</p>
+              <p class="form-error auth-flow-status" role="alert">{{ errorKey() | translate }}</p>
             }
             <button type="submit" class="btn btn-primary btn-block" [disabled]="submitting()">
               {{ (submitting() ? 'auth.newPassword.saving' : 'auth.newPassword.save') | translate }}
             </button>
           </form>
         } @else {
-          <p class="form-error" role="alert">{{ 'auth.newPassword.missingEmail' | translate }}</p>
+          <p class="form-error auth-flow-status" role="alert">{{ 'auth.newPassword.missingEmail' | translate }}</p>
           <a routerLink="/auth/reset-password" class="btn btn-primary btn-block">{{ 'auth.reset.title' | translate }}</a>
         }
-      </div>
-    </div>
+      </section>
+    </main>
   `,
-  styles: [
-    `
-      .auth-icon {
-        display: grid;
-        place-items: center;
-        width: 52px;
-        height: 52px;
-        margin: 0 auto 1rem;
-        border-radius: 18px;
-        color: var(--color-primary);
-        background: var(--color-active);
-      }
-    `,
-  ],
+  styleUrls: ['../../../shared/styles/auth-panel.css', '../../../shared/styles/auth-flow.css', './reset-password-confirm.component.css'],
 })
 export class ResetPasswordConfirmComponent {
   private readonly passwordService = inject(PasswordService);

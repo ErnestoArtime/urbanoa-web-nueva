@@ -9,31 +9,34 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
   selector: 'app-reset-password',
   imports: [ReactiveFormsModule, RouterLink, TranslatePipe],
   template: `
-    <div class="page auth-page">
-      <h1 class="page-title">{{ 'auth.reset.title' | translate }}</h1>
-      <p class="page-subtitle">{{ 'auth.reset.subtitle' | translate }}</p>
-      <form [formGroup]="form" (ngSubmit)="onSubmit()">
-        <div class="form-group">
-          <label class="form-label">{{ 'account.profile.email' | translate }}</label>
-          <input class="form-input" type="email" formControlName="email" autocomplete="email" />
-          @if (form.controls.email.touched && form.controls.email.invalid) {
-            <p class="form-error">
-              {{ (form.controls.email.hasError('email') ? 'auth.reset.emailInvalid' : 'auth.reset.emailRequired') | translate }}
-            </p>
+    <main class="auth-page auth-page-centered">
+      <section class="auth-panel" aria-labelledby="reset-password-title">
+        <h1 id="reset-password-title" class="auth-flow-title">{{ 'auth.reset.title' | translate }}</h1>
+        <p class="auth-flow-intro">{{ 'auth.reset.subtitle' | translate }}</p>
+        <form [formGroup]="form" (ngSubmit)="onSubmit()">
+          <div class="form-group">
+            <label class="form-label" for="reset-password-email">{{ 'account.profile.email' | translate }}</label>
+            <input id="reset-password-email" class="form-input" type="email" formControlName="email" autocomplete="email" />
+            @if (form.controls.email.touched && form.controls.email.invalid) {
+              <p class="form-error">
+                {{ (form.controls.email.hasError('email') ? 'auth.reset.emailInvalid' : 'auth.reset.emailRequired') | translate }}
+              </p>
+            }
+          </div>
+          @if (errorKey()) {
+            <p class="form-error auth-flow-status" role="alert">{{ errorKey() | translate }}</p>
           }
-        </div>
-        @if (errorKey()) {
-          <p class="form-error" role="alert">{{ errorKey() | translate }}</p>
-        }
-        <button type="submit" class="btn btn-primary btn-block" [disabled]="submitting()">
-          {{ (submitting() ? 'auth.reset.sending' : 'auth.reset.generateCode') | translate }}
-        </button>
-      </form>
-      <p class="text-center mt-2">
-        <a routerLink="/auth/login">{{ 'auth.reset.backToLogin' | translate }}</a>
-      </p>
-    </div>
+          <button type="submit" class="btn btn-primary btn-block" [disabled]="submitting()">
+            {{ (submitting() ? 'auth.reset.sending' : 'auth.reset.generateCode') | translate }}
+          </button>
+        </form>
+        <p class="text-center mt-2">
+          <a routerLink="/auth/login">{{ 'auth.reset.backToLogin' | translate }}</a>
+        </p>
+      </section>
+    </main>
   `,
+  styleUrls: ['../../../shared/styles/auth-panel.css', '../../../shared/styles/auth-flow.css'],
 })
 export class ResetPasswordComponent {
   private readonly passwordService = inject(PasswordService);

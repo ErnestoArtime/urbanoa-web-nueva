@@ -13,7 +13,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
   selector: 'app-login',
   imports: [ReactiveFormsModule, RouterLink, LucideEye, LucideEyeOff, TranslatePipe],
   template: `
-    <main class="auth-page apk-auth-page">
+    <main class="auth-page auth-page-centered">
       <section class="auth-panel">
         <img [src]="brand.logoPath" [alt]="brand.name" class="apk-auth-logo" />
         <h1>{{ 'auth.login.title' | translate }}</h1>
@@ -61,130 +61,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
       </section>
     </main>
   `,
-  styles: [
-    `
-      .apk-auth-page {
-        justify-content: center;
-        background: var(--color-background);
-      }
-      .auth-panel {
-        width: min(100%, 420px);
-        padding: 2rem 2.2rem;
-        border: 1px solid var(--color-border);
-        border-radius: 22px;
-        background: var(--color-surface);
-        box-shadow: var(--shadow-md);
-      }
-      .apk-auth-logo {
-        display: block;
-        width: 230px;
-        max-width: 75%;
-        height: auto;
-        aspect-ratio: 885 / 240;
-        object-fit: contain;
-        margin: 0 auto 2rem;
-      }
-      .auth-panel h1 {
-        text-align: center;
-        font-size: var(--text-2xl);
-      }
-      .auth-intro {
-        text-align: center;
-        color: var(--color-text-muted);
-        margin: 0.35rem 0 1.5rem;
-      }
-      .outlined-field {
-        position: relative;
-        display: block;
-        margin: 1rem 0;
-      }
-      .outlined-field span {
-        position: absolute;
-        z-index: 1;
-        top: -0.55rem;
-        left: 0.8rem;
-        padding: 0 0.35rem;
-        background: var(--color-surface);
-        color: var(--color-primary);
-        font-size: var(--text-xs);
-      }
-      .outlined-field input {
-        width: 100%;
-        min-height: 54px;
-        padding: 0.85rem 1rem;
-        border: 1px solid var(--color-primary);
-        border-radius: 6px;
-        background: transparent;
-        font: inherit;
-      }
-      .password-field {
-        position: relative;
-        width: 100%;
-      }
-      .password-field input {
-        width: 100%;
-        padding-right: 44px;
-        box-sizing: border-box;
-      }
-      .password-field button {
-        position: absolute;
-        right: 0;
-        top: 0;
-        bottom: 0;
-        width: 44px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border: 0;
-        background: transparent;
-        color: var(--color-text-muted);
-        cursor: pointer;
-        padding: 0;
-      }
-      .password-field button svg {
-        width: 22px;
-        height: 22px;
-      }
-      .outlined-field input:focus {
-        outline: 2px solid rgba(43, 103, 103, 0.15);
-      }
-      .recover-link {
-        display: block;
-        text-align: right;
-        margin: 0.2rem 0 1.2rem;
-        font-size: var(--text-sm);
-      }
-      .login-button {
-        min-height: 50px;
-      }
-      .login-error {
-        display: flex;
-        align-items: center;
-        min-height: 2.75rem;
-        margin: 1rem 0 1.25rem;
-        padding: 0.65rem 0.8rem;
-        border-radius: var(--radius-md);
-        background: color-mix(in srgb, var(--color-error) 8%, transparent);
-        line-height: 1.35;
-      }
-      .register-link {
-        text-align: center;
-        margin-top: 1.2rem;
-        color: var(--color-text-muted);
-      }
-      @media (max-width: 520px) {
-        .auth-panel {
-          padding: 1.5rem;
-          border: 0;
-          box-shadow: none;
-          background: transparent;
-        }
-        .outlined-field span {
-          background: var(--color-background);
-        }
-      }
-    `,
-  ],
+  styleUrls: ['../../../shared/styles/auth-panel.css', '../../../shared/styles/auth-flow.css', './login.component.css'],
 })
 export class LoginComponent {
   private readonly authService = inject(AuthService);
