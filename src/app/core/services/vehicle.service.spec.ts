@@ -16,7 +16,11 @@ describe('VehicleService', () => {
   it('does not repopulate cleared vehicles from a previous account request', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['getOrNull', 'post']);
     let finish!: (value: { plates: { plate: string; favorite: boolean }[] }) => void;
-    api.getOrNull.and.returnValue(new Promise(resolve => { finish = resolve; }));
+    api.getOrNull.and.returnValue(
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+    );
     const service = serviceWith(api);
     const session = TestBed.inject(OpsSessionService);
     session.setToken('old-token');
@@ -232,7 +236,7 @@ describe('VehicleService', () => {
     expect(service.vehicles()).toEqual([]);
   });
 
-  it('treats any other plates load failure (network, backend, ...) as an empty list too', async () => {
+  it('preserves other plates load failures as errors', async () => {
     localStorage.setItem('urbanoa.vehicles', JSON.stringify([{ id: '7777 KKK', plate: '7777 KKK', isDefault: false }]));
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'getOrNull', 'post']);
     api.getOrNull.and.rejectWith(new OpsApiError('transport', 'OPSWebServicesAPI/QueryUserPlatesAPI', 'Network error'));
@@ -241,8 +245,8 @@ describe('VehicleService', () => {
 
     await service.load();
 
-    expect(service.source()).toBe('remote');
-    expect(service.lastError()).toBeNull();
+    expect(service.source()).toBe('error');
+    expect(service.lastError()?.kind).toBe('transport');
     expect(service.vehicles()).toEqual([]);
   });
 

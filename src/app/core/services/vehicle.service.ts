@@ -89,11 +89,16 @@ export class VehicleService {
   private async fetchPlates(token: string): Promise<PlatesApiValue | null> {
     try {
       return await this.api.getOrNull<PlatesApiValue>(OPS_ENDPOINTS.user.plates, { token });
-    } catch {
-      // Any failure loading plates (network, backend error, the confirmed HTTP 500-for-empty-account
-      // quirk, etc.) is treated as "no plates yet" — the list screen always shows either the real
-      // list or a normal empty state with the add-vehicle action, never a load-error banner.
-      return null;
+    } catch (error) {
+      // Compatibility is limited to the observed empty-account response.
+      if (
+        error instanceof OpsApiError &&
+        error.kind === 'http' &&
+        error.status === 500 &&
+        /HTTP 500 - \{"Message":"Error\."\}$/.test(error.message)
+      )
+        return null;
+      throw error;
     }
   }
 
@@ -161,7 +166,13 @@ export class VehicleService {
   private async refreshFromServer(): Promise<void> {
     const token = this.session.token();
     if (!token) return;
-    const value = await this.fetchPlates(token);
+    let value: PlatesApiValue | null;
+    try {
+      value = await this.fetchPlates(token);
+    } catch (error) {
+      if (this.session.token() === token) this.useError(error, OPS_ENDPOINTS.user.plates);
+      return;
+    }
     if (this.session.token() !== token) return;
     if (value === null || !Array.isArray(value.plates)) return;
     const previous = new Map(this.state().map((vehicle) => [vehicle.plate, vehicle]));
