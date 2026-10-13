@@ -1,3 +1,5 @@
+import { readDesignToken } from '../../../shared/styles/design-token';
+import { RuntimeStyleDirective } from '../../../shared/directives/runtime-style.directive';
 import { AfterViewInit, Component, ElementRef, OnDestroy, ViewChild, computed, effect, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import * as L from 'leaflet';
@@ -16,7 +18,7 @@ import { MapLocationControlComponent, type MapLocationState } from './map-locati
 import { CitiesService, type ParkingMunicipio } from '../../../core/services/cities.service';
 import { ParkingApiService } from '../../../core/services/parking-api.service';
 import { GoogleMapsLoaderService } from '../../../core/services/google-maps-loader.service';
-import { URBANOA_GOOGLE_MAP_STYLE } from '../../../shared/maps/google-map-style';
+import { createGoogleMapStyle } from '../../../shared/maps/google-map-style';
 
 interface MapPoint {
   lat: number;
@@ -35,7 +37,7 @@ interface MapParkingZone {
 
 @Component({
   selector: 'app-parking-map',
-  imports: [RouterLink, LoaderComponent, TranslatePipe, MapLocationControlComponent, LucideCarFront, LucideStar],
+  imports: [RuntimeStyleDirective, RouterLink, LoaderComponent, TranslatePipe, MapLocationControlComponent, LucideCarFront, LucideStar],
   template: `
     <app-loader [visible]="mapLoading()" [message]="'parking.map.loading' | translate" imageSrc="/assets/brand/login-logo.jpg" />
     <section class="parking-map-page">
@@ -143,7 +145,7 @@ interface MapParkingZone {
 
           @if (selectedZone(); as zone) {
             <div class="selected-zone">
-              <span [style.background]="'#' + zone.color"></span>
+              <span [appRuntimeStyle]="{ background: '#' + zone.color }"></span>
               <div>
                 <small>{{ 'parking.map.selectedZone' | translate }}</small
                 ><strong>{{ zone.name }}</strong>
@@ -176,529 +178,7 @@ interface MapParkingZone {
       </div>
     </section>
   `,
-  styles: [
-    `
-      :host {
-        display: block;
-        height: 100%;
-      }
-      .parking-map-page {
-        min-height: 100%;
-        padding: 1rem;
-      }
-      .map-heading {
-        display: flex;
-        align-items: end;
-        justify-content: space-between;
-        gap: 1rem;
-        margin-bottom: 1rem;
-      }
-      .map-heading p {
-        color: var(--color-primary);
-        font-size: var(--text-2xs);
-        font-weight: var(--font-extra);
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-      }
-      .map-heading h1 {
-        margin: 0.15rem 0;
-        font-size: var(--text-2xl);
-      }
-      .map-heading span {
-        color: var(--color-text-muted);
-      }
-      .flow-warning {
-        margin: 0.75rem 0 0;
-        padding: 0.65rem 0.8rem;
-        border: 1px solid var(--color-warning);
-        border-radius: var(--radius-sm);
-        background: #fff7e8;
-        color: var(--color-warning);
-        font-size: var(--text-sm);
-        font-weight: var(--font-medium);
-      }
-
-      .map-frame {
-        position: relative;
-        min-height: 540px;
-        overflow: hidden;
-        border: 1px solid var(--color-border);
-        border-radius: var(--radius-lg);
-        background: #dce7dc;
-      }
-      .leaflet-map {
-        width: 100%;
-        min-height: 540px;
-      }
-      .parking-controls {
-        position: absolute;
-        z-index: 500;
-        top: 1rem;
-        left: 1rem;
-        display: grid;
-        gap: 0.5rem;
-        width: min(330px, calc(100% - 2rem));
-        padding: 0.8rem;
-        border-radius: 20px;
-        background: rgba(249, 250, 239, 0.96);
-        box-shadow: var(--shadow-md);
-      }
-      .vehicle-control-wrapper {
-        position: relative;
-      }
-      .parking-behavior-help-trigger {
-        position: absolute;
-        z-index: 1002;
-        top: 14px;
-        right: 38px;
-        display: grid;
-        width: 24px;
-        height: 24px;
-        padding: 0;
-        place-items: center;
-        border: 1px solid var(--color-primary);
-        border-radius: 50%;
-        background: var(--color-surface);
-        color: var(--color-primary);
-        cursor: pointer;
-        font-weight: var(--font-bold);
-        transition:
-          color 160ms ease,
-          background-color 160ms ease;
-      }
-      .parking-behavior-help-trigger.active {
-        background: var(--color-primary);
-        color: var(--color-surface);
-      }
-      .parking-behavior-help {
-        position: absolute;
-        z-index: 1001;
-        top: calc(100% + 0.45rem);
-        left: 0;
-        width: 100%;
-        margin: 0;
-        padding: 0.7rem 0.8rem;
-        border: 1px solid var(--color-primary);
-        border-radius: 10px;
-        background: var(--color-surface);
-        color: var(--color-text);
-        box-shadow: var(--shadow-md);
-        font-size: var(--text-xs);
-        line-height: 1.4;
-      }
-      .search-control {
-        display: flex;
-        align-items: center;
-        gap: 0.7rem;
-        min-height: 52px;
-        padding: 0.6rem 0.8rem;
-        border: 1px solid var(--color-border);
-        border-radius: 15px;
-        background: #fff;
-        color: inherit;
-        width: 100%;
-        text-align: left;
-      }
-      .municipio-control {
-        display: flex;
-        align-items: center;
-        gap: 0.35rem;
-      }
-      .municipio-control .search-control {
-        flex: 1;
-      }
-      .municipio-info {
-        display: grid;
-        place-items: center;
-        width: 2rem;
-        height: 2rem;
-        border: 1px solid var(--color-border);
-        border-radius: 50%;
-        color: var(--color-primary);
-        font-weight: var(--font-bold);
-        text-decoration: none;
-      }
-      .vehicle-control {
-        width: 100%;
-        border: 0;
-        text-align: left;
-        display: flex;
-        align-items: center;
-        gap: 0.7rem;
-        min-height: 52px;
-        padding: 0.6rem 0.8rem;
-        border: 1px solid var(--color-border);
-        border-radius: 15px;
-        background: #fff;
-        color: inherit;
-        cursor: pointer;
-        width: 100%;
-        text-align: left;
-      }
-      .vehicle-control b {
-        display: inline-block;
-        width: 0.45rem;
-        height: 0.45rem;
-        margin: -0.2rem 0 0 0.15rem;
-        border-right: 2px solid var(--color-primary);
-        border-bottom: 2px solid var(--color-primary);
-        transform: rotate(45deg);
-        transition: transform 180ms ease;
-      }
-      .vehicle-control-wrapper.selector-open .vehicle-control b {
-        margin-top: 0.2rem;
-        transform: rotate(225deg);
-      }
-      .search-control > span:nth-child(2),
-      .vehicle-control > span:nth-child(2) {
-        display: flex;
-        flex: 1;
-        flex-direction: column;
-        min-width: 0;
-      }
-      .vehicle-control > span:first-child {
-        display: inline-grid;
-        width: 1.25rem;
-        height: 1.25rem;
-        flex: 0 0 1.25rem;
-        place-items: center;
-        line-height: 1;
-      }
-      .search-control small,
-      .vehicle-control small {
-        color: var(--color-text-muted);
-        line-height: var(--line-tight);
-      }
-      .search-control strong,
-      .vehicle-control strong {
-        line-height: var(--line-tight);
-      }
-      .search-control b,
-      .vehicle-control b {
-        flex-shrink: 0;
-      }
-      .vehicle-selector-dropdown {
-        position: absolute;
-        top: 100%;
-        left: 0;
-        right: 0;
-        margin-top: 0.5rem;
-        background: #fff;
-        border: 1px solid var(--color-border);
-        border-radius: 12px;
-        box-shadow: var(--shadow-lg);
-        z-index: 1000;
-        max-height: 0;
-        opacity: 0;
-        overflow: hidden;
-        pointer-events: none;
-        transition:
-          max-height 180ms ease,
-          opacity 140ms ease;
-      }
-      .vehicle-selector-dropdown.is-open {
-        max-height: 18rem;
-        opacity: 1;
-        pointer-events: auto;
-        overflow-y: auto;
-        overflow-x: hidden;
-      }
-      .vehicle-option {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 0.75rem;
-        width: 100%;
-        padding: 0.75rem 1rem;
-        border: none;
-        background: #fff;
-        text-align: left;
-        cursor: pointer;
-        transition: background 150ms ease;
-      }
-      .vehicle-option:hover {
-        background: var(--color-background);
-      }
-      .vehicle-option.selected {
-        background: rgba(93, 154, 150, 0.1);
-      }
-      .vehicle-option span:first-child {
-        font-weight: var(--font-medium);
-        font-size: var(--text-base);
-      }
-      .vehicle-label {
-        color: var(--color-text-muted);
-        font-size: var(--text-sm);
-      }
-      .vehicle-option .badge {
-        flex-shrink: 0;
-      }
-      @media (max-width: 600px) {
-        .vehicle-selector-dropdown {
-          top: auto;
-          bottom: 100%;
-          margin-top: 0;
-          margin-bottom: 0.35rem;
-          left: -0.5rem;
-          right: -0.5rem;
-        }
-      }
-      .map-target {
-        position: absolute;
-        z-index: 450;
-        /* The rotated pin's visual tip is 7 px above its container bottom. */
-        top: calc(50% + 7px);
-        left: 50%;
-        width: 30px;
-        height: 38px;
-        transform: translate(-50%, -100%);
-        pointer-events: none;
-      }
-      .map-target::before {
-        content: '';
-        position: absolute;
-        left: 6px;
-        top: 0;
-        width: 18px;
-        height: 18px;
-        border: 4px solid #fff;
-        border-radius: 50% 50% 50% 0;
-        background: var(--color-primary);
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.35);
-        transform: rotate(-45deg);
-      }
-      .map-target span {
-        position: absolute;
-        left: 12px;
-        top: 6px;
-        z-index: 1;
-        width: 6px;
-        height: 6px;
-        border-radius: 50%;
-        background: #fff;
-      }
-      .map-zone-label {
-        position: absolute;
-        z-index: 1200;
-        top: calc(50% - 46px);
-        left: 50%;
-        max-width: min(280px, calc(100% - 2rem));
-        padding: 0.7rem 2.5rem 0.7rem 1rem;
-        border-radius: 14px;
-        background: var(--color-surface);
-        color: var(--color-primary-dark);
-        box-shadow: var(--shadow-md);
-        font-size: var(--text-sm);
-        font-weight: var(--font-bold);
-        line-height: var(--line-tight);
-        overflow-wrap: anywhere;
-        pointer-events: none;
-        text-align: center;
-        transform: translate(-50%, -100%);
-      }
-      .map-zone-label button {
-        position: absolute;
-        top: 0.25rem;
-        right: 0.35rem;
-        display: grid;
-        width: 1.75rem;
-        height: 1.75rem;
-        padding: 0;
-        place-items: center;
-        border: 0;
-        border-radius: 50%;
-        background: transparent;
-        color: var(--color-text-muted);
-        cursor: pointer;
-        font-size: 1.25rem;
-        line-height: 1;
-        pointer-events: auto;
-      }
-      .map-zone-label button:hover {
-        background: var(--color-background);
-        color: var(--color-primary-dark);
-      }
-      .map-zone-label::after {
-        position: absolute;
-        top: 100%;
-        left: 50%;
-        width: 0;
-        height: 0;
-        border-top: 10px solid var(--color-surface);
-        border-right: 10px solid transparent;
-        border-left: 10px solid transparent;
-        content: '';
-        transform: translateX(-50%);
-      }
-      .selected-zone {
-        display: flex;
-        align-items: center;
-        gap: 0.65rem;
-        padding: 0.55rem 0.7rem;
-        border-radius: 12px;
-        background: #fff;
-      }
-      .selected-zone > span {
-        width: 8px;
-        align-self: stretch;
-        border-radius: 999px;
-      }
-      .selected-zone div {
-        display: flex;
-        min-width: 0;
-        flex-direction: column;
-      }
-      .selected-zone small,
-      .selected-zone em {
-        overflow: hidden;
-        color: var(--color-text-muted);
-        font-size: var(--text-2xs);
-        font-style: normal;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-      .selected-zone strong {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-      .select-hint {
-        padding: 0.25rem 0.4rem;
-        color: var(--color-text-muted);
-        font-size: var(--text-xs);
-        text-align: center;
-      }
-      .select-hint-error {
-        color: var(--color-error);
-      }
-      .btn:disabled,
-      .vehicle-control:disabled {
-        opacity: 0.45;
-        cursor: not-allowed;
-      }
-      .map-status {
-        position: absolute;
-        z-index: 500;
-        right: 1rem;
-        bottom: 1rem;
-        padding: 0.45rem 0.7rem;
-        border-radius: 999px;
-        background: rgba(249, 250, 239, 0.94);
-        color: var(--color-primary-dark);
-        font-size: var(--text-xs);
-        font-weight: var(--font-bold);
-        box-shadow: var(--shadow-sm);
-      }
-      .map-status.error {
-        color: var(--color-error);
-      }
-      @media (min-width: 900px) {
-        .parking-map-page,
-        .map-frame,
-        .leaflet-map {
-          height: calc(100dvh - 34px);
-          min-height: 100%;
-        }
-        .parking-map-page {
-          padding: 0;
-        }
-        .map-heading {
-          display: none;
-        }
-        .flow-warning {
-          margin: 0.75rem 0 0;
-          padding: 0.65rem 0.8rem;
-          border: 1px solid var(--color-warning);
-          border-radius: var(--radius-sm);
-          background: #fff7e8;
-          color: var(--color-warning);
-          font-size: var(--text-sm);
-          font-weight: var(--font-medium);
-        }
-
-        .map-frame {
-          border: 0;
-          border-radius: 0;
-        }
-        .parking-controls {
-          top: 3rem;
-          left: 3rem;
-        }
-        :host-context(app-parking-wizard-layout) .parking-map-page,
-        :host-context(app-parking-wizard-layout) .map-frame,
-        :host-context(app-parking-wizard-layout) .leaflet-map {
-          height: 100%;
-          min-height: 100%;
-        }
-        :host-context(app-parking-wizard-layout) .parking-controls {
-          top: 1rem;
-          left: 1rem;
-        }
-      }
-      @media (max-width: 600px) {
-        .parking-map-page {
-          padding: 0.65rem;
-          padding-bottom: 14rem;
-        }
-        .map-heading {
-          align-items: start;
-          flex-direction: column;
-          gap: 0.5rem;
-          margin-bottom: 0.65rem;
-        }
-        .map-heading h1 {
-          font-size: var(--text-lg);
-        }
-        .map-heading p {
-          margin: 0;
-          font-size: var(--text-2xs);
-        }
-        .map-heading span {
-          font-size: var(--text-xs);
-        }
-        .map-heading .btn {
-          width: 100%;
-          padding: 0.5rem 0.75rem;
-          font-size: var(--text-sm);
-        }
-        .map-frame,
-        .leaflet-map {
-          min-height: 320px;
-        }
-        .parking-controls {
-          position: fixed;
-          z-index: 1000;
-          top: auto;
-          left: 0;
-          bottom: 58px;
-          width: 100%;
-          padding: 0.65rem 0.75rem calc(0.35rem + env(safe-area-inset-bottom, 0px));
-          gap: 0.4rem;
-          border-radius: 20px 20px 0 0;
-          background: rgba(249, 250, 239, 0.98);
-          box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.12);
-        }
-        .parking-controls .search-control,
-        .parking-controls .vehicle-control {
-          width: 100%;
-          border: 0;
-          text-align: left;
-          min-height: 44px;
-          padding: 0.45rem 0.7rem;
-        }
-        .parking-controls .btn {
-          padding: 0.65rem;
-          font-size: var(--text-md);
-        }
-        .map-status {
-          right: 0.5rem;
-          bottom: 0.5rem;
-          font-size: var(--text-2xs);
-          padding: 0.35rem 0.55rem;
-        }
-      }
-    `,
-  ],
+  styleUrls: ['./map.component.css', './parking-controls.css'],
 })
 export class ParkingMapComponent implements AfterViewInit, OnDestroy {
   @ViewChild('mapContainer', { static: true }) private readonly mapContainer!: ElementRef<HTMLElement>;
@@ -895,9 +375,9 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
       this.leafletLocationMarker?.remove();
       this.leafletLocationMarker = L.circleMarker(point, {
         radius: 9,
-        color: '#fff',
+        color: readDesignToken('--color-on-primary'),
         weight: 3,
-        fillColor: '#16765d',
+        fillColor: readDesignToken('--color-map-location'),
         fillOpacity: 1,
       }).addTo(this.leafletMap);
       this.leafletMap.flyTo(point, 17, { duration: 0.8 });
@@ -908,9 +388,9 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
         map: this.googleMap,
         center,
         radius: 7,
-        strokeColor: '#ffffff',
+        strokeColor: readDesignToken('--color-on-primary'),
         strokeWeight: 3,
-        fillColor: '#16765d',
+        fillColor: readDesignToken('--color-map-location'),
         fillOpacity: 1,
       });
       this.googleMap.panTo(center);
@@ -988,7 +468,7 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
     this.googleMap = new googleMaps.Map(this.mapContainer.nativeElement, {
       center: { lat, lng },
       zoom: 15,
-      styles: URBANOA_GOOGLE_MAP_STYLE,
+      styles: createGoogleMapStyle(),
       zoomControl: true,
       zoomControlOptions: { position: googleMaps.ControlPosition.RIGHT_TOP },
       streetViewControl: false,
@@ -1021,7 +501,9 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
       for (const placemark of Array.from(xml.getElementsByTagName('Placemark'))) {
         const name = placemark.getElementsByTagName('name')[0]?.textContent?.trim() || 'Zona';
         const description = placemark.getElementsByTagName('description')[0]?.textContent?.trim() || '';
-        const color = placemark.querySelector('ExtendedData zoneColor')?.textContent?.trim() || '3f51b5';
+        const color =
+          placemark.querySelector('ExtendedData zoneColor')?.textContent?.trim() ||
+          readDesignToken('--color-map-zone-fallback').replace('#', '');
         const zoneId = Number(placemark.querySelector('ExtendedData zoneId')?.textContent?.trim()) || 0;
         for (const polygon of Array.from(placemark.getElementsByTagName('Polygon'))) {
           const coordinates = polygon.getElementsByTagName('coordinates')[0]?.textContent;

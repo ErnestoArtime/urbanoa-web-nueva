@@ -1,3 +1,5 @@
+import { normalizeSectorColor } from '../../../shared/utils/sector-color';
+import { RuntimeStyleDirective } from '../../../shared/directives/runtime-style.directive';
 import { Component, computed, effect, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { LoaderComponent } from '../../../shared/components/loader/loader.component';
@@ -8,14 +10,14 @@ import { ParkingApiService, ParkingTicketOption } from '../../../core/services/p
 
 @Component({
   selector: 'app-parking-tickets',
-  imports: [RouterLink, LoaderComponent, TranslatePipe],
+  imports: [RuntimeStyleDirective, RouterLink, LoaderComponent, TranslatePipe],
   template: `
     <app-loader [visible]="loading()" [message]="'parking.tickets.loading' | translate" />
     <div class="page flow-page">
       <a routerLink="/app/parking" [queryParams]="{ city: query().city }" class="back-link">{{ 'parking.tickets.back' | translate }}</a>
       <h1 class="page-title">{{ 'parking.tickets.title' | translate }}</h1>
       <div class="selection-summary card">
-        <span class="zone-color" [style.background]="'#' + query().sectorColor"></span>
+        <span class="zone-color" [appRuntimeStyle]="{ background: '#' + query().sectorColor }"></span>
         <div>
           <strong>{{ query().street }}</strong>
           <p>{{ query().zone }} · {{ query().cityName }}</p>
@@ -32,8 +34,10 @@ import { ParkingApiService, ParkingTicketOption } from '../../../core/services/p
           >
             <div
               class="ticket-zone-header"
-              [style.background]="'#' + (tariff.sectorColor || query().sectorColor || '2b6767').replace('#', '')"
               aria-hidden="true"
+              [appRuntimeStyle]="{
+                background: normalizeSectorColor(tariff.sectorColor || query().sectorColor) || 'var(--color-parking-fallback)',
+              }"
             ></div>
             <div class="ticket-content">
               <div class="ticket-option-head">
@@ -73,122 +77,10 @@ import { ParkingApiService, ParkingTicketOption } from '../../../core/services/p
       </div>
     </div>
   `,
-  styles: [
-    `
-      .flow-page {
-        max-width: 760px;
-      }
-      .back-link {
-        display: inline-block;
-        margin-bottom: 1rem;
-      }
-      .flow-step {
-        color: var(--color-primary);
-        font-size: var(--text-xs);
-        font-weight: var(--font-extra);
-        text-transform: uppercase;
-      }
-      .selection-summary {
-        display: flex;
-        gap: 0.8rem;
-        margin: 1rem 0;
-      }
-      .zone-color {
-        width: 8px;
-        border-radius: 99px;
-      }
-      .selection-summary p,
-      .selection-summary small {
-        color: var(--color-text-muted);
-      }
-      .tariff-list {
-        display: grid;
-        gap: 0.8rem;
-      }
-      .ticket-option {
-        overflow: hidden;
-        border: 1px solid var(--color-border);
-        border-radius: 14px;
-        background: var(--color-surface);
-        color: inherit;
-        box-shadow: var(--shadow-sm);
-      }
-      .ticket-zone-header {
-        height: 6px;
-      }
-      .ticket-content {
-        display: grid;
-        gap: 0.8rem;
-        padding: 1rem;
-      }
-      .ticket-behavior {
-        margin: 0;
-        color: var(--color-text);
-        font-size: var(--text-sm);
-        line-height: 1.45;
-      }
-      .ticket-option-head {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 1rem;
-      }
-      .ticket-option-head h2 {
-        margin: 0;
-        font-size: var(--text-base);
-      }
-      .ticket-option-head > strong {
-        align-self: center;
-        color: var(--color-primary);
-        white-space: nowrap;
-      }
-      .ticket-meta {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 0.5rem;
-        padding: 0.65rem 0;
-        border-block: 1px dashed var(--color-border);
-      }
-      .ticket-meta span {
-        display: flex;
-        min-width: 0;
-        flex-direction: column;
-      }
-      .ticket-meta small {
-        color: var(--color-text-muted);
-        font-size: var(--text-2xs);
-      }
-      .ticket-meta strong {
-        font-size: var(--text-xs);
-        overflow-wrap: anywhere;
-      }
-      .ticket-action {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.35rem;
-        justify-self: end;
-        padding: 0.55rem 1rem;
-        border-radius: 999px;
-        background: var(--color-primary);
-        color: #fff;
-        font-size: var(--text-sm);
-        font-weight: var(--font-extra);
-      }
-      .ticket-action:hover {
-        text-decoration: none;
-      }
-      .ticket-action b {
-        font-size: var(--text-base);
-      }
-      @media (max-width: 600px) {
-        .ticket-meta {
-          grid-template-columns: 1fr;
-        }
-      }
-    `,
-  ],
+  styleUrl: './tickets.component.css',
 })
 export class ParkingTicketsComponent implements OnInit {
+  readonly normalizeSectorColor = normalizeSectorColor;
   private readonly route = inject(ActivatedRoute);
   private readonly store = inject(ParkingFlowStore);
   private readonly parkingApi = inject(ParkingApiService);

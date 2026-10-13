@@ -1,0 +1,110 @@
+.flow-page {
+  max-width: 760px;
+}
+.back-link {
+  display: inline-block;
+  margin-bottom: 1rem;
+}
+.flow-step {
+  color: var(--color-primary);
+  font-size: var(--text-xs);
+  font-weight: var(--font-extra);
+  text-transform: uppercase;
+}
+.selection-summary {
+  display: flex;
+  gap: 0.8rem;
+  margin: 1rem 0;
+}
+.zone-color {
+  width: 8px;
+  border-radius: 99px;
+}
+.selection-summary p,
+.selection-summary small {
+  color: var(--color-text-muted);
+}
+.tariff-list {
+  display: grid;
+  gap: 0.8rem;
+}
+.ticket-option {
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: var(--color-surface);
+  color: inherit;
+  box-shadow: var(--shadow-sm);
+}
+.ticket-zone-header {
+  height: 6px;
+}
+.ticket-content {
+  display: grid;
+  gap: 0.8rem;
+  padding: 1rem;
+}
+.ticket-behavior {
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  line-height: 1.45;
+}
+.ticket-option-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.ticket-option-head h2 {
+  margin: 0;
+  font-size: var(--text-base);
+}
+.ticket-option-head > strong {
+  align-self: center;
+  color: var(--color-primary);
+  white-space: nowrap;
+}
+.ticket-meta {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+  padding: 0.65rem 0;
+  border-block: 1px dashed var(--color-border);
+}
+.ticket-meta span {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+.ticket-meta small {
+  color: var(--color-text-muted);
+  font-size: var(--text-2xs);
+}
+.ticket-meta strong {
+  font-size: var(--text-xs);
+  overflow-wrap: anywhere;
+}
+.ticket-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  justify-self: end;
+  padding: 0.55rem 1rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font-size: var(--text-sm);
+  font-weight: var(--font-extra);
+}
+.ticket-action:hover {
+  text-decoration: none;
+}
+.ticket-action b {
+  font-size: var(--text-base);
+}
+@media (max-width: 600px) {
+  .ticket-meta {
+    grid-template-columns: 1fr;
+  }
+}

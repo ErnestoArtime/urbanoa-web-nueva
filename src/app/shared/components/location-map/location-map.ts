@@ -1,54 +1,13 @@
 import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, OnDestroy, ViewChild, effect, inject, input } from '@angular/core';
 import * as L from 'leaflet';
 import { GoogleMapsLoaderService } from '../../../core/services/google-maps-loader.service';
-import { URBANOA_GOOGLE_MAP_STYLE } from '../../maps/google-map-style';
+import { createGoogleMapStyle } from '../../maps/google-map-style';
 
 @Component({
   selector: 'app-location-map',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: ` <div #mapContainer class="location-map" [attr.aria-label]="label()"></div> `,
-  styles: `
-    :host {
-      display: block;
-      overflow: hidden;
-      border-radius: 22px;
-      background: #dce7dc;
-    }
-
-    .location-map {
-      width: 100%;
-      height: 210px;
-    }
-
-    :host ::ng-deep .operation-location-pin {
-      display: block;
-      position: relative;
-      width: 28px;
-      height: 28px;
-      border: 4px solid #fff;
-      border-radius: 50% 50% 50% 0;
-      background: #c84536;
-      box-shadow: 0 2px 7px rgb(0 0 0 / 35%);
-      transform: rotate(-45deg);
-    }
-
-    :host ::ng-deep .operation-location-pin::after {
-      position: absolute;
-      top: 7px;
-      left: 7px;
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: #fff;
-      content: '';
-    }
-
-    @media (max-width: 600px) {
-      .location-map {
-        height: 180px;
-      }
-    }
-  `,
+  styleUrl: './location-map.css',
 })
 export class LocationMap implements AfterViewInit, OnDestroy {
   @ViewChild('mapContainer', { static: true }) private readonly mapContainer!: ElementRef<HTMLElement>;
@@ -116,7 +75,7 @@ export class LocationMap implements AfterViewInit, OnDestroy {
     this.googleMap = new googleMaps.Map(this.mapContainer.nativeElement, {
       center: coordinates,
       zoom: 15,
-      styles: URBANOA_GOOGLE_MAP_STYLE,
+      styles: createGoogleMapStyle(),
       streetViewControl: false,
       mapTypeControl: false,
       fullscreenControl: false,

@@ -40,14 +40,7 @@ import { ParkingFlowStore } from '../parking-flow.store';
       <a routerLink="/app/operations" class="btn btn-secondary btn-block mt-1">{{ 'parking.ticketDetail.unpark' | translate }}</a>
     </div>
   `,
-  styles: [
-    `
-      .back-link {
-        display: inline-block;
-        margin-bottom: 1rem;
-      }
-    `,
-  ],
+  styleUrl: './ticket-detail.component.css',
 })
 export class ParkingTicketDetailComponent {
   private readonly flow = inject(ParkingFlowStore);

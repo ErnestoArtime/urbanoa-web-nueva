@@ -1,3 +1,4 @@
+import { RuntimeStyleDirective } from '../../../shared/directives/runtime-style.directive';
 import { Component, computed, effect, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { LoaderComponent } from '../../../shared/components/loader/loader.component';
@@ -13,7 +14,7 @@ import { opsRelativeDayLabel, formatOpsTime, parseOpsDate } from '../../../core/
 
 @Component({
   selector: 'app-parking-time-steps',
-  imports: [RouterLink, LoaderComponent, TranslatePipe, LucideCarFront],
+  imports: [RuntimeStyleDirective, RouterLink, LoaderComponent, TranslatePipe, LucideCarFront],
   template: `
     <app-loader [visible]="loading()" [message]="'parking.timeSteps.loading' | translate" imageSrc="/assets/brand/login-logo.jpg" />
     <div class="page flow-page has-sticky-actions">
@@ -22,7 +23,7 @@ import { opsRelativeDayLabel, formatOpsTime, parseOpsDate } from '../../../core/
       <p class="page-subtitle">{{ 'parking.timeSteps.subtitle' | translate }}</p>
 
       <div class="context-card card">
-        <span class="sector-mark" [style.background]="sectorColor()"></span>
+        <span class="sector-mark" [appRuntimeStyle]="{ background: sectorColor() }"></span>
         <div>
           <strong>{{ context().zone }}</strong>
           <p>{{ context().street }}{{ context().cityName ? ' · ' + context().cityName : '' }}</p>
@@ -64,7 +65,7 @@ import { opsRelativeDayLabel, formatOpsTime, parseOpsDate } from '../../../core/
           >
             −
           </button>
-          <div class="time-wheel" [style.background]="wheelBackground()">
+          <div class="time-wheel" [appRuntimeStyle]="{ background: wheelBackground() }">
             <div class="wheel-content">
               <small>{{ 'parking.timeSteps.time' | translate }}</small>
               <strong>{{ selectedStep().timeFormatted }}</strong>
@@ -117,242 +118,7 @@ import { opsRelativeDayLabel, formatOpsTime, parseOpsDate } from '../../../core/
       }
     </div>
   `,
-  styles: [
-    `
-      .flow-page {
-        max-width: 680px;
-      }
-      .back-link {
-        display: inline-block;
-        margin-bottom: 1rem;
-      }
-      .flow-step {
-        color: var(--color-primary);
-        font-size: var(--text-xs);
-        font-weight: var(--font-extra);
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-      }
-      .page-subtitle {
-        margin-top: 0.35rem;
-      }
-      .context-card {
-        display: flex;
-        gap: 0.8rem;
-        margin: 1.2rem 0;
-      }
-      .sector-mark {
-        width: 8px;
-        border-radius: 99px;
-        flex: none;
-      }
-      .context-card p,
-      .context-card small {
-        color: var(--color-text-muted);
-      }
-      .selected-vehicle {
-        display: flex;
-        align-items: center;
-        gap: 0.55rem;
-        margin-left: auto;
-        padding-left: 1rem;
-        color: var(--color-primary);
-      }
-      .selected-vehicle span {
-        display: flex;
-        flex-direction: column;
-      }
-      .selected-vehicle strong {
-        color: var(--color-text);
-        white-space: nowrap;
-      }
-      .time-line {
-        display: grid;
-        grid-template-columns: auto 1fr auto 1fr auto;
-        align-items: center;
-        gap: 0.65rem;
-        text-align: center;
-      }
-      .time-line div {
-        display: flex;
-        flex-direction: column;
-      }
-      .time-line small {
-        color: var(--color-text-muted);
-      }
-      .time-line .time-day-label {
-        color: var(--color-text-muted);
-        font-size: var(--text-xs);
-      }
-      .time-line strong {
-        font-size: var(--text-lg);
-      }
-      .line {
-        height: 1px;
-        background: var(--color-border);
-      }
-      .duration-pill {
-        padding: 0.45rem 0.7rem;
-        border: 1px solid var(--color-border);
-        border-radius: 10px;
-        font-weight: var(--font-bold);
-        background: var(--color-background);
-      }
-      .time-selector {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 1.25rem;
-        margin: 1.5rem 0;
-      }
-      .time-wheel {
-        width: 210px;
-        height: 210px;
-        padding: 11px;
-        border-radius: 50%;
-        box-shadow: 0 8px 26px rgba(34, 105, 105, 0.16);
-        transition: background 0.25s ease;
-      }
-      .wheel-content {
-        height: 100%;
-        border-radius: 50%;
-        background: var(--color-surface);
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        border: 1px solid var(--color-border);
-      }
-      .wheel-content small {
-        color: var(--color-text-muted);
-        text-transform: uppercase;
-        font-weight: var(--font-bold);
-      }
-      .wheel-content strong {
-        font-size: var(--text-display);
-        color: var(--color-primary);
-        margin: 0.2rem 0;
-      }
-      .wheel-content span {
-        font-weight: var(--font-extra);
-      }
-      .step-control {
-        width: 44px;
-        height: 44px;
-        border-radius: 50%;
-        border: 1px solid var(--color-primary);
-        background: var(--color-surface);
-        color: var(--color-primary);
-        font-size: var(--text-2xl);
-        cursor: pointer;
-      }
-      .step-control:disabled {
-        opacity: 0.3;
-        cursor: not-allowed;
-      }
-      .step-options {
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: center;
-        gap: 0.5rem;
-        margin-bottom: 1.25rem;
-      }
-      .step-options button {
-        border: 1px solid var(--color-border);
-        border-radius: 999px;
-        background: var(--color-surface);
-        padding: 0.45rem 0.75rem;
-        cursor: pointer;
-      }
-      .step-options button.active {
-        background: var(--color-primary);
-        border-color: var(--color-primary);
-        color: #fff;
-        font-weight: var(--font-bold);
-      }
-      .price-card {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 1rem;
-      }
-      .price-card span {
-        color: var(--color-text-muted);
-      }
-      .price-card strong {
-        font-size: var(--text-xl);
-        color: var(--color-primary);
-      }
-      .no-extension-message {
-        border-color: var(--color-warning);
-        background: #fff7e8;
-        color: var(--color-warning);
-        font-weight: var(--font-bold);
-      }
-      @media (min-width: 960px) and (max-height: 950px) {
-        .flow-page {
-          padding-top: 1rem;
-          padding-bottom: 0.8rem;
-        }
-        .back-link {
-          margin-bottom: 0.35rem;
-        }
-        .page-title {
-          font-size: var(--text-xl);
-        }
-        .page-subtitle {
-          font-size: var(--text-sm);
-        }
-        .context-card {
-          margin: 0.65rem 0;
-          padding: 0.75rem;
-        }
-        .time-line {
-          padding: 0.65rem;
-        }
-        .time-selector {
-          margin: 0.7rem 0;
-        }
-        .time-wheel {
-          width: 168px;
-          height: 168px;
-          padding: 9px;
-        }
-        .wheel-content strong {
-          font-size: var(--text-2xl);
-        }
-        .step-control {
-          width: 40px;
-          height: 40px;
-        }
-        .step-options {
-          margin-bottom: 0.65rem;
-        }
-        .price-card {
-          padding: 0.65rem;
-          margin-bottom: 0.55rem;
-        }
-      }
-      @media (max-width: 520px) {
-        .time-wheel {
-          width: 175px;
-          height: 175px;
-        }
-        .time-selector {
-          gap: 0.75rem;
-        }
-        .time-line {
-          gap: 0.35rem;
-        }
-        .duration-pill {
-          padding: 0.35rem;
-        }
-        .flow-page {
-          padding-inline: 1rem;
-        }
-      }
-    `,
-  ],
+  styleUrl: './time-steps.component.css',
 })
 export class ParkingTimeStepsComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);

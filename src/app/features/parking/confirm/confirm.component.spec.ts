@@ -11,9 +11,12 @@ import { ParkingFlowStore } from '../parking-flow.store';
 import { ParkingConfirmComponent } from './confirm.component';
 
 describe('ParkingConfirmComponent', () => {
-  beforeEach(() => TestBed.configureTestingModule({ providers: [
-    { provide: AuthService, useValue: { preparePaymentRedirect: jasmine.createSpy('preparePaymentRedirect') } },
-  ] }));
+  beforeEach(() => {
+    sessionStorage.clear();
+    TestBed.configureTestingModule({
+      providers: [{ provide: AuthService, useValue: { preparePaymentRedirect: jasmine.createSpy('preparePaymentRedirect') } }],
+    });
+  });
   it('blocks payment without funds or cards and opens wallet management without leaving parking', async () => {
     const confirmParking = jasmine.createSpy();
     const navigate = jasmine.createSpy();
@@ -224,7 +227,7 @@ describe('ParkingConfirmComponent', () => {
     new OpsApiError('timeout', 'ConfirmParkingOperationAPI', 'La confirmación agotó el tiempo de espera'),
     new OpsApiError('transport', 'ConfirmParkingOperationAPI', 'Se perdió la respuesta de confirmación'),
   ]) {
-    it(`recovers the existing operation after a ${recoverableError.kind} confirmation failure`, async () => {
+    it(`keeps a ${recoverableError.kind} result pending without matching unrelated history`, async () => {
       const navigate = jasmine.createSpy().and.resolveTo(true);
       const operations = signal([
         {
@@ -292,14 +295,13 @@ describe('ParkingConfirmComponent', () => {
       await fixture.componentInstance.onSwipeComplete();
 
       expect(loadOperations).toHaveBeenCalled();
-      expect(navigate).toHaveBeenCalledOnceWith(['/app/parking/success'], {
-        queryParams: jasmine.objectContaining({ operationId: '8431063', startTime: '12:00', endTime: '13:00' }),
-      });
-      expect(fixture.componentInstance.submitError()).toBeNull();
+      expect(navigate).not.toHaveBeenCalled();
+      expect(fixture.componentInstance.submitError()).not.toBeNull();
+      expect(fixture.componentInstance.paymentUncertain()).toBeTrue();
     });
   }
 
-  it('retries recovery while the confirmed operation is not yet visible in the history', async () => {
+  it('does not promote delayed history to payment confirmation', async () => {
     const navigate = jasmine.createSpy().and.resolveTo(true);
     const operations = signal<unknown[]>([]);
     const loadOperations = jasmine.createSpy().and.callFake(async () => {
@@ -376,10 +378,8 @@ describe('ParkingConfirmComponent', () => {
 
     await fixture.componentInstance.onSwipeComplete();
 
-    expect(loadOperations).toHaveBeenCalledTimes(2);
-    expect(navigate).toHaveBeenCalledOnceWith(
-      ['/app/parking/success'],
-      jasmine.objectContaining({ queryParams: jasmine.objectContaining({ operationId: '8431063' }) }),
-    );
+    expect(loadOperations).toHaveBeenCalledTimes(1);
+    expect(navigate).not.toHaveBeenCalled();
+    expect(fixture.componentInstance.paymentUncertain()).toBeTrue();
   });
 });

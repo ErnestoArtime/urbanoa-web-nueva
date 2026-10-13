@@ -1,3 +1,4 @@
+import { RuntimeStyleDirective } from '../../../shared/directives/runtime-style.directive';
 import { WalletManagerModalComponent } from '../../account/wallet-manager-modal/wallet-manager-modal.component';
 import { Component, computed, inject, OnInit, signal, ViewChild } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -11,10 +12,7 @@ import { WalletService } from '../../../core/services/wallet.service';
 import { ParkingApiService } from '../../../core/services/parking-api.service';
 import { ParkingTicketStoreService } from '../../../core/services/parking-ticket-store.service';
 import { OperationsService } from '../../../core/services/operations.service';
-import { OpsApiError } from '../../../core/api/ops-api.types';
-import { Operation } from '../../../shared/models/operation';
-import { OperationType } from '../../../shared/models/operation-type';
-import { parseOpsDate } from '../../../core/utils/ops-date';
+import { isPaymentOutcomeUnknown } from '../../../core/utils/payment-error';
 import { ResultModalComponent } from '../../../shared/components/result-modal/result-modal.component';
 import { isCardUsable } from '../../../core/utils/card-expiry';
 import { TranslationService } from '../../../core/services/translation.service';
@@ -24,6 +22,7 @@ import { AuthService } from '../../../core/services/auth.service';
 @Component({
   selector: 'app-parking-confirm',
   imports: [
+    RuntimeStyleDirective,
     WalletManagerModalComponent,
     ResultModalComponent,
     RouterLink,
@@ -43,7 +42,7 @@ import { AuthService } from '../../../core/services/auth.service';
 
       <div class="card summary">
         <div class="zone-heading">
-          <span [style.background]="sectorColor()"></span>
+          <span [appRuntimeStyle]="{ background: sectorColor() }"></span>
           <div>
             <strong>{{ query().zone }}</strong>
             <p>{{ query().street }} · {{ query().cityName }}</p>
@@ -103,7 +102,7 @@ import { AuthService } from '../../../core/services/auth.service';
       <div class="sticky-actions" [attr.aria-busy]="loading()">
         <app-swipe-to-pay
           #swipePay
-          [disabled]="loading() || walletService.loading() || walletManagerOpen()"
+          [disabled]="loading() || walletService.loading() || walletManagerOpen() || paymentUncertain()"
           [label]="loading() ? ('parking.confirm.loading' | translate) : undefined"
           [completedLabel]="loading() ? ('parking.confirm.loading' | translate) : undefined"
           (complete)="onSwipeComplete()"
@@ -129,143 +128,7 @@ import { AuthService } from '../../../core/services/auth.service';
       }
     </div>
   `,
-  styles: [
-    `
-      :host {
-        display: block;
-      }
-      .flow-page {
-        max-width: 680px;
-      }
-      .back-link {
-        display: inline-block;
-        margin-bottom: 0.65rem;
-      }
-      .flow-step {
-        color: var(--color-primary);
-        font-size: var(--text-xs);
-        font-weight: var(--font-extra);
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-      }
-      .page-title {
-        margin-bottom: 0.8rem;
-      }
-      .summary {
-        padding: 0.85rem 1rem;
-      }
-      .summary > p {
-        display: flex;
-        justify-content: space-between;
-        gap: 1rem;
-        padding: 0.48rem 0;
-        border-bottom: 1px solid var(--color-border);
-      }
-      .summary > p span {
-        color: var(--color-text-muted);
-      }
-      .summary > p.total-row {
-        border-bottom: none;
-        padding-bottom: 0;
-      }
-      .summary > p.total-row strong {
-        color: var(--color-primary);
-        font-size: var(--text-lg);
-      }
-      .zone-heading {
-        display: flex;
-        gap: 0.8rem;
-        padding-bottom: 0.4rem;
-      }
-      .zone-heading > span {
-        width: 8px;
-        border-radius: 99px;
-      }
-      .zone-heading p {
-        color: var(--color-text-muted);
-      }
-      .change-payment {
-        display: block;
-        width: 100%;
-        margin-top: 0.7rem;
-        text-align: center;
-        font-size: var(--text-xs);
-      }
-      .payment-selector {
-        display: grid;
-        gap: 0.5rem;
-        margin-top: 0.8rem;
-      }
-      .payment-selector.empty-payment {
-        margin: 0 0 0.5rem;
-      }
-      .payment-selector.empty-payment .wallet-priority {
-        color: var(--color-text);
-        font-size: var(--text-sm);
-        line-height: 1.5;
-      }
-      .payment-selector-title {
-        font-weight: var(--font-bold);
-      }
-      .payment-option {
-        display: grid;
-        grid-template-columns: auto 1fr auto;
-        align-items: center;
-        gap: 0.6rem;
-        padding: 0.65rem;
-        border: 1px solid var(--color-border);
-        border-radius: var(--radius-md);
-        cursor: pointer;
-      }
-      .payment-option.selected {
-        border-color: var(--color-primary);
-        background: var(--color-active);
-      }
-      .payment-option input {
-        accent-color: var(--color-primary);
-      }
-      .payment-option small {
-        color: var(--color-text-muted);
-      }
-      .wallet-priority,
-      .card-needed {
-        color: var(--color-text-muted);
-        font-size: var(--text-sm);
-      }
-      .submit-error {
-        margin-bottom: 0.8rem;
-        padding: 0.75rem 0.9rem;
-        border-radius: var(--radius-md);
-        background: var(--color-error-bg);
-        color: var(--color-error);
-      }
-      .sticky-actions {
-        margin-top: 1rem;
-      }
-      @media (min-width: 960px) and (max-height: 950px) {
-        .confirm-page {
-          padding-top: 1rem;
-          padding-bottom: 0.8rem;
-        }
-        .back-link {
-          margin-bottom: 0.35rem;
-        }
-        .page-title {
-          font-size: var(--text-xl);
-          margin-bottom: 0.55rem;
-        }
-        .summary {
-          padding: 0.65rem 0.9rem;
-        }
-        .summary > p {
-          padding: 0.34rem 0;
-        }
-        .zone-heading {
-          padding-bottom: 0.25rem;
-        }
-      }
-    `,
-  ],
+  styleUrl: './confirm.component.css',
 })
 export class ParkingConfirmComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
@@ -296,7 +159,10 @@ export class ParkingConfirmComponent implements OnInit {
   readonly walletManagerOpen = signal(false);
   readonly paymentAlertOpen = signal(false);
   readonly loading = signal(false);
-  readonly submitError = signal<string | null>(null);
+  readonly submitError = signal<string | null>(
+    this.paymentChallenge.hasPendingPayment() ? this.translations.translate('payment.uncertain.message') : null,
+  );
+  readonly paymentUncertain = signal(this.paymentChallenge.hasPendingPayment());
   private confirmationPending = false;
 
   readonly totalAmount = computed(() => {
@@ -322,6 +188,12 @@ export class ParkingConfirmComponent implements OnInit {
 
   async onSwipeComplete(): Promise<void> {
     if (this.confirmationPending || this.walletService.loading() || this.walletManagerOpen()) return;
+    if (this.paymentUncertain() || this.paymentChallenge.hasPendingPayment()) {
+      this.paymentUncertain.set(true);
+      this.submitError.set(this.translations.translate('payment.uncertain.message'));
+      this.swipePay.reset();
+      return;
+    }
     const amount = this.totalAmount();
     const cards = this.usableCards();
     if (this.requiresCard() && !cards.length) {
@@ -338,51 +210,74 @@ export class ParkingConfirmComponent implements OnInit {
     this.confirmationPending = true;
     this.loading.set(true);
     this.submitError.set(null);
-    const attemptStartedAt = this.parkingApi.serverNow();
-    const confirmation = {
-      contractId: Number(this.query().cityId || 0),
-      plate: this.query().plate,
-      sector: Number(this.query().sectorId || 0),
-      quantity: Math.round(amount * 100),
-      tariffType: Number(this.query().tariffType || 0),
-      date: this.parkingApi.opsDate(this.parkingApi.serverNow()),
-      time: Number(this.query().minutes || 0),
-      latitude: Number(this.query().latitude || 0),
-      longitude: Number(this.query().longitude || 0),
-      street: this.query().street,
-      payMethodId: Number(this.selectedCardId() || 0),
-      reference: this.query().mode === 'extension' ? this.query().opBaseId || '' : '',
-    };
-    const result =
-      this.query().mode === 'extension'
-        ? await this.parkingApi.confirmExtension({ ...confirmation, latitude: 0, longitude: 0, street: '' })
-        : await this.parkingApi.confirmParking(confirmation);
-    if (!result.success) {
-      const recovered = this.shouldRecoverOperation(result.error)
-        ? await this.recoverConfirmedOperation(attemptStartedAt, amount)
-        : undefined;
-      if (recovered) {
-        await this.finishConfirmation(walletAmount, recovered.id, recovered);
+    this.paymentChallenge.begin({
+      kind: this.query().mode === 'extension' ? 'parking-extension' : 'parking',
+      returnUrl: '/app/operations',
+      amount,
+      status: 'uncertain',
+    });
+    try {
+      const confirmation = {
+        contractId: Number(this.query().cityId || 0),
+        plate: this.query().plate,
+        sector: Number(this.query().sectorId || 0),
+        quantity: Math.round(amount * 100),
+        tariffType: Number(this.query().tariffType || 0),
+        date: this.parkingApi.opsDate(this.parkingApi.serverNow()),
+        time: Number(this.query().minutes || 0),
+        latitude: Number(this.query().latitude || 0),
+        longitude: Number(this.query().longitude || 0),
+        street: this.query().street,
+        payMethodId: Number(this.selectedCardId() || 0),
+        reference: this.query().mode === 'extension' ? this.query().opBaseId || '' : '',
+      };
+      const result =
+        this.query().mode === 'extension'
+          ? await this.parkingApi.confirmExtension({ ...confirmation, latitude: 0, longitude: 0, street: '' })
+          : await this.parkingApi.confirmParking(confirmation);
+      if (!result.success) {
+        if (isPaymentOutcomeUnknown(result.error)) {
+          this.paymentUncertain.set(true);
+          this.submitError.set(this.translations.translate('payment.uncertain.message'));
+          await this.operations.load();
+        } else {
+          this.paymentChallenge.clear();
+          this.submitError.set(this.translations.translate('parking.confirm.operationError'));
+        }
         return;
       }
-      this.submitError.set(this.translations.translate('parking.confirm.operationError'));
+      if (result.challengeUrl) {
+        this.paymentUncertain.set(true);
+        this.paymentChallenge.begin({
+          kind: this.query().mode === 'extension' ? 'parking-extension' : 'parking',
+          returnUrl: '/app/operations',
+          amount,
+        });
+        try {
+          this.authService.preparePaymentRedirect(result.challengeUrl);
+          window.location.assign(result.challengeUrl);
+        } catch (error) {
+          this.paymentChallenge.begin({
+            kind: this.query().mode === 'extension' ? 'parking-extension' : 'parking',
+            returnUrl: '/app/operations',
+            amount,
+            status: 'uncertain',
+          });
+          throw error;
+        }
+        return;
+      }
+
+      await this.finishConfirmation(walletAmount, result.operationId);
+      this.paymentChallenge.clear();
+    } catch {
+      this.paymentUncertain.set(true);
+      this.submitError.set(this.translations.translate('payment.uncertain.message'));
+    } finally {
       this.loading.set(false);
       this.confirmationPending = false;
       this.swipePay.reset();
-      return;
     }
-    if (result.challengeUrl) {
-      this.paymentChallenge.begin({
-        kind: this.query().mode === 'extension' ? 'parking-extension' : 'parking',
-        returnUrl: '/app/operations',
-        amount,
-      });
-      this.authService.preparePaymentRedirect(result.challengeUrl);
-      window.location.assign(result.challengeUrl);
-      return;
-    }
-
-    await this.finishConfirmation(walletAmount, result.operationId);
   }
 
   openPaymentMethods(): void {
@@ -390,12 +285,10 @@ export class ParkingConfirmComponent implements OnInit {
     this.walletManagerOpen.set(true);
   }
 
-  private async finishConfirmation(walletAmount: number, operationId?: number | string, recovered?: Operation): Promise<void> {
+  private async finishConfirmation(walletAmount: number, operationId?: number | string): Promise<void> {
     const paymentQuery = {
       ...this.query(),
       operationId: operationId ?? '',
-      ...(recovered?.startTime ? { startTime: recovered.startTime } : {}),
-      ...(recovered?.endTime ? { endTime: recovered.endTime } : {}),
       paymentWalletAmount: walletAmount.toFixed(2),
       paymentCardAmount: this.cardAmount().toFixed(2),
       paymentCardId: this.requiresCard() ? this.selectedCardId() : '',
@@ -412,60 +305,9 @@ export class ParkingConfirmComponent implements OnInit {
       });
     }
 
-    await this.router.navigate(['/app/parking/success'], { queryParams: paymentQuery });
+    const navigated = await this.router.navigate(['/app/parking/success'], { queryParams: paymentQuery });
+    if (navigated === false) throw new Error('Confirmation navigation cancelled');
     this.loading.set(false);
     this.confirmationPending = false;
-  }
-
-  private shouldRecoverOperation(error: unknown): boolean {
-    return (
-      error instanceof OpsApiError &&
-      (error.backendError?.code === -13 ||
-        error.kind === 'timeout' ||
-        error.kind === 'abort' ||
-        error.kind === 'transport' ||
-        error.kind === 'invalid-response' ||
-        (error.kind === 'http' && (error.status ?? 0) >= 500))
-    );
-  }
-
-  private async recoverConfirmedOperation(attemptStartedAt: Date, amount: number): Promise<Operation | undefined> {
-    const query = this.query();
-    const expectedType = query.mode === 'extension' ? OperationType.PARKING_EXTENSION : OperationType.PARKING;
-    const contractId = Number(query.cityId || 0);
-    const sectorId = Number(query.sectorId || 0);
-    const normalizedPlate = this.normalizePlate(query.plate);
-    const recoveryWindowMs = 10 * 60_000;
-    const retryDelaysMs = [0, 500, 1_500, 3_000];
-
-    for (const delayMs of retryDelaysMs) {
-      if (delayMs) await this.waitForRecoveryRetry(delayMs);
-      await this.operations.load();
-      if (this.operations.source() !== 'remote') continue;
-
-      const recovered = this.operations
-        .operations()
-        .filter(
-          (operation) =>
-            operation.type === expectedType &&
-            this.normalizePlate(operation.plate ?? '') === normalizedPlate &&
-            (!contractId || operation.contractId === undefined || operation.contractId === contractId) &&
-            (!sectorId || operation.sectorId === undefined || operation.sectorId === sectorId) &&
-            Math.abs(Math.abs(operation.amount) - amount) < 0.01 &&
-            operation.operationDate &&
-            Math.abs(parseOpsDate(operation.operationDate).getTime() - attemptStartedAt.getTime()) <= recoveryWindowMs,
-        )
-        .sort((left, right) => parseOpsDate(right.operationDate!).getTime() - parseOpsDate(left.operationDate!).getTime())[0];
-      if (recovered) return recovered;
-    }
-    return undefined;
-  }
-
-  private waitForRecoveryRetry(delayMs: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, delayMs));
-  }
-
-  private normalizePlate(plate: string): string {
-    return plate.replace(/\s+/g, '').toLocaleUpperCase('es');
   }
 }

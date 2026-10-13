@@ -46,49 +46,7 @@ import { LucideMail, LucideMapPin, LucidePhone } from '@lucide/angular';
       }
     </div>
   `,
-  styles: `
-    .back-link {
-      display: inline-block;
-      margin-bottom: 1rem;
-    }
-    .city-hero {
-      position: relative;
-      overflow: hidden;
-      border-radius: var(--radius-lg);
-      margin-bottom: 1rem;
-    }
-    .city-hero img {
-      display: block;
-      width: 100%;
-      height: 180px;
-      object-fit: cover;
-      filter: brightness(0.72);
-    }
-    .city-hero strong {
-      position: absolute;
-      inset: auto 1rem 1rem;
-      color: #fff;
-      font-size: 1.6rem;
-    }
-    h2 {
-      margin: 0.75rem 0 0.35rem;
-    }
-    .contact-row {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-      padding: 0.8rem 0;
-      color: var(--color-text);
-      text-decoration: none;
-    }
-    .contact-row + .contact-row {
-      border-top: 1px solid var(--color-border);
-    }
-    .contact-row svg {
-      color: var(--color-text);
-      flex: 0 0 auto;
-    }
-  `,
+  styleUrl: './city-info.component.css',
 })
 export class ParkingCityInfoComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
