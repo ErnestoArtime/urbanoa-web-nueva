@@ -1,0 +1,33 @@
+:host {
+  display: block;
+  height: 100%;
+  overflow-y: auto;
+}
+
+.auth-flow-title {
+  text-align: center;
+  font-size: var(--text-2xl);
+  line-height: var(--line-normal);
+}
+
+.auth-flow-intro {
+  margin: 0.75rem 0 1.5rem;
+  text-align: center;
+  color: var(--color-text-muted);
+  line-height: var(--line-readable);
+  overflow-wrap: anywhere;
+}
+
+.auth-flow-status {
+  margin-block: 1rem;
+  line-height: var(--line-readable);
+  overflow-wrap: anywhere;
+}
+
+.auth-flow-secondary {
+  display: block;
+  width: 100%;
+  min-height: var(--control-height);
+  margin-top: var(--space-2);
+  text-align: center;
+}

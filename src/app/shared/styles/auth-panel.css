@@ -1,0 +1,22 @@
+.auth-page-centered {
+  justify-content: center;
+  background: var(--color-background);
+}
+
+.auth-panel {
+  width: min(100%, var(--auth-panel-width));
+  padding: 2rem 2.2rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--auth-panel-radius);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
+}
+
+@media (max-width: 520px) {
+  .auth-panel {
+    padding: 1.5rem;
+    border: 0;
+    box-shadow: none;
+    background: transparent;
+  }
+}

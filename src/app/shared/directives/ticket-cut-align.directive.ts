@@ -1,4 +1,5 @@
 import { AfterViewInit, Directive, ElementRef, OnDestroy, inject } from '@angular/core';
+import { RuntimeStyleRegistry } from '../styles/runtime-style-registry.service';
 
 /** Keeps a ticket's side notches aligned with its real separator position. */
 @Directive({
@@ -6,6 +7,7 @@ import { AfterViewInit, Directive, ElementRef, OnDestroy, inject } from '@angula
 })
 export class TicketCutAlignDirective implements AfterViewInit, OnDestroy {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
+  private readonly styles = inject(RuntimeStyleRegistry).bind(this.host);
   private resizeObserver?: ResizeObserver;
   private animationFrame?: number;
 
@@ -18,7 +20,7 @@ export class TicketCutAlignDirective implements AfterViewInit, OnDestroy {
       const hostRect = this.host.getBoundingClientRect();
       const separatorRect = separator.getBoundingClientRect();
       const separatorCenter = separatorRect.top - hostRect.top + separatorRect.height / 2;
-      this.host.style.setProperty('--ticket-cut-y', `${separatorCenter}px`);
+      this.styles.update({ '--ticket-cut-y': `${separatorCenter}px` });
     };
 
     const scheduleUpdate = () => {
@@ -33,6 +35,7 @@ export class TicketCutAlignDirective implements AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.styles.destroy();
     this.resizeObserver?.disconnect();
     if (this.animationFrame !== undefined) cancelAnimationFrame(this.animationFrame);
   }
