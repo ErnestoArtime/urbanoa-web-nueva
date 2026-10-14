@@ -1,4 +1,4 @@
-import { Component, input, output, inject, OnDestroy, OnInit, signal } from '@angular/core';
+import { Component, ElementRef, ViewChild, input, output, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { Router } from '@angular/router';
 import { WalletService } from '../../../core/services/wallet.service';
@@ -26,8 +26,8 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
         </div>
       } @else if (error()) {
         <div class="state" role="alert">
-          <p>{{ 'account.addCard.formError' | translate }}</p>
-          <button type="button" class="btn btn-primary" (click)="loadForm()">{{ 'common.retry' | translate }}</button>
+          <p>{{ (confirmationError() ? 'account.addCard.confirmError' : 'account.addCard.formError') | translate }}</p>
+          <button type="button" class="btn btn-primary" (click)="retry()">{{ 'common.retry' | translate }}</button>
         </div>
       } @else if (success()) {
         <div class="state">
@@ -38,6 +38,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
         </div>
       } @else if (formHtml()) {
         <iframe
+          #paymentFrame
           class="paycomet-frame"
           title="Paycomet"
           [srcdoc]="formHtml()!"
@@ -50,19 +51,31 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
   styleUrl: './payment-add.component.css',
 })
 export class PaymentAddComponent implements OnInit, OnDestroy {
+  @ViewChild('paymentFrame') private paymentFrame?: ElementRef<HTMLIFrameElement>;
   readonly embedded = input(false);
   readonly back = output<void>();
+  readonly added = output<void>();
 
   private readonly wallet = inject(WalletService);
   private readonly sanitizer = inject(DomSanitizer);
   private readonly router = inject(Router);
   private readonly onMessage = (event: MessageEvent): void => {
-    if (event.data === 'urbanoa-card-added') void this.onCardAdded();
+    if (
+      event.data === 'urbanoa-card-added' &&
+      event.source === this.paymentFrame?.nativeElement.contentWindow &&
+      event.origin === window.location.origin
+    )
+      void this.onCardAdded();
   };
+  private baselineCardIds = new Set<string>();
+  private requestRevision = 0;
+  private destroyed = false;
+  private checkingCard = false;
 
   readonly loading = signal(true);
   readonly error = signal(false);
   readonly success = signal(false);
+  readonly confirmationError = signal(false);
   readonly formHtml = signal<SafeHtml | null>(null);
 
   ngOnInit(): void {
@@ -71,30 +84,66 @@ export class PaymentAddComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.destroyed = true;
+    this.requestRevision++;
     window.removeEventListener('message', this.onMessage);
   }
 
   async loadForm(): Promise<void> {
+    const revision = ++this.requestRevision;
     this.loading.set(true);
     this.error.set(false);
-    const html = await this.wallet.loadPaymentMethodForm();
-    if (!html) {
-      this.formHtml.set(null);
-      this.error.set(true);
-      this.loading.set(false);
-      return;
+    this.confirmationError.set(false);
+    this.success.set(false);
+    this.formHtml.set(null);
+    try {
+      await this.wallet.load();
+      if (this.destroyed || revision !== this.requestRevision) return;
+      if (this.wallet.source() !== 'remote') throw new Error('Card catalogue unavailable');
+      this.baselineCardIds = new Set(this.wallet.cards().map((card) => card.id));
+      const html = await this.wallet.loadPaymentMethodForm();
+      if (this.destroyed || revision !== this.requestRevision) return;
+      if (!html) throw new Error('Payment form unavailable');
+      const bridgedHtml = html.replace(
+        /window\.Urbanoa\.finish\(\)/g,
+        `window.parent.postMessage('urbanoa-card-added', ${JSON.stringify(window.location.origin)}); window.Urbanoa.finish()`,
+      );
+      this.formHtml.set(this.sanitizer.bypassSecurityTrustHtml(bridgedHtml));
+    } catch {
+      if (!this.destroyed && revision === this.requestRevision) this.error.set(true);
+    } finally {
+      if (!this.destroyed && revision === this.requestRevision) this.loading.set(false);
     }
-    const bridgedHtml = html.replace(
-      /window\.Urbanoa\.finish\(\)/g,
-      "window.parent.postMessage('urbanoa-card-added', '*'); window.Urbanoa.finish()",
-    );
-    this.formHtml.set(this.sanitizer.bypassSecurityTrustHtml(bridgedHtml));
-    this.loading.set(false);
   }
 
   private async onCardAdded(): Promise<void> {
-    await this.wallet.load();
-    this.success.set(true);
+    if (this.checkingCard || this.success() || this.destroyed) return;
+    this.checkingCard = true;
+    const revision = this.requestRevision;
+    this.loading.set(true);
+    this.error.set(false);
+    try {
+      await this.wallet.load();
+      if (this.destroyed || revision !== this.requestRevision) return;
+      const confirmed = this.wallet.source() === 'remote' && this.wallet.cards().some((card) => !this.baselineCardIds.has(card.id));
+      this.success.set(confirmed);
+      this.confirmationError.set(!confirmed);
+      this.error.set(!confirmed);
+      if (confirmed) this.added.emit();
+    } catch {
+      if (!this.destroyed && revision === this.requestRevision) {
+        this.confirmationError.set(true);
+        this.error.set(true);
+      }
+    } finally {
+      this.checkingCard = false;
+      if (!this.destroyed && revision === this.requestRevision) this.loading.set(false);
+    }
+  }
+
+  retry(): void {
+    if (this.confirmationError()) void this.onCardAdded();
+    else void this.loadForm();
   }
 
   goBack(): void {
