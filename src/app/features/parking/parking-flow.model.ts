@@ -1,4 +1,5 @@
 export interface ParkingFlowQuery extends Record<string, string | undefined> {
+  selectionOrigin?: 'map' | 'streets';
   city: string;
   cityName: string;
   cityId: string;

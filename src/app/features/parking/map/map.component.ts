@@ -430,6 +430,7 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
     });
     void this.router.navigate(['/app/parking/tickets'], {
       queryParams: {
+        selectionOrigin: 'map',
         city: this.selected.id,
         cityName: this.selected.nombre,
         cityId: this.selected.contractId,

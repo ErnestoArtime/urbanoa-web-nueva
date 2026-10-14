@@ -23,5 +23,6 @@ describe('ParkingStreetsComponent back navigation', () => {
     expect(query.get('city')).toBe('zarautz');
     expect(query.get('vehicleId')).toBe('vehicle-1');
     expect(query.get('plate')).toBe('PKJ321');
+    expect(fixture.componentInstance.streetParams({ id: 1, name: 'Calle', zoneId: 2, zoneDescription: 'Azul' })['selectionOrigin']).toBe('streets');
   });
 });

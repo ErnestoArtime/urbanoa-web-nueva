@@ -1,11 +1,62 @@
 import { ApplicationRef, provideZonelessChangeDetection } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ActivatedRoute, convertToParamMap } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { ParkingApiService } from '../../../core/services/parking-api.service';
 import { ParkingFlowStore } from '../parking-flow.store';
 import { ParkingTicketsComponent } from './tickets.component';
+import { TranslationService } from '../../../core/services/translation.service';
 
 describe('ParkingTicketsComponent', () => {
+  for (const origin of ['streets', 'map', undefined]) {
+    it(`returns to the selection origin ${origin ?? '(missing)'} with the current city and vehicle`, async () => {
+      const params = {
+        city: 'durango',
+        cityId: '23',
+        cityName: 'Durango',
+        vehicleId: 'vehicle-1',
+        plate: '1234ABC',
+        ...(origin ? { selectionOrigin: origin } : {}),
+      };
+      TestBed.configureTestingModule({
+        imports: [ParkingTicketsComponent],
+        providers: [
+          provideZonelessChangeDetection(),
+          provideRouter([]),
+          { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: convertToParamMap(params) } } },
+          { provide: TranslationService, useValue: { translate: (key: string) => key } },
+          {
+            provide: ParkingApiService,
+            useValue: {
+              tickets: async () => ({ data: [{ id: '1', schedule: 'L - V 9:00\nSábado 9:00\n<b>Texto</b>', informationalOnly: true }] }),
+              serverNow: () => new Date(),
+              opsDate: () => '120000141026',
+            },
+          },
+        ],
+      });
+      const fixture = TestBed.createComponent(ParkingTicketsComponent);
+      await fixture.whenStable();
+      const link = fixture.nativeElement.querySelector('.back-link') as HTMLAnchorElement;
+      expect(link.pathname).toBe(origin === 'streets' ? '/app/parking/streets' : '/app/parking');
+      expect(link.textContent?.trim()).toBe(origin === 'streets' ? 'parking.streets.back' : 'parking.tickets.back');
+      const query = new URL(link.href).searchParams;
+      expect(query.get('city')).toBe('durango');
+      expect(query.get('cityId')).toBe('23');
+      expect(query.get('cityName')).toBe('Durango');
+      expect(query.get('plate')).toBe('1234ABC');
+      expect(query.get('vehicleId')).toBe('vehicle-1');
+      const schedule = fixture.nativeElement.querySelector('.ticket-schedule') as HTMLElement;
+      expect(schedule.textContent).toBe('L - V 9:00\nSábado 9:00\n<b>Texto</b>');
+      expect(schedule.querySelector('b')).toBeNull();
+      expect(getComputedStyle(schedule).whiteSpace).toBe('pre-line');
+      const store = TestBed.inject(ParkingFlowStore);
+      store.update({ cityId: '23', zoneId: '1', sectorId: '2', plate: '5678DEF', vehicleId: 'vehicle-2' });
+      await fixture.whenStable();
+      expect(new URL(link.href).searchParams.get('plate')).toBe('5678DEF');
+      expect(link.pathname).toBe(origin === 'streets' ? '/app/parking/streets' : '/app/parking');
+    });
+  }
+
   it('reloads tariffs with the newly selected plate', async () => {
     const parkingApi = jasmine.createSpyObj<ParkingApiService>('ParkingApiService', ['tickets', 'opsDate', 'serverNow']);
     parkingApi.tickets.and.resolveTo({ data: [], source: 'remote' });

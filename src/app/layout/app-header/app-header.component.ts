@@ -42,7 +42,9 @@ export class AppHeaderComponent {
     const previous = previousSteps[current];
     if (previous) {
       const queryParams = this.router.parseUrl(this.router.url).queryParams;
-      void this.router.navigate([previous], { queryParams });
+      const destination =
+        current === '/app/parking/tickets' && queryParams['selectionOrigin'] === 'streets' ? '/app/parking/streets' : previous;
+      void this.router.navigate([destination], { queryParams });
       return;
     }
     this.location.back();

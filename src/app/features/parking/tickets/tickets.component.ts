@@ -14,7 +14,7 @@ import { ParkingApiService, ParkingTicketOption } from '../../../core/services/p
   template: `
     <app-loader [visible]="loading()" [message]="'parking.tickets.loading' | translate" />
     <div class="page flow-page">
-      <a routerLink="/app/parking" [queryParams]="{ city: query().city }" class="back-link">{{ 'parking.tickets.back' | translate }}</a>
+      <a [routerLink]="backRoute()" [queryParams]="backParams()" class="back-link">{{ backLabel() | translate }}</a>
       <h1 class="page-title">{{ 'parking.tickets.title' | translate }}</h1>
       <div class="selection-summary card">
         <span class="zone-color" [appRuntimeStyle]="{ background: '#' + query().sectorColor }"></span>
@@ -92,6 +92,20 @@ export class ParkingTicketsComponent implements OnInit {
     this.store.hasMinimumParkingData() ? ({ ...this.initialQuery, ...this.store.fromStore() } as ParkingFlowQuery) : this.initialQuery,
   );
   readonly loading = signal(true);
+  readonly backRoute = computed(() => (this.query().selectionOrigin === 'streets' ? '/app/parking/streets' : '/app/parking'));
+  readonly backLabel = computed(() => (this.query().selectionOrigin === 'streets' ? 'parking.streets.back' : 'parking.tickets.back'));
+  readonly backParams = computed(() => {
+    const query = this.query();
+    return {
+      city: query.city,
+      cityId: query.cityId,
+      cityName: query.cityName,
+      plate: query.plate,
+      vehicleId: query.vehicleId,
+      latitude: query.latitude,
+      longitude: query.longitude,
+    };
+  });
   private currentlyLoadedPlate = '';
   private requestSequence = 0;
 
