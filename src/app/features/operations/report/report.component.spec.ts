@@ -96,4 +96,24 @@ describe('ReportComponent parking operations filter', () => {
       { token: 'test-token' },
     );
   });
+
+  it('sends full Madrid days when requesting a custom interval across the winter clock change', async () => {
+    spyOn(globalThis, 'open').and.returnValue(null);
+    component.form.controls.customDates.setValue(true);
+    component.onDateRangeChange({ from: '25/10/2026', to: '25/10/2026' });
+    await component.generateReport();
+    expect(api.post).toHaveBeenCalledWith(
+      jasmine.any(String),
+      jasmine.objectContaining({ dateStart: '000000251026', dateEnd: '235959251026' }),
+      { token: 'test-token' },
+    );
+  });
+
+  it('does not send a report request when custom dates are incomplete', async () => {
+    component.form.controls.customDates.setValue(true);
+    component.onDateRangeChange({ from: '14/10/2026', to: '' });
+    await component.generateReport();
+    expect(api.post).not.toHaveBeenCalled();
+    expect(component.dateRangeError()).toBe('validation.required');
+  });
 });

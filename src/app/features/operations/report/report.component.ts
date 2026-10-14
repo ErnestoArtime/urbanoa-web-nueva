@@ -13,7 +13,7 @@ import { OpsSessionService } from '../../../core/api/ops-session.service';
 import { OPS_ENDPOINTS } from '../../../core/api/ops-endpoints';
 import { UserService } from '../../../core/services/user.service';
 import { AuthService } from '../../../core/services/auth.service';
-import { formatOpsDate } from '../../../core/utils/ops-date';
+import { formatOpsDate, formatOpsCalendarDate, parseOpsDate } from '../../../core/utils/ops-date';
 import { ReportArtifactService } from '../../../core/services/report-artifact.service';
 
 type ReportRange = 'last7' | 'last14' | 'last30' | 'last6m' | 'last12m' | 'last5y';
@@ -198,6 +198,10 @@ export class ReportComponent {
 
   async generateReport(): Promise<void> {
     if (this.dateRangeError() || this.isGenerating()) return;
+    if (this.customDatesEnabled() && (!this.fromDate || !this.toDate)) {
+      this.dateRangeError.set('validation.required');
+      return;
+    }
     this.isGenerating.set(true);
     this.reportError.set(false);
     const viewer = globalThis.open('', '_blank');
@@ -245,26 +249,36 @@ export class ReportComponent {
 
   private resolveRange(): { start: Date; end: Date } {
     if (this.customDatesEnabled() && this.fromDate && this.toDate) {
-      return { start: this.parseDate(this.fromDate), end: this.parseDate(this.toDate) };
+      return { start: this.dayBoundary(this.fromDate, false), end: this.dayBoundary(this.toDate, true) };
     }
 
-    const now = new Date();
-    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+    const now = this.api.serverNow?.() ?? new Date();
+    const [day, month, year] = formatOpsCalendarDate(now).split('/').map(Number);
+    const end = new Date(Date.UTC(year, month - 1, day, 12));
     const start = new Date(end);
     const range = this.ranges.find((item) => item.key === this.selectedRange) ?? this.ranges[2];
 
     if (range.days) {
-      start.setDate(start.getDate() - (range.days - 1));
+      start.setUTCDate(start.getUTCDate() - (range.days - 1));
     } else if (range.months) {
-      start.setMonth(start.getMonth() - range.months);
-      start.setDate(start.getDate() + 1);
+      start.setUTCMonth(start.getUTCMonth() - range.months);
+      start.setUTCDate(start.getUTCDate() + 1);
     } else if (range.years) {
-      start.setFullYear(start.getFullYear() - range.years);
-      start.setDate(start.getDate() + 1);
+      start.setUTCFullYear(start.getUTCFullYear() - range.years);
+      start.setUTCDate(start.getUTCDate() + 1);
     }
 
-    start.setHours(0, 0, 0, 0);
-    return { start, end };
+    const calendarDate = (date: Date) =>
+      `${String(date.getUTCDate()).padStart(2, '0')}/${String(date.getUTCMonth() + 1).padStart(2, '0')}/${date.getUTCFullYear()}`;
+    return { start: this.dayBoundary(calendarDate(start), false), end: this.dayBoundary(calendarDate(end), true) };
+  }
+
+  private dayBoundary(value: string, endOfDay: boolean): Date {
+    const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(value);
+    if (!match) throw new Error('Invalid report calendar date');
+    const date = parseOpsDate(`${endOfDay ? '235959' : '000000'}${match[1]}${match[2]}${match[3].slice(-2)}`);
+    if (formatOpsCalendarDate(date) !== value) throw new Error('Invalid report calendar date');
+    return date;
   }
 
   private isInRange(date: string, start: Date, end: Date): boolean {
