@@ -15,9 +15,9 @@
 }
 .thread-reference {
   color: var(--color-primary);
-  font-size: var(--text-2xs);
-  font-weight: var(--font-extra);
-  letter-spacing: 0.08em;
+  font-size: var(--text-caption);
+  font-weight: var(--font-medium);
+  line-height: var(--line-normal);
 }
 .thread-header h1 {
   margin-top: 0.12rem;
@@ -34,8 +34,9 @@
   border-radius: var(--radius-pill);
   background: var(--color-accent-soft);
   color: var(--color-primary-dark);
-  font-size: var(--text-2xs);
-  font-weight: var(--font-extra);
+  font-size: var(--text-caption);
+  font-weight: var(--font-medium);
+  line-height: var(--line-normal);
 }
 .status-pill.closed {
   background: var(--color-status-pill-surface);
@@ -96,8 +97,10 @@
 }
 .message-author time {
   color: var(--color-text-muted);
-  font-size: var(--text-2xs);
+  font-size: var(--text-caption);
   white-space: nowrap;
+  font-weight: var(--font-regular);
+  line-height: var(--line-normal);
 }
 .message-bubble > p {
   line-height: var(--line-readable);

@@ -65,12 +65,11 @@
 .menu-group {
   list-style: none;
   margin: 0.75rem 0 0.25rem;
-  font-size: var(--text-2xs);
-  font-weight: var(--font-extra);
+  font-size: var(--text-caption);
+  font-weight: var(--font-medium);
   padding: 0 0.9rem;
   color: var(--color-text);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  line-height: var(--line-normal);
 }
 .account-list {
   overflow: hidden;
@@ -91,11 +90,11 @@
   box-shadow: inset 4px 0 0 var(--color-primary);
 }
 .account-list .list-item.active .list-item-title {
-  font-weight: var(--font-extra);
+  font-weight: var(--font-bold);
 }
 .account-list .list-item.active .list-item-chevron {
   color: var(--color-primary);
-  font-weight: var(--font-extra);
+  font-weight: var(--font-regular);
 }
 .account-item-icon {
   width: 20px;

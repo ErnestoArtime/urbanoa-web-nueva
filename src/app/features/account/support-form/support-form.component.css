@@ -37,7 +37,9 @@
 }
 .field-heading > span {
   color: var(--color-text-muted);
-  font-size: var(--text-2xs);
+  font-size: var(--text-caption);
+  font-weight: var(--font-regular);
+  line-height: var(--line-normal);
 }
 textarea.form-input {
   min-height: 132px;
