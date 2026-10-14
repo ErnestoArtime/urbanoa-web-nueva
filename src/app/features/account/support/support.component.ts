@@ -5,6 +5,7 @@ import { LucideChevronRight, LucideMessageCircle, LucidePlus } from '@lucide/ang
 import { SupportService, type SupportThread } from '../../../core/services/support.service';
 import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { LoaderComponent } from '../../../shared/components/loader/loader.component';
 
 @Component({
   selector: 'app-account-support',
@@ -17,10 +18,20 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
     LucidePlus,
     DetailPanelHeaderComponent,
     TranslatePipe,
+    LoaderComponent,
   ],
   template: `
     <div class="page account-static-page support-page">
+      <app-loader [visible]="support.loading()" [message]="'common.loading' | translate" />
       <app-detail-panel-header [title]="'account.support.title' | translate" backRoute="/app/account" />
+      @if (support.source() === 'error') {
+        <div class="data-notice" role="alert">
+          <span>{{ 'account.support.loadError' | translate }}</span>
+          <button type="button" class="btn btn-secondary" [disabled]="support.loading()" (click)="support.load()">
+            {{ 'common.retry' | translate }}
+          </button>
+        </div>
+      }
 
       <div class="support-heading">
         <div>
@@ -51,7 +62,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
             }
           </div>
         }
-      } @else {
+      } @else if (!support.loading() && support.source() === 'remote') {
         <section class="support-empty card">
           <span class="empty-icon"><svg lucideMessageCircle size="34" strokeWidth="1.8" aria-hidden="true"></svg></span>
           <h2>{{ 'account.support.emptyTitle' | translate }}</h2>

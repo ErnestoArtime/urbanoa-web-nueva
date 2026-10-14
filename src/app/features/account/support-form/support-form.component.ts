@@ -1,4 +1,6 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, DestroyRef, computed, inject, OnInit, signal } from '@angular/core';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
+import { distinctUntilChanged, map } from 'rxjs/operators';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { LucideCamera, LucideImage, LucidePaperclip, LucideTrash2 } from '@lucide/angular';
@@ -55,7 +57,13 @@ const FEEDBACK_SUBTYPES: SelectOption<FeedbackSubtype>[] = [
     TranslatePipe,
   ],
   template: `
-    <app-loader [visible]="submitting()" [message]="'common.loading' | translate" />
+    <app-loader [visible]="submitting() || loading()" [message]="'common.loading' | translate" />
+    @if (loadFailed()) {
+      <div class="data-notice" role="alert">
+        <span>{{ (isReply() ? 'account.support.loadError' : 'parking.cities.loadError') | translate }}</span>
+        <button type="button" class="btn btn-secondary" (click)="retryLoad()">{{ 'common.retry' | translate }}</button>
+      </div>
+    }
     <div class="page account-static-page account-form-page has-sticky-actions support-form-page">
       <app-detail-panel-header [title]="titleKey() | translate" [backRoute]="backRoute()" />
       @if (replyThread(); as thread) {
@@ -183,7 +191,12 @@ const FEEDBACK_SUBTYPES: SelectOption<FeedbackSubtype>[] = [
                 <strong>{{ file.name }}</strong
                 ><span>{{ 'account.support.imageReady' | translate }}</span>
               </div>
-              <button type="button" (click)="attachment.set(null)" [attr.aria-label]="'account.support.removeAttachment' | translate">
+              <button
+                type="button"
+                [disabled]="submitting()"
+                (click)="clearAttachment()"
+                [attr.aria-label]="'account.support.removeAttachment' | translate"
+              >
                 <svg lucideTrash2 size="19" aria-hidden="true"></svg>
               </button>
             </div>
@@ -194,7 +207,12 @@ const FEEDBACK_SUBTYPES: SelectOption<FeedbackSubtype>[] = [
         </section>
 
         <div class="sticky-actions">
-          <button type="submit" class="btn btn-primary btn-block" [disabled]="submitting()" [attr.aria-busy]="submitting()">
+          <button
+            type="submit"
+            class="btn btn-primary btn-block"
+            [disabled]="submitting() || loading() || loadFailed() || attachmentReading()"
+            [attr.aria-busy]="submitting()"
+          >
             {{ (isReply() ? 'account.support.sendReply' : 'account.support.send') | translate }}
           </button>
         </div>
@@ -204,7 +222,7 @@ const FEEDBACK_SUBTYPES: SelectOption<FeedbackSubtype>[] = [
         <app-result-modal
           type="error"
           [title]="'account.support.missingTitle' | translate"
-          [message]="'account.support.requiredFields' | translate"
+          [message]="(sendFailed() ? 'account.support.sendError' : 'account.support.requiredFields') | translate"
           [primaryText]="'account.support.reviewForm' | translate"
           (primaryAction)="showError.set(false)"
         />
@@ -220,7 +238,14 @@ export class AccountSupportFormComponent implements OnInit {
   private readonly support = inject(SupportService);
   private readonly cities = inject(CitiesService);
   private readonly vehicleService = inject(VehicleService);
-  private readonly threadId = this.route.snapshot.paramMap.get('id');
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly params = toSignal(this.route.paramMap, { initialValue: this.route.snapshot.paramMap });
+  private get threadId(): string | null {
+    return this.params().get('id');
+  }
+  private loadRevision = 0;
+  private attachmentRevision = 0;
+  private attachmentReader?: FileReader;
 
   readonly types = FEEDBACK_TYPES;
   readonly subtypes = FEEDBACK_SUBTYPES;
@@ -231,6 +256,10 @@ export class AccountSupportFormComponent implements OnInit {
   readonly attachmentError = signal<string | null>(null);
   readonly showError = signal(false);
   readonly submitting = signal(false);
+  readonly loading = signal(true);
+  readonly loadFailed = signal(false);
+  readonly sendFailed = signal(false);
+  readonly attachmentReading = signal(false);
   readonly form = this.fb.nonNullable.group({
     type: ['' as FeedbackType | '', Validators.required],
     subtype: ['' as FeedbackSubtype | '', Validators.required],
@@ -243,11 +272,39 @@ export class AccountSupportFormComponent implements OnInit {
   readonly titleKey = () => (this.isReply() ? 'account.support.replyTitle' : 'account.support.newMessage');
   readonly backRoute = () => (this.threadId ? `/app/account/support/${this.threadId}` : '/app/account/support');
 
-  async ngOnInit(): Promise<void> {
+  ngOnInit(): void {
+    this.destroyRef.onDestroy(() => {
+      this.loadRevision++;
+      this.clearAttachment();
+    });
+    this.route.paramMap
+      .pipe(
+        map((params) => params.get('id')),
+        distinctUntilChanged(),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe(() => {
+        void this.initialize();
+      });
+  }
+
+  private async initialize(resetDraft = true): Promise<void> {
+    const revision = ++this.loadRevision;
+    const id = this.threadId;
+    this.loading.set(true);
+    this.loadFailed.set(false);
+    this.showError.set(false);
+    this.sendFailed.set(false);
+    if (resetDraft) {
+      this.form.reset();
+      this.clearAttachment();
+    }
+    this.form.disable({ emitEvent: false });
     try {
-      if (this.threadId && !this.support.getById(this.threadId)) await this.support.load();
-      const replyThread = this.threadId ? this.support.getById(this.threadId) : undefined;
-      if (this.threadId && !replyThread) {
+      if (id && !this.support.getById(id)) await this.support.load();
+      if (revision !== this.loadRevision) return;
+      const replyThread = id ? this.support.getById(id) : undefined;
+      if (id && !replyThread) {
         await this.router.navigate(['/app/account/support']);
         return;
       }
@@ -255,46 +312,90 @@ export class AccountSupportFormComponent implements OnInit {
         await this.router.navigate(['/app/account/support', replyThread.id]);
         return;
       }
-      const citiesRequest = this.cities.getCities();
-      if (!this.vehicleService.vehicles().length) await this.vehicleService.load();
-      this.municipios.set((await citiesRequest).data);
+      if (!replyThread) {
+        const [cities] = await Promise.all([
+          this.cities.getCities(),
+          this.vehicleService.vehicles().length ? Promise.resolve() : this.vehicleService.load(),
+        ]);
+        if (revision !== this.loadRevision) return;
+        this.municipios.set(cities.data);
+      }
       const mainVehicle = this.vehicleService.mainVehicle();
       if (mainVehicle && !this.form.controls.plate.value) this.form.controls.plate.setValue(mainVehicle.plate);
     } catch {
-      this.municipios.set([]);
+      if (revision === this.loadRevision) {
+        this.municipios.set([]);
+        this.loadFailed.set(true);
+      }
+    } finally {
+      if (revision === this.loadRevision) {
+        this.loading.set(false);
+        if (!this.submitting() && !this.loadFailed()) this.form.enable({ emitEvent: false });
+      }
     }
   }
 
   selectFile(event: Event): void {
+    if (this.submitting()) return;
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     input.value = '';
     this.attachmentError.set(null);
     if (!file) return;
+    this.clearAttachment();
     const validationError = supportImageFileError(file);
     if (validationError) {
       this.attachmentError.set(validationError === 'size' ? 'account.support.attachmentSizeError' : 'account.support.attachmentTypeError');
       return;
     }
     const reader = new FileReader();
-    reader.onload = () => this.attachment.set({ name: file.name, type: file.type, dataUrl: String(reader.result), size: file.size });
-    reader.onerror = () => this.attachmentError.set('account.support.attachmentReadError');
+    this.attachmentReader = reader;
+    const revision = this.attachmentRevision;
+    this.attachmentReading.set(true);
+    reader.onload = () => {
+      if (revision !== this.attachmentRevision) return;
+      this.attachment.set({ name: file.name, type: file.type, dataUrl: String(reader.result), size: file.size });
+      this.attachmentReading.set(false);
+    };
+    reader.onerror = () => {
+      if (revision !== this.attachmentRevision) return;
+      this.attachmentError.set('account.support.attachmentReadError');
+      this.attachmentReading.set(false);
+    };
     reader.readAsDataURL(file);
   }
 
+  clearAttachment(): void {
+    this.attachmentRevision++;
+    if (this.attachmentReader?.readyState === FileReader.LOADING) this.attachmentReader.abort();
+    this.attachmentReader = undefined;
+    this.attachment.set(null);
+    this.attachmentReading.set(false);
+    this.attachmentError.set(null);
+  }
+
+  async retryLoad(): Promise<void> {
+    if (!this.loading() && !this.submitting()) await this.initialize(false);
+  }
+
   async submit(): Promise<void> {
+    if (this.submitting() || this.loading() || this.loadFailed() || this.attachmentReading()) return;
+    const revision = this.loadRevision;
+    const id = this.threadId;
     this.showError.set(false);
+    this.sendFailed.set(false);
     if (this.form.controls.message.invalid || (!this.isReply() && this.form.invalid)) {
       this.form.markAllAsTouched();
       this.showError.set(true);
       return;
     }
     this.submitting.set(true);
+    this.form.disable({ emitEvent: false });
     try {
       const values = this.form.getRawValue();
       let success = false;
-      if (this.threadId) {
-        success = await this.support.reply(this.threadId, values.message, this.attachment() ?? undefined);
+      if (id) {
+        success = await this.support.reply(id, values.message, this.attachment() ?? undefined);
       } else {
         const city = this.municipios().find((item) => item.id === values.cityId);
         success = Boolean(
@@ -309,12 +410,20 @@ export class AccountSupportFormComponent implements OnInit {
           }),
         );
       }
+      if (revision !== this.loadRevision) return;
       if (success) void this.router.navigate(['/app/account/support-success']);
-      else this.showError.set(true);
+      else {
+        this.sendFailed.set(true);
+        this.showError.set(true);
+      }
     } catch {
-      this.showError.set(true);
+      if (revision === this.loadRevision) {
+        this.sendFailed.set(true);
+        this.showError.set(true);
+      }
     } finally {
       this.submitting.set(false);
+      if (!this.loading()) this.form.enable({ emitEvent: false });
     }
   }
 }

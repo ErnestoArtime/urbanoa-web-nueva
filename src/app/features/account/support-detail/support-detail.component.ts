@@ -5,6 +5,9 @@ import { SupportAttachment, SupportMessage, SupportService } from '../../../core
 import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { TranslationService } from '../../../core/services/translation.service';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
+import { distinctUntilChanged, map } from 'rxjs/operators';
+import { LoaderComponent } from '../../../shared/components/loader/loader.component';
 
 @Component({
   selector: 'app-account-support-detail',
@@ -16,9 +19,11 @@ import { TranslationService } from '../../../core/services/translation.service';
     LucideUserRound,
     DetailPanelHeaderComponent,
     TranslatePipe,
+    LoaderComponent,
   ],
   template: `
     <div class="page account-static-page support-detail-page">
+      <app-loader [visible]="support.loading()" [message]="'common.loading' | translate" />
       <app-detail-panel-header [title]="'account.support.detailTitle' | translate" backRoute="/app/account/support" />
       @if (thread(); as item) {
         <header class="thread-header card">
@@ -74,7 +79,12 @@ import { TranslationService } from '../../../core/services/translation.service';
             </a>
           </div>
         }
-      } @else {
+      } @else if (support.source() === 'error') {
+        <div class="data-notice" role="alert">
+          <span>{{ 'account.support.loadError' | translate }}</span>
+          <button type="button" class="btn btn-secondary" (click)="retry()">{{ 'common.retry' | translate }}</button>
+        </div>
+      } @else if (!support.loading()) {
         <section class="missing-thread card">
           <h1>{{ 'account.support.notFoundTitle' | translate }}</h1>
           <p>{{ 'account.support.notFoundDetail' | translate }}</p>
@@ -89,7 +99,12 @@ export class AccountSupportDetailComponent {
   private readonly translations = inject(TranslationService);
   private readonly route = inject(ActivatedRoute);
   readonly support = inject(SupportService);
-  private readonly threadId = this.route.snapshot.paramMap.get('id') ?? '';
+  private readonly currentId = toSignal(this.route.paramMap.pipe(map((params) => params.get('id') ?? '')), {
+    initialValue: this.route.snapshot.paramMap.get('id') ?? '',
+  });
+  private get threadId(): string {
+    return this.currentId();
+  }
   readonly thread = computed(() => this.support.getById(this.threadId));
 
   messageDate(value: string): string {
@@ -108,12 +123,26 @@ export class AccountSupportDetailComponent {
   }
 
   constructor() {
-    void this.initialize();
+    this.route.paramMap
+      .pipe(
+        map((params) => params.get('id') ?? ''),
+        distinctUntilChanged(),
+        takeUntilDestroyed(),
+      )
+      .subscribe((id) => {
+        if (id) void this.initialize(id);
+      });
   }
 
-  private async initialize(): Promise<void> {
-    if (!this.support.getById(this.threadId)) await this.support.load();
-    await this.support.markAsRead(this.threadId);
+  private async initialize(id: string): Promise<void> {
+    if (!this.support.getById(id)) await this.support.load();
+    if (id === this.threadId && this.support.getById(id)) await this.support.markAsRead(id);
+  }
+
+  async retry(): Promise<void> {
+    const id = this.threadId;
+    await this.support.load();
+    await this.initialize(id);
   }
 
   typeKey(): string {
