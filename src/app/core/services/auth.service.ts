@@ -158,12 +158,18 @@ export class AuthService {
       const saved = JSON.parse(raw) as { session: AuthSession; owner: string; savedAt: number; url: string };
       const age = Date.now() - saved.savedAt;
       if (
-        saved.url !== location.href || !Number.isFinite(age) || age < 0 || age > 60_000 ||
+        saved.url !== location.href ||
+        !Number.isFinite(age) ||
+        age < 0 ||
+        age > 60_000 ||
         typeof saved.owner !== 'string' ||
-        typeof saved.session?.token !== 'string' || !saved.session.token.trim() ||
-        typeof saved.session.user?.email !== 'string' || typeof saved.session.user?.id !== 'string' ||
+        typeof saved.session?.token !== 'string' ||
+        !saved.session.token.trim() ||
+        typeof saved.session.user?.email !== 'string' ||
+        typeof saved.session.user?.id !== 'string' ||
         !this.windowSession.resumePayment(saved.owner, this.userIdentity(saved.session.user))
-      ) return false;
+      )
+        return false;
       this.storeSession(saved.session);
       return true;
     } catch {
@@ -201,10 +207,14 @@ export class AuthService {
       this.paymentDepartureArmed = false;
       if (!raw) return false;
       const saved = JSON.parse(raw) as { session: AuthSession; owner: string; startedAt: number; departureUrl: string };
+      const age = Date.now() - Number(saved.startedAt);
       const pending = this.paymentChallenge.getPending();
       const callback = /^\/(?:(?:web-ui\/)?(?:ok|ko)|app\/paycomet\/(?:ok|ko))\/?$/.test(location.pathname);
       if (
         (!callback && !(backFromPayment && location.pathname === saved.departureUrl)) ||
+        !Number.isFinite(age) ||
+        age < 0 ||
+        age > 30 * 60_000 ||
         !pending ||
         pending.startedAt !== saved.startedAt ||
         typeof saved.session?.token !== 'string' ||
@@ -368,7 +378,8 @@ export class AuthService {
         headers: this.languageHeaders(),
       });
       return {
-        id: String(profile.contractId ?? ''),
+        // contractId identifies the municipality, never the authenticated account.
+        id: (profile.email || email).trim().toLowerCase(),
         email: profile.email || email,
         name: profile.names ?? '',
         surname: profile.firstSurname ?? '',
@@ -455,7 +466,11 @@ export class AuthService {
       'urbanoa.vehicles',
       'urbanoa.parking.active-tickets',
     ];
-    try { sessionStorage.removeItem('urbanoa.operations.ended'); } catch { /* Storage may be unavailable. */ }
+    try {
+      sessionStorage.removeItem('urbanoa.operations.ended');
+    } catch {
+      /* Storage may be unavailable. */
+    }
     for (const key of keys) {
       try {
         localStorage.removeItem(key);
@@ -482,7 +497,7 @@ export class AuthService {
   }
 
   private userIdentity(user: Pick<AuthUser, 'id' | 'email'>): string {
-    return user.id.trim() || user.email.trim();
+    return user.email.trim().toLowerCase();
   }
 
   private errorMessage(error: unknown): string {

@@ -106,7 +106,7 @@ describe('AuthService', () => {
       headers: { 'Accept-Language': 'es-ES' },
     });
     expect(opsSession.setToken).toHaveBeenCalledWith('real-token');
-    expect(user).toEqual(jasmine.objectContaining({ id: '42', name: 'Ada', surname: 'Lovelace', firstLogin: true }));
+    expect(user).toEqual(jasmine.objectContaining({ id: 'user@example.com', name: 'Ada', surname: 'Lovelace', firstLogin: true }));
     expect(service.currentSession()?.token).toBe('real-token');
     expect(localStorage.getItem('urbanoa.auth.session')).toBeNull();
     expect(localStorage.getItem('urbanoa.auth.user')).toBeNull();
