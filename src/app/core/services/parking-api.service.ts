@@ -135,6 +135,13 @@ export class ParkingApiService {
       );
       const operationId = this.operationId(response);
       const challengeUrl = this.challengeUrl(response);
+      if (operationId === undefined && !challengeUrl) {
+        throw new OpsApiError(
+          'invalid-response',
+          OPS_ENDPOINTS.parking.confirmParking,
+          'OPS no confirmó la operación ni devolvió un challenge.',
+        );
+      }
       return {
         success: true,
         source: 'remote',
@@ -393,6 +400,6 @@ export class ParkingApiService {
   private operationId(value: unknown): number | undefined {
     if (!value || typeof value !== 'object') return undefined;
     const candidate = (value as Partial<ConfirmParkingResponseDto>).operationId;
-    return typeof candidate === 'number' && Number.isInteger(candidate) && candidate >= 0 ? candidate : undefined;
+    return typeof candidate === 'number' && Number.isInteger(candidate) && candidate > 0 ? candidate : undefined;
   }
 }

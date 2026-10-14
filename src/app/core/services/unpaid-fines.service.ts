@@ -124,6 +124,10 @@ export class UnpaidFinesService {
         { token },
       );
       const challengeUrl = this.challengeUrl(response);
+      const operationId = typeof response === 'object' && response !== null ? response.operationId : null;
+      if (!challengeUrl && !(typeof operationId === 'number' && Number.isInteger(operationId) && operationId > 0)) {
+        throw new OpsApiError('invalid-response', OPS_ENDPOINTS.fines.confirmPayment, 'OPS no confirmó el pago de la sanción.');
+      }
       if (!challengeUrl) await Promise.all([this.operationsService.load(), this.walletService.load()]);
       return { success: true, challengeUrl };
     } catch (error) {
@@ -152,9 +156,7 @@ export class UnpaidFinesService {
   }
 
   async acknowledgeExpired(id: string): Promise<FineStatusUpdateResult> {
-    const operation = this.operationsService
-      .operations()
-      .find((item) => item.id === id && canMoveFineToHistory(item));
+    const operation = this.operationsService.operations().find((item) => item.id === id && canMoveFineToHistory(item));
     return operation ? this.moveFineToHistory(this.mapOperation(operation)) : { success: false };
   }
 

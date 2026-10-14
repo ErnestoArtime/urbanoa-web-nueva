@@ -27,6 +27,28 @@ function serviceWith(api: jasmine.SpyObj<OpsApiClient>, language: 'es' | 'eu' | 
 describe('ParkingApiService', () => {
   beforeEach(() => localStorage.clear());
 
+  it('keeps a confirmation without an operation id or challenge as an invalid response', async () => {
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
+    api.post.and.resolveTo({ operationId: null, challengeUrl: null });
+    const service = serviceWith(api);
+    TestBed.inject(OpsSessionService).setToken('token');
+    const result = await service.confirmParking({
+      contractId: 3,
+      plate: '1234ABC',
+      sector: 4,
+      quantity: 125,
+      tariffType: 2,
+      date: '120000141026',
+      time: 60,
+      latitude: 43,
+      longitude: -2,
+      street: '',
+      payMethodId: 7,
+    });
+    expect(result.success).toBeFalse();
+    expect(result.error).toEqual(jasmine.objectContaining({ kind: 'invalid-response' }));
+  });
+
   it('turns OPS schedule breaks into newlines while keeping other markup as text', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
     api.post.and.resolveTo({

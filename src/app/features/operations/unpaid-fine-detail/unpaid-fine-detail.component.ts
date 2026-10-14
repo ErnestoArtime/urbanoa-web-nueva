@@ -309,7 +309,7 @@ export class UnpaidFineDetailComponent {
     this.paying.set(true);
     this.paymentChallenge.begin({
       kind: 'fine',
-      returnUrl: `/app/operations/unpaid-fines/${encodeURIComponent(fine.id)}`,
+      returnUrl: `/app/operations/unpaid-fine-detail/${encodeURIComponent(fine.id)}`,
       amount: this.numericAmount(),
       status: 'uncertain',
     });
@@ -320,7 +320,7 @@ export class UnpaidFineDetailComponent {
         this.paymentUncertain.set(true);
         this.paymentChallenge.begin({
           kind: 'fine',
-          returnUrl: `/app/operations/unpaid-fines/${encodeURIComponent(fine.id)}`,
+          returnUrl: `/app/operations/unpaid-fine-detail/${encodeURIComponent(fine.id)}`,
           amount: this.numericAmount(),
         });
         try {

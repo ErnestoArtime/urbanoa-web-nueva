@@ -103,9 +103,21 @@ export class PaymentChallengeService {
       if (!parsed.kind || !validKinds.includes(parsed.kind)) return null;
       if (typeof parsed.returnUrl !== 'string' || !parsed.returnUrl.startsWith('/app/')) return null;
       const age = Date.now() - Number(parsed.startedAt);
-      if (!Number.isFinite(parsed.startedAt) || age < 0 || (parsed.status !== 'uncertain' && age > this.maxAgeMs)) return null;
+      if (!Number.isFinite(parsed.startedAt) || age < 0) return null;
       if (parsed.status !== undefined && parsed.status !== 'uncertain') return null;
-      if (parsed.amount !== undefined && (!Number.isFinite(parsed.amount) || Number(parsed.amount) <= 0)) return null;
+      if (
+        parsed.amount !== undefined &&
+        (!Number.isFinite(parsed.amount) ||
+          Number(parsed.amount) < 0 ||
+          (Number(parsed.amount) === 0 && parsed.kind !== 'parking' && parsed.kind !== 'parking-extension'))
+      )
+        return null;
+
+      // Expiration limits session continuation, never proves that OPS rejected a write.
+      if (parsed.status !== 'uncertain' && age > this.maxAgeMs) {
+        parsed.status = 'uncertain';
+        this.write(this.key, JSON.stringify(parsed));
+      }
 
       return {
         kind: parsed.kind,

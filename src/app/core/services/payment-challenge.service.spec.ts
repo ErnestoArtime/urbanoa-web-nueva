@@ -5,6 +5,12 @@ import { PaymentChallengeService } from './payment-challenge.service';
 describe('PaymentChallengeService', () => {
   let service: PaymentChallengeService;
 
+  it('keeps free parking pending while its write is uncertain', () => {
+    service.begin({ kind: 'parking', returnUrl: '/app/operations', amount: 0, status: 'uncertain' });
+    expect(service.hasPendingPayment()).toBeTrue();
+    expect(service.getPending()?.amount).toBe(0);
+  });
+
   it('keeps uncertain outcomes pending after reload and does not expire them into permission to pay again', () => {
     service.begin({ kind: 'parking', returnUrl: '/app/operations', status: 'uncertain' });
     const raw = JSON.parse(sessionStorage.getItem('urbanoa.paycomet.pending-payment-v1')!);
@@ -51,11 +57,11 @@ describe('PaymentChallengeService', () => {
     expect(parking?.returnUrl).toBe('/app/operations');
     expect(JSON.stringify(parking)).not.toContain('plate');
 
-    service.begin({ kind: 'fine', returnUrl: '/app/operations/unpaid-fines/42', amount: 20 });
-    expect(service.getPending()?.returnUrl).toBe('/app/operations/unpaid-fines/42');
+    service.begin({ kind: 'fine', returnUrl: '/app/operations/unpaid-fine-detail/42', amount: 20 });
+    expect(service.getPending()?.returnUrl).toBe('/app/operations/unpaid-fine-detail/42');
   });
 
-  it('rejects expired or externally-routable stored context', () => {
+  it('rejects external return routes and keeps expired challenges uncertain instead of unlocking payment', () => {
     sessionStorage.setItem(
       'urbanoa.paycomet.pending-payment-v1',
       JSON.stringify({ kind: 'fine', returnUrl: 'https://example.com', startedAt: Date.now(), amount: 20 }),
@@ -66,7 +72,8 @@ describe('PaymentChallengeService', () => {
       'urbanoa.paycomet.pending-payment-v1',
       JSON.stringify({ kind: 'fine', returnUrl: '/app/operations', startedAt: Date.now() - 31 * 60_000, amount: 20 }),
     );
-    expect(service.getPending()).toBeNull();
+    expect(service.getPending()?.status).toBe('uncertain');
+    expect(new PaymentChallengeService().hasPendingPayment()).toBeTrue();
   });
 
   it('migrates legacy recharge context so it also expires after the first safe resume', () => {
