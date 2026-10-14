@@ -2,7 +2,7 @@ import type { MainCard } from '../services/wallet.service';
 
 /** Returns the last instant of a card's expiry month. Supports MM/YY and YYYY/MM. */
 export function cardExpiryDate(value: string): Date | undefined {
-  const match = value.trim().match(/^(\d{1,4})[\/-](\d{1,4})$/);
+  const match = value.trim().match(/^(\d{1,4})[/-](\d{1,4})$/);
   if (!match) return undefined;
   const first = Number(match[1]);
   const second = Number(match[2]);

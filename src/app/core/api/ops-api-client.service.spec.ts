@@ -6,13 +6,17 @@ import { TestBed } from '@angular/core/testing';
 import { WindowSessionService } from '../services/window-session.service';
 import { OPS_ENDPOINTS } from './ops-endpoints';
 
+interface RetryClient {
+  waitForRetry(delay: number, signal: AbortSignal, endpoint: string): Promise<void>;
+}
+
 describe('OpsApiClient', () => {
   let client: OpsApiClient;
 
   const success = () => new Response(JSON.stringify({ value: 0, isSuccess: true, error: null }), { status: 200 });
 
   it('recovers a read-only POST after a transport failure', async () => {
-    const pause = spyOn<any>(client, 'waitForRetry').and.resolveTo();
+    const pause = spyOn(client as unknown as RetryClient, 'waitForRetry').and.resolveTo();
     const fetchSpy = spyOn(globalThis, 'fetch').and.returnValues(
       Promise.reject(new TypeError('Network failed')),
       Promise.resolve(success()),
@@ -23,7 +27,7 @@ describe('OpsApiClient', () => {
   });
 
   it('stops after three retries and keeps the final error', async () => {
-    const pause = spyOn<any>(client, 'waitForRetry').and.resolveTo();
+    const pause = spyOn(client as unknown as RetryClient, 'waitForRetry').and.resolveTo();
     const fetchSpy = spyOn(globalThis, 'fetch').and.callFake(async () => new Response('', { status: 503 }));
     await expectAsync(client.get(OPS_ENDPOINTS.wallet.credit)).toBeRejectedWith(jasmine.objectContaining({ kind: 'http', status: 503 }));
     expect(fetchSpy).toHaveBeenCalledTimes(4);
@@ -63,8 +67,8 @@ describe('OpsApiClient', () => {
     const started = new Promise<void>((resolve) => {
       delayStarted = resolve;
     });
-    const originalPause = (client as any).waitForRetry.bind(client);
-    spyOn<any>(client, 'waitForRetry').and.callFake((...args: unknown[]) => {
+    const originalPause = (client as unknown as RetryClient).waitForRetry.bind(client);
+    spyOn(client as unknown as RetryClient, 'waitForRetry').and.callFake((...args: Parameters<RetryClient['waitForRetry']>) => {
       delayStarted();
       return originalPause(...args);
     });
@@ -76,7 +80,7 @@ describe('OpsApiClient', () => {
   });
 
   it('retries a query timeout with a fresh request', async () => {
-    spyOn<any>(client, 'waitForRetry').and.resolveTo();
+    spyOn(client as unknown as RetryClient, 'waitForRetry').and.resolveTo();
     let attempts = 0;
     spyOn(globalThis, 'fetch').and.callFake((_input, init) => {
       if (++attempts === 2) return Promise.resolve(success());

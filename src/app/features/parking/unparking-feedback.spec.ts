@@ -22,20 +22,25 @@ for (const component of [HomeComponent, OperationsLayoutComponent]) {
         error.set('OPS rejected the confirmation');
         return false;
       });
-      TestBed.configureTestingModule({ providers: [
-        provideZonelessChangeDetection(), provideRouter([]),
-        { provide: OpsApiClient, useValue: {} },
-        { provide: OperationsService, useValue: { operations: signal([]), activeLoading: signal(false), source: signal('remote') } },
-        { provide: ParkingSessionService, useValue: { activeParkings: signal([]), unparkError: error, leaveParking: leave } },
-        { provide: DashboardApiService, useValue: { source: signal('remote'), load: async () => {} } },
-        { provide: NavigationToCarService, useValue: {} },
-        { provide: UserService, useValue: { user: signal({}) } },
-        { provide: VehicleService, useValue: { mainVehicle: signal(undefined) } },
-        { provide: WalletService, useValue: {} },
-        { provide: UnpaidFinesService, useValue: { fines: signal([]) } },
-        { provide: TranslationService, useValue: { translate: (key: string) => key } },
-      ] });
-      const instance = TestBed.runInInjectionContext(() => component === HomeComponent ? new HomeComponent() : new OperationsLayoutComponent());
+      TestBed.configureTestingModule({
+        providers: [
+          provideZonelessChangeDetection(),
+          provideRouter([]),
+          { provide: OpsApiClient, useValue: {} },
+          { provide: OperationsService, useValue: { operations: signal([]), activeLoading: signal(false), source: signal('remote') } },
+          { provide: ParkingSessionService, useValue: { activeParkings: signal([]), unparkError: error, leaveParking: leave } },
+          { provide: DashboardApiService, useValue: { source: signal('remote'), load: () => Promise.resolve() } },
+          { provide: NavigationToCarService, useValue: {} },
+          { provide: UserService, useValue: { user: signal({}) } },
+          { provide: VehicleService, useValue: { mainVehicle: signal(undefined) } },
+          { provide: WalletService, useValue: {} },
+          { provide: UnpaidFinesService, useValue: { fines: signal([]) } },
+          { provide: TranslationService, useValue: { translate: (key: string) => key } },
+        ],
+      });
+      const instance = TestBed.runInInjectionContext(() =>
+        component === HomeComponent ? new HomeComponent() : new OperationsLayoutComponent(),
+      );
       instance.confirmUnpark.set(true);
       instance.pendingUnparkAmount.set(5.3);
       await instance.confirmUnparkAction();
