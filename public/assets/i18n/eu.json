@@ -750,5 +750,13 @@
   "onboarding.notification.title": "Zure aparkalekuaren epemuga ez gainditzeko laguntzailea!",
   "auth.reset.subtitle": "Arinpark-en erabiltzen duzun helbide elektronikoa sartu eta kodea sortu klikatu. Bertan aurrera jarraitu ahal izateko erabilera bakarreko kodea jasoko duzu. Dudarik izatekotan, gurekin harremanetan jarri soporte@arinpark.eus",
   "auth.resetCode.resend": "Kodea berbidali",
-  "payment.uncertain.message": "eu_No se ha podido confirmar el resultado de la operación. Revisa tus operaciones o contacta con soporte antes de volver a pagar."
+  "payment.uncertain.message": "eu_No se ha podido confirmar el resultado de la operación. Revisa tus operaciones o contacta con soporte antes de volver a pagar.",
+  "parking.tickets.loadError": "eu_No se pudieron cargar las tarifas.",
+  "parking.tickets.empty": "eu_No hay tarifas disponibles.",
+  "parking.cities.partialLoadError": "eu_Algunos municipios no están disponibles. Puedes reintentar su carga.",
+  "account.addCard.confirmError": "eu_No se pudo confirmar el alta de la tarjeta. Reintenta la comprobación.",
+  "account.support.loadError": "eu_No se pudieron cargar las conversaciones.",
+  "account.support.sendError": "eu_No se pudo enviar el mensaje. Conservamos tus datos para que puedas reintentar.",
+  "account.settings.location.citySyncPending": "eu_El municipio {{city}} se ha guardado en este navegador. Su sincronización con el servicio sigue pendiente.",
+  "onboarding.location.citySyncPending": "eu_El municipio se ha guardado en este navegador y su sincronización con el servicio sigue pendiente. Puedes continuar."
 }

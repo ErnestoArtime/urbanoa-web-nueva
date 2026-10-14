@@ -750,5 +750,13 @@
   "onboarding.notification.title": "Don't lose track of the time",
   "auth.reset.subtitle": "Enter your Arinpark email address and click \"Generate code\". You will receive a verification code to enter in a later step. If you have any questions, please contact us at soporte@arinpark.eus",
   "auth.resetCode.resend": "Resend code",
-  "payment.uncertain.message": "uk_No se ha podido confirmar el resultado de la operación. Revisa tus operaciones o contacta con soporte antes de volver a pagar."
+  "payment.uncertain.message": "uk_No se ha podido confirmar el resultado de la operación. Revisa tus operaciones o contacta con soporte antes de volver a pagar.",
+  "parking.tickets.loadError": "uk_No se pudieron cargar las tarifas.",
+  "parking.tickets.empty": "uk_No hay tarifas disponibles.",
+  "parking.cities.partialLoadError": "uk_Algunos municipios no están disponibles. Puedes reintentar su carga.",
+  "account.addCard.confirmError": "uk_No se pudo confirmar el alta de la tarjeta. Reintenta la comprobación.",
+  "account.support.loadError": "uk_No se pudieron cargar las conversaciones.",
+  "account.support.sendError": "uk_No se pudo enviar el mensaje. Conservamos tus datos para que puedas reintentar.",
+  "account.settings.location.citySyncPending": "uk_El municipio {{city}} se ha guardado en este navegador. Su sincronización con el servicio sigue pendiente.",
+  "onboarding.location.citySyncPending": "uk_El municipio se ha guardado en este navegador y su sincronización con el servicio sigue pendiente. Puedes continuar."
 }

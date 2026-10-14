@@ -750,5 +750,13 @@
   "onboarding.notification.title": "Nous vous aidons à ne pas dépasser votre temps de stationnement autorisé!",
   "auth.reset.subtitle": "Saisissez l'adresse e-mail que vous utilisez sur Arinpark et cliquez sur « Générer un code ». Vous recevrez un code unique pour continuer. Pour toute question, veuillez nous contacter à l'adresse soporte@arinpark.eus.",
   "auth.resetCode.resend": "Renvoyer le code",
-  "payment.uncertain.message": "fr_No se ha podido confirmar el resultado de la operación. Revisa tus operaciones o contacta con soporte antes de volver a pagar."
+  "payment.uncertain.message": "fr_No se ha podido confirmar el resultado de la operación. Revisa tus operaciones o contacta con soporte antes de volver a pagar.",
+  "parking.tickets.loadError": "fr_No se pudieron cargar las tarifas.",
+  "parking.tickets.empty": "fr_No hay tarifas disponibles.",
+  "parking.cities.partialLoadError": "fr_Algunos municipios no están disponibles. Puedes reintentar su carga.",
+  "account.addCard.confirmError": "fr_No se pudo confirmar el alta de la tarjeta. Reintenta la comprobación.",
+  "account.support.loadError": "fr_No se pudieron cargar las conversaciones.",
+  "account.support.sendError": "fr_No se pudo enviar el mensaje. Conservamos tus datos para que puedas reintentar.",
+  "account.settings.location.citySyncPending": "fr_El municipio {{city}} se ha guardado en este navegador. Su sincronización con el servicio sigue pendiente.",
+  "onboarding.location.citySyncPending": "fr_El municipio se ha guardado en este navegador y su sincronización con el servicio sigue pendiente. Puedes continuar."
 }

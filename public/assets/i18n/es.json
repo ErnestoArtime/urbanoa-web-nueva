@@ -750,5 +750,13 @@
   "payment.insufficient.title": "Atención",
   "payment.insufficient.message": "No dispones de saldo suficiente y no tienes ningún método de pago añadido o los que tienes no son válidos. ¿Quieres añadir uno ahora?",
   "common.close": "Cerrar",
-  "payment.uncertain.message": "No se ha podido confirmar el resultado de la operación. Revisa tus operaciones o contacta con soporte antes de volver a pagar."
+  "payment.uncertain.message": "No se ha podido confirmar el resultado de la operación. Revisa tus operaciones o contacta con soporte antes de volver a pagar.",
+  "parking.tickets.loadError": "No se pudieron cargar las tarifas.",
+  "parking.tickets.empty": "No hay tarifas disponibles.",
+  "parking.cities.partialLoadError": "Algunos municipios no están disponibles. Puedes reintentar su carga.",
+  "account.addCard.confirmError": "No se pudo confirmar el alta de la tarjeta. Reintenta la comprobación.",
+  "account.support.loadError": "No se pudieron cargar las conversaciones.",
+  "account.support.sendError": "No se pudo enviar el mensaje. Conservamos tus datos para que puedas reintentar.",
+  "account.settings.location.citySyncPending": "El municipio {{city}} se ha guardado en este navegador. Su sincronización con el servicio sigue pendiente.",
+  "onboarding.location.citySyncPending": "El municipio se ha guardado en este navegador y su sincronización con el servicio sigue pendiente. Puedes continuar."
 }
