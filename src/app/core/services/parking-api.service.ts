@@ -286,7 +286,7 @@ export class ParkingApiService {
         .filter(({ behavior }) => behavior !== 2)
         .map(({ ticket, behavior }) => {
           const minAmountCents = this.amountInCents(ticket.minAmount);
-          const schedule = this.normalizeTariffText(ticket.schedule) ?? '';
+          const schedule = this.normalizeTariffText(ticket.schedule)?.replace(/<br\s*\/?>/gi, '\n') ?? '';
           const behaviorText = this.normalizeTariffText(ticket.ticketBehText);
           const ticketName = this.normalizeTariffText(ticket.ticketDesc) || this.normalizeTariffText(ticket.sectorDesc) || '';
           const minAmountText =

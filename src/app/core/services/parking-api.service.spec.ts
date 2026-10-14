@@ -27,6 +27,23 @@ function serviceWith(api: jasmine.SpyObj<OpsApiClient>, language: 'es' | 'eu' | 
 describe('ParkingApiService', () => {
   beforeEach(() => localStorage.clear());
 
+  it('turns OPS schedule breaks into newlines while keeping other markup as text', async () => {
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
+    api.post.and.resolveTo({
+      ticketlist: [
+        { ticketId: 1, ticketBehavior: 1, schedule: 'L - V 9:00 - 20:00,<br/>sábado 9:00<br>domingo 10:00<BR />festivos\n<b>Texto</b>' },
+        { ticketId: 2, ticketBehavior: 3, schedule: null },
+      ],
+    });
+    const service = serviceWith(api);
+    TestBed.inject(OpsSessionService).setToken('token');
+
+    const result = await service.tickets({ contractId: 3, plate: '1234ABC', zone: 22002, date: '120000141026' });
+
+    expect(result.data[0].schedule).toBe('L - V 9:00 - 20:00,\nSábado 9:00\nDomingo 10:00\nfestivos\n<b>Texto</b>');
+    expect(result.data[1].schedule).toBe('');
+  });
+
   for (const [webLanguage, opsLanguage] of [
     ['es', 'es'],
     ['eu', 'eu'],

@@ -85,6 +85,9 @@
   font-size: var(--text-xs);
   overflow-wrap: anywhere;
 }
+.ticket-schedule {
+  white-space: pre-line;
+}
 .ticket-action {
   display: inline-flex;
   align-items: center;

@@ -47,7 +47,7 @@ import { ParkingApiService, ParkingTicketOption } from '../../../core/services/p
               <div class="ticket-meta">
                 <span
                   ><small>{{ 'parking.tickets.schedule' | translate }}</small
-                  ><strong>{{ tariff.schedule || '—' }}</strong></span
+                  ><strong class="ticket-schedule">{{ tariff.schedule || '—' }}</strong></span
                 ><span
                   ><small>{{ 'parking.tickets.maximumTime' | translate }}</small
                   ><strong>{{ tariff.maxTime || '—' }}</strong></span
