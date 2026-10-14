@@ -121,6 +121,7 @@ interface QueryFeedbackResponseDto {
 export class SupportService {
   private readonly aliases = new Map<string, string>();
   private readonly unreadMembers = new Map<string, number[]>();
+  private readonly unlistedCreations = new Set<string>();
   private readonly state = signal<SupportThread[]>([]);
   private readonly api = inject(OpsApiClient);
   private readonly session = inject(OpsSessionService);
@@ -135,6 +136,7 @@ export class SupportService {
   readonly loading = signal(false);
   readonly lastError = signal<OpsApiError | null>(null);
   private generation = 0;
+  private loadRevision = 0;
 
   constructor() {
     const unsubscribe = this.session.onChange?.(() => this.reset());
@@ -143,8 +145,10 @@ export class SupportService {
 
   reset(): void {
     this.generation++;
+    this.loadRevision++;
     this.aliases.clear();
     this.unreadMembers.clear();
+    this.unlistedCreations.clear();
     this.state.set([]);
     this.source.set('idle');
     this.loading.set(false);
@@ -153,6 +157,7 @@ export class SupportService {
 
   async load(): Promise<boolean> {
     const generation = this.generation;
+    const revision = ++this.loadRevision;
     const token = this.session.token();
     if (!token) return this.fail(new OpsApiError('transport', OPS_ENDPOINTS.support.query, 'Se requiere una sesión válida'));
     this.loading.set(true);
@@ -162,18 +167,23 @@ export class SupportService {
         { contractId: 0, startDate: '000000010100', endDate: this.backendDate(new Date()) },
         { token },
       );
-      if (generation !== this.generation) return false;
+      if (generation !== this.generation || revision !== this.loadRevision) return false;
       const items = Array.isArray(response) ? response : (response.feedback ?? response.feedbackList ?? []);
-      this.state.set(this.groupRemoteThreads(items));
+      const threads = this.groupRemoteThreads(items);
+      // A confirmed write can precede its appearance in the query response.
+      // Retain it until OPS lists it, then let subsequent reads own its state.
+      for (const id of this.unlistedCreations) {
+        if (this.aliases.has(id)) this.unlistedCreations.delete(id);
+      }
+      this.state.set([...this.state().filter((thread) => this.unlistedCreations.has(thread.id)), ...threads]);
       this.source.set('remote');
       this.lastError.set(null);
       return true;
     } catch (error) {
-      if (generation !== this.generation) return false;
-      this.state.set([]);
+      if (generation !== this.generation || revision !== this.loadRevision) return false;
       return this.fail(this.toError(error, OPS_ENDPOINTS.support.query));
     } finally {
-      if (generation === this.generation) this.loading.set(false);
+      if (generation === this.generation && revision === this.loadRevision) this.loading.set(false);
     }
   }
 
@@ -196,7 +206,12 @@ export class SupportService {
       return null;
     }
     const created = this.toConfirmedThread(result, input);
+    this.loadRevision++;
+    this.loading.set(false);
+    this.unlistedCreations.add(created.id);
     this.state.update((threads) => [created, ...threads.filter((thread) => thread.id !== created.id)]);
+    this.source.set('remote');
+    this.lastError.set(null);
     return created;
   }
 

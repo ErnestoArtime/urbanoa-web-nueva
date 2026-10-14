@@ -8,6 +8,87 @@ import { SUPPORT_ATTACHMENT_MAX_BYTES, SupportService, supportImageFileError } f
 import { UserService } from './user.service';
 
 describe('SupportService', () => {
+  const newConversation = {
+    type: 'incident' as const,
+    subtype: 'app' as const,
+    cityId: 'durango',
+    cityName: 'Durango',
+    plate: '',
+    message: 'Nueva conversación',
+  };
+
+  function creationService(api: jasmine.SpyObj<OpsApiClient>) {
+    TestBed.configureTestingModule({
+      providers: [
+        provideZonelessChangeDetection(),
+        { provide: OpsApiClient, useValue: api },
+        { provide: OpsSessionService, useValue: { token: () => 'token' } },
+        { provide: CitiesService, useValue: { contractIdFor: () => 1, nameFor: () => 'Durango' } },
+        { provide: UserService, useValue: { user: signal({ email: 'user@example.com' }) } },
+      ],
+    });
+    return TestBed.inject(SupportService);
+  }
+
+  it('discards a query started before a successful creation', async () => {
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
+    let finish!: (value: { feedback: [] }) => void;
+    api.post.and.returnValues(new Promise((resolve) => (finish = resolve)), Promise.resolve('123'));
+    const service = creationService(api);
+    const oldQuery = service.load();
+    expect((await service.create(newConversation))?.id).toBe('123');
+    finish({ feedback: [] });
+    await oldQuery;
+    expect(service.getById('123')?.messages[0].body).toBe(newConversation.message);
+    expect(service.loading()).toBeFalse();
+    expect(service.source()).toBe('remote');
+  });
+
+  it('preserves a confirmed conversation when refreshing the list fails', async () => {
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
+    api.post.and.resolveTo('123');
+    const service = creationService(api);
+    await service.create(newConversation);
+    api.post.and.rejectWith(new Error('query unavailable'));
+    expect(await service.load()).toBeFalse();
+    expect(service.getById('123')).toBeDefined();
+    expect(service.source()).toBe('error');
+  });
+
+  it('uses the server record once creation appears and clears unlisted creations on session reset', async () => {
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
+    api.post.and.resolveTo('123');
+    const service = creationService(api);
+    await service.create(newConversation);
+    api.post.and.resolveTo({
+      feedback: [{ id: 123, contractId: 1, date: '120000141026', type: 1, subtype: 1, message: 'Servidor', status: 3, read: 1 }],
+    });
+    await service.load();
+    expect(service.threads().length).toBe(1);
+    expect(service.getById('123')?.status).toBe('closed');
+    api.post.and.resolveTo({ feedback: [] });
+    await service.load();
+    expect(service.threads()).toEqual([]);
+    api.post.and.resolveTo('456');
+    await service.create(newConversation);
+    service.reset();
+    api.post.and.resolveTo({ feedback: [] });
+    await service.load();
+    expect(service.threads()).toEqual([]);
+  });
+
+  it('keeps a confirmed reply while the newly created conversation is still absent from query results', async () => {
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
+    api.post.and.resolveTo('123');
+    const service = creationService(api);
+    await service.create(newConversation);
+    api.post.and.resolveTo('124');
+    expect(await service.reply('123', 'Más información')).toBeTrue();
+    api.post.and.resolveTo({ feedback: [] });
+    await service.load();
+    expect(service.getById('123')?.messages.map((message) => message.body)).toEqual([newConversation.message, 'Más información']);
+  });
+
   it('reconstructs replies, normalizes OPS dates and retains attachment-only responses', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
     const base = { contractId: 1, type: 1, subtype: 1, status: 1, read: 1 };
