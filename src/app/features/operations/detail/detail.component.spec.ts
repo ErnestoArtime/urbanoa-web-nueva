@@ -11,20 +11,20 @@ import { Operation } from '../../../shared/models/operation';
 
 describe('OperationsDetailComponent navigation', () => {
   it('does not invent wallet payment when OPS provides no payment information', async () => {
-    operations.update(items => items.map(op => ({ ...op, type: OperationType.PARKING, amount: -5 })));
+    operations.update((items) => items.map((op) => ({ ...op, type: OperationType.PARKING, amount: -5 })));
     const fixture = TestBed.createComponent(OperationsDetailComponent);
     await fixture.whenStable();
     expect(fixture.componentInstance.paymentMethodLabel()).toBe('—');
   });
   it('does not invent a payment method for top-ups', async () => {
-    operations.update(items => items.map(op => ({ ...op, type: OperationType.TOP_UP })));
+    operations.update((items) => items.map((op) => ({ ...op, type: OperationType.TOP_UP })));
     const fixture = TestBed.createComponent(OperationsDetailComponent);
     await fixture.whenStable();
-    expect(fixture.componentInstance.topUpPaymentMethod()).toBe('');
+    expect(fixture.componentInstance.topUpPaymentMethod()).toBe('—');
   });
 
   it('includes the operation time in balance refunds', async () => {
-    operations.update(items => items.map(op => ({ ...op, type: OperationType.BALANCE_REFUND, operationTime: '18:51' })));
+    operations.update((items) => items.map((op) => ({ ...op, type: OperationType.BALANCE_REFUND, operationTime: '18:51' })));
     const fixture = TestBed.createComponent(OperationsDetailComponent);
     await fixture.whenStable();
     expect(fixture.componentInstance.detailRows()[0].value).toContain('18:51');
@@ -94,10 +94,10 @@ describe('OperationsDetailComponent navigation', () => {
     }).compileComponents();
   });
 
-  it('does not show a map for an unpaid fine moved to history', async () => {
+  it('preserves the recorded location of an unpaid fine moved to history', async () => {
     const fixture = TestBed.createComponent(OperationsDetailComponent);
     await fixture.whenStable();
-    expect(fixture.nativeElement.querySelector('app-location-map')).toBeNull();
+    expect(fixture.nativeElement.querySelector('app-location-map')).not.toBeNull();
   });
 
   it('reloads each selection including returning to the first item', async () => {
@@ -116,6 +116,9 @@ describe('OperationsDetailComponent navigation', () => {
     await fixture.whenStable();
     expect(fixture.nativeElement.querySelector('app-location-map')).not.toBeNull();
     operations.update((items) => items.map((op) => ({ ...op, type: OperationType.UNPAID_FINES })));
+    await fixture.whenStable();
+    expect(fixture.nativeElement.querySelector('app-location-map')).not.toBeNull();
+    operations.update((items) => items.map((op) => ({ ...op, latitude: 0, longitude: 0 })));
     await fixture.whenStable();
     expect(fixture.nativeElement.querySelector('app-location-map')).toBeNull();
   });
