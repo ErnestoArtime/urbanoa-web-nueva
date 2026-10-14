@@ -12,7 +12,9 @@ import { NotificationsService } from '../../../core/services/notifications.servi
       <h1 class="page-title">{{ 'onboarding.notification.title' | translate }}</h1>
       <p class="page-subtitle">{{ 'onboarding.notification.subtitle' | translate }}</p>
       <p class="text-muted">{{ 'onboarding.notification.webNotice' | translate }}</p>
-      @if (failed()) { <p class="form-error" role="alert">{{ 'onboarding.notification.saveError' | translate }}</p> }
+      @if (failed()) {
+        <p class="form-error" role="alert">{{ 'onboarding.notification.saveError' | translate }}</p>
+      }
       <button type="button" class="btn btn-primary btn-block mt-2" [disabled]="saving()" (click)="activate()">
         {{ 'onboarding.notification.savePreferences' | translate }}
       </button>

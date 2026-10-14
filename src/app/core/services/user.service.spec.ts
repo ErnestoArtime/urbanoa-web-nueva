@@ -119,13 +119,16 @@ describe('UserService', () => {
 
   it('updates the preferred contract id through UpdateUserAPI', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'post']);
-    api.get.and.returnValues(Promise.resolve({
-      ...baseUser(),
-      contractId: 1,
-      names: 'Ane',
-      firstSurname: 'Lopez',
-      email: 'ane@example.com',
-    }), Promise.resolve({ names: 'Ane', firstSurname: 'Lopez', email: 'ane@example.com', contractId: 3 }));
+    api.get.and.returnValues(
+      Promise.resolve({
+        ...baseUser(),
+        contractId: 1,
+        names: 'Ane',
+        firstSurname: 'Lopez',
+        email: 'ane@example.com',
+      }),
+      Promise.resolve({ names: 'Ane', firstSurname: 'Lopez', email: 'ane@example.com', contractId: 3 }),
+    );
     api.post.and.resolveTo('194063');
     const service = serviceWith(api);
     TestBed.inject(OpsSessionService).setToken('token');

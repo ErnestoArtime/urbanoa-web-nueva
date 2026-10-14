@@ -1,8 +1,14 @@
 import { formatOpsCalendarDate } from '../../core/utils/ops-date';
 
 export const OPERATION_PERIODS = [
-  'ops.today', 'ops.yesterday', 'ops.thisWeek', 'ops.lastWeek',
-  'ops.thisMonth', 'ops.lastMonth', 'ops.thisYear', 'ops.previous',
+  'ops.today',
+  'ops.yesterday',
+  'ops.thisWeek',
+  'ops.lastWeek',
+  'ops.thisMonth',
+  'ops.lastMonth',
+  'ops.thisYear',
+  'ops.previous',
 ] as const;
 
 export function operationPeriod(date: string, now: Date): string {

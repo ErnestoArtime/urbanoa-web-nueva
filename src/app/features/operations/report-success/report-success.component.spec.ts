@@ -7,9 +7,13 @@ import { ReportArtifactService } from '../../../core/services/report-artifact.se
 
 describe('Report recovery', () => {
   it('explains an unavailable PDF and offers regeneration instead of false success', async () => {
-    TestBed.configureTestingModule({ providers: [provideZonelessChangeDetection(), provideRouter([]),
-      { provide: TranslationService, useValue: { translate: (key: string) => key } },
-    ] });
+    TestBed.configureTestingModule({
+      providers: [
+        provideZonelessChangeDetection(),
+        provideRouter([]),
+        { provide: TranslationService, useValue: { translate: (key: string) => key } },
+      ],
+    });
     const fixture = TestBed.createComponent(ReportSuccessComponent);
     await fixture.whenStable();
     expect(fixture.nativeElement.textContent).toContain('ops.report.unavailableDetail');

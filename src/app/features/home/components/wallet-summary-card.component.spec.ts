@@ -6,10 +6,14 @@ import { WalletSummaryCardComponent } from './wallet-summary-card.component';
 
 describe('WalletSummaryCardComponent balance availability', () => {
   it('distinguishes unavailable credit from a confirmed zero and offers retry', async () => {
-    TestBed.configureTestingModule({ imports: [WalletSummaryCardComponent], providers: [
-      provideZonelessChangeDetection(), provideRouter([]),
-      { provide: TranslationService, useValue: { translate: (key: string) => key } },
-    ] });
+    TestBed.configureTestingModule({
+      imports: [WalletSummaryCardComponent],
+      providers: [
+        provideZonelessChangeDetection(),
+        provideRouter([]),
+        { provide: TranslationService, useValue: { translate: (key: string) => key } },
+      ],
+    });
     const fixture = TestBed.createComponent(WalletSummaryCardComponent);
     fixture.componentRef.setInput('balance', 0);
     fixture.componentRef.setInput('mainCard', { brand: '', last4: '', cardholderName: '', expiryDate: '' });
@@ -21,7 +25,7 @@ describe('WalletSummaryCardComponent balance availability', () => {
     const root = fixture.nativeElement as HTMLElement;
     expect(root.querySelector('.wallet-inline-balance')?.textContent?.trim()).toBe('—');
     expect(root.querySelector('[role="alert"]')).not.toBeNull();
-    const retryButton = Array.from(root.querySelectorAll('button')).find(button => button.textContent?.trim() === 'common.retry')!;
+    const retryButton = Array.from(root.querySelectorAll('button')).find((button) => button.textContent?.trim() === 'common.retry')!;
     retryButton.click();
     expect(retry).toHaveBeenCalledTimes(1);
     fixture.componentRef.setInput('balanceAvailable', true);

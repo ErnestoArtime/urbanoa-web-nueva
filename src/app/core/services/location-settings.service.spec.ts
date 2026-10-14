@@ -70,7 +70,9 @@ describe('LocationSettingsService', () => {
 
   it('discards a geolocation result requested by the previous user', async () => {
     let resolve!: PositionCallback;
-    spyOn(navigator.geolocation, 'getCurrentPosition').and.callFake(callback => { resolve = callback; });
+    spyOn(navigator.geolocation, 'getCurrentPosition').and.callFake((callback) => {
+      resolve = callback;
+    });
     const service = new LocationSettingsService();
     service.setUserScope('u1');
     const old = service.requestCurrentLocation();

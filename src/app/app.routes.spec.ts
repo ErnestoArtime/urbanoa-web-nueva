@@ -11,13 +11,15 @@ describe('Paycomet return aliases', () => {
   for (const callback of ['ok', 'ko', 'web-ui/ok', 'web-ui/ko']) {
     const outcome = callback.endsWith('ok') ? 'ok' : 'ko';
     it(`preserves the OPS query parameters through /${callback}`, async () => {
-      TestBed.configureTestingModule({ providers: [
-        provideZonelessChangeDetection(),
-        provideRouter([
-          ...routes.filter(route => ['ok', 'ko', 'web-ui/ok', 'web-ui/ko'].includes(route.path ?? '')),
-          { path: 'app/paycomet/:outcome', component: ReturnRouteTestComponent },
-        ]),
-      ] });
+      TestBed.configureTestingModule({
+        providers: [
+          provideZonelessChangeDetection(),
+          provideRouter([
+            ...routes.filter((route) => ['ok', 'ko', 'web-ui/ok', 'web-ui/ko'].includes(route.path ?? '')),
+            { path: 'app/paycomet/:outcome', component: ReturnRouteTestComponent },
+          ]),
+        ],
+      });
       const harness = await RouterTestingHarness.create();
       await harness.navigateByUrl(`/${callback}?r=WLT-test&h=signature&ret=0&i=1000`);
       const router = TestBed.inject(Router);

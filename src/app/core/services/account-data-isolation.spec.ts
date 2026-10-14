@@ -17,11 +17,13 @@ describe('Account data isolation', () => {
   beforeEach(() => {
     sessionStorage.clear();
     api = jasmine.createSpyObj('OpsApiClient', ['get', 'getOrNull', 'post']);
-    TestBed.configureTestingModule({ providers: [
-      provideZonelessChangeDetection(),
-      { provide: OpsApiClient, useValue: api },
-      { provide: CitiesService, useValue: { nameFor: () => 'City', contractIdFor: () => 1 } },
-    ] });
+    TestBed.configureTestingModule({
+      providers: [
+        provideZonelessChangeDetection(),
+        { provide: OpsApiClient, useValue: api },
+        { provide: CitiesService, useValue: { nameFor: () => 'City', contractIdFor: () => 1 } },
+      ],
+    });
     session = TestBed.inject(OpsSessionService);
     session.setToken('u1-token');
   });
@@ -46,7 +48,12 @@ describe('Account data isolation', () => {
       const service = TestBed.inject(UserService);
       let resolve!: (value: unknown) => void;
       let reject!: (error: Error) => void;
-      api.get.and.returnValue(new Promise((res, rej) => { resolve = res; reject = rej; }));
+      api.get.and.returnValue(
+        new Promise((res, rej) => {
+          resolve = res;
+          reject = rej;
+        }),
+      );
       const old = service.load();
       session.setToken('u2-token');
       api.get.and.resolveTo({ email: 'u2@example.com', names: 'U2' });
@@ -62,7 +69,11 @@ describe('Account data isolation', () => {
   it('does not reuse U1 operation requests or apply their results to U2', async () => {
     const service = TestBed.inject(OperationsService);
     let resolve!: (value: unknown) => void;
-    api.post.and.returnValue(new Promise(res => { resolve = res; }));
+    api.post.and.returnValue(
+      new Promise((res) => {
+        resolve = res;
+      }),
+    );
     const old = service.load();
     session.setToken('u2-token');
     api.post.and.resolveTo([{ operationNumber: 2, operationType: 1, opDate: '120000051026' }]);
@@ -70,7 +81,7 @@ describe('Account data isolation', () => {
     expect(api.post).toHaveBeenCalledTimes(2);
     resolve([{ operationNumber: 1, operationType: 1, opDate: '120000051026' }]);
     await old;
-    expect(service.operations().map(op => op.id)).toEqual(['2']);
+    expect(service.operations().map((op) => op.id)).toEqual(['2']);
     session.clear();
     expect(service.operations()).toEqual([]);
     expect(service.activeParkings()).toEqual([]);
@@ -78,9 +89,13 @@ describe('Account data isolation', () => {
 
   it('clears notifications and ignores an old notification response', async () => {
     const service = TestBed.inject(NotificationsService);
-    service.preferences.update(p => ({ ...p, quantityBalance: 9999 }));
+    service.preferences.update((p) => ({ ...p, quantityBalance: 9999 }));
     let resolve!: (value: unknown) => void;
-    api.get.and.returnValue(new Promise(res => { resolve = res; }));
+    api.get.and.returnValue(
+      new Promise((res) => {
+        resolve = res;
+      }),
+    );
     const old = service.load();
     session.setToken('u2-token');
     expect(service.preferences().quantityBalance).toBe(500);
@@ -95,7 +110,11 @@ describe('Account data isolation', () => {
     const service = TestBed.inject(UserService);
     service.updateLocal({ email: 'u1@example.com' });
     let resolve!: (value: unknown) => void;
-    api.post.and.returnValue(new Promise(res => { resolve = res; }));
+    api.post.and.returnValue(
+      new Promise((res) => {
+        resolve = res;
+      }),
+    );
     const old = service.save({ name: 'U1' });
     session.setToken('u2-token');
     service.updateLocal({ email: 'u2@example.com', name: 'U2' });
@@ -107,11 +126,17 @@ describe('Account data isolation', () => {
 
   it('clears support aliases and ignores an old support response', async () => {
     const service = TestBed.inject(SupportService);
-    api.post.and.resolveTo({ feedback: [{ id: 12, baseId: null, contractId: 1, date: '120000051026', type: 1, subtype: 1, status: 1, read: 0, message: 'U1' }] });
+    api.post.and.resolveTo({
+      feedback: [{ id: 12, baseId: null, contractId: 1, date: '120000051026', type: 1, subtype: 1, status: 1, read: 0, message: 'U1' }],
+    });
     await service.load();
     expect(service.threads().length).toBe(1);
     let resolve!: (value: unknown) => void;
-    api.post.and.returnValue(new Promise(res => { resolve = res; }));
+    api.post.and.returnValue(
+      new Promise((res) => {
+        resolve = res;
+      }),
+    );
     const old = service.load();
     session.setToken('u2-token');
     expect(service.getById('12')).toBeUndefined();
@@ -126,7 +151,11 @@ describe('Account data isolation', () => {
     const vehicles = TestBed.inject(VehicleService);
     wallet.credit(50, { type: 'top-up', descriptionKey: 'wallet.movement.topUp' });
     let resolve!: (value: unknown) => void;
-    const getOrNull = api.getOrNull.and.returnValue(new Promise(res => { resolve = res; }));
+    const getOrNull = api.getOrNull.and.returnValue(
+      new Promise((res) => {
+        resolve = res;
+      }),
+    );
     const old = vehicles.load();
     session.setToken('u2-token');
     expect(wallet.balance()).toBe(0);
@@ -135,6 +164,6 @@ describe('Account data isolation', () => {
     await vehicles.load();
     resolve({ plates: [{ plate: 'U1', favorite: 1 }] });
     await old;
-    expect(vehicles.vehicles().map(v => v.plate)).toEqual(['U2']);
+    expect(vehicles.vehicles().map((v) => v.plate)).toEqual(['U2']);
   });
 });
