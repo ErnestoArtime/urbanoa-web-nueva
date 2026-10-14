@@ -61,13 +61,26 @@ export class CitiesService {
   private readonly api = inject(OpsApiClient);
   private readonly state = signal<ParkingMunicipio[]>([]);
   readonly cities = this.state.asReadonly();
+  readonly failedContractIds = signal<number[]>([]);
+  private loadPromise: Promise<DataResult<ParkingMunicipio[]>> | null = null;
 
   async getCities(force = false): Promise<DataResult<ParkingMunicipio[]>> {
-    if (!force && this.state().length) return { data: this.state(), source: 'remote' };
+    if (!force && this.state().length && !this.failedContractIds().length) return { data: this.state(), source: 'remote' };
+    if (this.loadPromise) return this.loadPromise;
+    const pending = this.loadCities();
+    this.loadPromise = pending;
+    try {
+      return await pending;
+    } finally {
+      if (this.loadPromise === pending) this.loadPromise = null;
+    }
+  }
+
+  private async loadCities(): Promise<DataResult<ParkingMunicipio[]>> {
     const value = await this.api.get<ContractsApiValue>(OPS_ENDPOINTS.parking.contracts);
     if (!Array.isArray(value.contractlist)) throw new Error('QueryContractsAPI no devolvió contractlist');
     const cities = value.contractlist.map((item) => this.toMunicipio(item));
-    const enriched = await Promise.all(
+    const results = await Promise.allSettled(
       cities.map(async (city) => {
         const zones = new Map<number, string>();
         let zoneLoadError: unknown;
@@ -97,6 +110,12 @@ export class CitiesService {
         return { ...city, zones: zoneList, zonas: zoneList.length };
       }),
     );
+    this.failedContractIds.set(results.flatMap((result, index) => (result.status === 'rejected' ? [cities[index].contractId] : [])));
+    const enriched = results.flatMap((result) => (result.status === 'fulfilled' ? [result.value] : []));
+    if (!enriched.length && this.failedContractIds().length) {
+      const failure = results.find((result): result is PromiseRejectedResult => result.status === 'rejected');
+      throw failure?.reason;
+    }
     this.state.set(enriched);
     return { data: enriched, source: 'remote' };
   }

@@ -176,7 +176,12 @@ export class AccountSettingsComponent {
         // Remote failure must not block a municipality already saved locally.
       }
       this.showCityPicker.set(false);
-      this.locationMessage.set({ key: 'account.settings.location.citySavedMessage', params: { city: name } });
+      this.locationMessage.set({
+        key: this.locationService.settings().preferredCitySyncPending
+          ? 'account.settings.location.citySyncPending'
+          : 'account.settings.location.citySavedMessage',
+        params: { city: name },
+      });
     } catch {
       this.locationMessage.set({ key: 'account.settings.location.citySaveError' });
     } finally {

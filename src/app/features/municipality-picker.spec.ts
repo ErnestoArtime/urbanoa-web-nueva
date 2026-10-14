@@ -16,12 +16,19 @@ for (const componentType of [AccountSettingsComponent, OnboardingLocationCompone
     beforeEach(() => {
       localStorage.clear();
       update = jasmine.createSpy('updatePreferredContract').and.resolveTo({ success: false, source: 'error' });
-      TestBed.configureTestingModule({ imports: [componentType], providers: [
-        provideZonelessChangeDetection(), provideRouter([]),
-        { provide: CitiesService, useValue: { getCities: async () => ({ data: [city] }), selectableCities: (data: unknown) => data, contractIdFor: () => 1 } },
-        { provide: UserService, useValue: { user: () => ({}), updatePreferredContract: update } },
-        { provide: TranslationService, useValue: { translate: (key: string) => key === 'common.save' ? 'Guardar' : key } },
-      ] });
+      TestBed.configureTestingModule({
+        imports: [componentType],
+        providers: [
+          provideZonelessChangeDetection(),
+          provideRouter([]),
+          {
+            provide: CitiesService,
+            useValue: { getCities: async () => ({ data: [city] }), selectableCities: (data: unknown) => data, contractIdFor: () => 1 },
+          },
+          { provide: UserService, useValue: { user: () => ({}), updatePreferredContract: update } },
+          { provide: TranslationService, useValue: { translate: (key: string) => (key === 'common.save' ? 'Guardar' : key) } },
+        ],
+      });
     });
 
     async function open() {
@@ -36,7 +43,7 @@ for (const componentType of [AccountSettingsComponent, OnboardingLocationCompone
     it('saves locally and closes the picker when OPS cannot confirm the municipality', async () => {
       const fixture = await open();
       const root = fixture.nativeElement as HTMLElement;
-      const save = Array.from(root.querySelectorAll('button')).find(button => button.textContent?.trim() === 'Guardar')!;
+      const save = Array.from(root.querySelectorAll('button')).find((button) => button.textContent?.trim() === 'Guardar')!;
       expect(save.disabled).toBeTrue();
       (root.querySelector('.city-option') as HTMLButtonElement).click();
       fixture.detectChanges();
@@ -48,10 +55,13 @@ for (const componentType of [AccountSettingsComponent, OnboardingLocationCompone
       fixture.detectChanges();
       expect(update).toHaveBeenCalledOnceWith(1);
       expect(fixture.componentInstance.showCityPicker()).toBeFalse();
-      expect(TestBed.inject(LocationSettingsService).settings()).toEqual(jasmine.objectContaining({
-        preferredCityId: city.id, preferredCitySyncPending: true,
-      }));
-      expect(root.textContent).toContain('citySaved');
+      expect(TestBed.inject(LocationSettingsService).settings()).toEqual(
+        jasmine.objectContaining({
+          preferredCityId: city.id,
+          preferredCitySyncPending: true,
+        }),
+      );
+      expect(root.textContent).toContain('citySyncPending');
       fixture.componentInstance.openCityPicker();
       expect(fixture.componentInstance.selectedCity()?.id).toBe(city.id);
     });

@@ -116,7 +116,11 @@ export class OnboardingLocationComponent {
         // The local choice remains usable even when OPS cannot synchronize it.
       }
       this.showCityPicker.set(false);
-      this.message.set('onboarding.location.citySavedRedirect');
+      this.message.set(
+        this.locationService.settings().preferredCitySyncPending
+          ? 'onboarding.location.citySyncPending'
+          : 'onboarding.location.citySavedRedirect',
+      );
       setTimeout(() => void this.router.navigate(['/onboarding/notification']), 1000);
     } catch {
       this.message.set('onboarding.location.citySaveError');

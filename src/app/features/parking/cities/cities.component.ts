@@ -38,6 +38,14 @@ const EMPTY_CITY: ParkingMunicipio = {
       @if (dataSource() === 'error') {
         <p class="data-notice" role="alert">{{ 'parking.cities.loadError' | translate }}</p>
       }
+      @if (dataSource() === 'error' || partialCities()) {
+        <div class="data-notice" role="status">
+          @if (partialCities()) {
+            <span>{{ 'parking.cities.partialLoadError' | translate }}</span>
+          }
+          <button type="button" class="btn btn-secondary btn-sm" (click)="loadCities(true)">{{ 'common.retry' | translate }}</button>
+        </div>
+      }
       <label class="municipio-search">
         <span aria-hidden="true">⌕</span>
         <input
@@ -134,13 +142,19 @@ export class ParkingCitiesComponent implements OnInit {
   readonly municipios = signal<ParkingMunicipio[]>([]);
   readonly selected = signal(this.defaultCity());
   readonly dataSource = signal<'loading' | 'remote' | 'error'>('loading');
+  readonly partialCities = computed(() => !!this.citiesService.failedContractIds?.().length);
 
   async ngOnInit(): Promise<void> {
+    await this.loadCities();
+  }
+
+  async loadCities(force = false): Promise<void> {
+    this.dataSource.set('loading');
     try {
-      const result = await this.citiesService.getCities();
+      const result = await this.citiesService.getCities(force);
       this.municipios.set(this.citiesService.selectableCities(result.data));
       this.dataSource.set('remote');
-      this.selected.set(this.defaultCity());
+      this.selected.set(this.municipios().find((city) => city.id === this.selected().id) ?? this.defaultCity());
     } catch {
       this.municipios.set([]);
       this.dataSource.set('error');
