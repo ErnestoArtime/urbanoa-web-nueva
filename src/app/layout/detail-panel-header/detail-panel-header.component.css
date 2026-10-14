@@ -14,8 +14,9 @@
 .header-title {
   flex: 1;
   font-size: var(--text-md);
-  font-weight: var(--font-extra);
+  font-weight: var(--font-bold);
   margin: 0;
+  line-height: var(--line-normal);
 }
 .back-btn {
   text-decoration: none;

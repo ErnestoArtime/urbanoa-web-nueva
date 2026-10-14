@@ -3,12 +3,11 @@
   margin-top: 0.7rem;
 }
 .section-label {
-  font-size: var(--text-xs);
-  font-weight: var(--font-bold);
+  font-size: var(--text-caption);
+  font-weight: var(--font-medium);
   color: var(--color-text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
   margin: 0 0.35rem 0.3rem;
+  line-height: var(--line-normal);
 }
 .payment-summary {
   padding: 0.35rem 0.55rem;
@@ -44,7 +43,9 @@
 }
 .payment-summary-info small {
   color: var(--color-text-muted);
-  font-size: var(--text-xs);
+  font-size: var(--text-caption);
+  font-weight: var(--font-regular);
+  line-height: var(--line-normal);
 }
 .payment-breakdown {
   display: flex;
@@ -58,7 +59,9 @@
 .payment-breakdown em {
   color: var(--color-text-muted);
   font-style: normal;
-  font-size: var(--text-2xs);
+  font-size: var(--text-caption);
+  font-weight: var(--font-regular);
+  line-height: var(--line-normal);
 }
 .payment-breakdown-total {
   border-bottom: none;

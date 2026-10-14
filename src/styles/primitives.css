@@ -123,11 +123,13 @@
 .card-title {
   font-size: var(--text-base);
   font-weight: var(--font-bold);
+  line-height: var(--line-normal);
   margin-bottom: 0.5rem;
 }
 .card-subtitle {
   font-size: var(--text-sm);
   color: var(--color-text-muted);
+  line-height: var(--line-normal);
 }
 
 /* List */
@@ -164,9 +166,10 @@
   font-size: var(--text-md);
 }
 .list-item-subtitle {
-  font-size: var(--text-xs);
+  font-size: var(--text-caption);
   color: var(--color-text-muted);
   margin-top: 0.125rem;
+  line-height: var(--line-normal);
 }
 .list-item-chevron {
   color: var(--color-secondary);
