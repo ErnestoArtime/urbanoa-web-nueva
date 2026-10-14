@@ -117,6 +117,7 @@ export class OperationsService {
   private activeLoadingRequests = 0;
   private lastLoadParameters: [string?, string?, number[]?] = [];
   private generation = 0;
+  private loadRevision = 0;
 
   constructor() {
     const unsubscribe = this.session.onChange?.(() => this.reset());
@@ -125,11 +126,16 @@ export class OperationsService {
 
   reset(): void {
     this.generation++;
+    this.loadRevision++;
     this._operations.set([]);
     this._activeParkings.set([]);
     this.operationsLoadsInFlight.clear();
     this.locallyEndedOperationIds.clear();
-    try { sessionStorage.removeItem(ENDED_PARKINGS_SESSION_KEY); } catch { /* Storage may be unavailable. */ }
+    try {
+      sessionStorage.removeItem(ENDED_PARKINGS_SESSION_KEY);
+    } catch {
+      /* Storage may be unavailable. */
+    }
     this.lastLoadParameters = [];
     this.activeLoadingRequests = 0;
     this._activeLoading.set(false);
@@ -154,10 +160,11 @@ export class OperationsService {
     () =>
       // APK GetLiveOperationsSizeUseCase counts each non-past operation,
       // including extensions and future parking, without grouping by vehicle.
-      this._operations().filter((operation) =>
-        ((operation.type === OperationType.PARKING || operation.type === OperationType.PARKING_EXTENSION) &&
-          (operation.timePeriod === 2 || operation.timePeriod === 3)) ||
-        (operation.type === OperationType.UNPAID_FINES && operation.fineStatus === 1),
+      this._operations().filter(
+        (operation) =>
+          ((operation.type === OperationType.PARKING || operation.type === OperationType.PARKING_EXTENSION) &&
+            (operation.timePeriod === 2 || operation.timePeriod === 3)) ||
+          (operation.type === OperationType.UNPAID_FINES && operation.fineStatus === 1),
       ).length,
   );
   readonly activeLoading = this._activeLoading.asReadonly();
@@ -185,6 +192,7 @@ export class OperationsService {
 
   private async loadRemote(effectiveStart: string, effectiveEnd: string, operationTypeList: number[]): Promise<void> {
     const generation = this.generation;
+    const revision = ++this.loadRevision;
     const token = this.session.token();
     if (!token) {
       this._operations.set([]);
@@ -204,7 +212,7 @@ export class OperationsService {
     this.lastError.set(null);
     try {
       const response = await this.api.post<OperationResponseDto[]>(OPS_ENDPOINTS.user.operations, requestBody, { token });
-      if (generation !== this.generation) return;
+      if (generation !== this.generation || revision !== this.loadRevision) return;
       const operations = response.map((item) => this.mapRemoteOperation(item));
       this.reconcileLocallyEndedOperations(operations);
       this._operations.set(
@@ -214,7 +222,7 @@ export class OperationsService {
       );
       this.source.set('remote');
     } catch (error) {
-      if (generation !== this.generation) return;
+      if (generation !== this.generation || revision !== this.loadRevision) return;
       this.lastError.set(error instanceof Error ? error.message : 'Error desconocido al cargar las operaciones');
       const errorDetails =
         error instanceof OpsApiError
@@ -223,7 +231,7 @@ export class OperationsService {
       console.warn('[OPS API] No se pudieron cargar las operaciones', JSON.stringify({ requestBody, error: errorDetails }));
       this.source.set('error');
     } finally {
-      if (generation === this.generation) this.loading.set(false);
+      if (generation === this.generation && revision === this.loadRevision) this.loading.set(false);
     }
   }
 

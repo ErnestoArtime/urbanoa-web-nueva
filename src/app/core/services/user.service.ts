@@ -90,6 +90,7 @@ export class UserService {
   private readonly errorState = signal<OpsApiError | null>(null);
   private remoteProfile: UserApiPayload | null = null;
   private generation = 0;
+  private loadRevision = 0;
 
   constructor() {
     const unsubscribe = this.session.onChange?.(() => this.reset());
@@ -98,6 +99,7 @@ export class UserService {
 
   reset(): void {
     this.generation++;
+    this.loadRevision++;
     this.remoteProfile = null;
     this.state.set({ ...this.emptyUser, address: emptyAddress() });
     this.sourceState.set('idle');
@@ -110,6 +112,7 @@ export class UserService {
 
   async load(): Promise<UserData> {
     const generation = this.generation;
+    const revision = ++this.loadRevision;
     const token = this.session.token();
     if (!token) {
       this.state.set(this.emptyUser);
@@ -119,16 +122,15 @@ export class UserService {
 
     try {
       const value = await this.api.get<UserApiPayload>(OPS_ENDPOINTS.user.query, { token });
-      if (generation !== this.generation) return this.state();
+      if (generation !== this.generation || revision !== this.loadRevision) return this.state();
       this.remoteProfile = value;
       this.state.set(this.fromApi(value, this.state()));
       this.sourceState.set('remote');
       this.errorState.set(null);
       return this.state();
     } catch (error) {
-      if (generation !== this.generation) return this.state();
+      if (generation !== this.generation || revision !== this.loadRevision) return this.state();
       const apiError = error instanceof OpsApiError ? error : new OpsApiError('invalid-response', OPS_ENDPOINTS.user.query, String(error));
-      this.state.set(this.emptyUser);
       this.sourceState.set('error');
       this.errorState.set(apiError);
       return this.state();
@@ -147,6 +149,7 @@ export class UserService {
     const result = await this.remoteUpdate(next);
     if (generation !== this.generation) return { success: false, source: 'error' };
     if (result.success) {
+      this.loadRevision++;
       this.state.set(next);
     }
     return result;
@@ -164,9 +167,10 @@ export class UserService {
     const result = await this.remoteUpdate(this.state(), contractId);
     if (generation !== this.generation) return { success: false, source: 'error' };
     if (!result.success) return result;
+    const revision = ++this.loadRevision;
     try {
       const profile = await this.api.get<UserApiPayload>(OPS_ENDPOINTS.user.query, { token });
-      if (generation !== this.generation) return { success: false, source: 'error' };
+      if (generation !== this.generation || revision !== this.loadRevision) return { success: false, source: 'error' };
       if (!profile || typeof profile !== 'object') {
         throw new OpsApiError('invalid-response', OPS_ENDPOINTS.user.query, 'OPS no devolvió el perfil actualizado.');
       }
@@ -177,14 +181,17 @@ export class UserService {
       }
       return { success: true, source: 'remote' };
     } catch (error) {
-      if (generation !== this.generation) return { success: false, source: 'error' };
+      if (generation !== this.generation || revision !== this.loadRevision) return { success: false, source: 'error' };
       this.sourceState.set('error');
-      this.errorState.set(error instanceof OpsApiError ? error : new OpsApiError('invalid-response', OPS_ENDPOINTS.user.query, String(error)));
+      this.errorState.set(
+        error instanceof OpsApiError ? error : new OpsApiError('invalid-response', OPS_ENDPOINTS.user.query, String(error)),
+      );
       return { success: false, source: 'error' };
     }
   }
 
   updateLocal(changes: Partial<UserData>): void {
+    this.loadRevision++;
     const current = this.state();
     this.state.set({
       ...current,
@@ -201,9 +208,11 @@ export class UserService {
       return { success: false, source: 'error' };
     }
 
+    this.loadRevision++;
     try {
       await this.api.post<string>(OPS_ENDPOINTS.user.update, this.toApiBody(user, contractId), { token });
       if (generation !== this.generation) return { success: false, source: 'error' };
+      this.loadRevision++;
       this.sourceState.set('remote');
       this.errorState.set(null);
       return { success: true, source: 'remote' };

@@ -8,23 +8,34 @@ import { NotificationsService } from '../../../core/services/notifications.servi
   selector: 'app-account-notifications',
   imports: [TranslatePipe, ResultModalComponent, LoaderComponent],
   template: `
-    <app-loader [visible]="saving()" [message]="'common.loading' | translate" />
+    <app-loader [visible]="loading() || saving()" [message]="'common.loading' | translate" />
     <div class="page account-static-page">
       <h1 class="page-title">{{ 'account.notifications.title' | translate }}</h1>
       @if (notifications.source() === 'error') {
         <p class="data-notice" role="alert">{{ 'account.notifications.syncError' | translate }}</p>
+      }
+      @if (loadFailed()) {
+        <button type="button" class="btn btn-secondary" (click)="loadPreferences()">{{ 'common.retry' | translate }}</button>
       }
       <div class="card">
         <p class="section-title">{{ 'account.notifications.app' | translate }}</p>
         @for (notif of appNotifications; track notif.key) {
           <label class="switch-row"
             ><span>{{ notif.labelKey | translate }}</span
-            ><input type="checkbox" [checked]="notif.enabled" (change)="notif.enabled = checked($event)" /><span class="switch"></span
+            ><input
+              type="checkbox"
+              [disabled]="loading() || saving() || loadFailed()"
+              [checked]="notif.enabled"
+              (change)="notif.enabled = checked($event)" /><span class="switch"></span
           ></label>
         }
         <label class="switch-row"
           ><span>{{ 'account.notifications.feedback' | translate }}</span
-          ><input type="checkbox" [checked]="feedbackApp" (change)="feedbackApp = checked($event)" /><span class="switch"></span
+          ><input
+            type="checkbox"
+            [disabled]="loading() || saving() || loadFailed()"
+            [checked]="feedbackApp"
+            (change)="feedbackApp = checked($event)" /><span class="switch"></span
         ></label>
       </div>
       <div class="card mt-1">
@@ -33,15 +44,23 @@ import { NotificationsService } from '../../../core/services/notifications.servi
         @for (notif of emailNotifications; track notif.key) {
           <label class="switch-row"
             ><span>{{ notif.labelKey | translate }}</span
-            ><input type="checkbox" [checked]="notif.enabled" (change)="notif.enabled = checked($event)" /><span class="switch"></span
+            ><input
+              type="checkbox"
+              [disabled]="loading() || saving() || loadFailed()"
+              [checked]="notif.enabled"
+              (change)="notif.enabled = checked($event)" /><span class="switch"></span
           ></label>
         }
         <label class="switch-row"
           ><span>{{ 'account.notifications.feedback' | translate }}</span
-          ><input type="checkbox" [checked]="feedbackEmail" (change)="feedbackEmail = checked($event)" /><span class="switch"></span
+          ><input
+            type="checkbox"
+            [disabled]="loading() || saving() || loadFailed()"
+            [checked]="feedbackEmail"
+            (change)="feedbackEmail = checked($event)" /><span class="switch"></span
         ></label>
       </div>
-      <button type="button" class="btn btn-primary btn-block mt-2" [disabled]="saving()" (click)="save()">
+      <button type="button" class="btn btn-primary btn-block mt-2" [disabled]="loading() || saving() || loadFailed()" (click)="save()">
         {{ 'account.notifications.save' | translate }}
       </button>
       @if (saved()) {
@@ -61,6 +80,8 @@ export class AccountNotificationsComponent implements OnInit {
   readonly notifications = inject(NotificationsService);
   readonly saved = signal(false);
   readonly saving = signal(false);
+  readonly loading = signal(true);
+  readonly loadFailed = signal(false);
   readonly appNotifications = [
     { key: 'ending-parking', labelKey: 'account.notifications.endingParking', enabled: true },
     { key: 'fine-warning', labelKey: 'account.notifications.fineWarning', enabled: true },
@@ -76,20 +97,36 @@ export class AccountNotificationsComponent implements OnInit {
   feedbackEmail = false;
 
   async ngOnInit(): Promise<void> {
-    const value = await this.notifications.load();
-    this.appNotifications[0].enabled = value.unparkingNotifications === 1;
-    this.appNotifications[1].enabled = value.fineNotifications === 1;
-    this.appNotifications[2].enabled = value.rechargeNotifications === 1;
-    this.emailNotifications[0].enabled = value.emailParkingNotifications === 1;
-    this.emailNotifications[1].enabled = value.emailUnparkingNotifications === 1;
-    this.emailNotifications[2].enabled = value.emailFineNotifications === 1;
-    this.emailNotifications[3].enabled = value.emailRechargeNotifications === 1;
-    this.feedbackApp = value.feedbackNotifications === 1;
-    this.feedbackEmail = value.emailFeedbackNotifications === 1;
+    await this.loadPreferences();
+  }
+
+  async loadPreferences(): Promise<void> {
+    this.loading.set(true);
+    this.loadFailed.set(false);
+    try {
+      const value = await this.notifications.load();
+      if (this.notifications.source() !== 'remote') {
+        this.loadFailed.set(true);
+        return;
+      }
+      this.appNotifications[0].enabled = value.unparkingNotifications === 1;
+      this.appNotifications[1].enabled = value.fineNotifications === 1;
+      this.appNotifications[2].enabled = value.rechargeNotifications === 1;
+      this.emailNotifications[0].enabled = value.emailParkingNotifications === 1;
+      this.emailNotifications[1].enabled = value.emailUnparkingNotifications === 1;
+      this.emailNotifications[2].enabled = value.emailFineNotifications === 1;
+      this.emailNotifications[3].enabled = value.emailRechargeNotifications === 1;
+      this.feedbackApp = value.feedbackNotifications === 1;
+      this.feedbackEmail = value.emailFeedbackNotifications === 1;
+    } catch {
+      this.loadFailed.set(true);
+    } finally {
+      this.loading.set(false);
+    }
   }
 
   async save(): Promise<void> {
-    if (this.saving()) return;
+    if (this.saving() || this.loading() || this.loadFailed()) return;
     this.saving.set(true);
     try {
       const current = this.notifications.preferences();

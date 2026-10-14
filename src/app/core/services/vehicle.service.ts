@@ -4,7 +4,6 @@ import { OpsApiClient } from '../api/ops-api-client.service';
 import { OpsApiError } from '../api/ops-api.types';
 import { OPS_ENDPOINTS } from '../api/ops-endpoints';
 import { OpsSessionService } from '../api/ops-session.service';
-import { generateUuid } from '../utils/generate-uuid';
 
 interface PlateApiItem {
   plate: string;
@@ -36,6 +35,7 @@ export class VehicleService {
   private readonly api = inject(OpsApiClient);
   private readonly session = inject(OpsSessionService);
   private generation = 0;
+  private loadRevision = 0;
 
   constructor() {
     const unsubscribe = this.session.onChange?.(() => this.reset());
@@ -54,6 +54,7 @@ export class VehicleService {
   }
 
   private async loadRemote(): Promise<void> {
+    const revision = ++this.loadRevision;
     const token = this.session.token();
     if (!token) {
       this.state.set([]);
@@ -63,7 +64,7 @@ export class VehicleService {
 
     try {
       const value = await this.fetchPlates(token);
-      if (this.session.token() !== token) return;
+      if (this.session.token() !== token || revision !== this.loadRevision) return;
       if (value === null || !Array.isArray(value.plates)) {
         this.state.set([]);
       } else {
@@ -80,8 +81,7 @@ export class VehicleService {
       this.sourceState.set('remote');
       this.errorState.set(null);
     } catch (error) {
-      if (this.session.token() !== token) return;
-      this.state.set([]);
+      if (this.session.token() !== token || revision !== this.loadRevision) return;
       this.useError(error, OPS_ENDPOINTS.user.plates);
     }
   }
@@ -118,9 +118,8 @@ export class VehicleService {
     if (generation !== this.generation) return { success: false, source: 'error' };
     if (!result.success) return result;
 
-    const vehicle: Vehicle = { ...input, plate, isDefault: false, id: generateUuid() };
-    this.state.update((vehicles) => [...vehicles, vehicle]);
-
+    const vehicle: Vehicle = { ...input, plate, isDefault: false, id: plate };
+    this.state.update((vehicles) => [...vehicles.filter((item) => item.plate !== plate), vehicle]);
     if (input.isDefault) return this.setDefault(vehicle.id);
     return result;
   }
@@ -164,16 +163,17 @@ export class VehicleService {
 
   /** Refetch the vehicles from QueryUserPlatesAPI, preserving any local-only label. */
   private async refreshFromServer(): Promise<void> {
+    const revision = ++this.loadRevision;
     const token = this.session.token();
     if (!token) return;
     let value: PlatesApiValue | null;
     try {
       value = await this.fetchPlates(token);
     } catch (error) {
-      if (this.session.token() === token) this.useError(error, OPS_ENDPOINTS.user.plates);
+      if (this.session.token() === token && revision === this.loadRevision) this.useError(error, OPS_ENDPOINTS.user.plates);
       return;
     }
-    if (this.session.token() !== token) return;
+    if (this.session.token() !== token || revision !== this.loadRevision) return;
     if (value === null || !Array.isArray(value.plates)) return;
     const previous = new Map(this.state().map((vehicle) => [vehicle.plate, vehicle]));
     const merged = value.plates.map((item) => {
@@ -203,9 +203,11 @@ export class VehicleService {
       return { success: false, source: 'error' };
     }
 
+    this.invalidateLoad();
     try {
       await this.api.post<string>(endpoint, body, { token });
       if (this.session.token() !== token) return { success: false, source: 'error' };
+      this.invalidateLoad();
       this.sourceState.set('remote');
       this.errorState.set(null);
       return { success: true, source: 'remote' };
@@ -240,9 +242,15 @@ export class VehicleService {
 
   reset(): void {
     this.generation++;
+    this.invalidateLoad();
     this.state.set([]);
     this.sourceState.set('idle');
     this.errorState.set(null);
+    this.loadPromise = null;
+  }
+
+  private invalidateLoad(): void {
+    this.loadRevision++;
     this.loadPromise = null;
   }
 }

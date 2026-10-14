@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, effect, inject, signal, untracked } from '@angular/core';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { LoaderComponent } from '../../../shared/components/loader/loader.component';
 import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
@@ -19,7 +19,7 @@ import { UserService, type UserAddress } from '../../../core/services/user.servi
             id="tax-data-field-1"
             class="form-input"
             [value]="nif()"
-            (input)="nif.set($any($event.target).value)"
+            (input)="setNif($any($event.target).value)"
             [placeholder]="'account.taxData.nif' | translate"
           />
           @if (submitted() && !nif()) {
@@ -170,14 +170,29 @@ export class AccountTaxDataComponent {
   readonly saved = signal(false);
   readonly saving = signal(false);
   readonly saveFailed = signal(false);
+  private edited = false;
 
   constructor() {
     const user = this.userService.user();
     this.nif.set(user.nif);
     this.address.set({ ...user.address });
+    effect(() => {
+      const current = this.userService.user();
+      untracked(() => {
+        if (this.edited || this.saving()) return;
+        this.nif.set(current.nif);
+        this.address.set({ ...current.address });
+      });
+    });
+  }
+
+  setNif(value: string): void {
+    this.edited = true;
+    this.nif.set(value);
   }
 
   setAddress<K extends keyof UserAddress>(key: K, value: string): void {
+    this.edited = true;
     this.address.update((current) => ({ ...current, [key]: value }));
   }
 

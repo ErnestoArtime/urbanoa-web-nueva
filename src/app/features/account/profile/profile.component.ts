@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, effect, inject, signal, untracked } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
@@ -124,6 +124,16 @@ export class AccountProfileComponent {
 
   constructor() {
     this.form.patchValue(this.userService.user());
+    effect(() => {
+      const user = this.userService.user();
+      untracked(() => {
+        if (this.saving()) return;
+        for (const key of Object.keys(this.form.controls) as (keyof typeof this.form.controls)[]) {
+          const control = this.form.controls[key];
+          if (control.pristine) control.setValue(user[key], { emitEvent: false });
+        }
+      });
+    });
   }
 
   async onSave(): Promise<void> {

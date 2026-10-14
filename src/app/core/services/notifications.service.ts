@@ -43,6 +43,7 @@ export class NotificationsService {
   private readonly api = inject(OpsApiClient);
   private readonly session = inject(OpsSessionService);
   private generation = 0;
+  private loadRevision = 0;
 
   constructor() {
     const unsubscribe = this.session.onChange?.(() => this.reset());
@@ -51,12 +52,14 @@ export class NotificationsService {
 
   reset(): void {
     this.generation++;
+    this.loadRevision++;
     this.preferences.set({ ...DEFAULTS });
     this.source.set('idle');
   }
 
   async load(): Promise<NotificationPreferences> {
     const generation = this.generation;
+    const revision = ++this.loadRevision;
     const token = this.session.token();
     if (!token) {
       this.source.set('error');
@@ -64,11 +67,11 @@ export class NotificationsService {
     }
     try {
       const response = await this.api.get<{ notifications: NotificationPreferences }>(OPS_ENDPOINTS.user.notifications, { token });
-      if (generation !== this.generation) return this.preferences();
+      if (generation !== this.generation || revision !== this.loadRevision) return this.preferences();
       this.preferences.set({ ...DEFAULTS, ...response.notifications });
       this.source.set('remote');
     } catch (error) {
-      if (generation !== this.generation) return this.preferences();
+      if (generation !== this.generation || revision !== this.loadRevision) return this.preferences();
       console.warn('[OPS API] No se pudieron cargar las notificaciones', error);
       this.source.set('error');
     }
@@ -82,9 +85,11 @@ export class NotificationsService {
       this.source.set('error');
       return 'error';
     }
+    this.loadRevision++;
     try {
       await this.api.post<string>(OPS_ENDPOINTS.user.updateNotifications, { contractId: 0, notifications: preferences }, { token });
       if (generation !== this.generation) return 'error';
+      this.loadRevision++;
       this.preferences.set(preferences);
       this.source.set('remote');
     } catch (error) {
