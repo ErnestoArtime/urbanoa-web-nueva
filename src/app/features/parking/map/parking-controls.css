@@ -14,6 +14,14 @@
 .vehicle-control-wrapper {
   position: relative;
 }
+.parking-controls button {
+  font-family: inherit;
+}
+.parking-controls > .btn {
+  font-size: var(--text-md);
+  font-weight: var(--font-medium);
+  line-height: var(--line-normal);
+}
 .parking-behavior-help-trigger {
   position: absolute;
   z-index: 1002;
@@ -51,8 +59,8 @@
   background: var(--color-surface);
   color: var(--color-text);
   box-shadow: var(--shadow-md);
-  font-size: var(--text-xs);
-  line-height: 1.4;
+  font-size: var(--text-caption);
+  line-height: var(--line-normal);
 }
 .search-control,
 .vehicle-control {
@@ -76,6 +84,11 @@
 }
 .municipio-control .search-control {
   flex: 1;
+  text-decoration: none;
+}
+.search-chevron,
+.vehicle-control-chevron {
+  color: var(--color-primary);
 }
 .municipio-info {
   display: grid;
@@ -89,22 +102,14 @@
   text-decoration: none;
 }
 .vehicle-control {
-  font-weight: var(--font-extra);
-  line-height: 1;
+  font-weight: var(--font-regular);
+  line-height: var(--line-normal);
 }
-.vehicle-control b {
-  display: inline-block;
-  width: 0.45rem;
-  height: 0.45rem;
-  margin: -0.2rem 0 0 0.15rem;
-  border-right: 2px solid var(--color-primary);
-  border-bottom: 2px solid var(--color-primary);
-  transform: rotate(45deg);
+.vehicle-control-chevron {
   transition: transform 180ms ease;
 }
-.vehicle-control-wrapper.selector-open .vehicle-control b {
-  margin-top: 0.2rem;
-  transform: rotate(225deg);
+.vehicle-control-wrapper.selector-open .vehicle-control-chevron {
+  transform: rotate(180deg);
 }
 .search-control > span:nth-child(2),
 .vehicle-control > span:nth-child(2) {
@@ -113,7 +118,10 @@
   flex-direction: column;
   min-width: 0;
 }
-.vehicle-control > span:first-child {
+.vehicle-control > span:first-child,
+.search-control > span:first-child,
+.search-control > .search-chevron,
+.vehicle-control > .vehicle-control-chevron {
   display: inline-grid;
   width: 1.25rem;
   height: 1.25rem;
@@ -122,17 +130,20 @@
   line-height: 1;
 }
 .search-control small,
-.vehicle-control small {
+.vehicle-control small,
+.selected-zone small,
+.selected-zone em {
   color: var(--color-text-muted);
-  line-height: var(--line-tight);
+  font-size: var(--text-caption);
+  font-weight: var(--font-regular);
+  line-height: var(--line-normal);
 }
 .search-control strong,
-.vehicle-control strong {
-  line-height: var(--line-tight);
-}
-.search-control b,
-.vehicle-control b {
-  flex-shrink: 0;
+.vehicle-control strong,
+.selected-zone strong {
+  font-size: var(--text-md);
+  font-weight: var(--font-bold);
+  line-height: var(--line-normal);
 }
 .vehicle-selector-dropdown {
   position: absolute;
@@ -180,7 +191,7 @@
   background: var(--color-vehicle-option-surface);
 }
 .vehicle-option span:first-child {
-  font-weight: var(--font-medium);
+  font-weight: var(--font-bold);
   font-size: var(--text-base);
 }
 .vehicle-label {
@@ -221,8 +232,6 @@
 .selected-zone small,
 .selected-zone em {
   overflow: hidden;
-  color: var(--color-text-muted);
-  font-size: var(--text-2xs);
   font-style: normal;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -235,7 +244,8 @@
 .select-hint {
   padding: 0.25rem 0.4rem;
   color: var(--color-text-muted);
-  font-size: var(--text-xs);
+  font-size: var(--text-caption);
+  line-height: var(--line-normal);
   text-align: center;
 }
 .select-hint-error {
@@ -280,7 +290,6 @@
   }
   .parking-controls .btn {
     padding: 0.65rem;
-    font-size: var(--text-md);
   }
 }
 
@@ -305,7 +314,6 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-size: var(--text-sm);
   }
   .municipio-info {
     flex: 0 0 1.5rem;

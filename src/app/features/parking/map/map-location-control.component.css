@@ -19,8 +19,9 @@
   color: var(--color-primary-dark);
   background: var(--color-location-message-surface);
   box-shadow: var(--shadow-sm);
-  font-size: var(--text-xs);
-  font-weight: var(--font-medium);
+  font-size: var(--text-caption);
+  font-weight: var(--font-regular);
+  line-height: var(--line-normal);
 }
 .location-message.error {
   color: var(--color-error);

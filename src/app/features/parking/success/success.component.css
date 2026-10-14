@@ -16,10 +16,9 @@
 }
 .flow-step {
   color: var(--color-primary);
-  font-size: var(--text-xs);
-  font-weight: var(--font-extra);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  font-size: var(--text-caption);
+  font-weight: var(--font-medium);
+  line-height: var(--line-normal);
 }
 .success-mark {
   position: relative;

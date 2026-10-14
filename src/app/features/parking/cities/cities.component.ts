@@ -5,6 +5,7 @@ import { LocationSettingsService } from '../../../core/services/location-setting
 import { ParkingFlowStore } from '../parking-flow.store';
 import { CitiesService, ParkingMunicipio } from '../../../core/services/cities.service';
 import { LoaderComponent } from '../../../shared/components/loader/loader.component';
+import { LucideSearch } from '@lucide/angular';
 
 const EMPTY_CITY: ParkingMunicipio = {
   id: '',
@@ -26,7 +27,7 @@ const EMPTY_CITY: ParkingMunicipio = {
 
 @Component({
   selector: 'app-parking-cities',
-  imports: [RouterLink, TranslatePipe, LoaderComponent],
+  imports: [RouterLink, TranslatePipe, LoaderComponent, LucideSearch],
   template: `
     <div class="page has-sticky-actions">
       <app-loader
@@ -47,7 +48,7 @@ const EMPTY_CITY: ParkingMunicipio = {
         </div>
       }
       <label class="municipio-search">
-        <span aria-hidden="true">⌕</span>
+        <svg lucideSearch size="20" strokeWidth="2" aria-hidden="true"></svg>
         <input
           type="search"
           [placeholder]="'parking.cities.searchPlaceholder' | translate"

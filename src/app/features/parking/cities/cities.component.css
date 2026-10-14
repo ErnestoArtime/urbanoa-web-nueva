@@ -54,6 +54,10 @@
   box-shadow: 0 0 0 3px var(--color-municipio-search-shadow);
 }
 
+.municipio-search > svg {
+  flex: 0 0 20px;
+}
+
 .municipio-search input {
   width: 100%;
   border: 0;
@@ -153,10 +157,9 @@
 
 .detail-kicker {
   color: var(--color-primary);
-  font-size: var(--text-2xs);
-  font-weight: var(--font-extra);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  font-size: var(--text-caption);
+  font-weight: var(--font-medium);
+  line-height: var(--line-normal);
 }
 
 .municipio-detail h2 {

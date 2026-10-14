@@ -3,7 +3,7 @@ import { RuntimeStyleDirective } from '../../../shared/directives/runtime-style.
 import { AfterViewInit, Component, ElementRef, OnDestroy, ViewChild, computed, effect, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import * as L from 'leaflet';
-import { LucideCarFront, LucideStar } from '@lucide/angular';
+import { LucideCarFront, LucideChevronDown, LucideChevronRight, LucideSearch, LucideStar } from '@lucide/angular';
 import { preferredVehicle, type Vehicle } from '../../../shared/models/vehicle';
 import { LoaderComponent } from '../../../shared/components/loader/loader.component';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
@@ -37,7 +37,18 @@ interface MapParkingZone {
 
 @Component({
   selector: 'app-parking-map',
-  imports: [RuntimeStyleDirective, RouterLink, LoaderComponent, TranslatePipe, MapLocationControlComponent, LucideCarFront, LucideStar],
+  imports: [
+    RuntimeStyleDirective,
+    RouterLink,
+    LoaderComponent,
+    TranslatePipe,
+    MapLocationControlComponent,
+    LucideCarFront,
+    LucideChevronDown,
+    LucideChevronRight,
+    LucideSearch,
+    LucideStar,
+  ],
   template: `
     <app-loader [visible]="mapLoading()" [message]="'parking.map.loading' | translate" imageSrc="/assets/brand/login-logo.jpg" />
     <section class="parking-map-page">
@@ -71,12 +82,12 @@ interface MapParkingZone {
         <section class="parking-controls">
           <div class="municipio-control">
             <a routerLink="/app/parking/cities" [queryParams]="vehicleQueryParams()" class="search-control"
-              ><span>⌕</span
+              ><span aria-hidden="true"><svg lucideSearch size="20" strokeWidth="2"></svg></span
               ><span
                 ><small>{{ 'parking.map.municipio' | translate }}</small
                 ><strong>{{ selected.nombre }}</strong></span
-              ><b>›</b></a
-            >
+              ><svg class="search-chevron" lucideChevronRight size="20" strokeWidth="2" aria-hidden="true"></svg
+            ></a>
             <a
               routerLink="/app/parking/city-info"
               [queryParams]="{
@@ -98,7 +109,7 @@ interface MapParkingZone {
                 ><small>{{ 'parking.map.vehicle' | translate }}</small
                 ><strong>{{ selectedVehicle()?.plate ?? (vehiclePlaceholderKey() | translate) }}</strong></span
               >
-              <b class="vehicle-control-chevron" aria-hidden="true"></b>
+              <svg class="vehicle-control-chevron" lucideChevronDown size="20" strokeWidth="2" aria-hidden="true"></svg>
             </button>
 
             @if (selectedVehicle() && isParkedIn(selectedVehicle()!)) {
