@@ -72,7 +72,12 @@ import { ParkingApiService, ParkingTicketOption } from '../../../core/services/p
           </article>
         }
         @if (!loading() && !tariffs().length) {
-          <p class="card" role="status">{{ error() ? 'No se pudieron cargar las tarifas.' : 'No hay tarifas disponibles.' }}</p>
+          <div class="card" [attr.role]="error() ? 'alert' : 'status'">
+            <p>{{ (error() ? 'parking.tickets.loadError' : 'parking.tickets.empty') | translate }}</p>
+            @if (error()) {
+              <button type="button" class="btn btn-secondary" (click)="loadTariffs()">{{ 'common.retry' | translate }}</button>
+            }
+          </div>
         }
       </div>
     </div>
@@ -122,7 +127,7 @@ export class ParkingTicketsComponent implements OnInit {
     }
   });
 
-  private async loadTariffs(): Promise<void> {
+  async loadTariffs(): Promise<void> {
     const requestId = ++this.requestSequence;
     const query = this.query();
     this.loading.set(true);

@@ -6,6 +6,7 @@ import { OperationIconComponent } from '../../../shared/components/operation-ico
 import { AppIconComponent } from '../../../shared/icons/app-icon.component';
 import { OperationType } from '../../../shared/models/operation-type';
 import { formatFineDate } from '../../../shared/utils/fine-date';
+import { TranslationService } from '../../../core/services/translation.service';
 
 @Component({
   selector: 'app-unpaid-fines',
@@ -56,5 +57,6 @@ export class UnpaidFinesComponent {
   private readonly unpaidFinesService = inject(UnpaidFinesService);
   readonly fines = this.unpaidFinesService.fines;
   readonly operationType = OperationType;
-  readonly displayDate = formatFineDate;
+  private readonly translations = inject(TranslationService);
+  readonly displayDate = (value: string) => formatFineDate(value, this.translations.currentLang$());
 }

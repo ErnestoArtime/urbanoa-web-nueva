@@ -273,7 +273,7 @@ export class UnpaidFineDetailComponent {
       });
   }
 
-  readonly displayDate = formatFineDate;
+  readonly displayDate = (value: string) => formatFineDate(value, this.translationService.currentLang$());
 
   readonly successMessage = computed(() => {
     const wallet = this.capturedWalletAmount();

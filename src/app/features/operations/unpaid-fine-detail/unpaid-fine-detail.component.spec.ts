@@ -85,7 +85,7 @@ describe('UnpaidFineDetailComponent', () => {
           },
         },
         { provide: WalletService, useValue: wallet },
-        { provide: TranslationService, useValue: { translate } },
+        { provide: TranslationService, useValue: { translate, currentLang$: () => 'es' } },
       ],
     }).compileComponents();
 
@@ -186,7 +186,7 @@ describe('UnpaidFineDetailComponent', () => {
         { provide: OperationsService, useValue: { loadDetail } },
         { provide: UnpaidFinesService, useValue: { getFine: (id: string) => fines().find((fine) => fine.id === id) } },
         { provide: WalletService, useValue: { defaultCardId: () => '', balance: signal(50), cards: signal([]) } },
-        { provide: TranslationService, useValue: { translate: (key: string) => key } },
+        { provide: TranslationService, useValue: { translate: (key: string) => key, currentLang$: () => 'es' } },
       ],
     }).compileComponents();
     const fixture = TestBed.createComponent(UnpaidFineDetailComponent);

@@ -27,7 +27,7 @@ describe('UnpaidFinesComponent', () => {
         provideZonelessChangeDetection(),
         provideRouter([]),
         { provide: UnpaidFinesService, useValue: { fines: signal([fine]) } },
-        { provide: TranslationService, useValue: { translate: (key: string) => key } },
+        { provide: TranslationService, useValue: { translate: (key: string) => key, currentLang$: () => 'es' } },
       ],
     }).compileComponents();
 
@@ -38,7 +38,7 @@ describe('UnpaidFinesComponent', () => {
   it('shows the fine date without exposing a numeric translation key', () => {
     const text = fixture.nativeElement.textContent as string;
 
-    expect(text).toContain('02/09/2026');
+    expect(text).toContain('2 sept 2026');
     expect(text).not.toContain('ops.fineDetail.status.1');
   });
 });

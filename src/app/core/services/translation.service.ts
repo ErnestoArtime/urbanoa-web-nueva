@@ -28,8 +28,12 @@ export class TranslationService {
     this.currentLang.set(targetLang);
     this.translations.set(data);
     this.catalogueLoaded = true;
-    localStorage.setItem(STORAGE_KEY, targetLang);
-    document.documentElement.lang = targetLang;
+    try {
+      localStorage.setItem(STORAGE_KEY, targetLang);
+    } catch {
+      // A blocked preference store must not prevent changing the active language.
+    }
+    document.documentElement.lang = targetLang === 'uk' ? 'en' : targetLang;
   }
 
   translate(key: string, params?: Record<string, string | number>): string {
@@ -84,6 +88,7 @@ export class TranslationService {
 
     for (const candidate of candidates) {
       const normalized = candidate.toLowerCase();
+      if (normalized === 'en' || normalized.startsWith('en-')) return 'uk';
       const matched = SUPPORTED_LANGS.find((lang) => normalized === lang || normalized.startsWith(`${lang}-`));
       if (matched) {
         return matched;

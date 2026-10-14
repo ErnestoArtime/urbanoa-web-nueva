@@ -6,6 +6,16 @@ describe('TranslationService catalogue refresh', () => {
   beforeEach(() => TestBed.configureTestingModule({ providers: [provideZonelessChangeDetection()] }));
   const response = (data: Record<string, string>) => ({ ok: true, json: async () => data }) as Response;
 
+  it('announces English as en while retaining the internal uk catalogue code when storage is blocked', async () => {
+    spyOn(window, 'fetch').and.resolveTo(response({ 'common.retry': 'Retry' }));
+    spyOn(Storage.prototype, 'setItem').and.throwError('storage blocked');
+    const service = TestBed.inject(TranslationService);
+    await service.setLang('uk');
+    expect(service.currentLang$()).toBe('uk');
+    expect(document.documentElement.lang).toBe('en');
+    expect(service.translate('common.retry')).toBe('Retry');
+  });
+
   it('recovers a new key from a refreshed catalogue without repeated requests', async () => {
     const fetchSpy = spyOn(window, 'fetch').and.resolveTo(response({ 'ops.title': 'Operaciones' }));
     const service = TestBed.inject(TranslationService);
