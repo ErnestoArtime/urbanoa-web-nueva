@@ -154,6 +154,10 @@ export class ParkingTicketsComponent implements OnInit {
   withTariff(tariff: ParkingTicketOption): Record<string, string> {
     return {
       ...this.query(),
+      zoneId: tariff.zoneId && tariff.zoneId > 0 ? String(tariff.zoneId) : this.query().zoneId,
+      zone: tariff.zoneName || this.query().zone,
+      sectorId: tariff.sectorId && tariff.sectorId > 0 ? String(tariff.sectorId) : this.query().sectorId,
+      sector: tariff.sectorName || this.query().sector,
       ticketId: tariff.id,
       tariffId: tariff.id,
       tariff: tariff.name,
@@ -163,7 +167,12 @@ export class ParkingTicketsComponent implements OnInit {
     };
   }
   onSelectTariff(tariff: ParkingTicketOption): void {
+    const selected = this.withTariff(tariff);
     this.store.update({
+      zoneId: selected['zoneId'],
+      zoneName: selected['zone'],
+      sectorId: selected['sectorId'],
+      sectorName: selected['sector'],
       ticketId: tariff.id,
       ticketName: tariff.name,
       tariffId: tariff.id,

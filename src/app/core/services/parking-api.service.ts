@@ -1,3 +1,4 @@
+import { formatEuro } from '../utils/euro-format';
 import { inject, Injectable } from '@angular/core';
 import { OpsApiClient } from '../api/ops-api-client.service';
 import { OpsApiError } from '../api/ops-api.types';
@@ -62,7 +63,9 @@ export interface ParkingTicketOption {
   minAmount?: string;
   minAmountCents?: number;
   zoneId?: number;
+  zoneName?: string;
   sectorId?: number;
+  sectorName?: string;
   sectorColor?: string;
   ticketBehavior?: number;
   informationalOnly?: boolean;
@@ -306,17 +309,15 @@ export class ParkingApiService {
             id: String(ticket.ticketId),
             name: ticketName,
             desc: behaviorText || schedule,
-            price: minAmountText?.trim()
-              ? minAmountText
-              : typeof ticket.minAmount === 'number'
-                ? `${(minAmountCents / 100).toFixed(2).replace('.', ',')} €`
-                : '',
+            price: minAmountText?.trim() ? minAmountText : typeof ticket.minAmount === 'number' ? formatEuro(minAmountCents / 100) : '',
             schedule,
             maxTime: ticket.maxTime ?? undefined,
             minAmount: minAmountText,
             minAmountCents,
             zoneId: ticket.zoneId,
+            zoneName: ticket.zoneDesc || undefined,
             sectorId: ticket.sectorId,
+            sectorName: ticket.sectorDesc || undefined,
             sectorColor: ticket.sectorColor || undefined,
             ticketBehavior: behavior,
             // hasTicket describes the vehicle's current state, not whether this tariff

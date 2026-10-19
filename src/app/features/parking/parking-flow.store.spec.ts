@@ -36,12 +36,18 @@ describe('ParkingFlowStore', () => {
       minutes: '60',
       amount: '1,50 €',
       endTime: '20:27',
+      ticketBehavior: '3',
+      opBaseId: 'old-operation',
+      mode: 'extension',
     });
 
     store.selectVehicle('56789AB', '56789AB');
 
     expect(store.fromStore()).toEqual(
       jasmine.objectContaining({
+        opBaseId: '',
+        ticketBehavior: '',
+        mode: 'parking',
         cityId: '3',
         zoneId: '10002',
         streetId: '2401',
@@ -57,7 +63,6 @@ describe('ParkingFlowStore', () => {
         amount: '',
         startTime: '',
         endTime: '',
-        mode: 'parking',
       }),
     );
   });
@@ -100,6 +105,7 @@ describe('ParkingFlowStore', () => {
       vehicleId: 'vehicle-1',
       zone: 'Z2 AZUL',
       contractId: 3,
+      cityName: 'Zarautz',
       tariffId: 4,
       sectorId: 22002,
       sectorColor: '1E88E5',
@@ -114,6 +120,7 @@ describe('ParkingFlowStore', () => {
     expect(store.fromStore()).toEqual(
       jasmine.objectContaining({
         cityId: '3',
+        cityName: 'Zarautz',
         plate: 'AAA123456',
         vehicleId: 'vehicle-1',
         zoneId: '22002',

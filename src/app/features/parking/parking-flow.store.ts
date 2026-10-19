@@ -8,6 +8,7 @@ export interface ExtensionParkingContext {
   vehicleId: string;
   zone: string;
   contractId?: number;
+  cityName?: string;
   tariffId?: number;
   sectorId?: number;
   sectorColor?: string;
@@ -84,6 +85,8 @@ export class ParkingFlowStore {
       endTime: undefined,
       endDayLabel: undefined,
       mode: 'parking',
+      opBaseId: undefined,
+      ticketBehavior: undefined,
       selectedStep: undefined,
       paymentSummary: undefined,
     });
@@ -103,6 +106,7 @@ export class ParkingFlowStore {
 
     this.state.set({
       cityId: String(parking.contractId),
+      cityName: parking.cityName ?? '',
       plate: parking.plate,
       vehicleId: parking.vehicleId,
       zoneId: String(parking.sectorId),

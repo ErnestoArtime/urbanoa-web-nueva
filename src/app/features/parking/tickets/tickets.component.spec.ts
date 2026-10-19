@@ -57,6 +57,25 @@ describe('ParkingTicketsComponent', () => {
     });
   }
 
+  it('carries the selected tariff sector into navigation and the shared payment state like the APK', () => {
+    TestBed.configureTestingModule({
+      providers: [
+        provideZonelessChangeDetection(),
+        { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: convertToParamMap({}) } } },
+        { provide: ParkingApiService, useValue: {} },
+      ],
+    });
+    const store = TestBed.inject(ParkingFlowStore);
+    store.update({ cityId: '3', zoneId: '10', sectorId: '100', zoneName: 'Old zone', sectorName: 'Old sector', plate: '1234ABC' });
+    const component = TestBed.runInInjectionContext(() => new ParkingTicketsComponent());
+    const tariff = { id: '7', name: 'Visitor', desc: '', price: '', zoneId: 20, sectorId: 200, zoneName: 'Zone B', sectorName: 'Sector B' };
+    expect(component.withTariff(tariff)).toEqual(
+      jasmine.objectContaining({ sectorId: '200', zoneId: '20', zone: 'Zone B', sector: 'Sector B' }),
+    );
+    component.onSelectTariff(tariff);
+    expect(store.fromStore()).toEqual(jasmine.objectContaining({ sectorId: '200', zoneId: '20', zone: 'Zone B', sector: 'Sector B' }));
+  });
+
   it('reloads tariffs with the newly selected plate', async () => {
     const parkingApi = jasmine.createSpyObj<ParkingApiService>('ParkingApiService', ['tickets', 'opsDate', 'serverNow']);
     parkingApi.tickets.and.resolveTo({ data: [], source: 'remote' });
