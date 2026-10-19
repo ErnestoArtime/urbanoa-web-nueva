@@ -35,7 +35,12 @@ export class DashboardApiService {
   async load(): Promise<void> {
     const sessionToken = this.opsSession.token();
     if (!sessionToken) return;
-    await Promise.allSettled([this.operations.load(), this.vehiclesService.load(), this.wallet.load(), this.userService.load()]);
+    await Promise.allSettled([
+      this.operations.load(undefined, undefined, undefined, { reuseRecent: true }),
+      this.vehiclesService.load(),
+      this.wallet.load(),
+      this.userService.load(),
+    ]);
     if (this.opsSession.token() !== sessionToken) return;
     const coreRemote =
       this.operations.source() === 'remote' &&

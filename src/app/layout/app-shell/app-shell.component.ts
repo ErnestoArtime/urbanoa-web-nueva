@@ -148,7 +148,11 @@ export class AppShellComponent {
   private async initializeSessionData(): Promise<void> {
     const sessionToken = this.opsSession.token();
     if (!sessionToken || !this.isAppRoute()) return;
-    await Promise.all([this.operationsService.load(), this.vehicleService.load(), this.userService.load()]);
+    await Promise.allSettled([
+      this.operationsService.load(undefined, undefined, undefined, { reuseRecent: true }),
+      this.vehicleService.load(),
+      this.userService.load(),
+    ]);
     if (this.opsSession.token() !== sessionToken || !this.isAppRoute()) return;
     const currentPath = this.router.url.split(/[?#]/, 1)[0].replace(/\/+$/, '');
     if (currentPath === '/app') return;

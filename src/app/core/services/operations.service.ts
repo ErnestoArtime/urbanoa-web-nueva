@@ -17,6 +17,7 @@ import { formatParkingDuration } from '../utils/parking-duration';
 
 const ENDED_PARKINGS_SESSION_KEY = 'urbanoa.operations.ended';
 const ENDED_PARKING_TTL_MS = 60 * 60 * 1000;
+const OPERATIONS_READ_REUSE_MS = 5000;
 
 interface OperationResponseDto {
   contractId?: number;
@@ -117,7 +118,8 @@ export class OperationsService {
   private activeLoadingRequests = 0;
   private lastLoadParameters: [string?, string?, number[]?] = [];
   private generation = 0;
-  private loadRevision = 0;
+  private requestedLoadKey: string | null = null;
+  private lastSuccessfulLoad: { key: string; at: number } | null = null;
 
   constructor() {
     const unsubscribe = this.session.onChange?.(() => this.reset());
@@ -126,7 +128,8 @@ export class OperationsService {
 
   reset(): void {
     this.generation++;
-    this.loadRevision++;
+    this.requestedLoadKey = null;
+    this.lastSuccessfulLoad = null;
     this._operations.set([]);
     this._activeParkings.set([]);
     this.operationsLoadsInFlight.clear();
@@ -173,16 +176,34 @@ export class OperationsService {
   readonly loading = signal(false);
   readonly lastError = signal<string | null>(null);
 
-  load(dateStart?: string, dateEnd?: string, operationTypeList = [1, 2, 3, 4, 5, 7, 101, 102, 103, 104]): Promise<void> {
+  load(
+    dateStart?: string,
+    dateEnd?: string,
+    operationTypeList = [1, 2, 3, 4, 5, 7, 101, 102, 103, 104],
+    options: { reuseRecent?: boolean } = {},
+  ): Promise<void> {
+    operationTypeList = [...new Set(operationTypeList)].sort((a, b) => a - b);
     this.lastLoadParameters = [dateStart, dateEnd, operationTypeList];
     const year = new Date().getFullYear();
     const effectiveStart = dateStart ?? `${year}-01-01`;
     const effectiveEnd = dateEnd ?? `${year}-12-31`;
     const requestKey = JSON.stringify([effectiveStart, effectiveEnd, operationTypeList]);
+    this.requestedLoadKey = requestKey;
     const inFlight = this.operationsLoadsInFlight.get(requestKey);
     if (inFlight) return inFlight;
 
-    const request = this.loadRemote(effectiveStart, effectiveEnd, operationTypeList);
+    const age = Date.now() - (this.lastSuccessfulLoad?.at ?? 0);
+    if (
+      options.reuseRecent &&
+      this.source() === 'remote' &&
+      !this.loading() &&
+      this.lastSuccessfulLoad?.key === requestKey &&
+      age >= 0 &&
+      age < OPERATIONS_READ_REUSE_MS
+    )
+      return Promise.resolve();
+
+    const request = this.loadRemote(effectiveStart, effectiveEnd, operationTypeList, requestKey);
     const tracked = request.finally(() => {
       if (this.operationsLoadsInFlight.get(requestKey) === tracked) this.operationsLoadsInFlight.delete(requestKey);
     });
@@ -190,9 +211,8 @@ export class OperationsService {
     return tracked;
   }
 
-  private async loadRemote(effectiveStart: string, effectiveEnd: string, operationTypeList: number[]): Promise<void> {
+  private async loadRemote(effectiveStart: string, effectiveEnd: string, operationTypeList: number[], requestKey: string): Promise<void> {
     const generation = this.generation;
-    const revision = ++this.loadRevision;
     const token = this.session.token();
     if (!token) {
       this._operations.set([]);
@@ -212,7 +232,7 @@ export class OperationsService {
     this.lastError.set(null);
     try {
       const response = await this.api.post<OperationResponseDto[]>(OPS_ENDPOINTS.user.operations, requestBody, { token });
-      if (generation !== this.generation || revision !== this.loadRevision) return;
+      if (generation !== this.generation || requestKey !== this.requestedLoadKey) return;
       const operations = response.map((item) => this.mapRemoteOperation(item));
       this.reconcileLocallyEndedOperations(operations);
       this._operations.set(
@@ -221,8 +241,9 @@ export class OperationsService {
         ),
       );
       this.source.set('remote');
+      this.lastSuccessfulLoad = { key: requestKey, at: Date.now() };
     } catch (error) {
-      if (generation !== this.generation || revision !== this.loadRevision) return;
+      if (generation !== this.generation || requestKey !== this.requestedLoadKey) return;
       this.lastError.set(error instanceof Error ? error.message : 'Error desconocido al cargar las operaciones');
       const errorDetails =
         error instanceof OpsApiError
@@ -231,7 +252,7 @@ export class OperationsService {
       console.warn('[OPS API] No se pudieron cargar las operaciones', JSON.stringify({ requestBody, error: errorDetails }));
       this.source.set('error');
     } finally {
-      if (generation === this.generation && revision === this.loadRevision) this.loading.set(false);
+      if (generation === this.generation && requestKey === this.requestedLoadKey) this.loading.set(false);
     }
   }
 

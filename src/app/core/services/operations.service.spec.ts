@@ -478,6 +478,65 @@ describe('OperationsService stored data migration', () => {
     await Promise.all([first, second]);
   });
 
+  it('keeps the most recently selected range when returning to an earlier in-flight query', async () => {
+    let finishFirst!: (value: object[]) => void;
+    let finishSecond!: (value: object[]) => void;
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
+    api.post.and.returnValues(new Promise((resolve) => (finishFirst = resolve)), new Promise((resolve) => (finishSecond = resolve)));
+    TestBed.overrideProvider(OpsApiClient, { useValue: api });
+    TestBed.overrideProvider(OpsSessionService, { useValue: { token: () => 'token' } });
+    const service = TestBed.inject(OperationsService);
+    const first = service.load('2026-01-01', '2026-01-31');
+    const second = service.load('2026-02-01', '2026-02-28');
+    const selectedAgain = service.load('2026-01-01', '2026-01-31');
+    finishSecond([{ operationNumber: 2, operationType: 1, opDate: '120000010226' }]);
+    await second;
+    finishFirst([{ operationNumber: 1, operationType: 1, opDate: '120000010126' }]);
+    await Promise.all([first, selectedAgain]);
+    expect(api.post).toHaveBeenCalledTimes(2);
+    expect(service.operations().map((operation) => operation.id)).toEqual(['1']);
+    expect(service.loading()).toBeFalse();
+  });
+
+  it('reuses only recent successful passive reads and still refreshes explicitly', async () => {
+    let now = 1000;
+    spyOn(Date, 'now').and.callFake(() => now);
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
+    api.post.and.resolveTo([]);
+    TestBed.overrideProvider(OpsApiClient, { useValue: api });
+    TestBed.overrideProvider(OpsSessionService, { useValue: { token: () => 'token' } });
+    const service = TestBed.inject(OperationsService);
+    const passive = () => service.load(undefined, undefined, undefined, { reuseRecent: true });
+    await service.load();
+    await passive();
+    expect(api.post).toHaveBeenCalledTimes(1);
+    await service.load();
+    expect(api.post).toHaveBeenCalledTimes(2);
+    now += 5000;
+    await passive();
+    expect(api.post).toHaveBeenCalledTimes(3);
+    service.reset();
+    await passive();
+    expect(api.post).toHaveBeenCalledTimes(4);
+  });
+
+  it('does not reuse failed queries and canonicalizes equivalent type filters', async () => {
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
+    api.post.and.rejectWith(new Error('query failed'));
+    TestBed.overrideProvider(OpsApiClient, { useValue: api });
+    TestBed.overrideProvider(OpsSessionService, { useValue: { token: () => 'token' } });
+    const service = TestBed.inject(OperationsService);
+    await service.load(undefined, undefined, [2, 1, 2], { reuseRecent: true });
+    api.post.and.resolveTo([]);
+    await service.load(undefined, undefined, [1, 2], { reuseRecent: true });
+    expect(api.post).toHaveBeenCalledTimes(2);
+    await service.load(undefined, undefined, [2, 1], { reuseRecent: true });
+    expect(api.post).toHaveBeenCalledTimes(2);
+    expect(api.post.calls.mostRecent().args[1]).toEqual(jasmine.objectContaining({ operationTypeList: [1, 2] }));
+    await service.load(undefined, undefined, [1], { reuseRecent: true });
+    expect(api.post).toHaveBeenCalledTimes(3);
+  });
+
   it('uses the operation duration for the active parking timeline like the APK', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post', 'postOrNull']);
     api.post.and.resolveTo([

@@ -335,7 +335,10 @@ export class OperationsLayoutComponent implements OnInit, AfterViewInit {
   }
 
   private async reload(): Promise<void> {
-    await Promise.all([this.operationsService.load(), this.vehicleService.load()]);
+    await Promise.allSettled([
+      this.operationsService.load(undefined, undefined, undefined, { reuseRecent: true }),
+      this.vehicleService.load(),
+    ]);
     await this.operationsService.loadDashboardParkingStatuses(this.vehicleService.vehicles());
   }
 
