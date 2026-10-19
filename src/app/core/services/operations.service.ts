@@ -114,6 +114,7 @@ export class OperationsService {
   private readonly _activeParkings = signal<ActiveParking[]>([]);
   private readonly _activeLoading = signal(false);
   private readonly locallyEndedOperationIds = this.readLocallyEndedOperationIds();
+  private readonly paidFineKeys = new Set<string>(this.readPaidFineKeys());
   private readonly operationsLoadsInFlight = new Map<string, Promise<void>>();
   private activeLoadingRequests = 0;
   private lastLoadParameters: [string?, string?, number[]?] = [];
@@ -134,8 +135,10 @@ export class OperationsService {
     this._activeParkings.set([]);
     this.operationsLoadsInFlight.clear();
     this.locallyEndedOperationIds.clear();
+    this.paidFineKeys.clear();
     try {
       sessionStorage.removeItem(ENDED_PARKINGS_SESSION_KEY);
+      sessionStorage.removeItem('urbanoa.operations.paid-fines');
     } catch {
       /* Storage may be unavailable. */
     }
@@ -233,12 +236,15 @@ export class OperationsService {
     try {
       const response = await this.api.post<OperationResponseDto[]>(OPS_ENDPOINTS.user.operations, requestBody, { token });
       if (generation !== this.generation || requestKey !== this.requestedLoadKey) return;
+      for (const key of this.readPaidFineKeys()) this.paidFineKeys.add(key);
       const operations = response.map((item) => this.mapRemoteOperation(item));
       this.reconcileLocallyEndedOperations(operations);
       this._operations.set(
-        operations.map((operation) =>
-          operation.timePeriod === 2 && this.locallyEndedOperationIds.has(operation.id) ? { ...operation, timePeriod: 1 } : operation,
-        ),
+        operations
+          .filter((operation) => !this.isConfirmedPaidFine(operation))
+          .map((operation) =>
+            operation.timePeriod === 2 && this.locallyEndedOperationIds.has(operation.id) ? { ...operation, timePeriod: 1 } : operation,
+          ),
       );
       this.source.set('remote');
       this.lastSuccessfulLoad = { key: requestKey, at: Date.now() };
@@ -319,6 +325,35 @@ export class OperationsService {
         operation.id === operationId && operation.timePeriod === 2 ? { ...operation, timePeriod: 1 } : operation,
       ),
     );
+  }
+
+  markFinePaid(id: string, context?: { contractId: number; fineNumber: string }): void {
+    const fine = context ? { id, ...context, type: OperationType.UNPAID_FINES } : this.getOperationById(id);
+    if (!fine || fine.type !== OperationType.UNPAID_FINES) return;
+    this.paidFineKeys.add(this.fineKey(fine));
+    this._operations.update((operations) => operations.filter((operation) => !this.isConfirmedPaidFine(operation)));
+    try {
+      sessionStorage.setItem('urbanoa.operations.paid-fines', JSON.stringify([...this.paidFineKeys]));
+    } catch {
+      /* In-memory guard remains. */
+    }
+  }
+
+  private fineKey(operation: Pick<Operation, 'id' | 'contractId' | 'fineNumber'>): string {
+    return JSON.stringify([operation.contractId ?? 0, operation.fineNumber || operation.id]);
+  }
+
+  private isConfirmedPaidFine(operation: Operation): boolean {
+    return operation.type === OperationType.UNPAID_FINES && this.paidFineKeys.has(this.fineKey(operation));
+  }
+
+  private readPaidFineKeys(): string[] {
+    try {
+      const value: unknown = JSON.parse(sessionStorage.getItem('urbanoa.operations.paid-fines') ?? '[]');
+      return Array.isArray(value) ? value.filter((key): key is string => typeof key === 'string') : [];
+    } catch {
+      return [];
+    }
   }
 
   private activeParkingFromOperation(operation: Operation, vehicles: readonly { id: string; plate: string }[]): ActiveParking {

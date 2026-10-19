@@ -1,3 +1,4 @@
+import { OPS_ENDPOINTS } from '../api/ops-endpoints';
 import { TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { AppApiClient } from '../api/app-api-client.service';
@@ -292,5 +293,102 @@ describe('UnpaidFinesService PSD2 confirmation', () => {
     expect(result).toEqual({ success: true, challengeUrl: 'https://paycomet.example/challenge/fine-1' });
     expect(operations.load).not.toHaveBeenCalled();
     expect(wallet.load).not.toHaveBeenCalled();
+  });
+});
+
+describe('Confirmed fine payment refresh', () => {
+  beforeEach(() => sessionStorage.clear());
+  for (const failRefresh of [false, true]) {
+    it(`returns success before auxiliary refresh finishes and blocks a second payment (refresh failure: ${failRefresh})`, async () => {
+      const row = {
+        contractId: 7,
+        operationNumber: 'fine-1',
+        operationType: 104,
+        paymentAmount: 3500,
+        opDate: '120000191026',
+        fineNumber: 'FN-1',
+        fineStatus: 1,
+        timePeriod: 2,
+      };
+      let reads = 0;
+      const post = jasmine.createSpy().and.callFake((endpoint: string) => {
+        if (endpoint === OPS_ENDPOINTS.user.operations)
+          return ++reads === 1 ? Promise.resolve([row]) : failRefresh ? Promise.reject(new Error('offline')) : new Promise(() => undefined);
+        return Promise.resolve({ operationId: 123, challengeUrl: null });
+      });
+      const wallet = {
+        balance: () => 35,
+        cards: () => [],
+        load: jasmine.createSpy().and.returnValue(failRefresh ? Promise.reject(new Error('offline')) : new Promise(() => undefined)),
+      };
+      TestBed.configureTestingModule({
+        providers: [
+          provideZonelessChangeDetection(),
+          { provide: OpsApiClient, useValue: { post } },
+          { provide: WalletService, useValue: wallet },
+        ],
+      });
+      const session = TestBed.inject(OpsSessionService);
+      session.setToken('first');
+      const operations = TestBed.inject(OperationsService);
+      await operations.load();
+      const fines = TestBed.inject(UnpaidFinesService);
+      expect((await fines.payFine('fine-1')).success).toBeTrue();
+      expect((await fines.payFine('fine-1')).success).toBeFalse();
+      expect(post.calls.allArgs().filter(([endpoint]) => endpoint === OPS_ENDPOINTS.fines.confirmPayment).length).toBe(1);
+      expect(wallet.load).toHaveBeenCalledOnceWith({ balanceOnly: true });
+      // Even a later stale query cannot restore the paid fine.
+      if (failRefresh) {
+        post.and.resolveTo([row]);
+        await operations.load();
+        expect(fines.fines()).toEqual([]);
+        session.setToken('second');
+        await operations.load();
+        expect(fines.fines().length).toBe(1);
+      }
+    });
+  }
+  it('retains the confirmed fine identity even if it leaves the currently selected history range', async () => {
+    sessionStorage.clear();
+    const post = jasmine.createSpy().and.resolveTo([
+      {
+        contractId: 7,
+        operationNumber: 'different-list-id',
+        operationType: 104,
+        paymentAmount: 3500,
+        opDate: '120000191026',
+        fineNumber: 'FN-1',
+        fineStatus: 1,
+        timePeriod: 2,
+      },
+    ]);
+    TestBed.configureTestingModule({ providers: [provideZonelessChangeDetection(), { provide: OpsApiClient, useValue: { post } }] });
+    TestBed.inject(OpsSessionService).setToken('token');
+    const operations = TestBed.inject(OperationsService);
+    operations.markFinePaid('not-currently-listed', { contractId: 7, fineNumber: 'FN-1' });
+    await operations.load();
+    expect(operations.operations()).toEqual([]);
+  });
+
+  it('does not send the same fine twice while its confirmation is pending', async () => {
+    const post = jasmine.createSpy().and.returnValue(new Promise(() => undefined));
+    const operations = {
+      operations: signal([{ ...EXPIRED_FINE, fineStatus: 1 }]),
+      load: jasmine.createSpy(),
+      markFinePaid: jasmine.createSpy(),
+    };
+    TestBed.configureTestingModule({
+      providers: [
+        provideZonelessChangeDetection(),
+        { provide: OpsApiClient, useValue: { post } },
+        { provide: OperationsService, useValue: operations },
+        { provide: WalletService, useValue: { balance: () => 35, cards: () => [] } },
+        { provide: OpsSessionService, useValue: { token: () => 'token' } },
+      ],
+    });
+    const service = TestBed.inject(UnpaidFinesService);
+    void service.payFine('fine-1');
+    expect((await service.payFine('fine-1')).success).toBeFalse();
+    expect(post).toHaveBeenCalledTimes(1);
   });
 });

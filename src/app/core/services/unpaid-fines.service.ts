@@ -1,3 +1,4 @@
+import { formatEuro } from '../utils/euro-format';
 import { Injectable, computed, inject } from '@angular/core';
 import { OperationType } from '../../shared/models/operation-type';
 import type { Operation } from '../../shared/models/operation';
@@ -83,6 +84,7 @@ export function canMoveFineToHistory(operation: Pick<Operation, 'type' | 'fineSt
 
 @Injectable({ providedIn: 'root' })
 export class UnpaidFinesService {
+  private readonly pendingPayments = new Set<string>();
   private readonly citiesService = inject(CitiesService);
   private readonly walletService = inject(WalletService);
   private readonly operationsService = inject(OperationsService);
@@ -98,7 +100,7 @@ export class UnpaidFinesService {
 
   async payFine(id: string, cardId?: string): Promise<FinePaymentResult> {
     const fine = this.fines().find((item) => item.id === id);
-    if (!fine || fine.status !== FineStatus.PAYABLE) return { success: false };
+    if (!fine || fine.status !== FineStatus.PAYABLE || this.pendingPayments.has(id)) return { success: false };
 
     const numericAmount = fine.amountValue;
     const walletAmount = Math.min(this.walletService.balance(), numericAmount);
@@ -109,6 +111,7 @@ export class UnpaidFinesService {
     const token = this.session.token();
     if (!token) return { success: false };
     const payMethodId = Number(cardId || 0);
+    this.pendingPayments.add(id);
     try {
       const response = await this.api.post<FinePaymentResponseDto | string>(
         OPS_ENDPOINTS.fines.confirmPayment,
@@ -123,15 +126,23 @@ export class UnpaidFinesService {
         },
         { token },
       );
+      if (this.session.token() !== token)
+        return { success: false, error: new OpsApiError('abort', OPS_ENDPOINTS.fines.confirmPayment, 'Session changed') };
       const challengeUrl = this.challengeUrl(response);
       const operationId = typeof response === 'object' && response !== null ? response.operationId : null;
       if (!challengeUrl && !(typeof operationId === 'number' && Number.isInteger(operationId) && operationId > 0)) {
         throw new OpsApiError('invalid-response', OPS_ENDPOINTS.fines.confirmPayment, 'OPS no confirmó el pago de la sanción.');
       }
-      if (!challengeUrl) await Promise.all([this.operationsService.load(), this.walletService.load()]);
+      if (!challengeUrl) {
+        this.operationsService.markFinePaid(id, { contractId: fine.contractId, fineNumber: fine.fineNumber });
+        void this.operationsService.load().catch(() => undefined);
+        void this.walletService.load({ balanceOnly: true }).catch(() => undefined);
+      }
       return { success: true, challengeUrl };
     } catch (error) {
       return { success: false, error: this.toApiError(error) };
+    } finally {
+      this.pendingPayments.delete(id);
     }
   }
 
@@ -211,7 +222,7 @@ export class UnpaidFinesService {
   }
 
   private formatCurrency(value: number): string {
-    return `${value.toFixed(2).replace('.', ',')} €`;
+    return formatEuro(value);
   }
 
   private opsDate(date: Date): string {
