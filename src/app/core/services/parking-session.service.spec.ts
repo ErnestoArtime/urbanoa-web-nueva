@@ -54,55 +54,81 @@ describe('ParkingSessionService', () => {
     expect(api.postOrNull).not.toHaveBeenCalled();
   });
 
-  it('confirms unparking remotely and refreshes backend state', async () => {
-    const parking = {
-      id: 'parking-1',
-      plate: '1234 ABC',
-      vehicleId: 'vehicle-1',
-      zone: 'Centro',
-      startTime: '10:00',
-      durationLabel: '1 h',
-      timeRemaining: '01:00:00',
-      endTime: '11:00',
-      contractId: 3,
-      tariffId: 7,
-      refundable: 2,
-    };
-    const operations = {
-      activeParkings: () => [parking],
-      activeParkingsCount: () => 1,
-      hasActiveParkings: () => true,
-      activeSource: () => 'remote',
-      getActiveParking: jasmine.createSpy().and.returnValue(parking),
-      isVehicleParked: jasmine.createSpy().and.returnValue(true),
-      isPlateParked: jasmine.createSpy().and.returnValue(false),
-      markParkingEnded: jasmine.createSpy(),
-      load: jasmine.createSpy().and.resolveTo(),
-      syncActiveParkingsFromOperations: jasmine.createSpy(),
-    };
-    const parkingApi = { unpark: jasmine.createSpy().and.resolveTo({ success: true, source: 'remote', refundAmount: 0.4 }) };
-    const wallet = { load: jasmine.createSpy().and.resolveTo() };
-    TestBed.configureTestingModule({
-      providers: [
-        provideZonelessChangeDetection(),
-        ParkingSessionService,
-        { provide: OperationsService, useValue: operations },
-        { provide: ParkingApiService, useValue: parkingApi },
-        { provide: WalletService, useValue: wallet },
-      ],
+  for (const refreshFailure of [false, true]) {
+    it(`finishes confirmed unparking without waiting for auxiliary reads (failure: ${refreshFailure})`, async () => {
+      const parking = {
+        id: 'parking-1',
+        plate: '1234 ABC',
+        vehicleId: 'vehicle-1',
+        zone: 'Centro',
+        startTime: '10:00',
+        durationLabel: '1 h',
+        timeRemaining: '01:00:00',
+        endTime: '11:00',
+        contractId: 3,
+        tariffId: 7,
+        refundable: 2,
+      };
+      const operations = {
+        activeParkings: () => [parking],
+        activeParkingsCount: () => 1,
+        hasActiveParkings: () => true,
+        activeSource: () => 'remote',
+        getActiveParking: jasmine.createSpy().and.returnValue(parking),
+        isVehicleParked: jasmine.createSpy().and.returnValue(true),
+        isPlateParked: jasmine.createSpy().and.returnValue(false),
+        markParkingEnded: jasmine.createSpy(),
+        load: jasmine
+          .createSpy()
+          .and.returnValue(refreshFailure ? Promise.reject(new Error('refresh failed')) : new Promise<void>(() => undefined)),
+        syncActiveParkingsFromOperations: jasmine.createSpy(),
+      };
+      const parkingApi = { unpark: jasmine.createSpy().and.resolveTo({ success: true, source: 'remote', refundAmount: 0.4 }) };
+      const wallet = {
+        load: jasmine
+          .createSpy()
+          .and.returnValue(refreshFailure ? Promise.reject(new Error('refresh failed')) : new Promise<void>(() => undefined)),
+      };
+      TestBed.configureTestingModule({
+        providers: [
+          provideZonelessChangeDetection(),
+          ParkingSessionService,
+          { provide: OperationsService, useValue: operations },
+          { provide: ParkingApiService, useValue: parkingApi },
+          { provide: WalletService, useValue: wallet },
+        ],
+      });
+
+      const result = await TestBed.inject(ParkingSessionService).leaveParking('parking-1');
+
+      expect(result).toBeTrue();
+      expect(parkingApi.unpark).toHaveBeenCalledOnceWith({ contractId: 3, plate: '1234 ABC', ticketId: 7 });
+      expect(operations.markParkingEnded).toHaveBeenCalledOnceWith('parking-1');
+      expect(operations.load).toHaveBeenCalledTimes(1);
+      expect(wallet.load).toHaveBeenCalledOnceWith({ balanceOnly: true });
+      expect(operations.syncActiveParkingsFromOperations).not.toHaveBeenCalled();
     });
+  }
 
-    const result = await TestBed.inject(ParkingSessionService).leaveParking('parking-1');
-
-    expect(result).toBeTrue();
-    expect(parkingApi.unpark).toHaveBeenCalledOnceWith({ contractId: 3, plate: '1234 ABC', ticketId: 7 });
-    expect(operations.markParkingEnded).toHaveBeenCalledOnceWith('parking-1');
-    expect(operations.load).toHaveBeenCalledTimes(1);
-    expect(wallet.load).toHaveBeenCalled();
-    expect(operations.syncActiveParkingsFromOperations).toHaveBeenCalledWith([{ id: 'vehicle-1', plate: '1234 ABC' }]);
+  it('does not apply a delayed confirmation to a different account', async () => {
+    let confirm!: (value: { success: boolean; source: 'remote' }) => void;
+    const parking = { id: 'p', contractId: 1, refundable: 2, plate: 'PKJ321', tariffId: 7 };
+    const operations = { getActiveParking: () => parking, markParkingEnded: jasmine.createSpy(), load: jasmine.createSpy() };
+    const wallet = { load: jasmine.createSpy() };
+    TestBed.overrideProvider(OperationsService, { useValue: operations });
+    TestBed.overrideProvider(WalletService, { useValue: wallet });
+    TestBed.overrideProvider(ParkingApiService, { useValue: { unpark: () => new Promise((resolve) => (confirm = resolve)) } });
+    const session = TestBed.inject(OpsSessionService);
+    session.setToken('first-account');
+    const result = TestBed.inject(ParkingSessionService).leaveParking('p');
+    session.setToken('second-account');
+    confirm({ success: true, source: 'remote' });
+    expect(await result).toBeFalse();
+    expect(operations.markParkingEnded).not.toHaveBeenCalled();
+    expect(wallet.load).not.toHaveBeenCalled();
   });
 
-  it('uses the persisted QueryTicketsAPI ticketId when unparking', async () => {
+  it('uses the selected operation tariff instead of the last ticket cached for the same plate', async () => {
     const parking = {
       id: 'parking-1',
       plate: '1234 ABC',
@@ -134,7 +160,7 @@ describe('ParkingSessionService', () => {
     const parkingApi = { unpark: jasmine.createSpy().and.resolveTo({ success: true, source: 'remote', refundAmount: 0.4 }) };
     const wallet = { load: jasmine.createSpy().and.resolveTo() };
     const ticketStore = {
-      getByPlate: jasmine.createSpy().and.returnValue({ plate: '1234 ABC', ticketId: 108 }),
+      getByPlate: jasmine.createSpy().and.returnValue({ plate: '1234 ABC', ticketId: 108, contractId: 1, sectorId: 22002 }),
       clearByPlate: jasmine.createSpy(),
     };
     TestBed.configureTestingModule({
@@ -155,11 +181,57 @@ describe('ParkingSessionService', () => {
       contractId: 3,
       plate: '1234 ABC',
       groupId: 17,
-      ticketId: 108,
+      ticketId: 7,
       datetime: '100000260825',
     });
-    expect(ticketStore.clearByPlate).toHaveBeenCalledWith('1234 ABC');
+    expect(ticketStore.clearByPlate).not.toHaveBeenCalled();
   });
+
+  for (const cachedContractId of [1, 3]) {
+    it(`quotes the selected operation without borrowing a cached tariff from contract ${cachedContractId}`, async () => {
+      const parking = {
+        id: 'operation-13173663',
+        plate: 'PKJ321',
+        contractId: 1,
+        sectorId: 60301,
+        tariffId: 7,
+        refundable: 2,
+      };
+      const parkingApi = { queryUnparking: jasmine.createSpy().and.resolveTo({ success: true, refundAmount: 0 }) };
+      TestBed.overrideProvider(OperationsService, { useValue: { getActiveParking: () => parking } });
+      TestBed.overrideProvider(ParkingApiService, { useValue: parkingApi });
+      TestBed.overrideProvider(ParkingTicketStoreService, {
+        useValue: { getByPlate: () => ({ ticketId: 108, contractId: cachedContractId, sectorId: 22002 }) },
+      });
+      const result = await TestBed.inject(ParkingSessionService).quoteUnparking(parking.id);
+      expect(result.success).toBeTrue();
+      expect(parkingApi.queryUnparking).toHaveBeenCalledOnceWith({
+        contractId: 1,
+        plate: 'PKJ321',
+        groupId: 60301,
+        ticketId: 7,
+      });
+    });
+  }
+
+  for (const sectorId of [60301, 22002]) {
+    it(`uses a cached tariff only as a fallback in the same municipality and sector (${sectorId})`, async () => {
+      const parking = { id: 'operation-13173663', plate: 'PKJ321', contractId: 1, sectorId: 60301, refundable: 2 };
+      const parkingApi = { queryUnparking: jasmine.createSpy().and.resolveTo({ success: true, refundAmount: 0 }) };
+      TestBed.overrideProvider(OperationsService, { useValue: { getActiveParking: () => parking } });
+      TestBed.overrideProvider(ParkingApiService, { useValue: parkingApi });
+      TestBed.overrideProvider(ParkingTicketStoreService, {
+        useValue: { getByPlate: () => ({ ticketId: 108, contractId: 1, sectorId }) },
+      });
+      await TestBed.inject(ParkingSessionService).quoteUnparking(parking.id);
+      expect(parkingApi.queryUnparking).toHaveBeenCalledOnceWith({
+        contractId: 1,
+        plate: 'PKJ321',
+        groupId: 60301,
+        ticketId: sectorId === 60301 ? 108 : undefined,
+      });
+    });
+  }
 
   it('clears local parkings when every contract query fails', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'post']);

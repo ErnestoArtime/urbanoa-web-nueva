@@ -1,3 +1,4 @@
+import { OpsSessionService } from '../api/ops-session.service';
 import { PaymentChallengeService } from './payment-challenge.service';
 import { TranslationService } from './translation.service';
 import { isPaymentOutcomeUnknown } from '../utils/payment-error';
@@ -9,6 +10,7 @@ import { WalletService } from './wallet.service';
 
 @Injectable({ providedIn: 'root' })
 export class ParkingSessionService {
+  private readonly session = inject(OpsSessionService);
   private readonly paymentChallenge = inject(PaymentChallengeService);
   private readonly translations = inject(TranslationService);
   private readonly operationsService = inject(OperationsService);
@@ -27,12 +29,11 @@ export class ParkingSessionService {
     if (!parking?.contractId || parking.refundable !== 2) {
       return { success: false, source: 'remote', error: new Error('No se encontró el aparcamiento activo.') };
     }
-    const storedTicket = this.ticketStore.getByPlate(parking.plate)?.ticketId;
     return this.parkingApi.queryUnparking({
       contractId: parking.contractId,
       plate: parking.plate,
       ...(parking.sectorId ? { groupId: parking.sectorId } : {}),
-      ticketId: storedTicket && storedTicket > 0 ? storedTicket : parking.tariffId,
+      ticketId: this.unparkingTicketId(parking),
     });
   }
 
@@ -47,22 +48,24 @@ export class ParkingSessionService {
       this.unparkError.set('No se encontró el aparcamiento activo.');
       return false;
     }
-    const storedTicket = this.ticketStore.getByPlate(parking.plate)?.ticketId;
     const input = {
       contractId: parking.contractId,
       plate: parking.plate,
       ...(parking.sectorId ? { groupId: parking.sectorId } : {}),
-      ticketId: storedTicket && storedTicket > 0 ? storedTicket : parking.tariffId,
+      ticketId: this.unparkingTicketId(parking),
       ...(parking.operationDate ? { datetime: parking.operationDate } : {}),
     };
+    const token = this.session.token();
     this.paymentChallenge.begin({ kind: 'unparking', returnUrl: '/app/operations', status: 'uncertain' });
     let result;
     try {
       result = preparedQuote ? await this.parkingApi.unpark(input, preparedQuote) : await this.parkingApi.unpark(input);
     } catch {
+      if (this.session.token() !== token) return false;
       this.unparkError.set(this.translations.translate('payment.uncertain.message'));
       return false;
     }
+    if (this.session.token() !== token) return false;
     if (!result.success) {
       const error = result.error;
       if (isPaymentOutcomeUnknown(error)) {
@@ -76,10 +79,32 @@ export class ParkingSessionService {
     }
     this.paymentChallenge.clear();
     this.operationsService.markParkingEnded(parking.id);
-    await Promise.all([this.operationsService.load(), this.walletService.load()]);
-    this.operationsService.syncActiveParkingsFromOperations([{ id: parking.vehicleId, plate: parking.plate }]);
-    this.ticketStore.clearByPlate(parking.plate);
+    // Confirmation is final. Auxiliary reads must not keep the action modal blocked.
+    const vehicles = this.activeParkings().map(({ vehicleId: id, plate }) => ({ id, plate }));
+    void this.operationsService
+      .load()
+      .then(() => {
+        if (this.session.token() === token) this.operationsService.syncActiveParkingsFromOperations(vehicles);
+      })
+      .catch(() => undefined);
+    // Unparking changes credit, not payment methods. Each service exposes its refresh error.
+    void this.walletService.load({ balanceOnly: true }).catch(() => undefined);
+    const storedTicket = this.matchingStoredTicket(parking);
+    if (storedTicket && storedTicket.ticketId === input.ticketId) this.ticketStore.clearByPlate(parking.plate);
     return true;
+  }
+
+  private matchingStoredTicket(parking: ActiveParking) {
+    const stored = this.ticketStore.getByPlate(parking.plate);
+    return stored?.contractId === parking.contractId && stored?.sectorId === parking.sectorId ? stored : undefined;
+  }
+
+  private unparkingTicketId(parking: ActiveParking): number | undefined {
+    // Like the APK, use the selected operation, never another parking for this plate.
+    const tariffId = parking.tariffId;
+    if (typeof tariffId === 'number' && Number.isInteger(tariffId) && tariffId > 0) return tariffId;
+    const fallback = this.matchingStoredTicket(parking)?.ticketId;
+    return typeof fallback === 'number' && Number.isInteger(fallback) && fallback > 0 ? fallback : undefined;
   }
 
   isVehicleParked(vehicleIdOrPlate: string): boolean {
