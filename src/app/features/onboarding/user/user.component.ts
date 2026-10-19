@@ -12,6 +12,9 @@ import { UserService } from '../../../core/services/user.service';
     <div class="page">
       <h1 class="page-title">{{ 'onboarding.user.title' | translate }}</h1>
       <p class="page-subtitle">{{ 'onboarding.user.subtitle' | translate }}</p>
+      @if (failed()) {
+        <p class="form-error" role="alert">{{ 'account.profile.saveErrorDetail' | translate }}</p>
+      }
       <form [formGroup]="form" (ngSubmit)="continue()">
         <div class="form-group">
           <label class="form-label">{{ 'account.profile.name' | translate }}</label
@@ -43,6 +46,7 @@ import { UserService } from '../../../core/services/user.service';
 })
 export class OnboardingUserComponent implements OnInit {
   readonly saving = signal(false);
+  readonly failed = signal(false);
   private readonly fb = inject(FormBuilder);
   private readonly router = inject(Router);
   private readonly userService = inject(UserService);
@@ -60,11 +64,18 @@ export class OnboardingUserComponent implements OnInit {
 
   async continue(): Promise<void> {
     this.form.markAllAsTouched();
-    if (this.form.invalid) return;
+    if (this.form.invalid || this.saving()) return;
     this.saving.set(true);
+    this.failed.set(false);
     try {
-      await this.userService.save(this.form.getRawValue());
+      const result = await this.userService.save(this.form.getRawValue());
+      if (!result.success) {
+        this.failed.set(true);
+        return;
+      }
       await this.router.navigate(['/onboarding/payment']);
+    } catch {
+      this.failed.set(true);
     } finally {
       this.saving.set(false);
     }
