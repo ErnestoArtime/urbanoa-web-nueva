@@ -1,3 +1,4 @@
+import { TranslatePipe } from '../../pipes/translate.pipe';
 import { Component, input, output } from '@angular/core';
 import { LoaderComponent } from '../loader/loader.component';
 
@@ -5,9 +6,9 @@ export type ResultType = 'success' | 'error' | 'warning' | 'confirmation' | 'del
 
 @Component({
   selector: 'app-result-modal',
-  imports: [LoaderComponent],
+  imports: [LoaderComponent, TranslatePipe],
   template: `
-    <app-loader [visible]="busy()" message="Procesando" />
+    <app-loader [visible]="busy()" [message]="'common.loading' | translate" />
     <div class="result-modal-overlay">
       <div class="result-modal" role="dialog" aria-modal="true" [attr.aria-label]="title()">
         <div
