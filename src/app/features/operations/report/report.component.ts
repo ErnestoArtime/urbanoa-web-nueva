@@ -211,6 +211,7 @@ export class ReportComponent {
       if (!token) throw new Error('No hay una sesión OPS activa');
       const range = this.resolveRange();
       const email = this.authService.user().email.trim() || (await this.userService.load()).email.trim();
+      if (this.session.token() !== token) throw new Error('Session changed while generating report');
       if (!email) throw new Error('El correo del usuario está vacío');
       const content = await this.api.post<string>(
         OPS_ENDPOINTS.user.report,
@@ -224,6 +225,7 @@ export class ReportComponent {
         },
         { token },
       );
+      if (this.session.token() !== token) throw new Error('Session changed while generating report');
       const pdf = this.base64Pdf(content);
       const url = this.reportArtifact.set(pdf);
       if (viewer) viewer.location.href = url;
@@ -259,13 +261,14 @@ export class ReportComponent {
     const range = this.ranges.find((item) => item.key === this.selectedRange) ?? this.ranges[2];
 
     if (range.days) {
-      start.setUTCDate(start.getUTCDate() - (range.days - 1));
-    } else if (range.months) {
-      start.setUTCMonth(start.getUTCMonth() - range.months);
-      start.setUTCDate(start.getUTCDate() + 1);
-    } else if (range.years) {
-      start.setUTCFullYear(start.getUTCFullYear() - range.years);
-      start.setUTCDate(start.getUTCDate() + 1);
+      start.setUTCDate(start.getUTCDate() - range.days);
+    } else {
+      // Kotlin LocalDate.minus clamps month/year subtraction to the last valid day.
+      const originalDay = start.getUTCDate();
+      start.setUTCDate(1);
+      start.setUTCMonth(start.getUTCMonth() - (range.months ?? (range.years ?? 0) * 12));
+      const lastDay = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + 1, 0)).getUTCDate();
+      start.setUTCDate(Math.min(originalDay, lastDay));
     }
 
     const calendarDate = (date: Date) =>

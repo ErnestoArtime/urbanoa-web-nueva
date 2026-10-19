@@ -34,7 +34,8 @@ describe('ReportComponent parking operations filter', () => {
       operation(OperationType.REFUND, 'unparking'),
       operation(OperationType.TOP_UP, 'top-up'),
     ]);
-    api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
+    api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post', 'serverNow']);
+    api.serverNow.and.returnValue(new Date());
     api.post.and.resolveTo('JVBERi0xLjQ=');
 
     await TestBed.configureTestingModule({
@@ -107,6 +108,36 @@ describe('ReportComponent parking operations filter', () => {
       jasmine.objectContaining({ dateStart: '000000251026', dateEnd: '235959251026' }),
       { token: 'test-token' },
     );
+  });
+
+  for (const [now, range, start, end] of [
+    ['2026-08-31T12:00:00Z', 'last7', '000000240826', '235959310826'],
+    ['2026-08-31T12:00:00Z', 'last6m', '000000280226', '235959310826'],
+    ['2024-02-29T12:00:00Z', 'last5y', '000000280219', '235959290224'],
+  ] as const) {
+    it(`uses the APK calendar range ${range} at ${now}`, async () => {
+      spyOn(globalThis, 'open').and.returnValue(null);
+      api.serverNow.and.returnValue(new Date(now));
+      component.setRange(range);
+      await component.generateReport();
+      expect(api.post).toHaveBeenCalledWith(jasmine.any(String), jasmine.objectContaining({ dateStart: start, dateEnd: end }), {
+        token: 'test-token',
+      });
+    });
+  }
+
+  it('does not publish a PDF returned after the account changes', async () => {
+    spyOn(globalThis, 'open').and.returnValue(null);
+    let finish!: (value: string) => void;
+    api.post.and.returnValue(new Promise<string>((resolve) => (finish = resolve)) as Promise<never>);
+    const token = spyOn(TestBed.inject(OpsSessionService), 'token').and.returnValue('test-token');
+    const set = spyOn(TestBed.inject(ReportArtifactService), 'set').and.returnValue('/report.pdf');
+    const report = component.generateReport();
+    token.and.returnValue('different-account');
+    finish('JVBERi0xLjQ=');
+    await report;
+    expect(set).not.toHaveBeenCalled();
+    expect(component.reportError()).toBeTrue();
   });
 
   it('does not send a report request when custom dates are incomplete', async () => {
