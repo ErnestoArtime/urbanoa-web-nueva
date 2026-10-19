@@ -51,6 +51,34 @@ describe('AuthService', () => {
     service = TestBed.inject(AuthService);
   });
 
+  it('verifies the current password remotely and adopts a rotated token for the same account', async () => {
+    service.adoptToken('original', 'user@example.com');
+    sessionStorage.setItem('urbanoa.operations.paid-fines', '["confirmed-fine"]');
+    opsApi.post.and.resolveTo({ token: 'verified', firstLogin: 0 });
+    await service.reauthenticate('current-secret');
+    expect(opsApi.post).toHaveBeenCalledOnceWith(
+      OPS_ENDPOINTS.auth.login,
+      jasmine.objectContaining({ userName: 'user@example.com', password: 'current-secret', language: 'es' }),
+      jasmine.any(Object),
+    );
+    expect(sessionStorage.getItem('urbanoa.operations.paid-fines')).toBe('["confirmed-fine"]');
+    expect(service.token()).toBe('verified');
+    expect(service.user().email).toBe('user@example.com');
+  });
+  it('retains the current session on a rejected verification and ignores a response after logout', async () => {
+    service.adoptToken('original', 'user@example.com');
+    opsApi.post.and.rejectWith(new Error('incorrect password'));
+    await expectAsync(service.reauthenticate('wrong-secret')).toBeRejected();
+    expect(service.token()).toBe('original');
+    let finish!: (value: { token: string; firstLogin: number }) => void;
+    opsApi.post.and.returnValue(new Promise((resolve) => (finish = resolve)));
+    const verification = service.reauthenticate('current-secret');
+    await service.logout();
+    finish({ token: 'late', firstLogin: 0 });
+    await expectAsync(verification).toBeRejected();
+    expect(service.token()).toBe('');
+  });
+
   for (const [webLanguage, opsLanguage] of [
     ['es', 'es'],
     ['eu', 'eu'],

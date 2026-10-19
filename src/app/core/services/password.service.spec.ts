@@ -10,6 +10,7 @@ describe('PasswordService', () => {
   let service: PasswordService;
   let opsApi: jasmine.SpyObj<OpsApiClient>;
   let authService: {
+    reauthenticate: jasmine.Spy;
     requestPasswordReset: jasmine.Spy;
     resendMail: jasmine.Spy;
     verifyResetCode: jasmine.Spy;
@@ -20,6 +21,7 @@ describe('PasswordService', () => {
   beforeEach(() => {
     opsApi = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
     authService = {
+      reauthenticate: jasmine.createSpy().and.resolveTo('session-token'),
       requestPasswordReset: jasmine.createSpy().and.resolveTo(),
       resendMail: jasmine.createSpy().and.resolveTo(),
       verifyResetCode: jasmine.createSpy().and.resolveTo(),
@@ -50,7 +52,7 @@ describe('PasswordService', () => {
   it('updates an authenticated password with the OPS token', async () => {
     opsApi.post.and.resolveTo('ok');
 
-    await service.updatePassword('new-secret');
+    await service.updatePassword('new-secret', 'old-secret');
 
     expect(opsApi.post).toHaveBeenCalledOnceWith(OPS_ENDPOINTS.user.updatePassword, { password: 'new-secret' }, { token: 'session-token' });
     expect(service.source()).toBe('remote');
@@ -59,9 +61,15 @@ describe('PasswordService', () => {
   it('preserves auth-service errors when the authenticated password update fails', async () => {
     opsApi.post.and.rejectWith(new Error('backend unavailable'));
 
-    await expectAsync(service.updatePassword('new-secret')).toBeRejectedWithError('backend unavailable');
+    await expectAsync(service.updatePassword('new-secret', 'old-secret')).toBeRejectedWithError('backend unavailable');
 
     expect(service.source()).toBe('error');
+  });
+
+  it('does not update a password when verification of the current one fails', async () => {
+    authService.reauthenticate.and.rejectWith(new Error('incorrect current password'));
+    await expectAsync(service.updatePassword('new-secret', 'wrong-secret')).toBeRejected();
+    expect(opsApi.post).not.toHaveBeenCalled();
   });
 
   it('sends the recovery code only to ChangePasswordAPI', async () => {

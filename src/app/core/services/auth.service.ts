@@ -1,3 +1,4 @@
+import { OpsApiError } from '../api/ops-api.types';
 import { computed, DestroyRef, inject, Injectable, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { OpsLoginRequest, OpsLoginResponse, OpsRegisterRequest, OpsUserResponse } from '../api/ops-auth.types';
@@ -170,7 +171,7 @@ export class AuthService {
         !this.windowSession.resumePayment(saved.owner, this.userIdentity(saved.session.user))
       )
         return false;
-      this.storeSession(saved.session);
+      this.storeSession(saved.session, true);
       return true;
     } catch {
       return false;
@@ -224,7 +225,7 @@ export class AuthService {
         !this.windowSession.resumePayment(saved.owner, this.userIdentity(saved.session.user))
       )
         return false;
-      this.storeSession(saved.session);
+      this.storeSession(saved.session, true);
       return true;
     } catch {
       return false;
@@ -265,6 +266,26 @@ export class AuthService {
       this.source.set('error');
       throw error;
     }
+  }
+
+  async reauthenticate(currentPassword: string): Promise<string> {
+    const current = this.session();
+    const attempt = this.loginAttempt;
+    if (!current || !currentPassword) throw new OpsApiError('backend', OPS_ENDPOINTS.auth.login, 'Authentication required', 401);
+    if (this.paymentChallenge.hasPendingPayment()) throw new Error(this.translation.translate('payment.uncertain.message'));
+    const response = await this.opsApi.post<OpsLoginResponse>(
+      OPS_ENDPOINTS.auth.login,
+      this.loginRequest(current.user.userName || current.user.email, currentPassword),
+      { headers: this.languageHeaders() },
+    );
+    if (this.session() !== current || attempt !== this.loginAttempt || !this.windowSession.ensureActive()) {
+      throw new OpsApiError('abort', OPS_ENDPOINTS.auth.login, 'Session changed during authentication');
+    }
+    if (!response.token?.trim()) throw new OpsApiError('invalid-response', OPS_ENDPOINTS.auth.login, 'Authentication returned no token');
+    // OPS may rotate the token. Retain the account/window identity and hydrate its profile
+    // after session-scoped services discard requests made with the previous token.
+    this.storeSession({ ...current, token: response.token }, true);
+    return response.token;
   }
 
   async register(input: RegisterInput | RegisterPayload): Promise<void> {
@@ -417,7 +438,15 @@ export class AuthService {
     return language === 'uk' ? 'en' : language;
   }
 
-  private storeSession(session: AuthSession): void {
+  private storeSession(session: AuthSession, preserveConfirmedFinePayments = false): void {
+    let paidFines: string | null = null;
+    if (preserveConfirmedFinePayments) {
+      try {
+        paidFines = sessionStorage.getItem('urbanoa.operations.paid-fines');
+      } catch {
+        /* Optional storage. */
+      }
+    }
     this.clearBusinessData();
     this.ticketStore.setUserScope(session.user.email);
     this.session.set(session);
@@ -432,6 +461,13 @@ export class AuthService {
       phone: session.user.phone,
       address: session.user.address,
     });
+    if (paidFines) {
+      try {
+        sessionStorage.setItem('urbanoa.operations.paid-fines', paidFines);
+      } catch {
+        /* Optional storage. */
+      }
+    }
     this.source.set('remote');
   }
 
@@ -468,6 +504,7 @@ export class AuthService {
     ];
     try {
       sessionStorage.removeItem('urbanoa.operations.ended');
+      sessionStorage.removeItem('urbanoa.operations.paid-fines');
     } catch {
       /* Storage may be unavailable. */
     }

@@ -1,3 +1,4 @@
+import { OpsApiError } from '../api/ops-api.types';
 import { inject, Injectable, signal } from '@angular/core';
 import { OpsApiClient } from '../api/ops-api-client.service';
 import { OPS_ENDPOINTS } from '../api/ops-endpoints';
@@ -21,9 +22,12 @@ export class PasswordService {
     this.source.set(this.authService.source());
   }
 
-  async updatePassword(newPassword: string): Promise<void> {
+  async updatePassword(newPassword: string, currentPassword: string): Promise<void> {
     try {
-      await this.opsApi.post(OPS_ENDPOINTS.user.updatePassword, { password: newPassword }, { token: this.opsSession.token() });
+      const token = await this.authService.reauthenticate(currentPassword);
+      if (!token || this.opsSession.token() !== token) throw new OpsApiError('abort', OPS_ENDPOINTS.user.updatePassword, 'Session changed');
+      await this.opsApi.post(OPS_ENDPOINTS.user.updatePassword, { password: newPassword }, { token });
+      if (this.opsSession.token() !== token) throw new OpsApiError('abort', OPS_ENDPOINTS.user.updatePassword, 'Session changed');
       this.source.set('remote');
     } catch (error) {
       this.source.set('error');

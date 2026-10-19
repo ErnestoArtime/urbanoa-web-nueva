@@ -1,3 +1,5 @@
+import { AuthService } from '../../../core/services/auth.service';
+import { isValidApkPassword } from '../../../shared/utils/password-validation';
 import { Component, inject, signal } from '@angular/core';
 import { LucideEye, LucideEyeOff } from '@lucide/angular';
 import { apiErrorKey } from '../../../core/http/api-error-key';
@@ -15,6 +17,30 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
     <div class="page account-static-page account-form-page">
       <app-detail-panel-header [title]="'account.changePassword.title' | translate" backRoute="/app/account" />
       <div class="card">
+        <div class="form-group">
+          <label for="current-password">{{ 'account.changePassword.current' | translate }} <span class="text-error">*</span></label>
+          <div class="password-field">
+            <input
+              id="current-password"
+              class="form-input"
+              autocomplete="current-password"
+              [type]="showCurrent() ? 'text' : 'password'"
+              [value]="current()"
+              (input)="current.set(valueOf($event))"
+            />
+            <button
+              type="button"
+              (click)="toggleVisibility('current')"
+              [attr.aria-label]="'account.changePassword.togglePassword' | translate"
+            >
+              @if (showCurrent()) {
+                <svg lucideEyeOff size="21"></svg>
+              } @else {
+                <svg lucideEye size="21"></svg>
+              }
+            </button>
+          </div>
+        </div>
         <div class="form-group">
           <label>{{ 'account.changePassword.new' | translate }} <span class="text-error">*</span></label>
           <div class="password-field">
@@ -62,7 +88,7 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
           [title]="(state === 'success' ? 'account.changePassword.successTitle' : 'account.changePassword.errorTitle') | translate"
           [message]="(state === 'success' ? 'account.changePassword.successMessage' : errorKey()) | translate"
           [primaryText]="'common.accept' | translate"
-          (primaryAction)="result.set(null)"
+          (primaryAction)="dismissResult()"
         />
       }
     </div>
@@ -70,8 +96,11 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
   styleUrl: './change-password.component.css',
 })
 export class AccountChangePasswordComponent {
+  private readonly authService = inject(AuthService);
   private readonly passwordService = inject(PasswordService);
 
+  readonly current = signal('');
+  readonly showCurrent = signal(false);
   readonly next = signal('');
   readonly confirmation = signal('');
   readonly showNext = signal(false);
@@ -80,19 +109,29 @@ export class AccountChangePasswordComponent {
   readonly errorKey = signal('');
   readonly saving = signal(false);
 
+  async dismissResult(): Promise<void> {
+    if (this.result() === 'success') await this.authService.logout();
+    else this.result.set(null);
+  }
+
   valueOf(event: Event): string {
     return (event.target as HTMLInputElement).value;
   }
 
-  toggleVisibility(field: 'next' | 'confirmation'): void {
-    const visibility = field === 'next' ? this.showNext : this.showConfirmation;
+  toggleVisibility(field: 'current' | 'next' | 'confirmation'): void {
+    const visibility = field === 'current' ? this.showCurrent : field === 'next' ? this.showNext : this.showConfirmation;
     visibility.update((value) => !value);
   }
 
   async save(): Promise<void> {
-    if (this.saving()) return;
+    if (this.saving() || this.result() === 'success') return;
 
-    if (this.next().length < 8 || this.next() !== this.confirmation()) {
+    if (!this.current()) {
+      this.errorKey.set('common.required');
+      this.result.set('error');
+      return;
+    }
+    if (!isValidApkPassword(this.next()) || this.next() !== this.confirmation()) {
       this.errorKey.set(this.next() !== this.confirmation() ? 'account.changePassword.mismatch' : 'account.changePassword.invalid');
       this.result.set('error');
       return;
@@ -101,12 +140,13 @@ export class AccountChangePasswordComponent {
     this.saving.set(true);
 
     try {
-      await this.passwordService.updatePassword(this.next());
+      await this.passwordService.updatePassword(this.next(), this.current());
       this.result.set('success');
     } catch (error) {
-      this.errorKey.set(apiErrorKey(error));
+      this.errorKey.set(apiErrorKey(error, { unauthorized: 'auth.login.invalidCredentials' }));
       this.result.set('error');
     } finally {
+      this.current.set('');
       this.saving.set(false);
     }
   }
