@@ -265,7 +265,7 @@ export class AccountSupportFormComponent implements OnInit {
     subtype: ['' as FeedbackSubtype | '', Validators.required],
     cityId: ['', Validators.required],
     plate: [''],
-    message: ['', [Validators.required, Validators.maxLength(500)]],
+    message: ['', [Validators.required, Validators.pattern(/\S/), Validators.maxLength(500)]],
   });
 
   readonly isReply = () => Boolean(this.threadId);

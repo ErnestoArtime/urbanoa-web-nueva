@@ -30,6 +30,13 @@ describe('SupportService', () => {
     return TestBed.inject(SupportService);
   }
 
+  it('does not send an empty message made only of spaces or newlines', async () => {
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
+    const service = creationService(api);
+    expect(await service.create({ ...newConversation, message: '   \n  ' })).toBeNull();
+    expect(api.post).not.toHaveBeenCalled();
+  });
+
   it('discards a query started before a successful creation', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
     let finish!: (value: { feedback: [] }) => void;

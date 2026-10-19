@@ -282,6 +282,10 @@ export class SupportService {
   }
 
   private async send(input: NewSupportThread, baseId?: number): Promise<string | null> {
+    if (!input.message.trim()) {
+      this.fail(new OpsApiError('invalid-response', OPS_ENDPOINTS.support.add, 'El mensaje es obligatorio'));
+      return null;
+    }
     const generation = this.generation;
     const token = this.session.token();
     if (!token) {
