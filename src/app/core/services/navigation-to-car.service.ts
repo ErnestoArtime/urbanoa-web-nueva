@@ -26,7 +26,10 @@ export class NavigationToCarService {
       typeof target.latitude === 'number' &&
       typeof target.longitude === 'number' &&
       Number.isFinite(target.latitude) &&
-      Number.isFinite(target.longitude)
+      Number.isFinite(target.longitude) &&
+      Math.abs(target.latitude) <= 90 &&
+      Math.abs(target.longitude) <= 180 &&
+      (target.latitude !== 0 || target.longitude !== 0)
     );
   }
 }
