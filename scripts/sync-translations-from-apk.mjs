@@ -19,6 +19,12 @@ const shouldApply = args.has('apply');
 const shouldCheck = args.has('check');
 
 const resourceOverrides = new Map([
+  ['account.changePassword.current', 'change_password_hint'],
+  ['account.taxData.country', 'tax_data_country_hint'],
+  ['auth.register.passwordTooShort', 'account_password_requirements'],
+  ['auth.newPassword.passwordTooShort', 'account_password_requirements'],
+  ['account.changePassword.minLength', 'account_password_requirements'],
+  ['account.changePassword.invalid', 'account_password_requirements'],
   ['common.loading', 'common_loading_message'],
   ['auth.login.title', 'login_title'],
   ['auth.login.subtitle', 'login_subtitle'],
