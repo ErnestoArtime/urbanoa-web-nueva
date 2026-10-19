@@ -1,3 +1,4 @@
+import { formatEuro } from '../../../core/utils/euro-format';
 import { RuntimeStyleDirective } from '../../../shared/directives/runtime-style.directive';
 import { Component, computed, inject, OnInit, DestroyRef, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -105,7 +106,7 @@ export class ParkingSuccessComponent implements OnInit {
       startTime: receipt?.startTime || '',
       endTime: receipt?.endTime || '',
       duration: receipt?.durationLabel || '',
-      amount: receipt ? new Intl.NumberFormat(this.locale(), { style: 'currency', currency: 'EUR' }).format(Math.abs(receipt.amount)) : '',
+      amount: receipt ? formatEuro(Math.abs(receipt.amount)) : '',
     } as ParkingFlowQuery;
   });
   readonly isExtension = computed(() => this.query().mode === 'extension');

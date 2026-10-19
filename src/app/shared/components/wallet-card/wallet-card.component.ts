@@ -1,3 +1,4 @@
+import { formatEuro } from '../../../core/utils/euro-format';
 import { Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { WalletService } from '../../../core/services/wallet.service';
@@ -30,5 +31,5 @@ export class WalletCardComponent {
   private readonly walletService = inject(WalletService);
   readonly brand = APP_BRAND;
   readonly mainCard = this.walletService.defaultCard;
-  readonly balanceLabel = computed(() => `${this.walletService.balance().toFixed(2).replace('.', ',')} €`);
+  readonly balanceLabel = computed(() => formatEuro(this.walletService.balance()));
 }

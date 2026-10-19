@@ -1,3 +1,4 @@
+import { formatEuro } from '../../core/utils/euro-format';
 import { Component, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
@@ -156,7 +157,7 @@ import { TranslationService } from '../../core/services/translation.service';
           [title]="'dashboard.unpark' | translate"
           [message]="
             (pendingUnparkAmount() ?? 0) > 0
-              ? ('dashboard.unparkConfirmDetail' | translate: { amount: 'EUR' + pendingUnparkAmount()!.toFixed(2) })
+              ? ('dashboard.unparkConfirmDetail' | translate: { amount: formatEuro(pendingUnparkAmount()!) })
               : ('dashboard.unparkNoRefund' | translate)
           "
           [primaryText]="'common.accept' | translate"
@@ -172,6 +173,7 @@ import { TranslationService } from '../../core/services/translation.service';
   styleUrl: './home.component.css',
 })
 export class HomeComponent {
+  readonly formatEuro = formatEuro;
   private readonly router = inject(Router);
   readonly walletService = inject(WalletService);
   private readonly operationsService = inject(OperationsService);

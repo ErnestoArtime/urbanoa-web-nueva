@@ -1,11 +1,12 @@
+import { EuroPipe } from '../../pipes/euro.pipe';
 import { Component, input } from '@angular/core';
-import { DatePipe, DecimalPipe } from '@angular/common';
+import { DatePipe } from '@angular/common';
 import { TranslatePipe } from '../../pipes/translate.pipe';
 import type { WalletMovement } from '../../../core/services/wallet.service';
 
 @Component({
   selector: 'app-wallet-movement-list',
-  imports: [DatePipe, DecimalPipe, TranslatePipe],
+  imports: [EuroPipe, DatePipe, TranslatePipe],
   template: `
     <section class="card">
       <h2 class="section-title">{{ title() | translate }}</h2>
@@ -16,7 +17,7 @@ import type { WalletMovement } from '../../../core/services/wallet.service';
             <span>{{ movement.date | date: 'dd/MM/yyyy' : 'Europe/Madrid' }}</span>
           </div>
           <strong class="movement-amount" [class.positive]="movement.amount > 0">
-            {{ movement.amount > 0 ? '+' : '' }}{{ movement.amount | number: '1.2-2' }} €
+            {{ movement.amount > 0 ? '+' : '' }}{{ movement.amount | euro }}
           </strong>
         </div>
       } @empty {

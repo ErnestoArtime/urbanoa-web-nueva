@@ -1,6 +1,7 @@
+import { formatEuro } from '../../../core/utils/euro-format';
+import { EuroPipe } from '../../../shared/pipes/euro.pipe';
 import { RuntimeStyleDirective } from '../../../shared/directives/runtime-style.directive';
 import { AfterViewInit, Component, computed, DestroyRef, ElementRef, inject, OnInit, signal, ViewChild } from '@angular/core';
-import { DecimalPipe } from '@angular/common';
 import { RouterLink, RouterLinkActive, NavigationEnd, Router } from '@angular/router';
 import { filter, map, startWith } from 'rxjs/operators';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -28,11 +29,11 @@ import { TranslationService } from '../../../core/services/translation.service';
 @Component({
   selector: 'app-operations-layout',
   imports: [
+    EuroPipe,
     RuntimeStyleDirective,
     RouterLink,
     RouterLinkActive,
     TranslatePipe,
-    DecimalPipe,
     DateRangeFilterComponent,
     OperationIconComponent,
     SplitViewComponent,
@@ -200,7 +201,7 @@ import { TranslationService } from '../../../core/services/translation.service';
                           <span
                             [class]="op.amount > 0 ? 'operation-amount operation-amount-credit' : 'operation-amount operation-amount-debit'"
                           >
-                            {{ op.amount > 0 ? '+' : '' }}{{ op.amount | number: '1.2-2' }} €
+                            {{ op.amount > 0 ? '+' : '' }}{{ op.amount | euro }}
                           </span>
                         </div>
                       </a>
@@ -249,7 +250,7 @@ import { TranslationService } from '../../../core/services/translation.service';
         [title]="'dashboard.unpark' | translate"
         [message]="
           (pendingUnparkAmount() ?? 0) > 0
-            ? ('dashboard.unparkConfirmDetail' | translate: { amount: 'EUR' + pendingUnparkAmount()!.toFixed(2) })
+            ? ('dashboard.unparkConfirmDetail' | translate: { amount: formatEuro(pendingUnparkAmount()!) })
             : ('dashboard.unparkNoRefund' | translate)
         "
         [primaryText]="'common.accept' | translate"
@@ -264,6 +265,7 @@ import { TranslationService } from '../../../core/services/translation.service';
   styleUrl: './operations-layout.component.css',
 })
 export class OperationsLayoutComponent implements OnInit, AfterViewInit {
+  readonly formatEuro = formatEuro;
   @ViewChild('historyControls') private historyControls?: ElementRef<HTMLElement>;
   private readonly api = inject(OpsApiClient);
   private readonly router = inject(Router);

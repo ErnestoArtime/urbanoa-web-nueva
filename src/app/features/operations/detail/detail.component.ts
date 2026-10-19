@@ -1,6 +1,7 @@
+import { formatEuro } from '../../../core/utils/euro-format';
+import { EuroPipe } from '../../../shared/pipes/euro.pipe';
 import { RuntimeStyleDirective } from '../../../shared/directives/runtime-style.directive';
 import { Component, computed, inject } from '@angular/core';
-import { DecimalPipe } from '@angular/common';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
 import { distinctUntilChanged, map } from 'rxjs/operators';
@@ -20,8 +21,8 @@ import { TicketCutAlignDirective } from '../../../shared/directives/ticket-cut-a
 @Component({
   selector: 'app-operations-detail',
   imports: [
+    EuroPipe,
     RuntimeStyleDirective,
-    DecimalPipe,
     OperationIconComponent,
     AppIconComponent,
     TranslatePipe,
@@ -41,7 +42,7 @@ import { TicketCutAlignDirective } from '../../../shared/directives/ticket-cut-a
                 <strong>{{ 'ops.fineDetail.sanction' | translate }}</strong>
               </div>
 
-              <strong class="fine-payment-amount">{{ formatFineAmount(absoluteAmount()) }} €</strong>
+              <strong class="fine-payment-amount">{{ formatFineAmount(absoluteAmount()) }}</strong>
 
               @if (isAcknowledgedFineDetail()) {
                 @if (operation.fineStatus === 2 && operation.fineValidDate) {
@@ -67,9 +68,9 @@ import { TicketCutAlignDirective } from '../../../shared/directives/ticket-cut-a
                   <strong>{{ finePaymentMethodLabel() }}</strong>
                   @if (walletPaymentAmount() > 0 && cardPaymentAmount() > 0) {
                     <span>{{ 'ops.detail.wallet' | translate }}</span>
-                    <strong>−{{ formatFineAmount(walletPaymentAmount()) }} €</strong>
+                    <strong>−{{ formatFineAmount(walletPaymentAmount()) }}</strong>
                     <span>{{ cardPaymentLabel() }}</span>
-                    <strong>−{{ formatFineAmount(cardPaymentAmount()) }} €</strong>
+                    <strong>−{{ formatFineAmount(cardPaymentAmount()) }}</strong>
                   }
                 </div>
               }
@@ -151,7 +152,7 @@ import { TicketCutAlignDirective } from '../../../shared/directives/ticket-cut-a
                 <span class="top-up-row-icon"><app-icon name="coins" [stroke]="false" /></span>
                 <div>
                   <span>{{ 'ops.detail.amount' | translate }}</span>
-                  <strong class="positive">+{{ formatFineAmount(absoluteAmount()) }} €</strong>
+                  <strong class="positive">+{{ formatFineAmount(absoluteAmount()) }}</strong>
                 </div>
               </div>
               <div class="top-up-row">
@@ -205,9 +206,7 @@ import { TicketCutAlignDirective } from '../../../shared/directives/ticket-cut-a
                     ><small>{{ 'ops.detail.paymentMethod' | translate }}</small>
                   </div>
                   <div>
-                    <strong>{{
-                      isFreeTicket() ? ('parking.tickets.free' | translate) : (absoluteAmount() | number: '1.2-2') + ' €'
-                    }}</strong
+                    <strong>{{ isFreeTicket() ? ('parking.tickets.free' | translate) : (absoluteAmount() | euro) }}</strong
                     ><span>{{ paymentMethodLabel() }}</span>
                   </div>
                 </div>
@@ -216,13 +215,13 @@ import { TicketCutAlignDirective } from '../../../shared/directives/ticket-cut-a
                     @if (walletPaymentAmount() > 0) {
                       <p>
                         <span>{{ 'ops.detail.wallet' | translate }}</span
-                        ><strong>{{ walletPaymentAmount() | number: '1.2-2' }} €</strong>
+                        ><strong>{{ walletPaymentAmount() | euro }}</strong>
                       </p>
                     }
                     @if (cardPaymentAmount() > 0) {
                       <p>
                         <span>{{ cardPaymentLabel() }}</span
-                        ><strong>{{ cardPaymentAmount() | number: '1.2-2' }} €</strong>
+                        ><strong>{{ cardPaymentAmount() | euro }}</strong>
                       </p>
                     }
                   </div>
@@ -350,7 +349,7 @@ export class OperationsDetailComponent {
   readonly topUpPaymentMethod = computed(() => this.op()?.cardLabel || '—');
   readonly balanceAfterTopUp = computed(() => {
     const balance = this.op()?.newBalance;
-    return balance == null ? '—' : `${balance.toFixed(2).replace('.', ',')} €`;
+    return balance == null ? '—' : formatEuro(balance);
   });
   readonly fineLocationTitle = computed(() => this.op()?.zoneName || this.op()?.zone || '—');
   readonly fineLocationSubtitle = computed(() => {
@@ -386,13 +385,13 @@ export class OperationsDetailComponent {
         ...(o.ticketName ? [{ label: 'ops.detail.tariff', value: o.ticketName, icon: calendar, positive: undefined }] : []),
         { label: 'ops.detail.datetime', value: this.dateTime(o), icon: calendar, positive: undefined },
         ...(o.durationLabel ? [{ label: 'ops.detail.totalTime', value: o.durationLabel, icon: clock, positive: undefined }] : []),
-        { label: 'ops.detail.refund', value: `+${this.absoluteAmount().toFixed(2).replace('.', ',')} €`, icon: money, positive: true },
+        { label: 'ops.detail.refund', value: `+${formatEuro(this.absoluteAmount())}`, icon: money, positive: true },
       ];
     if (o.type === OperationType.TOP_UP)
       return [
         { label: 'ops.detail.datetime', value: this.dateTime(o), icon: calendar, positive: undefined },
         ...(o.cardLabel ? [{ label: 'ops.detail.paymentMethod', value: o.cardLabel, icon: money, positive: undefined }] : []),
-        { label: 'ops.detail.recharge', value: `+${this.absoluteAmount().toFixed(2).replace('.', ',')} €`, icon: money, positive: true },
+        { label: 'ops.detail.recharge', value: `+${formatEuro(this.absoluteAmount())}`, icon: money, positive: true },
       ];
     if (o.type === OperationType.FINE_PAYMENT)
       return [
@@ -402,14 +401,14 @@ export class OperationsDetailComponent {
         { label: 'ops.detail.location', value: o.zone ?? '', icon: calendar, positive: undefined },
         { label: 'ops.detail.paymentMethod', value: this.paymentMethodLabel(), icon: money, positive: undefined },
         ...this.paymentRows(money, false),
-        { label: 'ops.detail.total', value: `${this.absoluteAmount().toFixed(2).replace('.', ',')} €`, icon: money, positive: undefined },
+        { label: 'ops.detail.total', value: formatEuro(this.absoluteAmount()), icon: money, positive: undefined },
       ];
     return [
       { label: 'ops.detail.datetime', value: this.dateTime(o), icon: calendar, positive: undefined },
       ...(o.cardLabel ? [{ label: 'ops.detail.paymentMethod', value: o.cardLabel, icon: money, positive: undefined }] : []),
       {
         label: 'ops.detail.balanceRefund',
-        value: `${this.signedAmountPrefix()}${this.absoluteAmount().toFixed(2).replace('.', ',')} €`,
+        value: `${this.signedAmountPrefix()}${formatEuro(this.absoluteAmount())}`,
         icon: money,
         positive: o.amount > 0,
       },
@@ -420,10 +419,10 @@ export class OperationsDetailComponent {
     if (!this.hasPaymentBreakdown()) return [];
     const rows: { label: string; value: string; icon: 'wallet'; positive: boolean | undefined }[] = [];
     if (this.walletPaymentAmount() > 0) {
-      rows.push({ label: 'ops.detail.wallet', value: `${this.walletPaymentAmount().toFixed(2).replace('.', ',')} €`, icon, positive });
+      rows.push({ label: 'ops.detail.wallet', value: formatEuro(this.walletPaymentAmount()), icon, positive });
     }
     if (this.cardPaymentAmount() > 0) {
-      rows.push({ label: this.cardPaymentLabel(), value: `${this.cardPaymentAmount().toFixed(2).replace('.', ',')} €`, icon, positive });
+      rows.push({ label: this.cardPaymentLabel(), value: formatEuro(this.cardPaymentAmount()), icon, positive });
     }
     return rows;
   }
@@ -439,6 +438,6 @@ export class OperationsDetailComponent {
   }
 
   formatFineAmount(amount: number): string {
-    return Math.abs(amount).toFixed(2).replace('.', ',');
+    return formatEuro(Math.abs(amount));
   }
 }

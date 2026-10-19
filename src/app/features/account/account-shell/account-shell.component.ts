@@ -1,5 +1,5 @@
+import { EuroPipe } from '../../../shared/pipes/euro.pipe';
 import { Component, inject, OnInit, signal } from '@angular/core';
-import { DecimalPipe } from '@angular/common';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { filter, map, startWith } from 'rxjs/operators';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -15,7 +15,7 @@ import { TranslationService } from '../../../core/services/translation.service';
 
 @Component({
   selector: 'app-account-shell',
-  imports: [RouterLink, RouterLinkActive, AppIconComponent, SplitViewComponent, TranslatePipe, DecimalPipe],
+  imports: [EuroPipe, RouterLink, RouterLinkActive, AppIconComponent, SplitViewComponent, TranslatePipe],
   template: `
     <app-split-view [class.account-split]="isVehicleRoute()" [hideList]="!isRootRoute()" [hideDetail]="isRootRoute()">
       <div splitList class="account-master">
@@ -25,12 +25,12 @@ import { TranslationService } from '../../../core/services/translation.service';
           <div>
             <strong>{{ user().name }} {{ user().surname }}</strong
             ><span>{{ user().email }}</span
-            ><span>{{ walletService.balance() | number: '1.2-2' }} €</span>
+            ><span>{{ walletService.balance() | euro }}</span>
           </div>
         </div>
         <div class="card wallet-card mb-2 mobile-wallet">
           <p>{{ 'account.walletBalance' | translate }}</p>
-          <p class="wallet-balance">{{ walletService.balance() | number: '1.2-2' }} €</p>
+          <p class="wallet-balance">{{ walletService.balance() | euro }}</p>
         </div>
         <ul class="list account-list">
           @for (item of menu; track item.key; let i = $index) {

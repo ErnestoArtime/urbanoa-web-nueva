@@ -1,3 +1,4 @@
+import { formatEuro } from '../../../core/utils/euro-format';
 import { RuntimeStyleDirective } from '../../../shared/directives/runtime-style.directive';
 import { Component, computed, effect, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -258,7 +259,7 @@ export class ParkingTimeStepsComponent implements OnInit {
     return opsRelativeDayLabel(this.stepDate(step.datetimeRaw, fallback), this.api.serverNow());
   }
   amountFormatted(): string {
-    return `${this.selectedStep().amount.toFixed(2).replace('.', ',')} €`;
+    return formatEuro(this.selectedStep().amount);
   }
   sectorColor(): string {
     return this.query().sectorColor ? `#${this.query().sectorColor.replace('#', '')}` : 'var(--color-primary)';
@@ -273,7 +274,7 @@ export class ParkingTimeStepsComponent implements OnInit {
       ...this.query(),
       duration: step.timeFormatted,
       minutes: String(step.time),
-      amount: this.amountFormatted(),
+      amount: String(step.amount),
       startTime: this.startTime(),
       startDayLabel: this.startDayLabel(),
       endTime: this.endTime(),
@@ -288,7 +289,7 @@ export class ParkingTimeStepsComponent implements OnInit {
     this.store.update({
       duration: step.timeFormatted,
       minutes: String(step.time),
-      amount: this.amountFormatted(),
+      amount: String(step.amount),
       startTime: this.startTime(),
       startDayLabel: this.startDayLabel(),
       endTime: this.endTime(),

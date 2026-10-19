@@ -1,3 +1,4 @@
+import { formatEuro, formatEuroNumber } from '../../../core/utils/euro-format';
 import { RuntimeStyleDirective } from '../../../shared/directives/runtime-style.directive';
 import { WalletManagerModalComponent } from '../../account/wallet-manager-modal/wallet-manager-modal.component';
 import { Component, computed, inject, OnInit, signal, ViewChild } from '@angular/core';
@@ -70,17 +71,17 @@ import { AuthService } from '../../../core/services/auth.service';
         </p>
         <p class="total-row">
           <span>{{ 'parking.confirm.amount' | translate }}</span
-          ><strong>{{ query().amount }}</strong>
+          ><strong>{{ formatEuro(totalAmount()) }}</strong>
         </p>
       </div>
 
       <app-payment-summary [wallet]="wallet()" [totalAmount]="totalAmount()">
         <section class="payment-selector" [class.empty-payment]="requiresCard() && !usableCards().length">
           <p class="wallet-priority">
-            {{ 'payment.walletPriority' | translate: { balance: walletService.balance().toFixed(2).replace('.', ',') } }}
+            {{ 'payment.walletPriority' | translate: { balance: formatEuroNumber(walletService.balance()) } }}
           </p>
           @if (requiresCard() && usableCards().length > 1) {
-            <p class="card-needed">{{ 'payment.chooseCard' | translate: { amount: cardAmount().toFixed(2).replace('.', ',') } }}</p>
+            <p class="card-needed">{{ 'payment.chooseCard' | translate: { amount: formatEuroNumber(cardAmount()) } }}</p>
             @for (card of walletService.cards(); track card.id) {
               <label class="payment-option" [class.selected]="selectedCard().id === card.id" [class.disabled]="!isCardUsable(card)">
                 <input
@@ -131,6 +132,8 @@ import { AuthService } from '../../../core/services/auth.service';
   styleUrl: './confirm.component.css',
 })
 export class ParkingConfirmComponent implements OnInit {
+  readonly formatEuro = formatEuro;
+  readonly formatEuroNumber = formatEuroNumber;
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly store = inject(ParkingFlowStore);

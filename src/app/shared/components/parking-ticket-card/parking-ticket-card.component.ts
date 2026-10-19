@@ -1,3 +1,4 @@
+import { formatEuro } from '../../../core/utils/euro-format';
 import { RuntimeStyleDirective } from '../../directives/runtime-style.directive';
 import { Component, OnDestroy, computed, input, output, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
@@ -155,7 +156,7 @@ export class ParkingTicketCardComponent implements OnDestroy {
   }
 
   formattedAmount(amount: number): string {
-    return `${Math.abs(amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
+    return formatEuro(Math.abs(amount));
   }
 
   private durationMinutes(label: string): number {

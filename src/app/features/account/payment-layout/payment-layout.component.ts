@@ -1,8 +1,9 @@
+import { EuroPipe } from '../../../shared/pipes/euro.pipe';
 import { PaymentAddComponent } from '../payment-add/payment-add.component';
 import { AccountRechargeComponent } from '../recharge/recharge.component';
 import { AccountRefundComponent } from '../refund/refund.component';
 import { Component, HostListener, inject, input, OnInit, signal, ViewChild } from '@angular/core';
-import { NgTemplateOutlet, DecimalPipe } from '@angular/common';
+import { NgTemplateOutlet } from '@angular/common';
 import { NavigationEnd, Router } from '@angular/router';
 import { filter, map, startWith } from 'rxjs/operators';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -16,13 +17,13 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
 @Component({
   selector: 'app-payment-layout',
   imports: [
+    EuroPipe,
     NgTemplateOutlet,
     PaymentAddComponent,
     AccountRechargeComponent,
     AccountRefundComponent,
     SplitViewComponent,
     TranslatePipe,
-    DecimalPipe,
     ResultModalComponent,
     LoaderComponent,
   ],
@@ -64,7 +65,7 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
         <div class="wallet-card payment-wallet-card mb-2">
           <div class="wallet-section">
             <strong>{{ 'account.wallet' | translate }}</strong>
-            <p class="wallet-balance-large">{{ walletService.balance() | number: '1.2-2' }} €</p>
+            <p class="wallet-balance-large">{{ walletService.balance() | euro }}</p>
           </div>
         </div>
         <p class="section-title">{{ 'account.cards' | translate }}</p>

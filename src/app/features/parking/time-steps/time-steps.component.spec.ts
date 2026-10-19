@@ -1,3 +1,4 @@
+import { formatEuro } from '../../../core/utils/euro-format';
 import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap } from '@angular/router';
@@ -52,15 +53,15 @@ describe('ParkingTimeStepsComponent extension', () => {
     );
     expect(component.error()).toBeFalse();
     expect(component.steps().length).toBe(2);
-    expect(component.amountFormatted()).toBe('1,50 €');
+    expect(component.amountFormatted()).toBe(formatEuro(1.5));
     component.changeTime(-1);
-    expect(component.amountFormatted()).toBe('0,75 €');
+    expect(component.amountFormatted()).toBe(formatEuro(0.75));
     component.onContinue();
     expect(store.vm()).toEqual(
       jasmine.objectContaining({
         mode: 'extension',
         minutes: '30',
-        amount: '0,75 €',
+        amount: '0.75',
         tariffType: '6',
         startDayLabel: 'ops.today',
         endDayLabel: 'ops.today',

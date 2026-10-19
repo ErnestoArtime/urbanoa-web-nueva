@@ -1,6 +1,7 @@
+import { EuroPipe } from '../../../shared/pipes/euro.pipe';
 import { Component, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { DecimalPipe } from '@angular/common';
+
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { OperationIconComponent } from '../../../shared/components/operation-icon/operation-icon.component';
 import { OperationType, OPERATION_TYPE_LABELS } from '../../../shared/models/operation-type';
@@ -10,7 +11,7 @@ import { isAcknowledgedFine } from '../../../core/services/unpaid-fines.service'
 @Component({
   selector: 'app-recent-operations-card',
   standalone: true,
-  imports: [RouterLink, DecimalPipe, TranslatePipe, OperationIconComponent],
+  imports: [EuroPipe, RouterLink, TranslatePipe, OperationIconComponent],
   template: `
     <div class="card operation-history-card">
       <p class="card-title">{{ 'dashboard.recentOps' | translate }}</p>
@@ -56,7 +57,7 @@ import { isAcknowledgedFine } from '../../../core/services/unpaid-fines.service'
                 <span class="operation-time">{{ operationTime(op) }}</span>
               }
               <span [class]="op.amount > 0 ? 'operation-amount operation-amount-credit' : 'operation-amount operation-amount-debit'">
-                {{ op.amount > 0 ? '+' : '' }}{{ op.amount | number: '1.2-2' }} €
+                {{ op.amount > 0 ? '+' : '' }}{{ op.amount | euro }}
               </span>
             </div>
           </a>

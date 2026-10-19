@@ -17,45 +17,49 @@ describe('ParkingConfirmComponent', () => {
       providers: [{ provide: AuthService, useValue: { preparePaymentRedirect: jasmine.createSpy('preparePaymentRedirect') } }],
     });
   });
-  it('blocks payment without funds or cards and opens wallet management without leaving parking', async () => {
-    const confirmParking = jasmine.createSpy();
-    const navigate = jasmine.createSpy();
-    TestBed.configureTestingModule({
-      providers: [
-        provideZonelessChangeDetection(),
-        { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: { keys: [], get: () => null } } } },
-        { provide: Router, useValue: { navigate } },
-        {
-          provide: ParkingFlowStore,
-          useValue: {
-            hasMinimumParkingData: () => true,
-            fromStore: () => ({ amount: '1,50 €', plate: '1234ABC' }),
+  for (const amount of ['1,50 €', '12345.6']) {
+    it('blocks payment without funds or cards and opens wallet management without leaving parking', async () => {
+      const confirmParking = jasmine.createSpy();
+      const navigate = jasmine.createSpy();
+      TestBed.configureTestingModule({
+        providers: [
+          provideZonelessChangeDetection(),
+          { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: { keys: [], get: () => null } } } },
+          { provide: Router, useValue: { navigate } },
+          {
+            provide: ParkingFlowStore,
+            useValue: {
+              hasMinimumParkingData: () => true,
+              fromStore: () => ({ amount, plate: '1234ABC' }),
+            },
           },
-        },
-        {
-          provide: WalletService,
-          useValue: {
-            balance: signal(0),
-            cards: signal([]),
-            defaultCardId: signal(''),
-            loading: signal(false),
+          {
+            provide: WalletService,
+            useValue: {
+              balance: signal(0),
+              cards: signal([]),
+              defaultCardId: signal(''),
+              loading: signal(false),
+            },
           },
-        },
-        { provide: ParkingApiService, useValue: { confirmParking } },
-        { provide: OperationsService, useValue: {} },
-      ],
+          { provide: ParkingApiService, useValue: { confirmParking } },
+          { provide: OperationsService, useValue: {} },
+        ],
+      });
+      const component = TestBed.runInInjectionContext(() => new ParkingConfirmComponent());
+      expect(component.totalAmount()).toBe(amount === '12345.6' ? 12345.6 : 1.5);
+      component.swipePay = { reset: jasmine.createSpy() } as never;
+      await component.onSwipeComplete();
+      expect(confirmParking).not.toHaveBeenCalled();
+      expect(component.paymentAlertOpen()).toBeTrue();
+      component.openPaymentMethods();
+      expect(component.walletManagerOpen()).toBeTrue();
+      expect(component.paymentAlertOpen()).toBeFalse();
+      expect(component.query().plate).toBe('1234ABC');
+      expect(navigate).not.toHaveBeenCalled();
     });
-    const component = TestBed.runInInjectionContext(() => new ParkingConfirmComponent());
-    component.swipePay = { reset: jasmine.createSpy() } as never;
-    await component.onSwipeComplete();
-    expect(confirmParking).not.toHaveBeenCalled();
-    expect(component.paymentAlertOpen()).toBeTrue();
-    component.openPaymentMethods();
-    expect(component.walletManagerOpen()).toBeTrue();
-    expect(component.paymentAlertOpen()).toBeFalse();
-    expect(component.query().plate).toBe('1234ABC');
-    expect(navigate).not.toHaveBeenCalled();
-  });
+  }
+
   it('loads the wallet on direct access and selects the default card', async () => {
     const defaultCardId = signal('');
     const wallet = {

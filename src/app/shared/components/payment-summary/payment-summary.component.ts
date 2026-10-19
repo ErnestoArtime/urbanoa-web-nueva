@@ -1,3 +1,4 @@
+import { formatEuro } from '../../../core/utils/euro-format';
 import { Component, computed, input } from '@angular/core';
 import { TranslatePipe } from '../../pipes/translate.pipe';
 import { AppIconComponent } from '../../icons/app-icon.component';
@@ -108,13 +109,13 @@ export class PaymentSummaryComponent {
     return 'mixed';
   });
 
-  readonly balanceUsedFormatted = computed(() => this.balanceUsed().toFixed(2).replace('.', ',') + ' €');
+  readonly balanceUsedFormatted = computed(() => formatEuro(this.balanceUsed()));
 
-  readonly cardUsedFormatted = computed(() => this.cardUsed().toFixed(2).replace('.', ',') + ' €');
+  readonly cardUsedFormatted = computed(() => formatEuro(this.cardUsed()));
 
-  readonly walletBalanceFormatted = computed(() => this.wallet().balance.toFixed(2).replace('.', ',') + ' €');
+  readonly walletBalanceFormatted = computed(() => formatEuro(this.wallet().balance));
 
-  readonly totalFormatted = computed(() => this.totalAmount().toFixed(2).replace('.', ',') + ' €');
+  readonly totalFormatted = computed(() => formatEuro(this.totalAmount()));
 
   cardBrandAsset(): string {
     return this.wallet().mainCard.brand.toLowerCase().includes('master') ? '/assets/payment/mastercard.svg' : '/assets/payment/visa.svg';

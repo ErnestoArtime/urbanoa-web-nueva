@@ -1,7 +1,9 @@
+import { formatEuroNumber } from '../../../core/utils/euro-format';
+import { EuroPipe } from '../../../shared/pipes/euro.pipe';
 import { isPaymentOutcomeUnknown } from '../../../core/utils/payment-error';
 import { Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { DecimalPipe } from '@angular/common';
+
 import { canMoveFineToHistory, FineStatus, UnpaidFinesService } from '../../../core/services/unpaid-fines.service';
 import { WalletService } from '../../../core/services/wallet.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
@@ -26,8 +28,9 @@ import { AuthService } from '../../../core/services/auth.service';
 @Component({
   selector: 'app-unpaid-fine-detail',
   imports: [
+    EuroPipe,
     RouterLink,
-    DecimalPipe,
+
     TranslatePipe,
     LoaderComponent,
     DetailPanelHeaderComponent,
@@ -131,7 +134,7 @@ import { AuthService } from '../../../core/services/auth.service';
               <div class="mt-2 card payment-breakdown-card">
                 <div class="payment-breakdown-row">
                   <span class="payment-breakdown-label">{{ 'ops.fineDetail.availableBalance' | translate }}</span>
-                  <span class="payment-breakdown-value">{{ walletService.balance() | number: '1.2-2' }} €</span>
+                  <span class="payment-breakdown-value">{{ walletService.balance() | euro }}</span>
                 </div>
               </div>
               @if (insufficientFunds()) {
@@ -281,8 +284,8 @@ export class UnpaidFineDetailComponent {
     const params = {
       plate: this.paidFine()?.plate ?? '',
       location: this.paidFine()?.location ?? '',
-      wallet: wallet.toFixed(2).replace('.', ','),
-      card: card.toFixed(2).replace('.', ','),
+      wallet: formatEuroNumber(wallet),
+      card: formatEuroNumber(card),
     };
     if (card > 0) {
       return this.translationService.translate('ops.fineDetail.paidWithWalletAndCard', params);

@@ -1,3 +1,4 @@
+import { formatEuro } from '../../../core/utils/euro-format';
 import { provideZonelessChangeDetection } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
@@ -31,7 +32,7 @@ describe('WalletSummaryCardComponent balance availability', () => {
     fixture.componentRef.setInput('balanceAvailable', true);
     fixture.componentRef.setInput('balanceError', false);
     await fixture.whenStable();
-    expect(root.querySelector('.wallet-inline-balance')?.textContent).toContain('0.00 €');
+    expect(root.querySelector('.wallet-inline-balance')?.textContent).toContain(formatEuro(0));
     expect(root.querySelector('[role="alert"]')).toBeNull();
   });
 });

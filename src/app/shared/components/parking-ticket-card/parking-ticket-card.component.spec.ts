@@ -1,3 +1,4 @@
+import { formatEuro } from '../../../core/utils/euro-format';
 import { provideZonelessChangeDetection } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
@@ -151,7 +152,7 @@ describe('ParkingTicketCardComponent', () => {
 
     const element = fixture.nativeElement as HTMLElement;
     expect(element.querySelector('.ticket-header')?.textContent).toContain('ZARAUTZ · Z2 AZUL');
-    expect(element.querySelector('.ticket-amount')?.textContent).toMatch(/5[,.]00 €/);
+    expect(element.querySelector('.ticket-amount')?.textContent).toBe(formatEuro(5));
     expect(element.querySelector('.ticket-actions .btn-secondary')).toBeNull();
     expect(element.querySelector('.ticket-actions')?.textContent).toContain('Desaparcar');
     expect(element.querySelector('.ticket-actions')?.textContent).toContain('Ampliar');

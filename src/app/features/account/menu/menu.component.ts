@@ -1,5 +1,5 @@
+import { EuroPipe } from '../../../shared/pipes/euro.pipe';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
-import { DecimalPipe } from '@angular/common';
 import { NavigationEnd, Router, RouterLink } from '@angular/router';
 import { ACCOUNT_MENU } from '../../../shared/constants/navigation';
 import { WalletService } from '../../../core/services/wallet.service';
@@ -29,10 +29,10 @@ import { environment } from '../../../../environments/environment';
 @Component({
   selector: 'app-account-menu',
   imports: [
+    EuroPipe,
     RouterLink,
     AppIconComponent,
     TranslatePipe,
-    DecimalPipe,
     AccountProfileComponent,
     AccountSettingsComponent,
     AccountNotificationsComponent,
@@ -57,12 +57,12 @@ import { environment } from '../../../../environments/environment';
           <div>
             <strong>{{ user().name }} {{ user().surname }}</strong
             ><span>{{ user().email }}</span
-            ><span>{{ walletService.balance() | number: '1.2-2' }} €</span>
+            ><span>{{ walletService.balance() | euro }}</span>
           </div>
         </div>
         <div class="card wallet-card mb-2 mobile-wallet">
           <p>{{ 'account.walletBalance' | translate }}</p>
-          <p class="wallet-balance">{{ walletService.balance() | number: '1.2-2' }} €</p>
+          <p class="wallet-balance">{{ walletService.balance() | euro }}</p>
         </div>
         <ul class="list account-list">
           @for (item of menu; track item.key; let i = $index) {
@@ -178,7 +178,7 @@ import { environment } from '../../../../environments/environment';
                   <div class="page">
                     <div class="wallet-card mb-2">
                       <p class="wallet-brand-note">{{ 'account.wallet' | translate }} {{ brand.name }}</p>
-                      <p class="wallet-balance">{{ walletService.balance() | number: '1.2-2' }} €</p>
+                      <p class="wallet-balance">{{ walletService.balance() | euro }}</p>
                     </div>
                     <p class="section-title">{{ 'account.cards' | translate }}</p>
                     <div class="card">

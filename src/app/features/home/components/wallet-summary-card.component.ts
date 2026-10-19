@@ -1,6 +1,7 @@
+import { EuroPipe } from '../../../shared/pipes/euro.pipe';
 import { Component, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { DecimalPipe } from '@angular/common';
+
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { AppIconComponent } from '../../../shared/icons/app-icon.component';
 import { APP_BRAND } from '../../../shared/constants/app-brand';
@@ -8,14 +9,14 @@ import { APP_BRAND } from '../../../shared/constants/app-brand';
 @Component({
   selector: 'app-wallet-summary-card',
   standalone: true,
-  imports: [RouterLink, DecimalPipe, TranslatePipe, AppIconComponent],
+  imports: [EuroPipe, RouterLink, TranslatePipe, AppIconComponent],
   template: `
     <div class="card wallet-shell-card">
       <div class="wallet-card-inline">
         <p class="wallet-inline-title">{{ 'account.wallet' | translate }}</p>
         <p class="wallet-inline-balance">
           @if (balanceAvailable()) {
-            {{ balance() | number: '1.2-2' }} €
+            {{ balance() | euro }}
           } @else {
             —
           }
