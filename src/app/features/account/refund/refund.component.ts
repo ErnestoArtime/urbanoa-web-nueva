@@ -1,6 +1,8 @@
+import { formatEuroNumber } from '../../../core/utils/euro-format';
+import { EuroPipe } from '../../../shared/pipes/euro.pipe';
 import { PaymentChallengeService } from '../../../core/services/payment-challenge.service';
 import { isPaymentOutcomeUnknown } from '../../../core/utils/payment-error';
-import { DecimalPipe } from '@angular/common';
+
 import { Component, input, output, inject, signal } from '@angular/core';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { WalletService } from '../../../core/services/wallet.service';
@@ -11,7 +13,7 @@ import { LoaderComponent } from '../../../shared/components/loader/loader.compon
 
 @Component({
   selector: 'app-account-refund',
-  imports: [TranslatePipe, DecimalPipe, DetailPanelHeaderComponent, ResultModalComponent, LoaderComponent],
+  imports: [EuroPipe, TranslatePipe, DetailPanelHeaderComponent, ResultModalComponent, LoaderComponent],
   template: `
     <app-loader [visible]="requesting() && !refundQuote()" [message]="'common.loading' | translate" />
     <div class="page account-static-page account-form-page">
@@ -27,7 +29,7 @@ import { LoaderComponent } from '../../../shared/components/loader/loader.compon
       }
       <div class="card refund-summary">
         <p class="text-muted">{{ 'account.refund.availableBalance' | translate }}</p>
-        <strong class="available-balance">{{ walletService.balance() | number: '1.2-2' }} €</strong>
+        <strong class="available-balance">{{ walletService.balance() | euro }}</strong>
         <p class="refund-explanation">
           {{ 'account.refund.explanation' | translate }}
         </p>
@@ -85,7 +87,7 @@ export class AccountRefundComponent {
       this.paymentUncertain.set(true);
       return;
     }
-    if (this.requesting() || this.walletService.balance() <= 0) return;
+    if (this.done() || this.requesting() || this.walletService.loading() || this.walletService.balance() <= 0) return;
     this.failed.set(false);
     this.refundQuote.set(this.walletService.balance());
   }
@@ -110,14 +112,15 @@ export class AccountRefundComponent {
         if (!isPaymentOutcomeUnknown(result.error)) this.pendingPayment.clear();
         else this.paymentUncertain.set(true);
         this.failed.set(true);
-        await this.walletService.load();
+        void this.walletService.load({ balanceOnly: true }).catch(() => undefined);
         return;
       }
       this.refundedAmount.set(result.amount);
       this.pendingPayment.clear();
       this.done.set(true);
-      await Promise.all([this.operationsService.load(), this.walletService.load()]);
-      this.done.set(true);
+      // WalletService already applied the amount confirmed by OPS. A stale read
+      // must not restore the pre-refund balance and enable another refund.
+      void this.operationsService.load().catch(() => undefined);
     } catch {
       if (!this.done()) this.paymentUncertain.set(true);
       this.refundQuote.set(null);
@@ -127,6 +130,6 @@ export class AccountRefundComponent {
     }
   }
   formatAmount(amount: number): string {
-    return amount.toFixed(2).replace('.', ',');
+    return formatEuroNumber(amount);
   }
 }

@@ -20,6 +20,7 @@ describe('AccountRefundComponent', () => {
           provide: WalletService,
           useValue: {
             source: signal('remote'),
+            loading: signal(false),
             balance: signal(2),
             refund: jasmine.createSpy().and.resolveTo({ success: true, amount: 1 }),
             load: jasmine.createSpy().and.resolveTo(),
@@ -45,20 +46,19 @@ describe('AccountRefundComponent', () => {
     expect(fixture.componentInstance.refundQuote()).toBe(2);
   });
 
-  it('keeps confirmation locked through refresh and reloads the remote wallet', async () => {
+  it('shows confirmed success without waiting for history and without reading a stale wallet', async () => {
     const fixture = TestBed.createComponent(AccountRefundComponent);
     const wallet = TestBed.inject(WalletService);
-    let finish!: () => void;
-    const operations = TestBed.inject(OperationsService);
-    (operations.load as jasmine.Spy).and.returnValue(new Promise<void>((resolve) => (finish = resolve)));
-    fixture.componentInstance.refundQuote.set(2);
-    const pending = fixture.componentInstance.confirmRefund();
-    await Promise.resolve();
-    await fixture.componentInstance.confirmRefund();
+    (TestBed.inject(OperationsService).load as jasmine.Spy).and.returnValue(new Promise<void>(() => undefined));
+    const component = fixture.componentInstance;
+    component.refundQuote.set(2);
+    await component.confirmRefund();
+    expect(component.requesting()).toBeFalse();
+    expect(component.done()).toBeTrue();
+    expect(wallet.load).not.toHaveBeenCalled();
+    expect(component.refundedAmount()).toBe(1);
+    component.requestRefund();
+    await component.confirmRefund();
     expect(wallet.refund).toHaveBeenCalledTimes(1);
-    finish();
-    await pending;
-    expect(wallet.load).toHaveBeenCalledTimes(1);
-    expect(fixture.componentInstance.refundedAmount()).toBe(1);
   });
 });

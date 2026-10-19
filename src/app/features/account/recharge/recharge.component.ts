@@ -1,4 +1,6 @@
-import { DecimalPipe } from '@angular/common';
+import { formatEuro } from '../../../core/utils/euro-format';
+import { EuroPipe } from '../../../shared/pipes/euro.pipe';
+
 import { Component, effect, input, output, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -19,7 +21,7 @@ import { isPaymentOutcomeUnknown } from '../../../core/utils/payment-error';
 
 @Component({
   selector: 'app-account-recharge',
-  imports: [ReactiveFormsModule, RouterLink, TranslatePipe, DetailPanelHeaderComponent, ResultModalComponent, DecimalPipe, LoaderComponent],
+  imports: [EuroPipe, ReactiveFormsModule, RouterLink, TranslatePipe, DetailPanelHeaderComponent, ResultModalComponent, LoaderComponent],
   template: `
     <app-loader [visible]="saving()" [message]="'common.loading' | translate" />
     <div class="page account-static-page account-form-page">
@@ -50,13 +52,13 @@ import { isPaymentOutcomeUnknown } from '../../../core/utils/payment-error';
         <form [formGroup]="form" (ngSubmit)="confirm()" novalidate>
           <div class="card">
             <p class="text-muted">
-              {{ 'account.recharge.currentBalance' | translate }} <strong>{{ walletService.balance() | number: '1.2-2' }} €</strong>
+              {{ 'account.recharge.currentBalance' | translate }} <strong>{{ walletService.balance() | euro }}</strong>
             </p>
             <fieldset class="recharge-options">
               <legend>{{ 'account.recharge.amountQuestion' | translate }}</legend>
               @for (amount of rechargeAmounts; track amount) {
                 <label class="recharge-option" [class.active]="selectedAmount() === amount">
-                  <input type="radio" formControlName="amount" [value]="amount" />{{ amount | number: '1.2-2' }} €
+                  <input type="radio" formControlName="amount" [value]="amount" />{{ amount | euro }}
                 </label>
               }
             </fieldset>
@@ -83,7 +85,7 @@ import { isPaymentOutcomeUnknown } from '../../../core/utils/payment-error';
           </fieldset>
           <div class="card mt-1">
             <p>
-              {{ 'account.recharge.balanceAfter' | translate }} <strong>{{ balanceAfterRecharge() | number: '1.2-2' }} €</strong>
+              {{ 'account.recharge.balanceAfter' | translate }} <strong>{{ balanceAfterRecharge() | euro }}</strong>
             </p>
           </div>
           <button type="submit" class="btn btn-primary btn-block mt-2" [disabled]="saving() || paymentUncertain()">
@@ -95,7 +97,7 @@ import { isPaymentOutcomeUnknown } from '../../../core/utils/payment-error';
         <app-result-modal
           type="success"
           [title]="'account.recharge.success' | translate"
-          [message]="'account.recharge.successDetail' | translate: { amount: selectedAmount() + ',00 €' }"
+          [message]="'account.recharge.successDetail' | translate: { amount: formatEuro(selectedAmount()) }"
           [primaryText]="'common.accept' | translate"
           (primaryAction)="done.set(false)"
         />
@@ -105,6 +107,7 @@ import { isPaymentOutcomeUnknown } from '../../../core/utils/payment-error';
   styleUrl: './recharge.component.css',
 })
 export class AccountRechargeComponent {
+  readonly formatEuro = formatEuro;
   readonly cardId = input('');
   readonly addCard = output<void>();
   readonly embedded = input(false);
@@ -219,7 +222,7 @@ export class AccountRechargeComponent {
       }
       this.paymentChallenge.clear();
       this.done.set(true);
-      await this.operationsService.load();
+      void this.operationsService.load().catch(() => undefined);
     } catch {
       if (!this.done()) this.paymentUncertain.set(true);
       this.submitError.set(this.translationService.translate(this.done() ? 'errors.server' : 'payment.uncertain.message'));

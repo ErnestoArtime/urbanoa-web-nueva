@@ -96,6 +96,18 @@ describe('AccountRechargeComponent', () => {
     expect(TestBed.inject(PaymentChallengeService).hasUncertainPayment()).toBeTrue();
   });
 
+  it('finishes a confirmed recharge without waiting for operation history', async () => {
+    const recharge = jasmine.createSpy().and.resolveTo({ success: true, amount: 1 });
+    Object.assign(TestBed.inject(WalletService), { recharge });
+    (TestBed.inject(OperationsService).load as jasmine.Spy).and.returnValue(new Promise<void>(() => undefined));
+    const component = mount().componentInstance;
+    await component.confirm();
+    expect(component.done()).toBeTrue();
+    expect(component.saving()).toBeFalse();
+    await component.confirm();
+    expect(recharge).toHaveBeenCalledTimes(1);
+  });
+
   it('allows a corrected attempt after a definitive business rejection', async () => {
     const recharge = jasmine
       .createSpy()
