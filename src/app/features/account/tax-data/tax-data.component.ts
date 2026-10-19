@@ -1,4 +1,4 @@
-import { Component, effect, inject, signal, untracked } from '@angular/core';
+import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { LoaderComponent } from '../../../shared/components/loader/loader.component';
 import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
@@ -14,20 +14,21 @@ import { UserService, type UserAddress } from '../../../core/services/user.servi
       <app-detail-panel-header [title]="'account.taxData.title' | translate" backRoute="/app/account" />
       <div class="card">
         <div class="form-group">
-          <label for="tax-data-field-1">{{ 'account.taxData.nif' | translate }} <span class="text-error">*</span></label
+          <label for="tax-data-field-1">{{ 'account.taxData.nif' | translate }}</label
           ><input
             id="tax-data-field-1"
             class="form-input"
             [value]="nif()"
+            [attr.aria-invalid]="!validNif()"
             (input)="setNif($any($event.target).value)"
             [placeholder]="'account.taxData.nif' | translate"
           />
-          @if (submitted() && !nif()) {
-            <p class="form-error">{{ 'common.required' | translate }}</p>
-          }
         </div>
+        @if (!validNif()) {
+          <p class="form-error" role="alert">{{ 'account.taxData.nifInvalid' | translate }}</p>
+        }
         <div class="form-group">
-          <label for="tax-data-field-2">{{ 'account.taxData.street' | translate }} <span class="text-error">*</span></label
+          <label for="tax-data-field-2">{{ 'account.taxData.street' | translate }}</label
           ><input
             id="tax-data-field-2"
             class="form-input"
@@ -35,22 +36,16 @@ import { UserService, type UserAddress } from '../../../core/services/user.servi
             (input)="setAddress('street', $any($event.target).value)"
             [placeholder]="'account.taxData.street' | translate"
           />
-          @if (submitted() && !address().street) {
-            <p class="form-error">{{ 'common.required' | translate }}</p>
-          }
         </div>
         <div class="form-group">
-          <label for="tax-data-field-3">{{ 'account.taxData.number' | translate }} <span class="text-error">*</span></label
+          <label for="tax-data-field-3">{{ 'account.taxData.number' | translate }}</label
           ><input
             id="tax-data-field-3"
             class="form-input"
             [value]="address().number"
             (input)="setAddress('number', $any($event.target).value)"
-            [placeholder]="'account.taxData.numberRequired' | translate"
+            [placeholder]="'account.taxData.number' | translate"
           />
-          @if (submitted() && !address().number) {
-            <p class="form-error">{{ 'common.required' | translate }}</p>
-          }
         </div>
         <div class="row">
           <div class="form-group">
@@ -97,7 +92,7 @@ import { UserService, type UserAddress } from '../../../core/services/user.servi
           </div>
         </div>
         <div class="form-group">
-          <label for="tax-data-field-8">{{ 'account.taxData.city' | translate }} <span class="text-error">*</span></label
+          <label for="tax-data-field-8">{{ 'account.taxData.city' | translate }}</label
           ><input
             id="tax-data-field-8"
             class="form-input"
@@ -105,12 +100,9 @@ import { UserService, type UserAddress } from '../../../core/services/user.servi
             (input)="setAddress('city', $any($event.target).value)"
             [placeholder]="'account.taxData.city' | translate"
           />
-          @if (submitted() && !address().city) {
-            <p class="form-error">{{ 'common.required' | translate }}</p>
-          }
         </div>
         <div class="form-group">
-          <label for="tax-data-field-9">{{ 'account.taxData.province' | translate }} <span class="text-error">*</span></label
+          <label for="tax-data-field-9">{{ 'account.taxData.province' | translate }}</label
           ><input
             id="tax-data-field-9"
             class="form-input"
@@ -118,12 +110,9 @@ import { UserService, type UserAddress } from '../../../core/services/user.servi
             (input)="setAddress('province', $any($event.target).value)"
             [placeholder]="'account.taxData.province' | translate"
           />
-          @if (submitted() && !address().province) {
-            <p class="form-error">{{ 'common.required' | translate }}</p>
-          }
         </div>
         <div class="form-group">
-          <label for="tax-data-field-10">{{ 'account.taxData.postalCode' | translate }} <span class="text-error">*</span></label
+          <label for="tax-data-field-10">{{ 'account.taxData.postalCode' | translate }}</label
           ><input
             id="tax-data-field-10"
             class="form-input"
@@ -131,11 +120,17 @@ import { UserService, type UserAddress } from '../../../core/services/user.servi
             (input)="setAddress('postalCode', $any($event.target).value)"
             [placeholder]="'account.taxData.postalCode' | translate"
           />
-          @if (submitted() && !address().postalCode) {
-            <p class="form-error">{{ 'common.required' | translate }}</p>
-          }
         </div>
-        <button type="button" class="btn btn-primary btn-block" [disabled]="saving()" (click)="save()">
+        <div class="form-group">
+          <label for="tax-data-country">{{ 'account.taxData.country' | translate }}</label>
+          <input
+            id="tax-data-country"
+            class="form-input"
+            [value]="address().country"
+            (input)="setAddress('country', $any($event.target).value)"
+          />
+        </div>
+        <button type="button" class="btn btn-primary btn-block" [disabled]="saving() || !canSave()" (click)="save()">
           {{ saving() ? ('common.saving' | translate) : ('common.save' | translate) }}
         </button>
       </div>
@@ -171,6 +166,11 @@ export class AccountTaxDataComponent {
   readonly saving = signal(false);
   readonly saveFailed = signal(false);
   private edited = false;
+  // APK TaxDataViewModel: any content, with an optional NIF matching Validator.REGEX_NIF.
+  readonly validNif = computed(() => !this.nif().trim() || /^(?:[0-9]{8}[A-Za-z]|[A-Za-z][0-9]{7}[0-9A-Za-z])$/.test(this.nif().trim()));
+  readonly canSave = computed(
+    () => this.validNif() && [this.nif(), ...Object.values(this.address())].some((value) => value.trim().length > 0),
+  );
 
   constructor() {
     const user = this.userService.user();
@@ -199,14 +199,12 @@ export class AccountTaxDataComponent {
   async save(): Promise<void> {
     this.submitted.set(true);
     const current = this.address();
-    if (!this.nif() || !current.street || !current.number || !current.city || !current.province || !current.postalCode) {
-      return;
-    }
+    if (!this.canSave()) return;
     if (this.saving()) return;
 
     this.saving.set(true);
     try {
-      const result = await this.userService.save({ nif: this.nif(), address: current });
+      const result = await this.userService.save({ nif: this.nif().trim(), address: current });
       if (result.success) {
         this.saved.set(true);
       } else {
