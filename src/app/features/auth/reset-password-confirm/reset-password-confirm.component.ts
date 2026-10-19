@@ -1,3 +1,4 @@
+import { apkPasswordValidator } from '../../../shared/utils/password-validation';
 import { Component, inject, input, signal } from '@angular/core';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -102,7 +103,7 @@ export class ResetPasswordConfirmComponent {
   readonly form = this.formBuilder.nonNullable.group(
     {
       code: ['', Validators.required],
-      password: ['', [Validators.required, Validators.minLength(8)]],
+      password: ['', [Validators.required, apkPasswordValidator]],
       confirmation: ['', Validators.required],
     },
     { validators: passwordsMatch },

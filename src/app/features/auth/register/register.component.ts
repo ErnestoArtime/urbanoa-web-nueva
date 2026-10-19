@@ -1,3 +1,4 @@
+import { apkPasswordValidator } from '../../../shared/utils/password-validation';
 import { Component, inject, signal } from '@angular/core';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -139,7 +140,7 @@ export class RegisterComponent {
       plate: ['', Validators.required],
       foreignPlate: [false],
       email: ['', [Validators.required, Validators.email]],
-      password: ['', [Validators.required, Validators.minLength(8)]],
+      password: ['', [Validators.required, apkPasswordValidator]],
       confirmation: ['', Validators.required],
       terms: [false, Validators.requiredTrue],
     },
