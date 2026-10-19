@@ -119,7 +119,7 @@ export class WalletService {
     }
   }
 
-  async load(): Promise<void> {
+  async load(options: { balanceOnly?: boolean } = {}): Promise<void> {
     const revision = ++this.loadRevision;
     const token = this.session?.token();
     if (!token) {
@@ -132,11 +132,14 @@ export class WalletService {
     }
 
     this.loading.set(true);
+    if (options.balanceOnly) this.balanceAvailable.set(false);
     this.lastError.set(null);
     try {
       const [creditResult, paymentMethodsResult] = await Promise.allSettled([
         this.api.get<number>(OPS_ENDPOINTS.wallet.credit, { token }),
-        this.api.get<PaymentMethodsDto>(OPS_ENDPOINTS.wallet.paymentMethods, { token }),
+        options.balanceOnly
+          ? Promise.resolve<PaymentMethodsDto>({ payMethods: [] })
+          : this.api.get<PaymentMethodsDto>(OPS_ENDPOINTS.wallet.paymentMethods, { token }),
       ]);
       if (this.session.token() !== token || revision !== this.loadRevision) return;
       if (creditResult.status === 'fulfilled') {
@@ -147,7 +150,7 @@ export class WalletService {
         this.balance.set(this.fromCents(creditResult.value));
       }
       this.balanceAvailable.set(creditResult.status === 'fulfilled');
-      if (paymentMethodsResult.status === 'fulfilled') {
+      if (!options.balanceOnly && paymentMethodsResult.status === 'fulfilled') {
         const methods = paymentMethodsResult.value.payMethods ?? [];
         const cards = methods.map((method) => this.mapPaymentMethod(method));
         this.cards.set(cards);
@@ -160,7 +163,7 @@ export class WalletService {
             ? paymentMethodsResult.reason
             : null;
       if (creditResult.status === 'rejected') {
-        if (paymentMethodsResult.status === 'rejected') this.cards.set([]);
+        if (!options.balanceOnly && paymentMethodsResult.status === 'rejected') this.cards.set([]);
         this.useError(failure);
       } else {
         this.source.set('remote');

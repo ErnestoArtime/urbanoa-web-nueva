@@ -1,3 +1,4 @@
+import { OPS_ENDPOINTS } from '../api/ops-endpoints';
 import { provideZonelessChangeDetection } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { OpsApiClient } from '../api/ops-api-client.service';
@@ -12,6 +13,29 @@ function serviceWith(api: jasmine.SpyObj<OpsApiClient>): WalletService {
 }
 
 describe('WalletService', () => {
+  it('refreshes only credit after unparking, preserving existing cards', async () => {
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'post']);
+    let complete!: (value: number) => void;
+    api.get.and.returnValue(new Promise<number>((resolve) => (complete = resolve)) as Promise<never>);
+    const wallet = serviceWith(api);
+    TestBed.inject(OpsSessionService).setToken('token');
+    const cards = [{ id: '7', brand: 'Visa', last4: '1234', expiryDate: '12/99', cardholderName: 'Test' }];
+    wallet.cards.set(cards);
+    wallet.defaultCardId.set('7');
+    wallet.balanceAvailable.set(true);
+    const refresh = wallet.load({ balanceOnly: true });
+    expect(wallet.balanceAvailable()).toBeFalse();
+    expect(wallet.loading()).toBeTrue();
+    complete(3060);
+    await refresh;
+    expect(api.get).toHaveBeenCalledOnceWith(OPS_ENDPOINTS.wallet.credit, { token: 'token' });
+    expect(wallet.balance()).toBe(30.6);
+    expect(wallet.balanceAvailable()).toBeTrue();
+    expect(wallet.cards()).toEqual(cards);
+    expect(wallet.defaultCardId()).toBe('7');
+    expect(wallet.loading()).toBeFalse();
+  });
+
   it('rejects a malformed recharge without inventing a credited amount or balance', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'post']);
     api.post.and.resolveTo({ challengeUrl: null, newBalance: 'bad' });
