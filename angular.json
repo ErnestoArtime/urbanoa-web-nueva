@@ -41,15 +41,22 @@
               "outputHashing": "all"
             },
             "development": {
-              "optimization": false,
-              "extractLicenses": false,
-              "sourceMap": true,
+              "optimization": true,
+              "extractLicenses": true,
+              "sourceMap": false,
+              "outputHashing": "all",
               "fileReplacements": [
                 {
                   "replace": "src/environments/environment.ts",
                   "with": "src/environments/environment.development.ts"
                 }
               ]
+            },
+            "local": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "outputHashing": "none"
             }
           },
           "defaultConfiguration": "production"
@@ -65,7 +72,10 @@
               "buildTarget": "web-urbanoa:build:production"
             },
             "development": {
-              "buildTarget": "web-urbanoa:build:development"
+              "buildTarget": "web-urbanoa:build:development,local"
+            },
+            "local": {
+              "buildTarget": "web-urbanoa:build:development,local"
             }
           },
           "defaultConfiguration": "development"
