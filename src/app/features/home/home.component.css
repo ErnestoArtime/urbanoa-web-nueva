@@ -233,7 +233,7 @@
 }
 @media (min-width: 960px) {
   :host > .page {
-    max-width: 1420px;
+    max-width: none;
     margin: 0 auto;
     padding: 1.5rem 1rem 1.5rem;
   }

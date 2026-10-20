@@ -2,7 +2,7 @@
   display: block;
 }
 .flow-page {
-  max-width: 680px;
+  max-width: none;
 }
 .back-link {
   display: inline-block;

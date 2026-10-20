@@ -2,7 +2,7 @@
   display: block;
 }
 .support-form-page {
-  max-width: var(--content-form-wide);
+  max-width: none;
   margin: 0 auto;
 }
 .reply-context {

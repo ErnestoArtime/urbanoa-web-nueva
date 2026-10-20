@@ -1,6 +1,6 @@
 .report-page {
   width: 100%;
-  max-width: var(--content-form-wide);
+  max-width: none;
   margin-inline: auto;
   display: flex;
   flex-direction: column;

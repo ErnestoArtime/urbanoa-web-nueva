@@ -5,7 +5,7 @@
 .support-success-page {
   display: flex;
   min-height: 100%;
-  max-width: 520px;
+  max-width: none;
   margin: 0 auto;
   flex-direction: column;
   align-items: center;

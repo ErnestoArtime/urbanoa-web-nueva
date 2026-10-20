@@ -18,7 +18,7 @@
 /* Reading widths and field rhythm for account forms. */
 .account-form-page {
   width: 100%;
-  max-width: var(--content-form-width);
+  max-width: none;
   margin-inline: auto;
 }
 
@@ -158,15 +158,12 @@
 .split-view-list,
 .split-view-detail {
   min-height: 0;
+  min-width: 0;
 }
-/*
- * Los flujos anidados de cuenta pueden mostrar Cuenta → Métodos → detalle.
- * En escritorio amplio se conservan las tres columnas; antes de que el
- * detalle pierda legibilidad se muestra únicamente el panel en curso.
- */
+/* Collapse only nested navigation when three panels no longer fit. */
 @media (min-width: 960px) and (max-width: 1499px) {
-  .split-view-list.split-hidden,
-  .split-view-detail.split-hidden {
+  .split-view-detail .split-view-list.split-hidden,
+  .split-view-detail .split-view-detail.split-hidden {
     display: none;
   }
 }
@@ -176,7 +173,7 @@
     height: 100%;
   }
   .split-view-list {
-    width: 420px;
+    width: clamp(260px, 27vw, 420px);
     flex-shrink: 0;
     border-right: 1px solid var(--color-border);
     overflow-x: hidden;
@@ -490,4 +487,35 @@
   height: 10px;
   background: var(--color-primary);
   border-radius: 50%;
+}
+
+/* Fields follow the actual panel width, including nested account panels. */
+.account-form-page .card:has(> .form-group) {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.account-form-page .card:has(> .form-group) > .row {
+  display: contents;
+}
+
+.account-form-page .card:has(> .form-group) .form-group {
+  margin-bottom: 0;
+  min-width: 0;
+}
+
+.account-form-page .card:has(> .form-group) > .btn,
+.account-form-page .card:has(> .form-group) > .form-error {
+  grid-column: 1 / -1;
+}
+
+.account-form-page {
+  container-type: inline-size;
+}
+
+@container (max-width: 580px) {
+  .account-form-page .card:has(> .form-group) {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
