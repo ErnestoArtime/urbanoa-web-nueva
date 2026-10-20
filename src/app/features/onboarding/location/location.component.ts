@@ -5,35 +5,45 @@ import { LocationSettingsService } from '../../../core/services/location-setting
 import { CitiesService } from '../../../core/services/cities.service';
 import { UserService } from '../../../core/services/user.service';
 import type { Municipio } from '../../../shared/models/municipio';
+import { AppIconComponent } from '../../../shared/icons/app-icon.component';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 
 @Component({
   selector: 'app-onboarding-location',
-  imports: [TranslatePipe],
+  imports: [TranslatePipe, AppIconComponent],
   template: `
-    <div class="page">
-      <h1 class="page-title">{{ 'onboarding.location.title' | translate }}</h1>
-      <p class="page-subtitle">
-        {{ 'onboarding.location.subtitle' | translate: { brand: brand.name } }}
-      </p>
-      <div class="card card-highlight mt-2">
-        <p>📍 {{ 'onboarding.location.permissionTitle' | translate }}</p>
-        <p class="card-subtitle mt-1">{{ 'onboarding.location.permissionSubtitle' | translate }}</p>
-      </div>
-      <button type="button" class="btn btn-primary btn-block mt-2" (click)="grantPermission()">
-        {{ 'onboarding.location.grant' | translate }}
-      </button>
-      <button type="button" class="btn btn-ghost btn-block mt-1" (click)="openCityPicker()">
-        {{ 'onboarding.location.chooseCity' | translate }}
-      </button>
-      <button type="button" class="btn btn-ghost btn-block mt-1" (click)="skip()">
-        {{ 'onboarding.location.skip' | translate }}
-      </button>
+    <div class="location-page">
+      <header class="location-header">
+        <img [src]="brand.logoPath" [alt]="brand.name" class="location-logo" />
+      </header>
+      <main class="location-content">
+        <section class="card location-panel" aria-labelledby="location-title">
+          <h1 id="location-title" class="location-title">{{ 'onboarding.location.title' | translate }}</h1>
+          <p class="location-subtitle">
+            {{ 'onboarding.location.subtitle' | translate: { brand: brand.name } }}
+          </p>
+          <div class="location-permission">
+            <span class="location-icon"><app-icon name="location" [size]="28" [stroke]="false" /></span>
+            <div>
+              <h2 class="permission-title">{{ 'onboarding.location.permissionTitle' | translate }}</h2>
+              <p class="card-subtitle mt-1">{{ 'onboarding.location.permissionSubtitle' | translate }}</p>
+            </div>
+          </div>
+          <button type="button" class="btn btn-primary btn-block mt-2" (click)="grantPermission()">
+            {{ 'onboarding.location.grant' | translate }}
+          </button>
+          <button type="button" class="btn btn-secondary btn-block mt-1" (click)="openCityPicker()">
+            {{ 'onboarding.location.chooseCity' | translate }}
+          </button>
+          <button type="button" class="btn btn-ghost btn-block mt-1" (click)="skip()">
+            {{ 'onboarding.location.skip' | translate }}
+          </button>
 
-      @if (message(); as msg) {
-        <p class="location-feedback">{{ msg | translate }}</p>
-      }
-
+          @if (message(); as msg) {
+            <p class="location-feedback">{{ msg | translate }}</p>
+          }
+        </section>
+      </main>
       @if (showCityPicker()) {
         <div class="city-picker-overlay" (click)="closeCityPicker()">
           <div class="city-picker" (click)="$event.stopPropagation()">
