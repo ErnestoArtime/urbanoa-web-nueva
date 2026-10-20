@@ -16,68 +16,72 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
     <app-loader [visible]="saving()" [message]="'common.loading' | translate" />
     <div class="page account-static-page account-form-page">
       <app-detail-panel-header [title]="'account.changePassword.title' | translate" backRoute="/app/account" />
-      <div class="card">
-        <div class="form-group">
-          <label for="current-password">{{ 'account.changePassword.current' | translate }} <span class="text-error">*</span></label>
-          <div class="password-field">
-            <input
-              id="current-password"
-              class="form-input"
-              autocomplete="current-password"
-              [type]="showCurrent() ? 'text' : 'password'"
-              [value]="current()"
-              (input)="current.set(valueOf($event))"
-            />
-            <button
-              type="button"
-              (click)="toggleVisibility('current')"
-              [attr.aria-label]="'account.changePassword.togglePassword' | translate"
-            >
-              @if (showCurrent()) {
-                <svg lucideEyeOff size="21"></svg>
-              } @else {
-                <svg lucideEye size="21"></svg>
-              }
-            </button>
+      <div class="account-editor-body">
+        <div class="card">
+          <div class="form-group">
+            <label for="current-password">{{ 'account.changePassword.current' | translate }} <span class="text-error">*</span></label>
+            <div class="password-field">
+              <input
+                id="current-password"
+                class="form-input"
+                autocomplete="current-password"
+                [type]="showCurrent() ? 'text' : 'password'"
+                [value]="current()"
+                (input)="current.set(valueOf($event))"
+              />
+              <button
+                type="button"
+                (click)="toggleVisibility('current')"
+                [attr.aria-label]="'account.changePassword.togglePassword' | translate"
+              >
+                @if (showCurrent()) {
+                  <svg lucideEyeOff size="21"></svg>
+                } @else {
+                  <svg lucideEye size="21"></svg>
+                }
+              </button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>{{ 'account.changePassword.new' | translate }} <span class="text-error">*</span></label>
+            <div class="password-field">
+              <input class="form-input" [type]="showNext() ? 'text' : 'password'" (input)="next.set(valueOf($event))" /><button
+                type="button"
+                (click)="toggleVisibility('next')"
+                [attr.aria-label]="'account.changePassword.togglePassword' | translate"
+              >
+                @if (showNext()) {
+                  <svg lucideEyeOff size="21"></svg>
+                } @else {
+                  <svg lucideEye size="21"></svg>
+                }
+              </button>
+            </div>
+            <small class="text-muted">{{ 'account.changePassword.minLength' | translate }}</small>
+          </div>
+          <div class="form-group">
+            <label>{{ 'account.changePassword.confirm' | translate }} <span class="text-error">*</span></label>
+            <div class="password-field">
+              <input
+                class="form-input"
+                [type]="showConfirmation() ? 'text' : 'password'"
+                (input)="confirmation.set(valueOf($event))"
+              /><button
+                type="button"
+                (click)="toggleVisibility('confirmation')"
+                [attr.aria-label]="'account.changePassword.togglePassword' | translate"
+              >
+                @if (showConfirmation()) {
+                  <svg lucideEyeOff size="21"></svg>
+                } @else {
+                  <svg lucideEye size="21"></svg>
+                }
+              </button>
+            </div>
           </div>
         </div>
-        <div class="form-group">
-          <label>{{ 'account.changePassword.new' | translate }} <span class="text-error">*</span></label>
-          <div class="password-field">
-            <input class="form-input" [type]="showNext() ? 'text' : 'password'" (input)="next.set(valueOf($event))" /><button
-              type="button"
-              (click)="toggleVisibility('next')"
-              [attr.aria-label]="'account.changePassword.togglePassword' | translate"
-            >
-              @if (showNext()) {
-                <svg lucideEyeOff size="21"></svg>
-              } @else {
-                <svg lucideEye size="21"></svg>
-              }
-            </button>
-          </div>
-          <small class="text-muted">{{ 'account.changePassword.minLength' | translate }}</small>
-        </div>
-        <div class="form-group">
-          <label>{{ 'account.changePassword.confirm' | translate }} <span class="text-error">*</span></label>
-          <div class="password-field">
-            <input
-              class="form-input"
-              [type]="showConfirmation() ? 'text' : 'password'"
-              (input)="confirmation.set(valueOf($event))"
-            /><button
-              type="button"
-              (click)="toggleVisibility('confirmation')"
-              [attr.aria-label]="'account.changePassword.togglePassword' | translate"
-            >
-              @if (showConfirmation()) {
-                <svg lucideEyeOff size="21"></svg>
-              } @else {
-                <svg lucideEye size="21"></svg>
-              }
-            </button>
-          </div>
-        </div>
+      </div>
+      <div class="account-editor-actions">
         <button type="button" class="btn btn-primary btn-block" (click)="save()" [disabled]="saving()">
           {{ (saving() ? 'common.saving' : 'common.save') | translate }}
         </button>
@@ -93,7 +97,7 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
       }
     </div>
   `,
-  styleUrl: './change-password.component.css',
+  styleUrls: ['../account-editor.css', './change-password.component.css'],
 })
 export class AccountChangePasswordComponent {
   private readonly authService = inject(AuthService);

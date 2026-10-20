@@ -14,7 +14,7 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
     <app-loader [visible]="saving()" [message]="'common.loading' | translate" />
     <div class="page account-static-page account-form-page">
       <app-detail-panel-header [title]="'account.profile.title' | translate" backRoute="/app/account" />
-      <form [formGroup]="form" (ngSubmit)="onSave()">
+      <form id="account-profile-form" class="account-editor-body" [formGroup]="form" (ngSubmit)="onSave()">
         <div class="card">
           <div class="form-group">
             <label for="profile-field-1">{{ 'account.profile.name' | translate }} <span aria-hidden="true">*</span></label
@@ -77,14 +77,14 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
               </p>
             }
           </div>
-          <button type="submit" class="btn btn-primary btn-block" [disabled]="saving()">
-            {{ saving() ? ('common.saving' | translate) : ('common.save' | translate) }}
-          </button>
         </div>
       </form>
-      <a routerLink="/app/account/change-password" class="btn btn-secondary btn-block mt-2">{{
-        'account.menu.changePassword' | translate
-      }}</a>
+      <div class="account-editor-actions">
+        <button type="submit" form="account-profile-form" class="btn btn-primary btn-block" [disabled]="saving()">
+          {{ saving() ? ('common.saving' | translate) : ('common.save' | translate) }}
+        </button>
+        <a routerLink="/app/account/change-password" class="btn btn-secondary btn-block">{{ 'account.menu.changePassword' | translate }}</a>
+      </div>
       @if (saved()) {
         <app-result-modal
           type="success"
@@ -104,7 +104,7 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
       }
     </div>
   `,
-  styleUrl: './profile.component.css',
+  styleUrls: ['../account-editor.css', './profile.component.css'],
 })
 export class AccountProfileComponent {
   readonly saved = signal(false);

@@ -21,6 +21,7 @@ import { isPaymentOutcomeUnknown } from '../../../core/utils/payment-error';
 
 @Component({
   selector: 'app-account-recharge',
+  host: { '[class.embedded-editor]': 'embedded()' },
   imports: [EuroPipe, ReactiveFormsModule, RouterLink, TranslatePipe, DetailPanelHeaderComponent, ResultModalComponent, LoaderComponent],
   template: `
     <app-loader [visible]="saving()" [message]="'common.loading' | translate" />
@@ -49,48 +50,52 @@ import { isPaymentOutcomeUnknown } from '../../../core/utils/payment-error';
           }
         </div>
       } @else {
-        <form [formGroup]="form" (ngSubmit)="confirm()" novalidate>
-          <div class="card">
-            <p class="text-muted">
-              {{ 'account.recharge.currentBalance' | translate }} <strong>{{ walletService.balance() | euro }}</strong>
-            </p>
-            <fieldset class="recharge-options">
-              <legend>{{ 'account.recharge.amountQuestion' | translate }}</legend>
-              @for (amount of rechargeAmounts; track amount) {
-                <label class="recharge-option" [class.active]="selectedAmount() === amount">
-                  <input type="radio" formControlName="amount" [value]="amount" />{{ amount | euro }}
-                </label>
-              }
-            </fieldset>
-            @if (amountControl.invalid && amountControl.touched) {
-              <p class="form-error">{{ 'validation.amount' | translate }}</p>
-            }
-          </div>
-          <fieldset class="payment-card-selector mt-1">
-            <legend>{{ 'account.recharge.cardForRecharge' | translate }}</legend>
-            <div role="radiogroup" [attr.aria-label]="'account.recharge.cardForRecharge' | translate">
-              @for (card of walletService.cards(); track card.id) {
-                <label class="payment-card-option" [class.selected]="selectedCardId() === card.id" [class.disabled]="!isCardUsable(card)">
-                  <input type="radio" formControlName="cardId" [value]="card.id" [disabled]="!isCardUsable(card)" />
-                  <span
-                    ><strong>{{ card.brand }} •••• {{ card.last4 }}</strong
-                    ><small>{{ card.cardholderName }} · {{ 'account.recharge.expires' | translate }} {{ card.expiryDate }}</small></span
-                  >
-                </label>
+        <form class="account-editor-form" [formGroup]="form" (ngSubmit)="confirm()" novalidate>
+          <div class="account-editor-body">
+            <div class="card">
+              <p class="text-muted">
+                {{ 'account.recharge.currentBalance' | translate }} <strong>{{ walletService.balance() | euro }}</strong>
+              </p>
+              <fieldset class="recharge-options">
+                <legend>{{ 'account.recharge.amountQuestion' | translate }}</legend>
+                @for (amount of rechargeAmounts; track amount) {
+                  <label class="recharge-option" [class.active]="selectedAmount() === amount">
+                    <input type="radio" formControlName="amount" [value]="amount" />{{ amount | euro }}
+                  </label>
+                }
+              </fieldset>
+              @if (amountControl.invalid && amountControl.touched) {
+                <p class="form-error">{{ 'validation.amount' | translate }}</p>
               }
             </div>
-            @if (cardControl.invalid && cardControl.touched) {
-              <p class="form-error">{{ 'validation.required' | translate }}</p>
-            }
-          </fieldset>
-          <div class="card mt-1">
-            <p>
-              {{ 'account.recharge.balanceAfter' | translate }} <strong>{{ balanceAfterRecharge() | euro }}</strong>
-            </p>
+            <fieldset class="payment-card-selector mt-1">
+              <legend>{{ 'account.recharge.cardForRecharge' | translate }}</legend>
+              <div role="radiogroup" [attr.aria-label]="'account.recharge.cardForRecharge' | translate">
+                @for (card of walletService.cards(); track card.id) {
+                  <label class="payment-card-option" [class.selected]="selectedCardId() === card.id" [class.disabled]="!isCardUsable(card)">
+                    <input type="radio" formControlName="cardId" [value]="card.id" [disabled]="!isCardUsable(card)" />
+                    <span
+                      ><strong>{{ card.brand }} •••• {{ card.last4 }}</strong
+                      ><small>{{ card.cardholderName }} · {{ 'account.recharge.expires' | translate }} {{ card.expiryDate }}</small></span
+                    >
+                  </label>
+                }
+              </div>
+              @if (cardControl.invalid && cardControl.touched) {
+                <p class="form-error">{{ 'validation.required' | translate }}</p>
+              }
+            </fieldset>
+            <div class="card mt-1">
+              <p>
+                {{ 'account.recharge.balanceAfter' | translate }} <strong>{{ balanceAfterRecharge() | euro }}</strong>
+              </p>
+            </div>
           </div>
-          <button type="submit" class="btn btn-primary btn-block mt-2" [disabled]="saving() || paymentUncertain()">
-            {{ (saving() ? 'common.loading' : 'account.recharge.button') | translate }}
-          </button>
+          <div class="account-editor-actions">
+            <button type="submit" class="btn btn-primary btn-block" [disabled]="saving() || paymentUncertain()">
+              {{ (saving() ? 'common.loading' : 'account.recharge.button') | translate }}
+            </button>
+          </div>
         </form>
       }
       @if (done()) {
@@ -104,7 +109,7 @@ import { isPaymentOutcomeUnknown } from '../../../core/utils/payment-error';
       }
     </div>
   `,
-  styleUrl: './recharge.component.css',
+  styleUrls: ['../account-editor.css', './recharge.component.css'],
 })
 export class AccountRechargeComponent {
   readonly formatEuro = formatEuro;

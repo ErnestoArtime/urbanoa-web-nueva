@@ -2,67 +2,72 @@ import { Component, inject, OnInit, signal } from '@angular/core';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { LoaderComponent } from '../../../shared/components/loader/loader.component';
 import { ResultModalComponent } from '../../../shared/components/result-modal/result-modal.component';
+import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
 import { NotificationsService } from '../../../core/services/notifications.service';
 
 @Component({
   selector: 'app-account-notifications',
-  imports: [TranslatePipe, ResultModalComponent, LoaderComponent],
+  imports: [DetailPanelHeaderComponent, TranslatePipe, ResultModalComponent, LoaderComponent],
   template: `
     <app-loader [visible]="loading() || saving()" [message]="'common.loading' | translate" />
-    <div class="page account-static-page">
-      <h1 class="page-title">{{ 'account.notifications.title' | translate }}</h1>
-      @if (notifications.source() === 'error') {
-        <p class="data-notice" role="alert">{{ 'account.notifications.syncError' | translate }}</p>
-      }
-      @if (loadFailed()) {
-        <button type="button" class="btn btn-secondary" (click)="loadPreferences()">{{ 'common.retry' | translate }}</button>
-      }
-      <div class="card">
-        <p class="section-title">{{ 'account.notifications.app' | translate }}</p>
-        @for (notif of appNotifications; track notif.key) {
+    <div class="page account-static-page account-form-page">
+      <app-detail-panel-header [title]="'account.notifications.title' | translate" backRoute="/app/account" />
+      <div class="account-editor-body">
+        @if (notifications.source() === 'error') {
+          <p class="data-notice" role="alert">{{ 'account.notifications.syncError' | translate }}</p>
+        }
+        @if (loadFailed()) {
+          <button type="button" class="btn btn-secondary" (click)="loadPreferences()">{{ 'common.retry' | translate }}</button>
+        }
+        <div class="card">
+          <p class="section-title">{{ 'account.notifications.app' | translate }}</p>
+          @for (notif of appNotifications; track notif.key) {
+            <label class="switch-row"
+              ><span>{{ notif.labelKey | translate }}</span
+              ><input
+                type="checkbox"
+                [disabled]="loading() || saving() || loadFailed()"
+                [checked]="notif.enabled"
+                (change)="notif.enabled = checked($event)" /><span class="switch"></span
+            ></label>
+          }
           <label class="switch-row"
-            ><span>{{ notif.labelKey | translate }}</span
+            ><span>{{ 'account.notifications.feedback' | translate }}</span
             ><input
               type="checkbox"
               [disabled]="loading() || saving() || loadFailed()"
-              [checked]="notif.enabled"
-              (change)="notif.enabled = checked($event)" /><span class="switch"></span
+              [checked]="feedbackApp"
+              (change)="feedbackApp = checked($event)" /><span class="switch"></span
           ></label>
-        }
-        <label class="switch-row"
-          ><span>{{ 'account.notifications.feedback' | translate }}</span
-          ><input
-            type="checkbox"
-            [disabled]="loading() || saving() || loadFailed()"
-            [checked]="feedbackApp"
-            (change)="feedbackApp = checked($event)" /><span class="switch"></span
-        ></label>
-      </div>
-      <div class="card mt-1">
-        <p class="section-title">{{ 'account.notifications.email' | translate }}</p>
-        <p class="text-muted">{{ 'account.notifications.emailHint' | translate }}</p>
-        @for (notif of emailNotifications; track notif.key) {
+        </div>
+        <div class="card mt-1">
+          <p class="section-title">{{ 'account.notifications.email' | translate }}</p>
+          <p class="text-muted">{{ 'account.notifications.emailHint' | translate }}</p>
+          @for (notif of emailNotifications; track notif.key) {
+            <label class="switch-row"
+              ><span>{{ notif.labelKey | translate }}</span
+              ><input
+                type="checkbox"
+                [disabled]="loading() || saving() || loadFailed()"
+                [checked]="notif.enabled"
+                (change)="notif.enabled = checked($event)" /><span class="switch"></span
+            ></label>
+          }
           <label class="switch-row"
-            ><span>{{ notif.labelKey | translate }}</span
+            ><span>{{ 'account.notifications.feedback' | translate }}</span
             ><input
               type="checkbox"
               [disabled]="loading() || saving() || loadFailed()"
-              [checked]="notif.enabled"
-              (change)="notif.enabled = checked($event)" /><span class="switch"></span
+              [checked]="feedbackEmail"
+              (change)="feedbackEmail = checked($event)" /><span class="switch"></span
           ></label>
-        }
-        <label class="switch-row"
-          ><span>{{ 'account.notifications.feedback' | translate }}</span
-          ><input
-            type="checkbox"
-            [disabled]="loading() || saving() || loadFailed()"
-            [checked]="feedbackEmail"
-            (change)="feedbackEmail = checked($event)" /><span class="switch"></span
-        ></label>
+        </div>
       </div>
-      <button type="button" class="btn btn-primary btn-block mt-2" [disabled]="loading() || saving() || loadFailed()" (click)="save()">
-        {{ 'account.notifications.save' | translate }}
-      </button>
+      <div class="account-editor-actions">
+        <button type="button" class="btn btn-primary btn-block" [disabled]="loading() || saving() || loadFailed()" (click)="save()">
+          {{ 'account.notifications.save' | translate }}
+        </button>
+      </div>
       @if (saved()) {
         <app-result-modal
           type="success"
@@ -74,7 +79,7 @@ import { NotificationsService } from '../../../core/services/notifications.servi
       }
     </div>
   `,
-  styleUrl: './notifications.component.css',
+  styleUrls: ['../account-editor.css', './notifications.component.css'],
 })
 export class AccountNotificationsComponent implements OnInit {
   readonly notifications = inject(NotificationsService);

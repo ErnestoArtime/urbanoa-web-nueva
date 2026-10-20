@@ -12,124 +12,128 @@ import { UserService, type UserAddress } from '../../../core/services/user.servi
     <app-loader [visible]="saving()" [message]="'common.loading' | translate" />
     <div class="page account-static-page account-form-page">
       <app-detail-panel-header [title]="'account.taxData.title' | translate" backRoute="/app/account" />
-      <div class="card">
-        <div class="form-group">
-          <label for="tax-data-field-1">{{ 'account.taxData.nif' | translate }}</label
-          ><input
-            id="tax-data-field-1"
-            class="form-input"
-            [value]="nif()"
-            [attr.aria-invalid]="!validNif()"
-            (input)="setNif($any($event.target).value)"
-            [placeholder]="'account.taxData.nif' | translate"
-          />
-        </div>
-        @if (!validNif()) {
-          <p class="form-error" role="alert">{{ 'account.taxData.nifInvalid' | translate }}</p>
-        }
-        <div class="form-group">
-          <label for="tax-data-field-2">{{ 'account.taxData.street' | translate }}</label
-          ><input
-            id="tax-data-field-2"
-            class="form-input"
-            [value]="address().street"
-            (input)="setAddress('street', $any($event.target).value)"
-            [placeholder]="'account.taxData.street' | translate"
-          />
-        </div>
-        <div class="form-group">
-          <label for="tax-data-field-3">{{ 'account.taxData.number' | translate }}</label
-          ><input
-            id="tax-data-field-3"
-            class="form-input"
-            [value]="address().number"
-            (input)="setAddress('number', $any($event.target).value)"
-            [placeholder]="'account.taxData.number' | translate"
-          />
-        </div>
-        <div class="row">
+      <div class="account-editor-body">
+        <div class="card">
           <div class="form-group">
-            <label for="tax-data-field-4">{{ 'account.taxData.floor' | translate }}</label
+            <label for="tax-data-field-1">{{ 'account.taxData.nif' | translate }}</label
             ><input
-              id="tax-data-field-4"
+              id="tax-data-field-1"
               class="form-input"
-              [value]="address().floor"
-              (input)="setAddress('floor', $any($event.target).value)"
-              [placeholder]="'account.taxData.floor' | translate"
+              [value]="nif()"
+              [attr.aria-invalid]="!validNif()"
+              (input)="setNif($any($event.target).value)"
+              [placeholder]="'account.taxData.nif' | translate"
+            />
+          </div>
+          @if (!validNif()) {
+            <p class="form-error" role="alert">{{ 'account.taxData.nifInvalid' | translate }}</p>
+          }
+          <div class="form-group">
+            <label for="tax-data-field-2">{{ 'account.taxData.street' | translate }}</label
+            ><input
+              id="tax-data-field-2"
+              class="form-input"
+              [value]="address().street"
+              (input)="setAddress('street', $any($event.target).value)"
+              [placeholder]="'account.taxData.street' | translate"
             />
           </div>
           <div class="form-group">
-            <label for="tax-data-field-5">{{ 'account.taxData.door' | translate }}</label
+            <label for="tax-data-field-3">{{ 'account.taxData.number' | translate }}</label
             ><input
-              id="tax-data-field-5"
+              id="tax-data-field-3"
               class="form-input"
-              [value]="address().door"
-              (input)="setAddress('door', $any($event.target).value)"
-              [placeholder]="'account.taxData.door' | translate"
+              [value]="address().number"
+              (input)="setAddress('number', $any($event.target).value)"
+              [placeholder]="'account.taxData.number' | translate"
             />
           </div>
-        </div>
-        <div class="row">
+          <div class="row">
+            <div class="form-group">
+              <label for="tax-data-field-4">{{ 'account.taxData.floor' | translate }}</label
+              ><input
+                id="tax-data-field-4"
+                class="form-input"
+                [value]="address().floor"
+                (input)="setAddress('floor', $any($event.target).value)"
+                [placeholder]="'account.taxData.floor' | translate"
+              />
+            </div>
+            <div class="form-group">
+              <label for="tax-data-field-5">{{ 'account.taxData.door' | translate }}</label
+              ><input
+                id="tax-data-field-5"
+                class="form-input"
+                [value]="address().door"
+                (input)="setAddress('door', $any($event.target).value)"
+                [placeholder]="'account.taxData.door' | translate"
+              />
+            </div>
+          </div>
+          <div class="row">
+            <div class="form-group">
+              <label for="tax-data-field-6">{{ 'account.taxData.stair' | translate }}</label
+              ><input
+                id="tax-data-field-6"
+                class="form-input"
+                [value]="address().stair"
+                (input)="setAddress('stair', $any($event.target).value)"
+                [placeholder]="'account.taxData.stair' | translate"
+              />
+            </div>
+            <div class="form-group">
+              <label for="tax-data-field-7">{{ 'account.taxData.letter' | translate }}</label
+              ><input
+                id="tax-data-field-7"
+                class="form-input"
+                [value]="address().letter"
+                (input)="setAddress('letter', $any($event.target).value)"
+                [placeholder]="'account.taxData.letter' | translate"
+              />
+            </div>
+          </div>
           <div class="form-group">
-            <label for="tax-data-field-6">{{ 'account.taxData.stair' | translate }}</label
+            <label for="tax-data-field-8">{{ 'account.taxData.city' | translate }}</label
             ><input
-              id="tax-data-field-6"
+              id="tax-data-field-8"
               class="form-input"
-              [value]="address().stair"
-              (input)="setAddress('stair', $any($event.target).value)"
-              [placeholder]="'account.taxData.stair' | translate"
+              [value]="address().city"
+              (input)="setAddress('city', $any($event.target).value)"
+              [placeholder]="'account.taxData.city' | translate"
             />
           </div>
           <div class="form-group">
-            <label for="tax-data-field-7">{{ 'account.taxData.letter' | translate }}</label
+            <label for="tax-data-field-9">{{ 'account.taxData.province' | translate }}</label
             ><input
-              id="tax-data-field-7"
+              id="tax-data-field-9"
               class="form-input"
-              [value]="address().letter"
-              (input)="setAddress('letter', $any($event.target).value)"
-              [placeholder]="'account.taxData.letter' | translate"
+              [value]="address().province"
+              (input)="setAddress('province', $any($event.target).value)"
+              [placeholder]="'account.taxData.province' | translate"
+            />
+          </div>
+          <div class="form-group">
+            <label for="tax-data-field-10">{{ 'account.taxData.postalCode' | translate }}</label
+            ><input
+              id="tax-data-field-10"
+              class="form-input"
+              [value]="address().postalCode"
+              (input)="setAddress('postalCode', $any($event.target).value)"
+              [placeholder]="'account.taxData.postalCode' | translate"
+            />
+          </div>
+          <div class="form-group">
+            <label for="tax-data-country">{{ 'account.taxData.country' | translate }}</label>
+            <input
+              id="tax-data-country"
+              class="form-input"
+              [value]="address().country"
+              (input)="setAddress('country', $any($event.target).value)"
             />
           </div>
         </div>
-        <div class="form-group">
-          <label for="tax-data-field-8">{{ 'account.taxData.city' | translate }}</label
-          ><input
-            id="tax-data-field-8"
-            class="form-input"
-            [value]="address().city"
-            (input)="setAddress('city', $any($event.target).value)"
-            [placeholder]="'account.taxData.city' | translate"
-          />
-        </div>
-        <div class="form-group">
-          <label for="tax-data-field-9">{{ 'account.taxData.province' | translate }}</label
-          ><input
-            id="tax-data-field-9"
-            class="form-input"
-            [value]="address().province"
-            (input)="setAddress('province', $any($event.target).value)"
-            [placeholder]="'account.taxData.province' | translate"
-          />
-        </div>
-        <div class="form-group">
-          <label for="tax-data-field-10">{{ 'account.taxData.postalCode' | translate }}</label
-          ><input
-            id="tax-data-field-10"
-            class="form-input"
-            [value]="address().postalCode"
-            (input)="setAddress('postalCode', $any($event.target).value)"
-            [placeholder]="'account.taxData.postalCode' | translate"
-          />
-        </div>
-        <div class="form-group">
-          <label for="tax-data-country">{{ 'account.taxData.country' | translate }}</label>
-          <input
-            id="tax-data-country"
-            class="form-input"
-            [value]="address().country"
-            (input)="setAddress('country', $any($event.target).value)"
-          />
-        </div>
+      </div>
+      <div class="account-editor-actions">
         <button type="button" class="btn btn-primary btn-block" [disabled]="saving() || !canSave()" (click)="save()">
           {{ saving() ? ('common.saving' | translate) : ('common.save' | translate) }}
         </button>
@@ -154,7 +158,7 @@ import { UserService, type UserAddress } from '../../../core/services/user.servi
       }
     </div>
   `,
-  styleUrl: './tax-data.component.css',
+  styleUrls: ['../account-editor.css', './tax-data.component.css'],
 })
 export class AccountTaxDataComponent {
   private readonly userService = inject(UserService);
