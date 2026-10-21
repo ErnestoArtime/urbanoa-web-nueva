@@ -44,6 +44,8 @@
 
 .map-frame {
   position: relative;
+  isolation: isolate;
+  z-index: 0;
   min-height: 540px;
   overflow: hidden;
   border: 1px solid var(--color-border);
