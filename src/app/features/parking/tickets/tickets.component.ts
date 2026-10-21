@@ -7,6 +7,7 @@ import { ParkingFlowStore } from '../parking-flow.store';
 import { ParkingFlowQuery, readParkingFlowQuery } from '../parking-flow.model';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { ParkingApiService, ParkingTicketOption } from '../../../core/services/parking-api.service';
+import { TranslationService } from '../../../core/services/translation.service';
 
 @Component({
   selector: 'app-parking-tickets',
@@ -89,6 +90,7 @@ export class ParkingTicketsComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly store = inject(ParkingFlowStore);
   private readonly parkingApi = inject(ParkingApiService);
+  private readonly translation = inject(TranslationService);
   readonly tariffs = signal<ParkingTicketOption[]>([]);
   readonly source = signal<'idle' | 'remote' | 'error'>('idle');
   readonly error = signal(false);
@@ -112,17 +114,19 @@ export class ParkingTicketsComponent implements OnInit {
     };
   });
   private currentlyLoadedPlate = '';
+  private currentlyLoadedLanguage = this.translation.currentLang$();
+  private initialized = false;
   private requestSequence = 0;
 
   async ngOnInit(): Promise<void> {
-    this.currentlyLoadedPlate = this.query().plate;
+    this.initialized = true;
     await this.loadTariffs();
   }
 
-  private readonly reloadOnVehicleChange = effect(() => {
+  private readonly reloadOnSelectionChange = effect(() => {
     const plate = this.query().plate;
-    if (this.currentlyLoadedPlate && plate && plate !== this.currentlyLoadedPlate) {
-      this.currentlyLoadedPlate = plate;
+    const language = this.translation.currentLang$();
+    if (this.initialized && (plate !== this.currentlyLoadedPlate || language !== this.currentlyLoadedLanguage)) {
       void this.loadTariffs();
     }
   });
@@ -130,6 +134,10 @@ export class ParkingTicketsComponent implements OnInit {
   async loadTariffs(): Promise<void> {
     const requestId = ++this.requestSequence;
     const query = this.query();
+    const language = this.translation.currentLang$();
+    this.currentlyLoadedPlate = query.plate;
+    this.currentlyLoadedLanguage = language;
+    this.tariffs.set([]);
     this.loading.set(true);
     this.error.set(false);
     try {
@@ -139,11 +147,11 @@ export class ParkingTicketsComponent implements OnInit {
         zone: Number(query.sectorId || query.zoneId || 0),
         date: this.parkingApi.opsDate(this.parkingApi.serverNow()),
       });
-      if (requestId !== this.requestSequence) return;
+      if (requestId !== this.requestSequence || language !== this.translation.currentLang$()) return;
       this.tariffs.set(result.data);
       this.source.set('remote');
     } catch {
-      if (requestId !== this.requestSequence) return;
+      if (requestId !== this.requestSequence || language !== this.translation.currentLang$()) return;
       this.tariffs.set([]);
       this.source.set('error');
       this.error.set(true);

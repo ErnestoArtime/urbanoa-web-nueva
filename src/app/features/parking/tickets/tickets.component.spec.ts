@@ -1,12 +1,43 @@
-import { ApplicationRef, provideZonelessChangeDetection } from '@angular/core';
+import { ApplicationRef, provideZonelessChangeDetection, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { ParkingApiService } from '../../../core/services/parking-api.service';
 import { ParkingFlowStore } from '../parking-flow.store';
 import { ParkingTicketsComponent } from './tickets.component';
-import { TranslationService } from '../../../core/services/translation.service';
+import { SupportedLang, TranslationService } from '../../../core/services/translation.service';
 
 describe('ParkingTicketsComponent', () => {
+  it('reloads tariffs after a confirmed language change and discards a late previous-language result', async () => {
+    const language = signal<SupportedLang>('es');
+    const parkingApi = jasmine.createSpyObj<ParkingApiService>('ParkingApiService', ['tickets', 'opsDate', 'serverNow']);
+    let finishSpanish!: (value: Awaited<ReturnType<ParkingApiService['tickets']>>) => void;
+    parkingApi.tickets.and.returnValue(
+      new Promise((resolve) => {
+        finishSpanish = resolve;
+      }),
+    );
+    parkingApi.serverNow.and.returnValue(new Date());
+    parkingApi.opsDate.and.returnValue('120000211026');
+    TestBed.configureTestingModule({
+      providers: [
+        provideZonelessChangeDetection(),
+        { provide: ParkingApiService, useValue: parkingApi },
+        { provide: TranslationService, useValue: { currentLang$: language } },
+        { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: convertToParamMap({ plate: '1234ABC' }) } } },
+      ],
+    });
+    const component = TestBed.runInInjectionContext(() => new ParkingTicketsComponent());
+    const initialLoad = component.ngOnInit();
+    await TestBed.inject(ApplicationRef).whenStable();
+    parkingApi.tickets.and.resolveTo({ data: [{ id: '2', name: 'Tarif français', desc: '', price: '' }], source: 'remote' });
+    language.set('fr');
+    await TestBed.inject(ApplicationRef).whenStable();
+    expect(parkingApi.tickets).toHaveBeenCalledTimes(2);
+    expect(component.tariffs()[0].name).toBe('Tarif français');
+    finishSpanish({ data: [{ id: '1', name: 'Tarifa española', desc: '', price: '' }], source: 'remote' });
+    await initialLoad;
+    expect(component.tariffs()[0].name).toBe('Tarif français');
+  });
   for (const origin of ['streets', 'map', undefined]) {
     it(`returns to the selection origin ${origin ?? '(missing)'} with the current city and vehicle`, async () => {
       const params = {
@@ -23,7 +54,7 @@ describe('ParkingTicketsComponent', () => {
           provideZonelessChangeDetection(),
           provideRouter([]),
           { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: convertToParamMap(params) } } },
-          { provide: TranslationService, useValue: { translate: (key: string) => key } },
+          { provide: TranslationService, useValue: { translate: (key: string) => key, currentLang$: () => 'es' } },
           {
             provide: ParkingApiService,
             useValue: {
