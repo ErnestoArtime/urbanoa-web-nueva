@@ -5,7 +5,7 @@ import { TranslationService, type SupportedLang } from '../../../core/services/t
   selector: 'app-lang-selector',
   template: `
     <details #dropdown class="lang-selector" (keydown.escape)="close()">
-      <summary class="toolbar-control lang-trigger">
+      <summary class="toolbar-control lang-trigger" [attr.aria-busy]="translationService.pendingLang() !== null">
         {{ translationService.currentLang$().toUpperCase() }}
         <span class="lang-chevron" aria-hidden="true"></span>
       </summary>
@@ -24,6 +24,17 @@ import { TranslationService, type SupportedLang } from '../../../core/services/t
         }
       </div>
     </details>
+    @if (translationService.pendingLang()) {
+      <span class="lang-feedback" role="status">{{ translationService.translate('common.loading') }}</span>
+    }
+    @if (translationService.failedLang(); as language) {
+      <div class="lang-feedback" role="alert">
+        <span>{{ failureMessage() }} ({{ language.toUpperCase() }})</span>
+        <button type="button" class="lang-option" (click)="select(language)">
+          {{ recoveryText('common.retry', 'Reintentar') }}
+        </button>
+      </div>
+    }
   `,
   styleUrl: './lang-selector.component.css',
 })
@@ -36,6 +47,18 @@ export class LangSelectorComponent {
   select(language: SupportedLang): void {
     void this.translationService.setLang(language);
     this.close();
+  }
+
+  failureMessage(): string {
+    return this.recoveryText('language.loadError', 'No se pudo cargar el idioma seleccionado.');
+  }
+
+  recoveryText(key: string, fallback: string): string {
+    const translated = this.translationService.translate(key);
+    if (translated !== `[${key}]`) return translated;
+    // Even the first catalogue can fail. Follow the pending-translation convention.
+    const language = this.translationService.failedLang();
+    return language && language !== 'es' ? `${language}_${fallback}` : fallback;
   }
 
   close(): void {

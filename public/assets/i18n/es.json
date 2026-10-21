@@ -365,6 +365,7 @@
   "breadcrumb.cityInfo": "Información",
   "breadcrumb.streets": "Calles",
   "breadcrumb.tickets": "Tarifa",
+  "language.loadError": "No se pudo cargar el idioma seleccionado.",
   "breadcrumb.success": "Éxito",
   "breadcrumb.detail": "Detalle",
   "account.vehicle.backToVehicles": "Volver a vehículos",

@@ -364,6 +364,7 @@
   "breadcrumb.cityInfo": "uk_Información",
   "breadcrumb.streets": "uk_Calles",
   "breadcrumb.tickets": "Tariff",
+  "language.loadError": "uk_No se pudo cargar el idioma seleccionado.",
   "breadcrumb.success": "uk_Éxito",
   "breadcrumb.detail": "uk_Detalle",
   "account.vehicle.backToVehicles": "uk_Volver a vehículos",

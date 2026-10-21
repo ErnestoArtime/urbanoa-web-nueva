@@ -14,30 +14,42 @@ export class TranslationService {
   private loadVersion = 0;
   private catalogueLoaded = false;
   private refreshAttempted = false;
+  private selectionController?: AbortController;
+  readonly pendingLang = signal<SupportedLang | null>(null);
+  readonly failedLang = signal<SupportedLang | null>(null);
   readonly translations$ = this.translations.asReadonly();
   readonly currentLang$ = this.currentLang.asReadonly();
 
   async setLang(lang: SupportedLang): Promise<void> {
+    if (!this.isSupportedLang(lang)) return;
     const version = ++this.loadVersion;
-    this.catalogueLoaded = false;
-    this.refreshAttempted = false;
-    const targetLang = this.isSupportedLang(lang) ? lang : DEFAULT_LANG;
-    const data = await this.loadTranslations(targetLang);
-    if (version !== this.loadVersion) return;
-
-    this.currentLang.set(targetLang);
-    this.translations.set(data);
-    this.catalogueLoaded = true;
+    this.selectionController?.abort();
+    const controller = new AbortController();
+    this.selectionController = controller;
+    this.pendingLang.set(lang);
+    this.failedLang.set(null);
     try {
-      localStorage.setItem(STORAGE_KEY, targetLang);
+      const data = await this.loadTranslations(lang, controller.signal);
+      if (version !== this.loadVersion) return;
+      this.translations.set(data);
+      this.currentLang.set(lang);
+      this.catalogueLoaded = true;
+      this.refreshAttempted = false;
+      try {
+        localStorage.setItem(STORAGE_KEY, lang);
+      } catch {
+        // A blocked preference store must not prevent changing the active language.
+      }
+      document.documentElement.lang = lang === 'uk' ? 'en' : lang;
     } catch {
-      // A blocked preference store must not prevent changing the active language.
+      if (version === this.loadVersion) this.failedLang.set(lang);
+    } finally {
+      if (version === this.loadVersion) this.pendingLang.set(null);
     }
-    document.documentElement.lang = targetLang === 'uk' ? 'en' : targetLang;
   }
 
   translate(key: string, params?: Record<string, string | number>): string {
-    if (key && this.translations()[key] === undefined && this.catalogueLoaded && !this.refreshAttempted) {
+    if (key && this.translations()[key] === undefined && this.catalogueLoaded && !this.pendingLang() && !this.refreshAttempted) {
       void this.refreshCatalogue();
     }
     let value = this.translations()[key] ?? `[${key}]`;
@@ -102,19 +114,34 @@ export class TranslationService {
     return value === 'es' || value === 'eu' || value === 'fr' || value === 'uk';
   }
 
-  private async loadTranslations(lang: SupportedLang): Promise<Record<string, string>> {
-    try {
-      const response = await fetch(`/assets/i18n/${lang}.json`, TRANSLATION_FETCH_OPTIONS);
-      if (!response.ok) {
-        throw new Error(`Failed to load translations for ${lang}`);
+  private async loadTranslations(lang: SupportedLang, signal?: AbortSignal): Promise<Record<string, string>> {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      if (signal?.aborted) throw new Error('Language selection superseded');
+      const controller = new AbortController();
+      const abort = () => controller.abort();
+      signal?.addEventListener('abort', abort, { once: true });
+      const timeout = setTimeout(abort, 5_000);
+      try {
+        const response = await fetch(`/assets/i18n/${lang}.json`, { ...TRANSLATION_FETCH_OPTIONS, signal: controller.signal });
+        if (!response.ok) throw new Error(`Failed to load translations for ${lang}`);
+        const data: unknown = await response.json();
+        if (
+          !data ||
+          typeof data !== 'object' ||
+          Array.isArray(data) ||
+          !Object.keys(data).length ||
+          Object.values(data).some((value) => typeof value !== 'string')
+        ) {
+          throw new Error(`Invalid catalogue for ${lang}`);
+        }
+        return data as Record<string, string>;
+      } catch (error) {
+        if (signal?.aborted || attempt === 2) throw error;
+      } finally {
+        clearTimeout(timeout);
+        signal?.removeEventListener('abort', abort);
       }
-      return (await response.json()) as Record<string, string>;
-    } catch {
-      if (lang !== DEFAULT_LANG) {
-        const fallbackResponse = await fetch(`/assets/i18n/${DEFAULT_LANG}.json`, TRANSLATION_FETCH_OPTIONS);
-        return (await fallbackResponse.json()) as Record<string, string>;
-      }
-      return {};
     }
+    throw new Error(`Failed to load translations for ${lang}`);
   }
 }

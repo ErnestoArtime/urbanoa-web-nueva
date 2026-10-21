@@ -364,6 +364,7 @@
   "breadcrumb.cityInfo": "fr_Información",
   "breadcrumb.streets": "fr_Calles",
   "breadcrumb.tickets": "Tarif",
+  "language.loadError": "fr_No se pudo cargar el idioma seleccionado.",
   "breadcrumb.success": "fr_Éxito",
   "breadcrumb.detail": "fr_Detalle",
   "account.vehicle.backToVehicles": "fr_Volver a vehículos",

@@ -1,8 +1,27 @@
 :host {
   display: inline-block;
+  position: relative;
+}
+.lang-feedback {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 2100;
+  width: max-content;
+  max-width: min(280px, 80vw);
+  padding: 0.65rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: var(--text-xs);
+  box-shadow: var(--shadow-sm);
 }
 .lang-selector {
   position: relative;
+}
+.lang-selector[open] ~ .lang-feedback {
+  display: none;
 }
 .lang-trigger {
   min-width: 64px;
