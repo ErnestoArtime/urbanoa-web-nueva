@@ -29,7 +29,10 @@ app-operations-layout .history-filter-panel .chip {
   justify-content: center;
   min-width: 0;
   padding: 0.35rem 0.4rem;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: center;
+  line-height: var(--line-normal);
 }
 
 app-operations-layout .history-filter-panel .date-filter-cal-row {

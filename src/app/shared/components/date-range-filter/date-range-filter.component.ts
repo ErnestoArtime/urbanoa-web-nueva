@@ -1,5 +1,6 @@
+import { RuntimeStyleDirective } from '../../directives/runtime-style.directive';
 import { TitleCasePipe } from '@angular/common';
-import { Component, computed, inject, input, output, signal } from '@angular/core';
+import { ChangeDetectorRef, Component, computed, DestroyRef, ElementRef, inject, input, output, signal, viewChild } from '@angular/core';
 import { AppIconComponent } from '../../icons/app-icon.component';
 import { TranslatePipe } from '../../pipes/translate.pipe';
 import { TranslationService } from '../../../core/services/translation.service';
@@ -11,7 +12,7 @@ export interface DateRange {
 
 @Component({
   selector: 'app-date-range-filter',
-  imports: [TranslatePipe, TitleCasePipe, AppIconComponent],
+  imports: [TranslatePipe, TitleCasePipe, AppIconComponent, RuntimeStyleDirective],
   template: `
     <div class="date-filter">
       @if (!simple()) {
@@ -34,7 +35,7 @@ export interface DateRange {
           <div class="date-filter-inputs">
             <div class="date-picker-field">
               <span class="date-picker-label">{{ 'ops.from' | translate }}</span>
-              <button type="button" class="date-display" (click)="openPicker('from')">
+              <button type="button" class="date-display" (click)="openPicker('from', $event)">
                 @if (fromDisplay(); as d) {
                   <span>{{ d }}</span>
                 } @else {
@@ -44,7 +45,7 @@ export interface DateRange {
             </div>
             <div class="date-picker-field">
               <span class="date-picker-label">{{ 'ops.to' | translate }}</span>
-              <button type="button" class="date-display" (click)="openPicker('to')">
+              <button type="button" class="date-display" (click)="openPicker('to', $event)">
                 @if (toDisplay(); as d) {
                   <span>{{ d }}</span>
                 } @else {
@@ -58,39 +59,62 @@ export interface DateRange {
           </div>
         }
       </div>
-      @if (pickerTarget()) {
-        <div class="calendar-backdrop" (click)="pickerTarget.set(null)"></div>
-        <div class="calendar-popup">
-          <div class="cal-nav">
-            <button type="button" (click)="prevMonth()">‹</button>
-            <span class="cal-nav-title">{{ monthLabel() | titlecase }} {{ viewYear() }}</span>
-            <button type="button" (click)="nextMonth()">›</button>
-          </div>
-          <div class="cal-weekdays">
-            @for (day of dayHeaders(); track day) {
-              <span>{{ day }}</span>
-            }
-          </div>
-          <div class="cal-days">
-            @for (day of calendarDays(); track day.getTime()) {
-              <button
-                type="button"
-                class="cal-day"
-                [class.cal-day-other]="day.getMonth() !== viewDate().getMonth()"
-                [class.cal-day-selected]="isSelected(day)"
-                (click)="selectDate(day)"
-              >
-                {{ day.getDate() }}
-              </button>
-            }
-          </div>
+      <div #calendarPopup popover="auto" class="calendar-popup" [appRuntimeStyle]="popupPosition()" (toggle)="onPopupToggle($event)">
+        <div class="cal-nav">
+          <button type="button" (click)="prevMonth()">‹</button>
+          <span class="cal-nav-title">{{ monthLabel() | titlecase }} {{ viewYear() }}</span>
+          <button type="button" (click)="nextMonth()">›</button>
         </div>
-      }
+        <div class="cal-weekdays">
+          @for (day of dayHeaders(); track day) {
+            <span>{{ day }}</span>
+          }
+        </div>
+        <div class="cal-days">
+          @for (day of calendarDays(); track day.getTime()) {
+            <button
+              type="button"
+              class="cal-day"
+              [class.cal-day-other]="day.getMonth() !== viewDate().getMonth()"
+              [class.cal-day-selected]="isSelected(day)"
+              (click)="selectDate(day)"
+            >
+              {{ day.getDate() }}
+            </button>
+          }
+        </div>
+      </div>
     </div>
   `,
   styleUrl: './date-range-filter.component.css',
 })
 export class DateRangeFilterComponent {
+  private readonly popup = viewChild.required<ElementRef<HTMLElement>>('calendarPopup');
+  private readonly changeDetector = inject(ChangeDetectorRef);
+  readonly popupPosition = signal({ left: '0px', '--calendar-top': '0px', width: '260px', '--calendar-max-height': 'calc(100dvh - 16px)' });
+
+  constructor() {
+    const dismiss = (event: Event) => {
+      if (event.type === 'scroll' && this.popup().nativeElement.contains(event.target as Node)) return;
+      this.closePicker();
+    };
+    window.addEventListener('resize', dismiss);
+    document.addEventListener('scroll', dismiss, true);
+    inject(DestroyRef).onDestroy(() => {
+      window.removeEventListener('resize', dismiss);
+      document.removeEventListener('scroll', dismiss, true);
+    });
+  }
+
+  closePicker(): void {
+    this.popup().nativeElement.hidePopover();
+    this.pickerTarget.set(null);
+  }
+
+  onPopupToggle(event: Event): void {
+    if ((event as ToggleEvent).newState === 'closed') this.pickerTarget.set(null);
+  }
+
   private readonly translationService = inject(TranslationService);
 
   readonly simple = input(false);
@@ -170,11 +194,32 @@ export class DateRangeFilterComponent {
 
   toggleCalendar(): void {
     this.showCalendar.update((v) => !v);
-    if (!this.showCalendar()) this.pickerTarget.set(null);
+    if (!this.showCalendar()) this.closePicker();
   }
 
-  openPicker(target: 'from' | 'to'): void {
+  openPicker(target: 'from' | 'to', event: Event): void {
+    const anchor = (event.currentTarget as HTMLElement).getBoundingClientRect();
     this.pickerTarget.set(target);
+    const popup = this.popup().nativeElement;
+    popup.showPopover();
+    const gap = 8;
+    const width = Math.min(280, window.innerWidth - gap * 2);
+    this.popupPosition.set({
+      left: '0px',
+      '--calendar-top': '0px',
+      width: `${width}px`,
+      '--calendar-max-height': `${window.innerHeight - gap * 2}px`,
+    });
+    this.changeDetector.detectChanges();
+    const height = popup.getBoundingClientRect().height;
+    const below = window.innerHeight - anchor.bottom - gap;
+    const above = anchor.top - gap;
+    const top = below < height && above > below ? anchor.top - height - gap : anchor.bottom + gap;
+    this.popupPosition.update((position) => ({
+      ...position,
+      left: `${Math.max(gap, Math.min(anchor.left, window.innerWidth - width - gap))}px`,
+      '--calendar-top': `${Math.max(gap, Math.min(top, window.innerHeight - height - gap))}px`,
+    }));
   }
 
   prevMonth(): void {
@@ -191,7 +236,7 @@ export class DateRangeFilterComponent {
     if (target === 'from') this.from.set(formatted);
     if (target === 'to') this.to.set(formatted);
     this.activePreset.set(null);
-    this.pickerTarget.set(null);
+    this.closePicker();
     this.rangeChange.emit({ from: this.from(), to: this.to() });
   }
 
