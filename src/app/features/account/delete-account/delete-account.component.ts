@@ -1,7 +1,8 @@
+import { TranslationService } from '../../../core/services/translation.service';
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
-import { apiErrorKey } from '../../../core/http/api-error-key';
+import { apiErrorMessage } from '../../../core/http/api-error-key';
 import { AuthService } from '../../../core/services/auth.service';
 import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
@@ -29,7 +30,7 @@ import { LoaderComponent } from '../../../shared/components/loader/loader.compon
             <input class="form-input" formControlName="reason" />
           </div>
           @if (errorKey()) {
-            <p class="form-error" role="alert">{{ errorKey() | translate }}</p>
+            <p class="form-error" role="alert">{{ errorKey() }}</p>
           }
           <button type="submit" class="btn btn-danger btn-block" [disabled]="submitting()">
             {{ (submitting() ? 'account.deleteAccount.deleting' : 'account.deleteAccount.confirm') | translate }}
@@ -40,6 +41,7 @@ import { LoaderComponent } from '../../../shared/components/loader/loader.compon
   `,
 })
 export class AccountDeleteAccountComponent {
+  private readonly errorTranslation = inject(TranslationService);
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
   private readonly formBuilder = inject(FormBuilder);
@@ -66,7 +68,7 @@ export class AccountDeleteAccountComponent {
       await this.authService.cancelAccount();
       await this.router.navigateByUrl('/auth/login');
     } catch (error) {
-      this.errorKey.set(apiErrorKey(error));
+      this.errorKey.set(apiErrorMessage(error, this.errorTranslation));
     } finally {
       this.submitting.set(false);
     }

@@ -1,7 +1,8 @@
+import { TranslationService } from '../../../core/services/translation.service';
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { apiErrorKey } from '../../../core/http/api-error-key';
+import { apiErrorMessage } from '../../../core/http/api-error-key';
 import { PasswordService } from '../../../core/services/password.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 
@@ -24,7 +25,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
             }
           </div>
           @if (errorKey()) {
-            <p class="form-error auth-flow-status" role="alert">{{ errorKey() | translate }}</p>
+            <p class="form-error auth-flow-status" role="alert">{{ errorKey() }}</p>
           }
           <button type="submit" class="btn btn-primary btn-block" [disabled]="submitting()">
             {{ (submitting() ? 'auth.reset.sending' : 'auth.reset.generateCode') | translate }}
@@ -39,6 +40,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
   styleUrls: ['../../../shared/styles/auth-panel.css', '../../../shared/styles/auth-flow.css'],
 })
 export class ResetPasswordComponent {
+  private readonly errorTranslation = inject(TranslationService);
   private readonly passwordService = inject(PasswordService);
   private readonly router = inject(Router);
   private readonly formBuilder = inject(FormBuilder);
@@ -65,7 +67,7 @@ export class ResetPasswordComponent {
       await this.passwordService.requestCode(email);
       await this.router.navigate(['/auth/reset-password-code'], { queryParams: { email } });
     } catch (error) {
-      this.errorKey.set(apiErrorKey(error, { unauthorized: 'auth.reset.unknownEmail' }));
+      this.errorKey.set(apiErrorMessage(error, this.errorTranslation, { unauthorized: 'auth.reset.unknownEmail' }));
     } finally {
       this.submitting.set(false);
     }

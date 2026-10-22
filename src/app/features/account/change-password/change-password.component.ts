@@ -1,8 +1,9 @@
+import { TranslationService } from '../../../core/services/translation.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { isValidApkPassword } from '../../../shared/utils/password-validation';
 import { Component, inject, signal } from '@angular/core';
 import { LucideEye, LucideEyeOff } from '@lucide/angular';
-import { apiErrorKey } from '../../../core/http/api-error-key';
+import { apiErrorMessage } from '../../../core/http/api-error-key';
 import { PasswordService } from '../../../core/services/password.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { LoaderComponent } from '../../../shared/components/loader/loader.component';
@@ -90,7 +91,7 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
         <app-result-modal
           [type]="state"
           [title]="(state === 'success' ? 'account.changePassword.successTitle' : 'account.changePassword.errorTitle') | translate"
-          [message]="(state === 'success' ? 'account.changePassword.successMessage' : errorKey()) | translate"
+          [message]="state === 'success' ? ('account.changePassword.successMessage' | translate) : errorKey()"
           [primaryText]="'common.accept' | translate"
           (primaryAction)="dismissResult()"
         />
@@ -100,6 +101,7 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
   styleUrls: ['../account-editor.css', './change-password.component.css'],
 })
 export class AccountChangePasswordComponent {
+  private readonly errorTranslation = inject(TranslationService);
   private readonly authService = inject(AuthService);
   private readonly passwordService = inject(PasswordService);
 
@@ -147,7 +149,7 @@ export class AccountChangePasswordComponent {
       await this.passwordService.updatePassword(this.next(), this.current());
       this.result.set('success');
     } catch (error) {
-      this.errorKey.set(apiErrorKey(error, { unauthorized: 'auth.login.invalidCredentials' }));
+      this.errorKey.set(apiErrorMessage(error, this.errorTranslation, { unauthorized: 'auth.login.invalidCredentials' }));
       this.result.set('error');
     } finally {
       this.current.set('');

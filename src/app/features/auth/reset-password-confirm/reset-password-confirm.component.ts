@@ -1,9 +1,10 @@
+import { TranslationService } from '../../../core/services/translation.service';
 import { apkPasswordValidator } from '../../../shared/utils/password-validation';
 import { Component, inject, input, signal } from '@angular/core';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { LucideEye, LucideEyeOff, LucideKeyRound } from '@lucide/angular';
-import { apiErrorKey } from '../../../core/http/api-error-key';
+import { apiErrorMessage } from '../../../core/http/api-error-key';
 import { PasswordService } from '../../../core/services/password.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 
@@ -74,7 +75,7 @@ function passwordsMatch(control: AbstractControl): ValidationErrors | null {
               }
             </div>
             @if (errorKey()) {
-              <p class="form-error auth-flow-status" role="alert">{{ errorKey() | translate }}</p>
+              <p class="form-error auth-flow-status" role="alert">{{ errorKey() }}</p>
             }
             <button type="submit" class="btn btn-primary btn-block" [disabled]="submitting()">
               {{ (submitting() ? 'auth.newPassword.saving' : 'auth.newPassword.save') | translate }}
@@ -90,6 +91,7 @@ function passwordsMatch(control: AbstractControl): ValidationErrors | null {
   styleUrls: ['../../../shared/styles/auth-panel.css', '../../../shared/styles/auth-flow.css', './reset-password-confirm.component.css'],
 })
 export class ResetPasswordConfirmComponent {
+  private readonly errorTranslation = inject(TranslationService);
   private readonly passwordService = inject(PasswordService);
   private readonly router = inject(Router);
   private readonly formBuilder = inject(FormBuilder);
@@ -132,7 +134,7 @@ export class ResetPasswordConfirmComponent {
       await this.passwordService.confirmPasswordReset(this.email(), code, password);
       await this.router.navigateByUrl('/auth/reset-password-success');
     } catch (error) {
-      this.errorKey.set(apiErrorKey(error, { invalidCode: 'auth.newPassword.invalidCode' }));
+      this.errorKey.set(apiErrorMessage(error, this.errorTranslation, { invalidCode: 'auth.newPassword.invalidCode' }));
     } finally {
       this.submitting.set(false);
     }

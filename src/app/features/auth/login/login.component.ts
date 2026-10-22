@@ -2,8 +2,7 @@ import { Component, inject, input, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { LucideEye, LucideEyeOff } from '@lucide/angular';
-import { apiErrorKey } from '../../../core/http/api-error-key';
-import { OpsApiError } from '../../../core/api/ops-api.types';
+import { apiErrorMessage } from '../../../core/http/api-error-key';
 import { AuthService } from '../../../core/services/auth.service';
 import { TranslationService } from '../../../core/services/translation.service';
 import { APP_BRAND } from '../../../shared/constants/app-brand';
@@ -100,24 +99,13 @@ export class LoginComponent {
       await this.router.navigateByUrl(user.firstLogin ? '/onboarding/user' : this.returnUrl() || '/app');
     } catch (error) {
       this.errorMessage.set(
-        this.backendErrorMessage(error) ??
-          this.translationService.translate(
-            apiErrorKey(error, { unauthorized: 'auth.login.invalidCredentials', notActivated: 'auth.login.accountNotActivated' }),
-          ),
+        apiErrorMessage(error, this.translationService, {
+          unauthorized: 'auth.login.invalidCredentials',
+          notActivated: 'auth.login.accountNotActivated',
+        }),
       );
     } finally {
       this.submitting.set(false);
     }
-  }
-
-  private backendErrorMessage(error: unknown): string | null {
-    if (!(error instanceof OpsApiError) || !error.backendError) return null;
-    const messages: Record<string, string | undefined> = {
-      es: error.backendError.message_ES,
-      eu: error.backendError.message_EU,
-      fr: error.backendError.message_FR,
-      uk: error.backendError.message_EN,
-    };
-    return messages[this.translationService.currentLang$()] ?? error.backendError.message_ES ?? error.backendError.message_EN ?? null;
   }
 }

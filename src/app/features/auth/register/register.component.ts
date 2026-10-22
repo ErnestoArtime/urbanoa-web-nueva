@@ -1,9 +1,10 @@
+import { TranslationService } from '../../../core/services/translation.service';
 import { apkPasswordValidator } from '../../../shared/utils/password-validation';
 import { Component, inject, signal } from '@angular/core';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { LucideEye, LucideEyeOff } from '@lucide/angular';
-import { apiErrorKey } from '../../../core/http/api-error-key';
+import { apiErrorMessage } from '../../../core/http/api-error-key';
 import { AuthService } from '../../../core/services/auth.service';
 import { APP_BRAND } from '../../../shared/constants/app-brand';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
@@ -109,7 +110,7 @@ function passwordsMatch(control: AbstractControl): ValidationErrors | null {
             <p class="form-error">{{ 'auth.register.termsRequired' | translate }}</p>
           }
           @if (errorKey()) {
-            <p class="form-error" role="alert">{{ errorKey() | translate }}</p>
+            <p class="form-error" role="alert">{{ errorKey() }}</p>
           }
           <button type="submit" class="btn btn-primary btn-block continue-button" [disabled]="submitting()">
             {{ (submitting() ? 'auth.register.submitting' : 'auth.register.continue') | translate }}
@@ -124,6 +125,7 @@ function passwordsMatch(control: AbstractControl): ValidationErrors | null {
   styleUrls: ['../../../shared/styles/auth-flow.css', './register.component.css'],
 })
 export class RegisterComponent {
+  private readonly errorTranslation = inject(TranslationService);
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
   private readonly formBuilder = inject(FormBuilder);
@@ -182,7 +184,7 @@ export class RegisterComponent {
       await this.authService.register({ email, password, plates: [plate] });
       await this.router.navigate(['/auth/register-confirm'], { queryParams: { email } });
     } catch (error) {
-      this.errorKey.set(apiErrorKey(error, { conflict: 'auth.register.emailTaken' }));
+      this.errorKey.set(apiErrorMessage(error, this.errorTranslation, { conflict: 'auth.register.emailTaken' }));
     } finally {
       this.submitting.set(false);
     }

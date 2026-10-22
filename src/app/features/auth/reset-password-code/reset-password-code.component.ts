@@ -1,6 +1,7 @@
+import { TranslationService } from '../../../core/services/translation.service';
 import { Component, inject, input, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { apiErrorKey } from '../../../core/http/api-error-key';
+import { apiErrorMessage } from '../../../core/http/api-error-key';
 import { PasswordService } from '../../../core/services/password.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 
@@ -16,7 +17,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
           <p class="text-muted auth-flow-status" role="status">{{ noticeKey() | translate }}</p>
         }
         @if (errorKey()) {
-          <p class="form-error auth-flow-status" role="alert">{{ errorKey() | translate }}</p>
+          <p class="form-error auth-flow-status" role="alert">{{ errorKey() }}</p>
         }
         <a [routerLink]="['/auth/reset-password-confirm']" [queryParams]="{ email: email() }" class="btn btn-primary btn-block mt-2">{{
           'auth.resetCode.enterCode' | translate
@@ -30,6 +31,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
   styleUrls: ['../../../shared/styles/auth-panel.css', '../../../shared/styles/auth-flow.css'],
 })
 export class ResetPasswordCodeComponent {
+  private readonly errorTranslation = inject(TranslationService);
   private readonly passwordService = inject(PasswordService);
 
   readonly email = input('');
@@ -48,7 +50,7 @@ export class ResetPasswordCodeComponent {
       await this.passwordService.resendMail(this.email(), 'recover');
       this.noticeKey.set('auth.confirm.resent');
     } catch (error) {
-      this.errorKey.set(apiErrorKey(error));
+      this.errorKey.set(apiErrorMessage(error, this.errorTranslation));
     } finally {
       this.resending.set(false);
     }

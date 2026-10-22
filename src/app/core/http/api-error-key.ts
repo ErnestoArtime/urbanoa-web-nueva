@@ -1,4 +1,6 @@
+import type { TranslationService } from '../services/translation.service';
 import { ApiError, ApiErrorCode } from './api-client';
+import { OPS_ENDPOINTS } from '../api/ops-endpoints';
 import { OpsApiError } from '../api/ops-api.types';
 
 const DEFAULT_KEYS: Record<ApiErrorCode, string> = {
@@ -18,6 +20,7 @@ export function apiErrorKey(error: unknown, overrides: Partial<Record<ApiErrorCo
 
 function opsErrorCode(error: OpsApiError): ApiErrorCode {
   if (error.kind === 'transport') return 'network';
+  if (error.endpoint === OPS_ENDPOINTS.auth.recoverPassword && error.backendError?.code === -20) return 'unauthorized';
   if (error.status === 401 || error.backendError?.code === -1) return 'unauthorized';
   switch (error.backendError?.code) {
     case -21:
@@ -33,4 +36,23 @@ function opsErrorCode(error: OpsApiError): ApiErrorCode {
     default:
       return 'server';
   }
+}
+
+/** Prefer the OPS message in the active language; otherwise use the web catalogue. */
+export function apiErrorMessage(
+  error: unknown,
+  translation: Pick<TranslationService, 'currentLang$' | 'translate'>,
+  overrides: Partial<Record<ApiErrorCode, string>> = {},
+): string {
+  if (error instanceof OpsApiError && error.backendError) {
+    const messages = {
+      es: error.backendError.message_ES,
+      eu: error.backendError.message_EU,
+      fr: error.backendError.message_FR,
+      uk: error.backendError.message_EN,
+    };
+    const message = messages[translation.currentLang$()];
+    if (typeof message === 'string' && message.trim()) return message;
+  }
+  return translation.translate(apiErrorKey(error, overrides));
 }
