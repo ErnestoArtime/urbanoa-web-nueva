@@ -51,80 +51,92 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
       }
     } @else {
       <app-split-view [hideList]="isChildRoute()" [hideDetail]="!isChildRoute()">
-        <div splitList><ng-container [ngTemplateOutlet]="walletContent" /></div>
+        <div splitList class="payment-master"><ng-container [ngTemplateOutlet]="walletContent" /></div>
       </app-split-view>
     }
     <ng-template #walletContent>
-      <div class="page" [class.compact]="embedded()">
+      <div class="page wallet-page" [class.compact]="embedded()">
         @if (!embedded()) {
           <h1 class="page-title">{{ 'account.menu.paymentMethods' | translate }}</h1>
         }
-        @if (walletService.source() === 'error') {
-          <p class="data-notice" role="alert">{{ 'account.paymentMethods.loadError' | translate }}</p>
-        }
-        <div class="wallet-card payment-wallet-card mb-2">
-          <div class="wallet-section">
-            <strong>{{ 'account.wallet' | translate }}</strong>
-            <p class="wallet-balance-large">{{ walletService.balance() | euro }}</p>
+        <div class="wallet-scroll">
+          @if (walletService.source() === 'error') {
+            <p class="data-notice" role="alert">{{ 'account.paymentMethods.loadError' | translate }}</p>
+          }
+          <div class="wallet-card payment-wallet-card mb-2">
+            <div class="wallet-section">
+              <strong>{{ 'account.wallet' | translate }}</strong>
+              <p class="wallet-balance-large">{{ walletService.balance() | euro }}</p>
+            </div>
+          </div>
+          <p class="section-title cards-heading">
+            {{ 'account.cards' | translate }} <span class="cards-count">({{ walletService.cards().length }})</span>
+          </p>
+          <div class="card">
+            @for (card of walletService.cards(); track card.id) {
+              <div class="card-item">
+                <span class="card-brand-mark">
+                  @if (brandAsset(card.brand); as asset) {
+                    <img [src]="asset" [alt]="card.brand" />
+                  } @else {
+                    <span>{{ card.brand.slice(0, 2).toUpperCase() }}</span>
+                  }
+                </span>
+                <div class="card-info">
+                  <strong>{{ card.brand }} •••• {{ card.last4 }}</strong>
+                  <span>{{ card.cardholderName }}</span>
+                  <small>{{ card.expiryDate }}</small>
+                </div>
+                @if (walletService.defaultCardId() === card.id) {
+                  <span class="primary-label">{{ 'account.cardPrimary' | translate }}</span>
+                }
+                <button
+                  type="button"
+                  class="kebab-button"
+                  (click)="toggleCardMenu(card.id)"
+                  [attr.aria-label]="'account.cardOptions' | translate: { brand: card.brand, last4: card.last4 }"
+                  [attr.aria-expanded]="activeCardMenu() === card.id"
+                >
+                  ⋮
+                </button>
+                @if (activeCardMenu() === card.id) {
+                  <div class="card-menu">
+                    <button type="button" (click)="rechargeCard(card.id)">
+                      <span>＋</span> {{ 'account.recharge.button' | translate }}
+                    </button>
+                    <button type="button" (click)="refundToCard(card.id)">
+                      <span>↗</span> {{ 'account.withdrawBalance' | translate }}
+                    </button>
+                    @if (walletService.defaultCardId() !== card.id) {
+                      <button type="button" (click)="setAsDefault(card.id)">
+                        <span>☆</span> {{ 'account.setPrimaryCard' | translate }}
+                      </button>
+                    }
+                    <button type="button" class="delete-option" (click)="requestDelete(card.id)">
+                      <span>▣</span> {{ 'account.deleteCard' | translate }}
+                    </button>
+                  </div>
+                }
+              </div>
+            }
+            @if (walletService.cards().length === 0) {
+              <p class="empty-cards">{{ 'account.cardsEmpty' | translate }}</p>
+            }
           </div>
         </div>
-        <p class="section-title">{{ 'account.cards' | translate }}</p>
-        <div class="card">
-          @for (card of walletService.cards(); track card.id) {
-            <div class="card-item">
-              <span class="card-brand-mark">
-                @if (brandAsset(card.brand); as asset) {
-                  <img [src]="asset" [alt]="card.brand" />
-                } @else {
-                  <span>{{ card.brand.slice(0, 2).toUpperCase() }}</span>
-                }
-              </span>
-              <div class="card-info">
-                <strong>{{ card.brand }} •••• {{ card.last4 }}</strong>
-                <span>{{ card.cardholderName }}</span>
-                <small>{{ card.expiryDate }}</small>
-              </div>
-              @if (walletService.defaultCardId() === card.id) {
-                <span class="primary-label">{{ 'account.cardPrimary' | translate }}</span>
-              }
-              <button
-                type="button"
-                class="kebab-button"
-                (click)="toggleCardMenu(card.id)"
-                [attr.aria-label]="'account.cardOptions' | translate: { brand: card.brand, last4: card.last4 }"
-                [attr.aria-expanded]="activeCardMenu() === card.id"
-              >
-                ⋮
-              </button>
-              @if (activeCardMenu() === card.id) {
-                <div class="card-menu">
-                  <button type="button" (click)="rechargeCard(card.id)"><span>＋</span> {{ 'account.recharge.button' | translate }}</button>
-                  <button type="button" (click)="refundToCard(card.id)"><span>↗</span> {{ 'account.withdrawBalance' | translate }}</button>
-                  @if (walletService.defaultCardId() !== card.id) {
-                    <button type="button" (click)="setAsDefault(card.id)"><span>☆</span> {{ 'account.setPrimaryCard' | translate }}</button>
-                  }
-                  <button type="button" class="delete-option" (click)="requestDelete(card.id)">
-                    <span>▣</span> {{ 'account.deleteCard' | translate }}
-                  </button>
-                </div>
-              }
-            </div>
-          }
-          @if (walletService.cards().length === 0) {
-            <p class="empty-cards">{{ 'account.cardsEmpty' | translate }}</p>
-          }
-        </div>
-        <div class="payment-actions mt-2">
-          <button type="button" class="btn btn-primary btn-sm" [disabled]="walletService.cards().length === 0" (click)="goToRecharge()">
-            {{ 'dashboard.recharge' | translate }}
-          </button>
-          <button type="button" (click)="refundToCard(walletService.defaultCardId())" class="btn btn-secondary btn-sm">
-            {{ 'account.withdrawBalance' | translate }}
+        <div class="wallet-actions">
+          <div class="payment-actions">
+            <button type="button" class="btn btn-primary btn-sm" [disabled]="walletService.cards().length === 0" (click)="goToRecharge()">
+              {{ 'dashboard.recharge' | translate }}
+            </button>
+            <button type="button" (click)="refundToCard(walletService.defaultCardId())" class="btn btn-secondary btn-sm">
+              {{ 'account.withdrawBalance' | translate }}
+            </button>
+          </div>
+          <button type="button" (click)="openScreen('add')" class="btn btn-secondary btn-block mt-2">
+            {{ 'account.addCard' | translate }}
           </button>
         </div>
-        <button type="button" (click)="openScreen('add')" class="btn btn-secondary btn-block mt-2">
-          {{ 'account.addCard' | translate }}
-        </button>
       </div>
     </ng-template>
     @if (cardToDelete()) {
