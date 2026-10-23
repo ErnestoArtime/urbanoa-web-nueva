@@ -8,6 +8,8 @@ export interface PendingPaymentChallenge {
   startedAt: number;
   amount?: number;
   order?: string;
+  operationId?: string;
+  reference?: string;
   status?: 'uncertain';
 }
 
@@ -25,6 +27,8 @@ export type PaymentChallengeRequest = Omit<PendingPaymentChallenge, 'startedAt'>
  */
 @Injectable({ providedIn: 'root' })
 export class PaymentChallengeService {
+  private volatileConfirmed: { payment: PendingPaymentChallenge; confirmedAt: number } | null = null;
+  private readonly confirmedKey = 'urbanoa.payments.last-confirmed-v1';
   private volatilePending: PendingPaymentChallenge | null = null;
   private readonly key = 'urbanoa.paycomet.pending-payment-v1';
   private readonly legacyRechargeKey = 'urbanoa.paycomet.pending-recharge';
@@ -44,6 +48,41 @@ export class PaymentChallengeService {
       amount: challenge.amount,
       ...(challenge.order ? { order: challenge.order } : {}),
     });
+  }
+
+  updateReferences(references: { operationId?: number | string; reference?: string; order?: string }): void {
+    const pending = this.getPending();
+    if (!pending) return;
+    const updated = {
+      ...pending,
+      ...(references.operationId !== undefined ? { operationId: String(references.operationId) } : {}),
+      ...(references.reference ? { reference: references.reference } : {}),
+      ...(references.order ? { order: references.order } : {}),
+    };
+    this.volatilePending = updated;
+    this.write(this.key, JSON.stringify(updated));
+  }
+
+  /** Only call after an authenticated terminal success response, never a provider redirect. */
+  confirm(operationId?: number | string): void {
+    this.updateReferences({ operationId });
+    const payment = this.getPending();
+    if (!payment) return;
+    this.clear();
+    this.volatileConfirmed = { payment, confirmedAt: Date.now() };
+    this.write(this.confirmedKey, JSON.stringify(this.volatileConfirmed));
+  }
+
+  getLastConfirmed(): { payment: PendingPaymentChallenge; confirmedAt: number } | null {
+    const raw = this.read(this.confirmedKey);
+    if (!raw) return this.volatileConfirmed;
+    try {
+      const record = JSON.parse(raw);
+      const payment = this.parsePending(JSON.stringify(record.payment));
+      return payment && Number.isFinite(record.confirmedAt) ? { payment, confirmedAt: record.confirmedAt } : null;
+    } catch {
+      return null;
+    }
   }
 
   getPending(): PendingPaymentChallenge | null {
@@ -83,6 +122,8 @@ export class PaymentChallengeService {
   }
 
   clear(): void {
+    this.volatileConfirmed = null;
+    this.remove(this.confirmedKey);
     this.volatilePending = null;
     this.remove(this.key);
     this.remove(this.legacyRechargeKey);
@@ -126,6 +167,8 @@ export class PaymentChallengeService {
         ...(parsed.status === 'uncertain' ? { status: parsed.status } : {}),
         ...(parsed.amount !== undefined ? { amount: Number(parsed.amount) } : {}),
         ...(typeof parsed.order === 'string' && parsed.order.trim() ? { order: parsed.order.trim() } : {}),
+        ...(typeof parsed.operationId === 'string' && parsed.operationId.trim() ? { operationId: parsed.operationId.trim() } : {}),
+        ...(typeof parsed.reference === 'string' && parsed.reference.trim() ? { reference: parsed.reference.trim() } : {}),
       };
     } catch {
       return null;

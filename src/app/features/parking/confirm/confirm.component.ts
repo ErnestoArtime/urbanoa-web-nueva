@@ -104,8 +104,10 @@ import { AuthService } from '../../../core/services/auth.service';
         <app-swipe-to-pay
           #swipePay
           [disabled]="loading() || walletService.loading() || walletManagerOpen() || paymentUncertain()"
-          [label]="loading() ? ('parking.confirm.loading' | translate) : undefined"
-          [completedLabel]="loading() ? ('parking.confirm.loading' | translate) : undefined"
+          [label]="loading() ? ('parking.confirm.loading' | translate) : backendConfirmed() ? ('common.retry' | translate) : undefined"
+          [completedLabel]="
+            loading() ? ('parking.confirm.loading' | translate) : backendConfirmed() ? ('common.retry' | translate) : undefined
+          "
           (complete)="onSwipeComplete()"
         />
       </div>
@@ -167,6 +169,23 @@ export class ParkingConfirmComponent implements OnInit {
   );
   readonly paymentUncertain = signal(this.paymentChallenge.hasPendingPayment());
   private confirmationPending = false;
+  readonly backendConfirmed = signal(false);
+  private confirmedReceipt: { walletAmount: number; operationId?: number | string } | null = null;
+
+  private async showConfirmedReceipt(): Promise<void> {
+    if (!this.confirmedReceipt) return;
+    this.loading.set(true);
+    this.submitError.set(null);
+    try {
+      await this.finishConfirmation(this.confirmedReceipt.walletAmount, this.confirmedReceipt.operationId);
+    } catch {
+      // Receipt rendering/navigation cannot change a confirmed OPS payment into an uncertain one.
+      this.submitError.set(this.translations.translate('errors.server'));
+    } finally {
+      this.loading.set(false);
+      this.swipePay.reset();
+    }
+  }
 
   readonly totalAmount = computed(() => {
     const raw = this.query().amount?.replace('€', '').replace(',', '.').trim();
@@ -191,6 +210,10 @@ export class ParkingConfirmComponent implements OnInit {
 
   async onSwipeComplete(): Promise<void> {
     if (this.confirmationPending || this.walletService.loading() || this.walletManagerOpen()) return;
+    if (this.backendConfirmed()) {
+      await this.showConfirmedReceipt();
+      return;
+    }
     if (this.paymentUncertain() || this.paymentChallenge.hasPendingPayment()) {
       this.paymentUncertain.set(true);
       this.submitError.set(this.translations.translate('payment.uncertain.message'));
@@ -238,6 +261,7 @@ export class ParkingConfirmComponent implements OnInit {
         this.query().mode === 'extension'
           ? await this.parkingApi.confirmExtension({ ...confirmation, latitude: 0, longitude: 0, street: '' })
           : await this.parkingApi.confirmParking(confirmation);
+      this.paymentChallenge.updateReferences({ operationId: result.operationId });
       if (!result.success) {
         if (isPaymentOutcomeUnknown(result.error)) {
           this.paymentUncertain.set(true);
@@ -251,31 +275,22 @@ export class ParkingConfirmComponent implements OnInit {
       }
       if (result.challengeUrl) {
         this.paymentUncertain.set(true);
-        this.paymentChallenge.begin({
-          kind: this.query().mode === 'extension' ? 'parking-extension' : 'parking',
-          returnUrl: '/app/operations',
-          amount,
-        });
         try {
           this.authService.preparePaymentRedirect(result.challengeUrl);
           window.location.assign(result.challengeUrl);
         } catch (error) {
-          this.paymentChallenge.begin({
-            kind: this.query().mode === 'extension' ? 'parking-extension' : 'parking',
-            returnUrl: '/app/operations',
-            amount,
-            status: 'uncertain',
-          });
           throw error;
         }
         return;
       }
 
-      await this.finishConfirmation(walletAmount, result.operationId);
-      this.paymentChallenge.clear();
+      this.confirmedReceipt = { walletAmount, operationId: result.operationId };
+      this.backendConfirmed.set(true);
+      this.paymentChallenge.confirm(result.operationId);
+      await this.showConfirmedReceipt();
     } catch {
-      this.paymentUncertain.set(true);
-      this.submitError.set(this.translations.translate('payment.uncertain.message'));
+      this.paymentUncertain.set(!this.backendConfirmed());
+      this.submitError.set(this.translations.translate(this.backendConfirmed() ? 'errors.server' : 'payment.uncertain.message'));
     } finally {
       this.loading.set(false);
       this.confirmationPending = false;

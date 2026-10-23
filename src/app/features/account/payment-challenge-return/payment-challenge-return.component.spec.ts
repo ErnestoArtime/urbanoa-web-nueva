@@ -11,7 +11,7 @@ describe('PaymentChallengeReturnComponent', () => {
     const router = jasmine.createSpyObj<Router>('Router', ['navigateByUrl']);
     const wallet = jasmine.createSpyObj<WalletService>('WalletService', ['load']);
     const operations = jasmine.createSpyObj<OperationsService>('OperationsService', ['load']);
-    const challenge = jasmine.createSpyObj<PaymentChallengeService>('PaymentChallengeService', ['getPending', 'clear']);
+    const challenge = jasmine.createSpyObj<PaymentChallengeService>('PaymentChallengeService', ['getPending', 'clear', 'updateReferences']);
     wallet.load.and.resolveTo();
     operations.load.and.resolveTo();
     challenge.getPending.and.returnValue({

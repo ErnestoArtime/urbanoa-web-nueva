@@ -1,7 +1,9 @@
+import { TranslationService } from './core/services/translation.service';
 import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router } from '@angular/router';
 import { OpsApiClient } from './core/api/ops-api-client.service';
+import { PaymentChallengeService } from './core/services/payment-challenge.service';
 import { OpsSessionService } from './core/api/ops-session.service';
 import { OPS_ENDPOINTS } from './core/api/ops-endpoints';
 import { WindowSessionService } from './core/services/window-session.service';
@@ -144,7 +146,17 @@ describe('Error state consistency', () => {
     await expectAsync(component.onSwipeComplete()).toBeResolved();
     expect(component.loading()).toBeFalse();
     expect(component.submitError()).not.toBeNull();
+    const challenge = TestBed.inject(PaymentChallengeService);
+    expect(challenge.hasPendingPayment()).toBeFalse();
+    expect(challenge.getLastConfirmed()?.payment.operationId).toBe('confirmed-operation');
+    expect(component.backendConfirmed()).toBeTrue();
+    expect(component.paymentUncertain()).toBeFalse();
+    expect(component.submitError()).not.toBe(TestBed.inject(TranslationService).translate('payment.uncertain.message'));
+    const router = TestBed.inject(Router);
+    (router.navigate as jasmine.Spy).and.resolveTo(true);
     await component.onSwipeComplete();
+    expect(router.navigate).toHaveBeenCalledTimes(2);
+    expect(component.submitError()).toBeNull();
     expect(confirmParking).toHaveBeenCalledTimes(1);
     sessionStorage.removeItem('urbanoa.paycomet.pending-payment-v1');
   });

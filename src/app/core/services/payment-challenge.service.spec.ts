@@ -86,6 +86,32 @@ describe('PaymentChallengeService', () => {
     expect(sessionStorage.getItem('urbanoa.paycomet.pending-payment-v1')).not.toBeNull();
   });
 
+  it('preserves references and the original attempt time across reloads', () => {
+    service.begin({ kind: 'parking', returnUrl: '/app/operations', amount: 0.8, status: 'uncertain' });
+    const startedAt = service.getPending()!.startedAt;
+    service.updateReferences({ operationId: 13183249, reference: 'ops-reference', order: 'provider-order' });
+    const restored = new PaymentChallengeService();
+    expect(restored.getPending()).toEqual(
+      jasmine.objectContaining({
+        operationId: '13183249',
+        reference: 'ops-reference',
+        order: 'provider-order',
+        startedAt,
+      }),
+    );
+    expect(restored.hasPendingPayment()).toBeTrue();
+  });
+
+  it('archives a confirmed reference without keeping payment blocked and clears it on session cleanup', () => {
+    service.begin({ kind: 'parking', returnUrl: '/app/operations', amount: 0.8, status: 'uncertain' });
+    service.confirm(13183249);
+    const restored = new PaymentChallengeService();
+    expect(restored.hasPendingPayment()).toBeFalse();
+    expect(restored.getLastConfirmed()?.payment.operationId).toBe('13183249');
+    restored.clear();
+    expect(restored.getLastConfirmed()).toBeNull();
+  });
+
   it('clears pending context after the return flow finishes', () => {
     service.beginRecharge({ amount: 5 });
 

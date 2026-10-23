@@ -51,6 +51,7 @@ export class PaymentChallengeReturnComponent implements OnInit {
     });
     const outcome = this.route.snapshot.data['outcome'] === 'ok' && (returnCode === null || returnCode === '0') ? 'ok' : 'ko';
     this.outcome.set(outcome);
+    this.paymentChallenge.updateReferences({ reference: params.get('r') ?? undefined });
     this.pending.set(this.paymentChallenge.getPending());
 
     if (outcome !== 'ok') {
