@@ -41,7 +41,17 @@ describe('OperationsService stored data migration', () => {
     expect(service.getOperationById('2')?.paymentBreakdown).toEqual(jasmine.objectContaining({ walletAmount: 5, cardAmount: 0 }));
     expect(service.getOperationById('3')?.paymentBreakdown).toEqual({ walletAmount: 2, cardAmount: 3, cardLabel: 'VISA 4021' });
   });
-  it('refreshes cached details using the current history filters', async () => {
+  it('serves a cached detail without querying again', async () => {
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
+    api.post.and.resolveTo([{ operationNumber: 17, operationType: 7, paymentAmount: 500, opDate: '120000260825' }]);
+    TestBed.overrideProvider(OpsApiClient, { useValue: api });
+    TestBed.overrideProvider(OpsSessionService, { useValue: { token: () => 'token' } });
+    const service = TestBed.inject(OperationsService);
+    await service.load('2025-01-01', '2025-12-31', [7]);
+    expect((await service.loadDetail('17'))?.amount).toBe(-5);
+    expect(api.post).toHaveBeenCalledTimes(1);
+  });
+  it('queries cached details using the current history filters when the id is missing', async () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
     api.post.and.resolveTo([{ operationNumber: 17, operationType: 7, paymentAmount: 500, opDate: '120000260825' }]);
     TestBed.overrideProvider(OpsApiClient, { useValue: api });
@@ -49,8 +59,8 @@ describe('OperationsService stored data migration', () => {
     const service = TestBed.inject(OperationsService);
     await service.load('2025-01-01', '2025-12-31', [7]);
     const filters = api.post.calls.mostRecent().args[1];
-    api.post.and.resolveTo([{ operationNumber: 17, operationType: 7, paymentAmount: 700, opDate: '120000260825' }]);
-    expect((await service.loadDetail('17'))?.amount).toBe(-7);
+    api.post.and.resolveTo([{ operationNumber: 18, operationType: 7, paymentAmount: 700, opDate: '120000260825' }]);
+    expect((await service.loadDetail('18'))?.amount).toBe(-7);
     expect(api.post).toHaveBeenCalledTimes(2);
     expect(api.post.calls.mostRecent().args[1]).toEqual(filters);
   });

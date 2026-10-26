@@ -267,8 +267,10 @@ export class OperationsService {
   }
 
   async loadDetail(id: string): Promise<Operation | undefined> {
-    const generation = this.generation;
     if (!id) return undefined;
+    const cached = this.getOperationById(id);
+    if (cached) return cached;
+    const generation = this.generation;
     await this.load(...this.lastLoadParameters);
     if (generation !== this.generation) return undefined;
     return this.getOperationById(id);
