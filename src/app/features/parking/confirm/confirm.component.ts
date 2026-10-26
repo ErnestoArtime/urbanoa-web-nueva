@@ -1,3 +1,4 @@
+import { apiErrorMessage } from '../../../core/http/api-error-key';
 import { formatEuro, formatEuroNumber } from '../../../core/utils/euro-format';
 import { RuntimeStyleDirective } from '../../../shared/directives/runtime-style.directive';
 import { WalletManagerModalComponent } from '../../account/wallet-manager-modal/wallet-manager-modal.component';
@@ -265,22 +266,20 @@ export class ParkingConfirmComponent implements OnInit {
       if (!result.success) {
         if (isPaymentOutcomeUnknown(result.error)) {
           this.paymentUncertain.set(true);
-          this.submitError.set(this.translations.translate('payment.uncertain.message'));
+          const pendingMessage = this.translations.translate('payment.uncertain.message');
+          const serverMessage = apiErrorMessage(result.error, this.translations, {}, 'payment.uncertain.message');
+          this.submitError.set(serverMessage === pendingMessage ? pendingMessage : `${pendingMessage} ${serverMessage}`);
           await this.operations.load();
         } else {
           this.paymentChallenge.clear();
-          this.submitError.set(this.translations.translate('parking.confirm.operationError'));
+          this.submitError.set(apiErrorMessage(result.error, this.translations, {}, 'parking.confirm.operationError'));
         }
         return;
       }
       if (result.challengeUrl) {
         this.paymentUncertain.set(true);
-        try {
-          this.authService.preparePaymentRedirect(result.challengeUrl);
-          window.location.assign(result.challengeUrl);
-        } catch (error) {
-          throw error;
-        }
+        this.authService.preparePaymentRedirect(result.challengeUrl);
+        window.location.assign(result.challengeUrl);
         return;
       }
 

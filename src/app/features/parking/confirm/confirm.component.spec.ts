@@ -223,6 +223,11 @@ describe('ParkingConfirmComponent', () => {
   });
 
   for (const recoverableError of [
+    new OpsApiError('backend', 'ConfirmParkingOperationAPI', 'Error genérico - 1025', 200, {
+      code: -9,
+      type: 2,
+      message_ES: 'Error genérico - 1025',
+    }),
     new OpsApiError('backend', 'ConfirmParkingOperationAPI', 'La operación ya se ha insertado', 200, {
       code: -13,
       type: 3,
@@ -301,6 +306,9 @@ describe('ParkingConfirmComponent', () => {
       expect(loadOperations).toHaveBeenCalled();
       expect(navigate).not.toHaveBeenCalled();
       expect(fixture.componentInstance.submitError()).not.toBeNull();
+      if (recoverableError.backendError?.code === -9) {
+        expect(fixture.componentInstance.submitError()).toContain('1025');
+      }
       expect(fixture.componentInstance.paymentUncertain()).toBeTrue();
     });
   }
