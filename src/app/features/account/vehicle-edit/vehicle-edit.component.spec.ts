@@ -123,7 +123,7 @@ describe('VehicleEditComponent', () => {
 
     expect(fixture.componentInstance.result()).toBeNull();
     expect(fixture.componentInstance.deleteFailed()).toBeTrue();
-    expect(fixture.componentInstance.deleteErrorMessage()).toBe('Error genérico');
+    expect(fixture.componentInstance.deleteErrorMessage()).toBe(error);
   });
 
   it('shows the generic fallback message when the API error is not parseable', async () => {
@@ -135,6 +135,6 @@ describe('VehicleEditComponent', () => {
 
     expect(fixture.componentInstance.result()).toBeNull();
     expect(fixture.componentInstance.deleteFailed()).toBeTrue();
-    expect(fixture.componentInstance.deleteErrorMessage()).toBeNull();
+    expect(fixture.componentInstance.deleteErrorMessage()).toBe(error);
   });
 });

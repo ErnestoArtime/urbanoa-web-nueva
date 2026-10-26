@@ -139,7 +139,7 @@ describe('VehicleAddComponent', () => {
 
     expect(fixture.componentInstance.saved()).toBeFalse();
     expect(fixture.componentInstance.addFailed()).toBeTrue();
-    expect(fixture.componentInstance.addErrorMessage()).toBe('Error genérico');
+    expect(fixture.componentInstance.addErrorMessage()).toBe(error);
   });
 
   it('shows the generic fallback when the API error is not parseable', async () => {
@@ -152,10 +152,10 @@ describe('VehicleAddComponent', () => {
 
     expect(fixture.componentInstance.saved()).toBeFalse();
     expect(fixture.componentInstance.addFailed()).toBeTrue();
-    expect(fixture.componentInstance.addErrorMessage()).toBeNull();
+    expect(fixture.componentInstance.addErrorMessage()).toBe(error);
   });
 
-  it('renders the error modal with prefix plus localized message when the save fails', async () => {
+  it('renders the exact localized OPS message when the save fails', async () => {
     const fixture = TestBed.createComponent(VehicleAddComponent);
     fixture.componentInstance.plate.set('1234 BCD');
     const error = new OpsApiError('backend', 'OPSWebServicesAPI/AddPlateAPI', 'Error genérico', 200, {
@@ -173,6 +173,6 @@ describe('VehicleAddComponent', () => {
 
     const modal = fixture.nativeElement.querySelector('app-result-modal') as HTMLElement;
     expect(modal).not.toBeNull();
-    expect(modal.querySelector('.result-message')?.textContent?.trim()).toBe('No se pudo insertar la nueva matrícula: Error genérico');
+    expect(modal.querySelector('.result-message')?.textContent?.trim()).toBe('Error genérico');
   });
 });

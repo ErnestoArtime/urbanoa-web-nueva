@@ -1,3 +1,4 @@
+import { ApiErrorPipe } from '../../../shared/pipes/api-error.pipe';
 import { formatEuroNumber } from '../../../core/utils/euro-format';
 import { EuroPipe } from '../../../shared/pipes/euro.pipe';
 import { PaymentChallengeService } from '../../../core/services/payment-challenge.service';
@@ -13,7 +14,7 @@ import { LoaderComponent } from '../../../shared/components/loader/loader.compon
 
 @Component({
   selector: 'app-account-refund',
-  imports: [EuroPipe, TranslatePipe, DetailPanelHeaderComponent, ResultModalComponent, LoaderComponent],
+  imports: [ApiErrorPipe, EuroPipe, TranslatePipe, DetailPanelHeaderComponent, ResultModalComponent, LoaderComponent],
   template: `
     <app-loader [visible]="requesting() && !refundQuote()" [message]="'common.loading' | translate" />
     <div class="page account-static-page account-form-page">
@@ -25,7 +26,7 @@ import { LoaderComponent } from '../../../shared/components/loader/loader.compon
       @if (paymentUncertain()) {
         <p class="data-notice" role="alert">{{ 'payment.uncertain.message' | translate }}</p>
       } @else if (failed() || walletService.source() === 'error') {
-        <p class="data-notice" role="alert">{{ 'account.refund.error' | translate }}</p>
+        <p class="data-notice" role="alert">{{ errorForDisplay() | apiError: 'account.refund.error' }}</p>
       }
       <div class="card refund-summary">
         <p class="text-muted">{{ 'account.refund.availableBalance' | translate }}</p>
@@ -69,6 +70,10 @@ import { LoaderComponent } from '../../../shared/components/loader/loader.compon
   styleUrl: './refund.component.css',
 })
 export class AccountRefundComponent {
+  errorForDisplay(): unknown {
+    return this.refundError() ?? this.walletService.responseError?.();
+  }
+
   private readonly pendingPayment = inject(PaymentChallengeService);
   readonly paymentUncertain = signal(this.pendingPayment.hasPendingPayment());
   readonly cardId = input('');
@@ -82,6 +87,7 @@ export class AccountRefundComponent {
   readonly refundedAmount = signal(0);
   readonly done = signal(false);
   readonly failed = signal(false);
+  readonly refundError = signal<unknown>(null);
   requestRefund(): void {
     if (this.pendingPayment.hasPendingPayment()) {
       this.paymentUncertain.set(true);
@@ -89,6 +95,7 @@ export class AccountRefundComponent {
     }
     if (this.done() || this.requesting() || this.walletService.loading() || this.walletService.balance() <= 0) return;
     this.failed.set(false);
+    this.refundError.set(null);
     this.refundQuote.set(this.walletService.balance());
   }
   cancelRefund(): void {
@@ -104,11 +111,13 @@ export class AccountRefundComponent {
     }
     this.requesting.set(true);
     this.failed.set(false);
+    this.refundError.set(null);
     this.pendingPayment.begin({ kind: 'refund', returnUrl: '/app/operations', amount, status: 'uncertain' });
     try {
       const result = await this.walletService.refund(amount);
       this.refundQuote.set(null);
       if (!result.success || result.amount == null) {
+        this.refundError.set(result.error);
         if (!isPaymentOutcomeUnknown(result.error)) this.pendingPayment.clear();
         else this.paymentUncertain.set(true);
         this.failed.set(true);

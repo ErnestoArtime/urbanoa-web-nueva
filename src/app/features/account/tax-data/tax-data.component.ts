@@ -1,3 +1,4 @@
+import { ApiErrorPipe } from '../../../shared/pipes/api-error.pipe';
 import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { LoaderComponent } from '../../../shared/components/loader/loader.component';
@@ -7,7 +8,7 @@ import { UserService, type UserAddress } from '../../../core/services/user.servi
 
 @Component({
   selector: 'app-account-tax-data',
-  imports: [TranslatePipe, DetailPanelHeaderComponent, ResultModalComponent, LoaderComponent],
+  imports: [ApiErrorPipe, TranslatePipe, DetailPanelHeaderComponent, ResultModalComponent, LoaderComponent],
   template: `
     <app-loader [visible]="saving()" [message]="'common.loading' | translate" />
     <div class="page account-static-page account-form-page">
@@ -151,7 +152,7 @@ import { UserService, type UserAddress } from '../../../core/services/user.servi
         <app-result-modal
           type="error"
           [title]="'account.taxData.saveError' | translate"
-          [message]="'account.taxData.saveErrorDetail' | translate"
+          [message]="errorForDisplay() | apiError: 'account.taxData.saveErrorDetail'"
           [primaryText]="'common.accept' | translate"
           (primaryAction)="saveFailed.set(false)"
         />
@@ -161,6 +162,10 @@ import { UserService, type UserAddress } from '../../../core/services/user.servi
   styleUrls: ['../account-editor.css', './tax-data.component.css'],
 })
 export class AccountTaxDataComponent {
+  errorForDisplay(): unknown {
+    return this.userService.lastError?.();
+  }
+
   private readonly userService = inject(UserService);
 
   readonly nif = signal('');

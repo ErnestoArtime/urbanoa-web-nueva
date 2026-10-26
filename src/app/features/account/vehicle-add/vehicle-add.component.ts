@@ -1,3 +1,4 @@
+import { ApiErrorPipe } from '../../../shared/pipes/api-error.pipe';
 import { Component, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
@@ -10,7 +11,7 @@ import { LoaderComponent } from '../../../shared/components/loader/loader.compon
 
 @Component({
   selector: 'app-vehicle-add',
-  imports: [TranslatePipe, DetailPanelHeaderComponent, ResultModalComponent, LoaderComponent],
+  imports: [ApiErrorPipe, TranslatePipe, DetailPanelHeaderComponent, ResultModalComponent, LoaderComponent],
   template: `
     <app-loader [visible]="saving()" [message]="'common.loading' | translate" />
     <div class="page account-static-page account-form-page">
@@ -58,11 +59,7 @@ import { LoaderComponent } from '../../../shared/components/loader/loader.compon
         <app-result-modal
           type="error"
           [title]="'account.vehicleAdd.addErrorTitle' | translate"
-          [message]="
-            addErrorMessage()
-              ? ('account.vehicleAdd.addErrorPrefix' | translate) + addErrorMessage()
-              : ('account.vehicleAdd.addErrorDetail' | translate)
-          "
+          [message]="addErrorMessage() | apiError: 'account.vehicleAdd.addErrorDetail'"
           [primaryText]="'common.accept' | translate"
           (primaryAction)="addFailed.set(false)"
         />
@@ -83,7 +80,7 @@ export class VehicleAddComponent {
   readonly saved = signal(false);
   readonly saving = signal(false);
   readonly addFailed = signal(false);
-  readonly addErrorMessage = signal<string | null>(null);
+  readonly addErrorMessage = signal<unknown>(null);
   readonly FOREIGN_PLATE_MAX_LENGTH = FOREIGN_PLATE_MAX_LENGTH;
 
   setPlate(event: Event): void {
@@ -126,7 +123,7 @@ export class VehicleAddComponent {
         await this.operationsService.load();
         this.saved.set(true);
       } else {
-        this.addErrorMessage.set(mutation.error?.backendError ? mutation.error.message : null);
+        this.addErrorMessage.set(mutation.error);
         this.addFailed.set(true);
       }
     } catch {

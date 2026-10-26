@@ -1,3 +1,4 @@
+import { ApiErrorPipe } from '../../../shared/pipes/api-error.pipe';
 import { Component, DestroyRef, computed, inject, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { distinctUntilChanged, map } from 'rxjs/operators';
@@ -46,6 +47,7 @@ const FEEDBACK_SUBTYPES: SelectOption<FeedbackSubtype>[] = [
 @Component({
   selector: 'app-account-support-form',
   imports: [
+    ApiErrorPipe,
     ReactiveFormsModule,
     LucideCamera,
     LucideImage,
@@ -60,7 +62,7 @@ const FEEDBACK_SUBTYPES: SelectOption<FeedbackSubtype>[] = [
     <app-loader [visible]="submitting() || loading()" [message]="'common.loading' | translate" />
     @if (loadFailed()) {
       <div class="data-notice" role="alert">
-        <span>{{ (isReply() ? 'account.support.loadError' : 'parking.cities.loadError') | translate }}</span>
+        <span>{{ supportError() | apiError: (isReply() ? 'account.support.loadError' : 'parking.cities.loadError') }}</span>
         <button type="button" class="btn btn-secondary" (click)="retryLoad()">{{ 'common.retry' | translate }}</button>
       </div>
     }
@@ -222,7 +224,9 @@ const FEEDBACK_SUBTYPES: SelectOption<FeedbackSubtype>[] = [
         <app-result-modal
           type="error"
           [title]="'account.support.missingTitle' | translate"
-          [message]="(sendFailed() ? 'account.support.sendError' : 'account.support.requiredFields') | translate"
+          [message]="
+            sendFailed() ? (supportError() | apiError: 'account.support.sendError') : ('account.support.requiredFields' | translate)
+          "
           [primaryText]="'account.support.reviewForm' | translate"
           (primaryAction)="showError.set(false)"
         />
@@ -258,6 +262,10 @@ export class AccountSupportFormComponent implements OnInit {
   readonly submitting = signal(false);
   readonly loading = signal(true);
   readonly loadFailed = signal(false);
+  readonly requestError = signal<unknown>(null);
+  supportError(): unknown {
+    return this.support.lastError?.() ?? this.requestError();
+  }
   readonly sendFailed = signal(false);
   readonly attachmentReading = signal(false);
   readonly form = this.fb.nonNullable.group({
@@ -293,6 +301,7 @@ export class AccountSupportFormComponent implements OnInit {
     const id = this.threadId;
     this.loading.set(true);
     this.loadFailed.set(false);
+    this.requestError.set(null);
     this.showError.set(false);
     this.sendFailed.set(false);
     if (resetDraft) {
@@ -322,8 +331,9 @@ export class AccountSupportFormComponent implements OnInit {
       }
       const mainVehicle = this.vehicleService.mainVehicle();
       if (mainVehicle && !this.form.controls.plate.value) this.form.controls.plate.setValue(mainVehicle.plate);
-    } catch {
+    } catch (error) {
       if (revision === this.loadRevision) {
+        this.requestError.set(error);
         this.municipios.set([]);
         this.loadFailed.set(true);
       }

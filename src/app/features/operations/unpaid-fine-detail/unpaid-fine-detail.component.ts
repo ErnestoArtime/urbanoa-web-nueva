@@ -16,7 +16,7 @@ import { distinctUntilChanged, map } from 'rxjs/operators';
 import { OperationsService } from '../../../core/services/operations.service';
 import { OperationType } from '../../../shared/models/operation-type';
 import { OpsApiError } from '../../../core/api/ops-api.types';
-import { apiErrorKey } from '../../../core/http/api-error-key';
+import { apiErrorMessage } from '../../../core/http/api-error-key';
 import { isCardUsable } from '../../../core/utils/card-expiry';
 import { LocationMap } from '../../../shared/components/location-map/location-map';
 import { AppIconComponent } from '../../../shared/icons/app-icon.component';
@@ -386,8 +386,6 @@ export class UnpaidFineDetailComponent {
   }
 
   private localizedError(error?: OpsApiError): string {
-    if (!error) return this.translationService.translate('errors.server');
-    if (error.backendError) return error.message;
-    return this.translationService.translate(apiErrorKey(error));
+    return apiErrorMessage(error, this.translationService);
   }
 }

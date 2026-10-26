@@ -1,3 +1,4 @@
+import { ApiErrorPipe } from '../../../shared/pipes/api-error.pipe';
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { LoaderComponent } from '../../../shared/components/loader/loader.component';
@@ -7,14 +8,14 @@ import { NotificationsService } from '../../../core/services/notifications.servi
 
 @Component({
   selector: 'app-account-notifications',
-  imports: [DetailPanelHeaderComponent, TranslatePipe, ResultModalComponent, LoaderComponent],
+  imports: [ApiErrorPipe, DetailPanelHeaderComponent, TranslatePipe, ResultModalComponent, LoaderComponent],
   template: `
     <app-loader [visible]="loading() || saving()" [message]="'common.loading' | translate" />
     <div class="page account-static-page account-form-page">
       <app-detail-panel-header [title]="'account.notifications.title' | translate" backRoute="/app/account" />
       <div class="account-editor-body">
         @if (notifications.source() === 'error') {
-          <p class="data-notice" role="alert">{{ 'account.notifications.syncError' | translate }}</p>
+          <p class="data-notice" role="alert">{{ errorForDisplay() | apiError: 'account.notifications.syncError' }}</p>
         }
         @if (loadFailed()) {
           <button type="button" class="btn btn-secondary" (click)="loadPreferences()">{{ 'common.retry' | translate }}</button>
@@ -82,6 +83,10 @@ import { NotificationsService } from '../../../core/services/notifications.servi
   styleUrls: ['../account-editor.css', './notifications.component.css'],
 })
 export class AccountNotificationsComponent implements OnInit {
+  errorForDisplay(): unknown {
+    return this.notifications.lastError?.();
+  }
+
   readonly notifications = inject(NotificationsService);
   readonly saved = signal(false);
   readonly saving = signal(false);

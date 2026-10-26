@@ -1,3 +1,4 @@
+import { ApiErrorPipe } from '../../../shared/pipes/api-error.pipe';
 import { EuroPipe } from '../../../shared/pipes/euro.pipe';
 import { PaymentAddComponent } from '../payment-add/payment-add.component';
 import { AccountRechargeComponent } from '../recharge/recharge.component';
@@ -17,6 +18,7 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
 @Component({
   selector: 'app-payment-layout',
   imports: [
+    ApiErrorPipe,
     EuroPipe,
     NgTemplateOutlet,
     PaymentAddComponent,
@@ -60,8 +62,8 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
           <h1 class="page-title">{{ 'account.menu.paymentMethods' | translate }}</h1>
         }
         <div class="wallet-scroll">
-          @if (walletService.source() === 'error') {
-            <p class="data-notice" role="alert">{{ 'account.paymentMethods.loadError' | translate }}</p>
+          @if (walletService.source() === 'error' || walletService.lastError()) {
+            <p class="data-notice" role="alert">{{ errorForDisplay() | apiError: 'account.paymentMethods.loadError' }}</p>
           }
           <div class="wallet-card payment-wallet-card mb-2">
             <div class="wallet-section">
@@ -154,6 +156,10 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
   styleUrl: './payment-layout.component.css',
 })
 export class PaymentLayoutComponent implements OnInit {
+  errorForDisplay(): unknown {
+    return this.walletService.responseError?.();
+  }
+
   @ViewChild(AccountRechargeComponent) private recharge?: AccountRechargeComponent;
   @ViewChild(AccountRefundComponent) private refund?: AccountRefundComponent;
   readonly updating = signal(false);

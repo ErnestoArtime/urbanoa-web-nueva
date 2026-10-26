@@ -1,3 +1,4 @@
+import { ApiErrorPipe } from '../../../shared/pipes/api-error.pipe';
 import { Component, effect, inject, signal, untracked } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -9,7 +10,15 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
 
 @Component({
   selector: 'app-account-profile',
-  imports: [ReactiveFormsModule, RouterLink, TranslatePipe, DetailPanelHeaderComponent, ResultModalComponent, LoaderComponent],
+  imports: [
+    ApiErrorPipe,
+    ReactiveFormsModule,
+    RouterLink,
+    TranslatePipe,
+    DetailPanelHeaderComponent,
+    ResultModalComponent,
+    LoaderComponent,
+  ],
   template: `
     <app-loader [visible]="saving()" [message]="'common.loading' | translate" />
     <div class="page account-static-page account-form-page">
@@ -97,7 +106,7 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
         <app-result-modal
           type="error"
           [title]="'account.profile.saveError' | translate"
-          [message]="'account.profile.saveErrorDetail' | translate"
+          [message]="errorForDisplay() | apiError: 'account.profile.saveErrorDetail'"
           [primaryText]="'common.accept' | translate"
           (primaryAction)="saveFailed.set(false)"
         />
@@ -107,6 +116,10 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
   styleUrls: ['../account-editor.css', './profile.component.css'],
 })
 export class AccountProfileComponent {
+  errorForDisplay(): unknown {
+    return this.userService.lastError?.();
+  }
+
   readonly saved = signal(false);
   readonly saving = signal(false);
   readonly saveFailed = signal(false);

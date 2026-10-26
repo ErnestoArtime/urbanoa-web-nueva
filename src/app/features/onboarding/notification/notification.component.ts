@@ -1,3 +1,4 @@
+import { ApiErrorPipe } from '../../../shared/pipes/api-error.pipe';
 import { Component, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Router } from '@angular/router';
@@ -6,14 +7,14 @@ import { NotificationsService } from '../../../core/services/notifications.servi
 
 @Component({
   selector: 'app-onboarding-notification',
-  imports: [RouterLink, TranslatePipe],
+  imports: [ApiErrorPipe, RouterLink, TranslatePipe],
   template: `
     <div class="page">
       <h1 class="page-title">{{ 'onboarding.notification.title' | translate }}</h1>
       <p class="page-subtitle">{{ 'onboarding.notification.subtitle' | translate }}</p>
       <p class="text-muted">{{ 'onboarding.notification.webNotice' | translate }}</p>
       @if (failed()) {
-        <p class="form-error" role="alert">{{ 'onboarding.notification.saveError' | translate }}</p>
+        <p class="form-error" role="alert">{{ notifications.lastError() | apiError: 'onboarding.notification.saveError' }}</p>
       }
       <button type="button" class="btn btn-primary btn-block mt-2" [disabled]="saving()" (click)="activate()">
         {{ 'onboarding.notification.savePreferences' | translate }}
@@ -25,7 +26,7 @@ import { NotificationsService } from '../../../core/services/notifications.servi
 export class OnboardingNotificationComponent {
   readonly saving = signal(false);
   readonly failed = signal(false);
-  private readonly notifications = inject(NotificationsService);
+  readonly notifications = inject(NotificationsService);
   private readonly router = inject(Router);
 
   async activate(): Promise<void> {

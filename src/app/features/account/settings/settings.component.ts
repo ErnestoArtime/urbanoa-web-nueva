@@ -1,3 +1,4 @@
+import { ApiErrorPipe } from '../../../shared/pipes/api-error.pipe';
 import { Component, inject, signal } from '@angular/core';
 import { LucideLocateFixed } from '@lucide/angular';
 import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
@@ -15,7 +16,7 @@ interface LocationMessage {
 
 @Component({
   selector: 'app-account-settings',
-  imports: [TranslatePipe, DetailPanelHeaderComponent, LucideLocateFixed, LoaderComponent],
+  imports: [ApiErrorPipe, TranslatePipe, DetailPanelHeaderComponent, LucideLocateFixed, LoaderComponent],
   template: `
     <app-loader [visible]="savingCity()" [message]="'common.loading' | translate" />
     <div class="page account-static-page settings-page">
@@ -60,7 +61,13 @@ interface LocationMessage {
           </button>
         </div>
         @if (locationMessage(); as msg) {
-          <p class="inline-message">{{ msg.key | translate: msg.params }}</p>
+          <p class="inline-message">
+            {{
+              msg.key === 'account.settings.location.citySyncPending'
+                ? (userService.lastError() | apiError: msg.key)
+                : (msg.key | translate: msg.params)
+            }}
+          </p>
         }
       </section>
 
@@ -85,7 +92,13 @@ interface LocationMessage {
               }
             </div>
             @if (locationMessage(); as msg) {
-              <p class="inline-message" role="status">{{ msg.key | translate: msg.params }}</p>
+              <p class="inline-message" role="status">
+                {{
+                  msg.key === 'account.settings.location.citySyncPending'
+                    ? (userService.lastError() | apiError: msg.key)
+                    : (msg.key | translate: msg.params)
+                }}
+              </p>
             }
             <button type="button" class="btn btn-primary btn-block" [disabled]="!selectedCity() || savingCity()" (click)="saveCity()">
               {{ 'common.save' | translate }}
@@ -103,7 +116,7 @@ interface LocationMessage {
 export class AccountSettingsComponent {
   readonly locationService = inject(LocationSettingsService);
   private readonly citiesService = inject(CitiesService);
-  private readonly userService = inject(UserService);
+  readonly userService = inject(UserService);
   readonly municipios = signal<Municipio[]>([]);
   readonly showCityPicker = signal(false);
   readonly savingCity = signal(false);

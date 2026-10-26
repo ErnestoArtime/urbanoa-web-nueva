@@ -1,3 +1,4 @@
+import { ApiErrorPipe } from '../../../shared/pipes/api-error.pipe';
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { CitiesService, type ParkingMunicipio } from '../../../core/services/cities.service';
@@ -7,7 +8,7 @@ import { LucideMail, LucideMapPin, LucidePhone } from '@lucide/angular';
 
 @Component({
   selector: 'app-parking-city-info',
-  imports: [RouterLink, TranslatePipe, LucideMail, LucideMapPin, LucidePhone],
+  imports: [ApiErrorPipe, RouterLink, TranslatePipe, LucideMail, LucideMapPin, LucidePhone],
   template: `
     <div class="page">
       <a routerLink="/app/parking/cities" class="back-link">{{ 'parking.cityInfo.back' | translate }}</a>
@@ -42,13 +43,14 @@ import { LucideMail, LucideMapPin, LucidePhone } from '@lucide/angular';
           >{{ 'parking.selectStreet' | translate }}</a
         >
       } @else if (error()) {
-        <p class="card" role="alert">{{ 'parking.cityInfo.loadError' | translate }}</p>
+        <p class="card" role="alert">{{ requestError() | apiError: 'parking.cityInfo.loadError' }}</p>
       }
     </div>
   `,
   styleUrl: './city-info.component.css',
 })
 export class ParkingCityInfoComponent implements OnInit {
+  readonly requestError = signal<unknown>(null);
   private readonly route = inject(ActivatedRoute);
   private readonly cities = inject(CitiesService);
   readonly flowStore = inject(ParkingFlowStore);
@@ -72,7 +74,8 @@ export class ParkingCityInfoComponent implements OnInit {
       const contractId = Number(this.route.snapshot.queryParamMap.get('cityId'));
       this.municipio.set(data.find((city) => city.id === requested || city.contractId === contractId) ?? null);
       this.error.set(!this.municipio());
-    } catch {
+    } catch (error) {
+      this.requestError.set(error);
       this.error.set(true);
     }
   }

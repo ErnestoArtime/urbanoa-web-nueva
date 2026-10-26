@@ -1,3 +1,4 @@
+import { ApiErrorPipe } from '../../../shared/pipes/api-error.pipe';
 import { DatePipe, NgTemplateOutlet } from '@angular/common';
 import { Component, inject, OnInit } from '@angular/core';
 import { RouterLink } from '@angular/router';
@@ -10,6 +11,7 @@ import { LoaderComponent } from '../../../shared/components/loader/loader.compon
 @Component({
   selector: 'app-account-support',
   imports: [
+    ApiErrorPipe,
     DatePipe,
     NgTemplateOutlet,
     RouterLink,
@@ -26,7 +28,7 @@ import { LoaderComponent } from '../../../shared/components/loader/loader.compon
       <app-detail-panel-header [title]="'account.support.title' | translate" backRoute="/app/account" />
       @if (support.source() === 'error') {
         <div class="data-notice" role="alert">
-          <span>{{ 'account.support.loadError' | translate }}</span>
+          <span>{{ errorForDisplay() | apiError: 'account.support.loadError' }}</span>
           <button type="button" class="btn btn-secondary" [disabled]="support.loading()" (click)="support.load()">
             {{ 'common.retry' | translate }}
           </button>
@@ -106,6 +108,10 @@ import { LoaderComponent } from '../../../shared/components/loader/loader.compon
   styleUrl: './support.component.css',
 })
 export class AccountSupportComponent implements OnInit {
+  errorForDisplay(): unknown {
+    return this.support.lastError?.();
+  }
+
   readonly support = inject(SupportService);
 
   ngOnInit(): void {

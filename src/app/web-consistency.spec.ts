@@ -118,6 +118,7 @@ describe('Web consistency regressions', () => {
 
   it('rejects card-added messages from an unrelated origin and source', async () => {
     const wallet = {
+      responseError: () => null,
       loadPaymentMethodForm: async () => '<html></html>',
       load: jasmine.createSpy().and.resolveTo(),
       cards: signal([]),

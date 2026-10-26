@@ -1,3 +1,4 @@
+import { ApiErrorPipe } from '../../../shared/pipes/api-error.pipe';
 import { EuroPipe } from '../../../shared/pipes/euro.pipe';
 import { Component, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
@@ -9,7 +10,7 @@ import { APP_BRAND } from '../../../shared/constants/app-brand';
 @Component({
   selector: 'app-wallet-summary-card',
   standalone: true,
-  imports: [EuroPipe, RouterLink, TranslatePipe, AppIconComponent],
+  imports: [ApiErrorPipe, EuroPipe, RouterLink, TranslatePipe, AppIconComponent],
   template: `
     <div class="card wallet-shell-card">
       <div class="wallet-card-inline">
@@ -25,7 +26,7 @@ import { APP_BRAND } from '../../../shared/constants/app-brand';
         <span class="wallet-inline-mark" aria-hidden="true">{{ brand.name }}</span>
       </div>
       @if (balanceError()) {
-        <p role="alert">{{ 'account.paymentMethods.loadError' | translate }}</p>
+        <p role="alert">{{ responseError() | apiError: 'account.paymentMethods.loadError' }}</p>
         <button type="button" class="btn btn-secondary btn-sm" (click)="retry.emit()">{{ 'common.retry' | translate }}</button>
       }
       <div class="wallet-main-card-row">
@@ -57,6 +58,7 @@ export class WalletSummaryCardComponent {
   readonly balance = input.required<number>();
   readonly balanceAvailable = input(true);
   readonly balanceError = input(false);
+  readonly responseError = input<unknown>(null);
   readonly mainCard = input.required<{ brand: string; last4: string; cardholderName: string; expiryDate: string }>();
   readonly hasCards = input(false);
   readonly recharge = output<void>();

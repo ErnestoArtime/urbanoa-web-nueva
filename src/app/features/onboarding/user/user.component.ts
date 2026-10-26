@@ -1,3 +1,4 @@
+import { ApiErrorPipe } from '../../../shared/pipes/api-error.pipe';
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -7,13 +8,13 @@ import { UserService } from '../../../core/services/user.service';
 
 @Component({
   selector: 'app-onboarding-user',
-  imports: [ReactiveFormsModule, RouterLink, TranslatePipe],
+  imports: [ApiErrorPipe, ReactiveFormsModule, RouterLink, TranslatePipe],
   template: `
     <div class="page">
       <h1 class="page-title">{{ 'onboarding.user.title' | translate }}</h1>
       <p class="page-subtitle">{{ 'onboarding.user.subtitle' | translate }}</p>
       @if (failed()) {
-        <p class="form-error" role="alert">{{ 'account.profile.saveErrorDetail' | translate }}</p>
+        <p class="form-error" role="alert">{{ userService.lastError() | apiError: 'account.profile.saveErrorDetail' }}</p>
       }
       <form [formGroup]="form" (ngSubmit)="continue()">
         <div class="form-group">
@@ -49,7 +50,7 @@ export class OnboardingUserComponent implements OnInit {
   readonly failed = signal(false);
   private readonly fb = inject(FormBuilder);
   private readonly router = inject(Router);
-  private readonly userService = inject(UserService);
+  readonly userService = inject(UserService);
   readonly form = this.fb.nonNullable.group({
     name: ['', Validators.required],
     surname: ['', Validators.required],

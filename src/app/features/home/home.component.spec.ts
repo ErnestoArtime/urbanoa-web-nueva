@@ -54,6 +54,7 @@ describe('HomeComponent parking status progress', () => {
             balance: signal(0),
             balanceAvailable: signal(false),
             lastError: signal(null),
+            responseError: signal(null),
             cards: signal([]),
             mainCard: undefined,
           },

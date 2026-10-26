@@ -1,3 +1,4 @@
+import { apiErrorMessage } from '../../core/http/api-error-key';
 import { formatEuro } from '../../core/utils/euro-format';
 import { Component, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
@@ -119,11 +120,16 @@ import { TranslationService } from '../../core/services/translation.service';
           </div>
 
           <div class="dashboard-col-right">
-            <app-vehicle-summary-card [vehicle]="vehicle()" [unavailable]="vehicleLoadFailed()" />
+            <app-vehicle-summary-card
+              [vehicle]="vehicle()"
+              [unavailable]="vehicleLoadFailed()"
+              [responseError]="vehicleErrorForDisplay()"
+            />
             <app-wallet-summary-card
               [balance]="walletService.balance()"
               [balanceAvailable]="walletService.balanceAvailable()"
               [balanceError]="!walletService.balanceAvailable() && !!walletService.lastError()"
+              [responseError]="walletService.responseError()"
               [mainCard]="walletService.mainCard"
               [hasCards]="walletService.cards().length > 0"
               (recharge)="onRecharge()"
@@ -173,6 +179,10 @@ import { TranslationService } from '../../core/services/translation.service';
   styleUrl: './home.component.css',
 })
 export class HomeComponent {
+  vehicleErrorForDisplay(): unknown {
+    return this.vehicleService.lastError?.();
+  }
+
   readonly formatEuro = formatEuro;
   private readonly router = inject(Router);
   readonly walletService = inject(WalletService);
@@ -224,7 +234,7 @@ export class HomeComponent {
       this.pendingUnparkId = parking.id;
       const quote = await this.parkingSessionService.quoteUnparking(parking.id);
       if (!quote.success) {
-        this.unparkError.set(this.translations.translate('parking.unparking.quoteError'));
+        this.unparkError.set(apiErrorMessage(quote.error, this.translations, {}, 'parking.unparking.quoteError'));
         return;
       }
       this.pendingUnparkQuote = quote;
@@ -244,7 +254,7 @@ export class HomeComponent {
         this.unparked.set(true);
       }
     } catch (error) {
-      this.unparkError.set(error instanceof Error ? error.message : this.translations.translate('dashboard.unparkError'));
+      this.unparkError.set(apiErrorMessage(error, this.translations, {}, 'dashboard.unparkError'));
     } finally {
       this.confirmUnpark.set(false);
       this.pendingUnparkId = '';

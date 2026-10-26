@@ -14,6 +14,7 @@ describe('onboarding card setup', () => {
       source: signal('remote'),
       cards: signal<MainCard[]>([]),
       load: jasmine.createSpy('load').and.resolveTo(),
+      responseError: () => null,
       loadPaymentMethodForm: jasmine.createSpy('form').and.resolveTo('<html></html>'),
     };
     TestBed.configureTestingModule({

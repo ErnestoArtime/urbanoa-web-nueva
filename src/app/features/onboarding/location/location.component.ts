@@ -1,3 +1,4 @@
+import { ApiErrorPipe } from '../../../shared/pipes/api-error.pipe';
 import { Component, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { APP_BRAND } from '../../../shared/constants/app-brand';
@@ -10,7 +11,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 
 @Component({
   selector: 'app-onboarding-location',
-  imports: [TranslatePipe, AppIconComponent],
+  imports: [ApiErrorPipe, TranslatePipe, AppIconComponent],
   template: `
     <div class="location-page">
       <header class="location-header">
@@ -40,7 +41,9 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
           </button>
 
           @if (message(); as msg) {
-            <p class="location-feedback">{{ msg | translate }}</p>
+            <p class="location-feedback">
+              {{ msg === 'onboarding.location.citySyncPending' ? (userService.lastError() | apiError: msg) : (msg | translate) }}
+            </p>
           }
         </section>
       </main>
@@ -84,7 +87,7 @@ export class OnboardingLocationComponent {
   private readonly router = inject(Router);
   private readonly locationService = inject(LocationSettingsService);
   private readonly citiesService = inject(CitiesService);
-  private readonly userService = inject(UserService);
+  readonly userService = inject(UserService);
   readonly brand = APP_BRAND;
   readonly municipios = signal<Municipio[]>([]);
   readonly showCityPicker = signal(false);

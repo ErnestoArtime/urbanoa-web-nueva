@@ -1,3 +1,4 @@
+import { ApiErrorPipe } from '../../../shared/pipes/api-error.pipe';
 import { normalizeSectorColor } from '../../../shared/utils/sector-color';
 import { RuntimeStyleDirective } from '../../../shared/directives/runtime-style.directive';
 import { Component, computed, effect, inject, OnInit, signal } from '@angular/core';
@@ -11,7 +12,7 @@ import { TranslationService } from '../../../core/services/translation.service';
 
 @Component({
   selector: 'app-parking-tickets',
-  imports: [RuntimeStyleDirective, RouterLink, LoaderComponent, TranslatePipe],
+  imports: [ApiErrorPipe, RuntimeStyleDirective, RouterLink, LoaderComponent, TranslatePipe],
   template: `
     <app-loader [visible]="loading()" [message]="'parking.tickets.loading' | translate" />
     <div class="page flow-page">
@@ -74,7 +75,7 @@ import { TranslationService } from '../../../core/services/translation.service';
         }
         @if (!loading() && !tariffs().length) {
           <div class="card" [attr.role]="error() ? 'alert' : 'status'">
-            <p>{{ (error() ? 'parking.tickets.loadError' : 'parking.tickets.empty') | translate }}</p>
+            <p>{{ error() ? (requestError() | apiError: 'parking.tickets.loadError') : ('parking.tickets.empty' | translate) }}</p>
             @if (error()) {
               <button type="button" class="btn btn-secondary" (click)="loadTariffs()">{{ 'common.retry' | translate }}</button>
             }
@@ -94,6 +95,7 @@ export class ParkingTicketsComponent implements OnInit {
   readonly tariffs = signal<ParkingTicketOption[]>([]);
   readonly source = signal<'idle' | 'remote' | 'error'>('idle');
   readonly error = signal(false);
+  readonly requestError = signal<unknown>(null);
   private readonly initialQuery = readParkingFlowQuery(this.route);
   readonly query = computed(() =>
     this.store.hasMinimumParkingData() ? ({ ...this.initialQuery, ...this.store.fromStore() } as ParkingFlowQuery) : this.initialQuery,
@@ -140,6 +142,7 @@ export class ParkingTicketsComponent implements OnInit {
     this.tariffs.set([]);
     this.loading.set(true);
     this.error.set(false);
+    this.requestError.set(null);
     try {
       const result = await this.parkingApi.tickets({
         contractId: Number(query.cityId || 0),
@@ -150,9 +153,10 @@ export class ParkingTicketsComponent implements OnInit {
       if (requestId !== this.requestSequence || language !== this.translation.currentLang$()) return;
       this.tariffs.set(result.data);
       this.source.set('remote');
-    } catch {
+    } catch (error) {
       if (requestId !== this.requestSequence || language !== this.translation.currentLang$()) return;
       this.tariffs.set([]);
+      this.requestError.set(error);
       this.source.set('error');
       this.error.set(true);
     } finally {

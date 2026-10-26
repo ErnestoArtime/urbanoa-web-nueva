@@ -37,7 +37,10 @@ describe('Home navigation to actual feature routes', () => {
           provide: OpsApiClient,
           useValue: { get: read, getOrNull: read, post: read, postOrNull: read, serverNow: () => new Date(2026, 9, 20, 12) },
         },
-        { provide: TranslationService, useValue: { translate: (key: string) => key, translateLabel: (value: string) => value } },
+        {
+          provide: TranslationService,
+          useValue: { translate: (key: string) => key, translateLabel: (value: string) => value, currentLang$: () => 'es' },
+        },
       ],
     }).compileComponents();
     TestBed.inject(OpsSessionService).setToken('navigation-test');

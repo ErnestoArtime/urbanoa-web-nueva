@@ -1,3 +1,4 @@
+import { ApiErrorPipe } from '../../../shared/pipes/api-error.pipe';
 import { readDesignToken } from '../../../shared/styles/design-token';
 import { RuntimeStyleDirective } from '../../../shared/directives/runtime-style.directive';
 import { AfterViewInit, Component, ElementRef, OnDestroy, ViewChild, computed, effect, inject, signal } from '@angular/core';
@@ -38,6 +39,7 @@ interface MapParkingZone {
 @Component({
   selector: 'app-parking-map',
   imports: [
+    ApiErrorPipe,
     RuntimeStyleDirective,
     RouterLink,
     LoaderComponent,
@@ -165,7 +167,7 @@ interface MapParkingZone {
           } @else if (sectorResolving()) {
             <p class="select-hint" role="status">{{ 'parking.map.resolvingSector' | translate }}</p>
           } @else if (sectorError()) {
-            <p class="select-hint select-hint-error" role="status">{{ 'parking.map.sectorNotFound' | translate }}</p>
+            <p class="select-hint select-hint-error" role="status">{{ sectorResponseError() | apiError: 'parking.map.sectorNotFound' }}</p>
           } @else {
             <p class="select-hint">{{ 'parking.map.selectHint' | translate }}</p>
           }
@@ -181,7 +183,7 @@ interface MapParkingZone {
           @if (mapLoading()) {
             {{ 'parking.map.loadingZones' | translate: { city: selected.nombre } }}
           } @else if (mapError()) {
-            {{ 'parking.map.errorZones' | translate }}
+            {{ mapResponseError() | apiError: 'parking.map.errorZones' }}
           } @else {
             {{ 'parking.map.zonesCount' | translate: { count: '' + zoneCount(), city: selected.nombre } }}
           }
@@ -222,6 +224,8 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
   readonly mapLoading = signal(true);
   readonly flowError = signal(this.route.snapshot.queryParamMap.get('flowError') === 'missingData');
   readonly mapError = signal(false);
+  readonly mapResponseError = signal<unknown>(null);
+  readonly sectorResponseError = signal<unknown>(null);
   readonly sectorResolving = signal(false);
   readonly sectorError = signal(false);
   readonly locationState = signal<MapLocationState>('idle');
@@ -335,7 +339,8 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
         this.availableVehicles().find((vehicle) => vehicle.id === this.query.vehicleId || vehicle.plate === this.query.plate) ??
           preferredVehicle(this.availableVehicles()),
       );
-    } catch {
+    } catch (error) {
+      this.mapResponseError.set(error);
       this.mapError.set(true);
       this.mapLoading.set(false);
       return;
@@ -574,7 +579,8 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
         // initialized and makes the map center depend on the distribution of zones.
         this.selectZoneAtMapCenter();
       }
-    } catch {
+    } catch (error) {
+      this.mapResponseError.set(error);
       this.mapError.set(true);
     } finally {
       this.mapLoading.set(false);
@@ -598,6 +604,7 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
     const requestVersion = ++this.sectorRequestVersion;
     this.zoneLabelVisible.set(false);
     this.sectorError.set(false);
+    this.sectorResponseError.set(null);
     this.sectorResolving.set(Boolean(zone));
     if (this.highlightedZone && this.highlightedZone !== zone) {
       this.setZoneStyle(this.highlightedZone, false);
@@ -647,8 +654,11 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
       };
       this.selectedZone.set(resolved);
       this.zoneLabelVisible.set(true);
-    } catch {
-      if (requestVersion === this.sectorRequestVersion) this.sectorError.set(true);
+    } catch (error) {
+      if (requestVersion === this.sectorRequestVersion) {
+        this.sectorResponseError.set(error);
+        this.sectorError.set(true);
+      }
     } finally {
       if (requestVersion === this.sectorRequestVersion) this.sectorResolving.set(false);
     }

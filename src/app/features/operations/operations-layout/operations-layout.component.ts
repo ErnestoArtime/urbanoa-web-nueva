@@ -1,3 +1,5 @@
+import { apiErrorMessage } from '../../../core/http/api-error-key';
+import { ApiErrorPipe } from '../../../shared/pipes/api-error.pipe';
 import { formatEuro } from '../../../core/utils/euro-format';
 import { EuroPipe } from '../../../shared/pipes/euro.pipe';
 import { RuntimeStyleDirective } from '../../../shared/directives/runtime-style.directive';
@@ -29,6 +31,7 @@ import { TranslationService } from '../../../core/services/translation.service';
 @Component({
   selector: 'app-operations-layout',
   imports: [
+    ApiErrorPipe,
     EuroPipe,
     RuntimeStyleDirective,
     RouterLink,
@@ -214,7 +217,7 @@ import { TranslationService } from '../../../core/services/translation.service';
               <li class="list-item history-empty">
                 @if (operationsSource() === 'error') {
                   <div class="operations-error">
-                    <span>{{ 'ops.loadError' | translate }}</span>
+                    <span>{{ errorForDisplay() | apiError: 'ops.loadError' }}</span>
                     <button type="button" class="btn btn-secondary" (click)="retryOperations()">{{ 'common.retry' | translate }}</button>
                   </div>
                 } @else {
@@ -265,6 +268,10 @@ import { TranslationService } from '../../../core/services/translation.service';
   styleUrl: './operations-layout.component.css',
 })
 export class OperationsLayoutComponent implements OnInit, AfterViewInit {
+  errorForDisplay(): unknown {
+    return this.operationsService.responseError?.();
+  }
+
   readonly formatEuro = formatEuro;
   @ViewChild('historyControls') private historyControls?: ElementRef<HTMLElement>;
   private readonly api = inject(OpsApiClient);
@@ -370,7 +377,7 @@ export class OperationsLayoutComponent implements OnInit, AfterViewInit {
       this.pendingUnparkId = parkingId;
       const quote = await this.parkingSessionService.quoteUnparking(parkingId);
       if (!quote.success) {
-        this.unparkError.set(this.translations.translate('parking.unparking.quoteError'));
+        this.unparkError.set(apiErrorMessage(quote.error, this.translations, {}, 'parking.unparking.quoteError'));
         return;
       }
       this.pendingUnparkQuote = quote;
@@ -390,7 +397,7 @@ export class OperationsLayoutComponent implements OnInit, AfterViewInit {
         this.unparked.set(true);
       }
     } catch (error) {
-      this.unparkError.set(error instanceof Error ? error.message : this.translations.translate('dashboard.unparkError'));
+      this.unparkError.set(apiErrorMessage(error, this.translations, {}, 'dashboard.unparkError'));
     } finally {
       this.confirmUnpark.set(false);
       this.pendingUnparkId = '';

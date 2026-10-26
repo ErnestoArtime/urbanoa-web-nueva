@@ -1,3 +1,4 @@
+import { ApiErrorPipe } from '../../../shared/pipes/api-error.pipe';
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { RouterLink, NavigationEnd, Router } from '@angular/router';
 import { filter, map, startWith } from 'rxjs/operators';
@@ -12,7 +13,7 @@ import type { Vehicle } from '../../../shared/models/vehicle';
 
 @Component({
   selector: 'app-vehicles-layout',
-  imports: [RouterLink, SplitViewComponent, TranslatePipe, AppIconComponent],
+  imports: [ApiErrorPipe, RouterLink, SplitViewComponent, TranslatePipe, AppIconComponent],
   template: `
     <app-split-view class="vehicles-split" [hideList]="isChildRoute()" [hideDetail]="!isChildRoute()">
       <div splitList class="page has-sticky-actions" [attr.aria-busy]="loadingVehicles()">
@@ -21,7 +22,7 @@ import type { Vehicle } from '../../../shared/models/vehicle';
           <span class="sr-only" role="status">{{ 'common.loading' | translate }}</span>
         } @else if (vehicleService.source() === 'error') {
           <div class="card" role="alert">
-            <p>{{ 'errors.server' | translate }}</p>
+            <p>{{ errorForDisplay() | apiError: 'errors.server' }}</p>
             <button type="button" class="btn btn-primary btn-block" (click)="retry()">{{ 'common.retry' | translate }}</button>
           </div>
         } @else if (vehicles().length > 0) {
@@ -66,6 +67,10 @@ import type { Vehicle } from '../../../shared/models/vehicle';
   styleUrl: './vehicles-layout.component.css',
 })
 export class VehiclesLayoutComponent implements OnInit {
+  errorForDisplay(): unknown {
+    return this.vehicleService.lastError?.();
+  }
+
   readonly vehicleService = inject(VehicleService);
   private readonly parkingSessionService = inject(ParkingSessionService);
   private readonly translation = inject(TranslationService);

@@ -11,6 +11,7 @@ describe('PaymentAddComponent card confirmation', () => {
   async function setup() {
     const wallet = {
       load: jasmine.createSpy('load').and.resolveTo(),
+      responseError: () => null,
       loadPaymentMethodForm: jasmine.createSpy('form').and.resolveTo('<html></html>'),
       source: signal<'remote' | 'error'>('remote'),
       cards: signal([card('existing')]),

@@ -1,3 +1,4 @@
+import { apiErrorMessage } from '../http/api-error-key';
 import { OpsSessionService } from '../api/ops-session.service';
 import { PaymentChallengeService } from './payment-challenge.service';
 import { TranslationService } from './translation.service';
@@ -73,7 +74,7 @@ export class ParkingSessionService {
       } else {
         this.paymentChallenge.clear();
         this.operationsService.restoreActiveParking(parking);
-        this.unparkError.set(this.translations.translate('errors.server'));
+        this.unparkError.set(apiErrorMessage(error, this.translations));
       }
       return false;
     }

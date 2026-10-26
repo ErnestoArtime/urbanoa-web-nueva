@@ -1,3 +1,4 @@
+import { ApiErrorPipe } from '../../../shared/pipes/api-error.pipe';
 import { Component, ElementRef, ViewChild, input, output, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { Router } from '@angular/router';
@@ -7,7 +8,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 
 @Component({
   selector: 'app-payment-add',
-  imports: [TranslatePipe, DetailPanelHeaderComponent],
+  imports: [ApiErrorPipe, TranslatePipe, DetailPanelHeaderComponent],
   template: `
     <div class="page account-static-page paycomet-page">
       @if (!embedded()) {
@@ -26,7 +27,12 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
         </div>
       } @else if (error()) {
         <div class="state" role="alert">
-          <p>{{ (confirmationError() ? 'account.addCard.confirmError' : 'account.addCard.formError') | translate }}</p>
+          <p>
+            {{
+              (confirmationError() ? wallet.responseError() : requestError())
+                | apiError: (confirmationError() ? 'account.addCard.confirmError' : 'account.addCard.formError')
+            }}
+          </p>
           <button type="button" class="btn btn-primary" (click)="retry()">{{ 'common.retry' | translate }}</button>
         </div>
       } @else if (success()) {
@@ -51,12 +57,13 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
   styleUrl: './payment-add.component.css',
 })
 export class PaymentAddComponent implements OnInit, OnDestroy {
+  readonly requestError = signal<unknown>(null);
   @ViewChild('paymentFrame') private paymentFrame?: ElementRef<HTMLIFrameElement>;
   readonly embedded = input(false);
   readonly back = output<void>();
   readonly added = output<void>();
 
-  private readonly wallet = inject(WalletService);
+  readonly wallet = inject(WalletService);
   private readonly sanitizer = inject(DomSanitizer);
   private readonly router = inject(Router);
   private readonly onMessage = (event: MessageEvent): void => {
@@ -91,6 +98,7 @@ export class PaymentAddComponent implements OnInit, OnDestroy {
 
   async loadForm(): Promise<void> {
     const revision = ++this.requestRevision;
+    this.requestError.set(null);
     this.loading.set(true);
     this.error.set(false);
     this.confirmationError.set(false);
@@ -109,8 +117,11 @@ export class PaymentAddComponent implements OnInit, OnDestroy {
         `window.parent.postMessage('urbanoa-card-added', ${JSON.stringify(window.location.origin)}); window.Urbanoa.finish()`,
       );
       this.formHtml.set(this.sanitizer.bypassSecurityTrustHtml(bridgedHtml));
-    } catch {
-      if (!this.destroyed && revision === this.requestRevision) this.error.set(true);
+    } catch (error) {
+      if (!this.destroyed && revision === this.requestRevision) {
+        this.requestError.set(this.wallet.responseError() ?? error);
+        this.error.set(true);
+      }
     } finally {
       if (!this.destroyed && revision === this.requestRevision) this.loading.set(false);
     }
@@ -120,6 +131,7 @@ export class PaymentAddComponent implements OnInit, OnDestroy {
     if (this.checkingCard || this.success() || this.destroyed) return;
     this.checkingCard = true;
     const revision = this.requestRevision;
+    this.requestError.set(null);
     this.loading.set(true);
     this.error.set(false);
     try {
@@ -130,8 +142,9 @@ export class PaymentAddComponent implements OnInit, OnDestroy {
       this.confirmationError.set(!confirmed);
       this.error.set(!confirmed);
       if (confirmed) this.added.emit();
-    } catch {
+    } catch (error) {
       if (!this.destroyed && revision === this.requestRevision) {
+        this.requestError.set(this.wallet.responseError() ?? error);
         this.confirmationError.set(true);
         this.error.set(true);
       }

@@ -1,3 +1,4 @@
+import { ApiErrorPipe } from '../../../shared/pipes/api-error.pipe';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
@@ -8,7 +9,7 @@ import { LoaderComponent } from '../../../shared/components/loader/loader.compon
 
 @Component({
   selector: 'app-parking-streets',
-  imports: [RouterLink, TranslatePipe, LoaderComponent],
+  imports: [ApiErrorPipe, RouterLink, TranslatePipe, LoaderComponent],
   template: `
     <div class="page">
       <app-loader [visible]="loading()" [message]="'parking.streets.loading' | translate" imageSrc="/assets/brand/login-logo.jpg" />
@@ -22,7 +23,7 @@ import { LoaderComponent } from '../../../shared/components/loader/loader.compon
       </div>
       @if (dataSource() === 'error') {
         <div class="data-notice" role="alert">
-          <span>{{ 'parking.streets.loadError' | translate }}</span>
+          <span>{{ requestError() | apiError: 'parking.streets.loadError' }}</span>
           <button type="button" class="btn btn-secondary btn-sm" (click)="loadStreets()">{{ 'common.retry' | translate }}</button>
         </div>
       }
@@ -56,6 +57,7 @@ import { LoaderComponent } from '../../../shared/components/loader/loader.compon
   styleUrl: './streets.component.css',
 })
 export class ParkingStreetsComponent implements OnInit {
+  readonly requestError = signal<unknown>(null);
   private readonly route = inject(ActivatedRoute);
   private readonly streetsService = inject(StreetsService);
   private readonly citiesService = inject(CitiesService);
@@ -107,13 +109,15 @@ export class ParkingStreetsComponent implements OnInit {
 
   async loadStreets(): Promise<void> {
     const contractId = this.citiesService.contractIdFor(this.cityId);
+    this.requestError.set(null);
     this.loading.set(true);
     this.dataSource.set('loading');
     try {
       const result = await this.streetsService.getStreets(contractId);
       this.streets.set(result.data);
       this.dataSource.set('remote');
-    } catch {
+    } catch (error) {
+      this.requestError.set(error);
       this.streets.set([]);
       this.dataSource.set('error');
     } finally {

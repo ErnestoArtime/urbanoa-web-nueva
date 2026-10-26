@@ -1,3 +1,4 @@
+import { ApiErrorPipe } from '../../../shared/pipes/api-error.pipe';
 import { Component, computed, effect, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -11,7 +12,7 @@ import { LoaderComponent } from '../../../shared/components/loader/loader.compon
 
 @Component({
   selector: 'app-vehicle-edit',
-  imports: [TranslatePipe, DetailPanelHeaderComponent, ResultModalComponent, LoaderComponent],
+  imports: [ApiErrorPipe, TranslatePipe, DetailPanelHeaderComponent, ResultModalComponent, LoaderComponent],
   template: `
     <app-loader [visible]="saving()" [message]="'common.loading' | translate" />
     <div class="page account-static-page account-form-page">
@@ -72,7 +73,7 @@ import { LoaderComponent } from '../../../shared/components/loader/loader.compon
         <app-result-modal
           type="error"
           [title]="'errors.server' | translate"
-          [message]="deleteErrorMessage() || ('errors.server' | translate)"
+          [message]="deleteErrorMessage() | apiError: 'errors.server'"
           [primaryText]="'common.accept' | translate"
           (primaryAction)="deleteFailed.set(false)"
         />
@@ -94,7 +95,7 @@ export class VehicleEditComponent implements OnInit {
   readonly favorite = signal(false);
   readonly result = signal<'saved' | 'deleted' | null>(null);
   readonly deleteFailed = signal(false);
-  readonly deleteErrorMessage = signal<string | null>(null);
+  readonly deleteErrorMessage = signal<unknown>(null);
   readonly confirmDelete = signal(false);
   readonly blockedDelete = signal(false);
   readonly saving = signal(false);
@@ -134,7 +135,7 @@ export class VehicleEditComponent implements OnInit {
         await this.operationsService.load();
         this.result.set('saved');
       } else {
-        this.deleteErrorMessage.set(mutation.error?.backendError ? mutation.error.message : null);
+        this.deleteErrorMessage.set(mutation.error);
         this.deleteFailed.set(true);
       }
     } catch {
@@ -169,7 +170,7 @@ export class VehicleEditComponent implements OnInit {
         await this.operationsService.load();
         this.result.set('deleted');
       } else {
-        this.deleteErrorMessage.set(mutation.error?.backendError ? mutation.error.message : null);
+        this.deleteErrorMessage.set(mutation.error);
         this.deleteFailed.set(true);
       }
     } catch {

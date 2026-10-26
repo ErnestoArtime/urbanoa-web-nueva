@@ -1,3 +1,4 @@
+import { ApiErrorPipe } from '../../../shared/pipes/api-error.pipe';
 import { Component, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
@@ -7,7 +8,7 @@ import type { Vehicle } from '../../../shared/models/vehicle';
 @Component({
   selector: 'app-vehicle-summary-card',
   standalone: true,
-  imports: [RouterLink, TranslatePipe, AppIconComponent],
+  imports: [ApiErrorPipe, RouterLink, TranslatePipe, AppIconComponent],
   template: `
     <div class="card compact-card vehicle-summary-card">
       <app-icon name="vehicle" class="vehicle-summary-icon" [stroke]="false" />
@@ -18,7 +19,7 @@ import type { Vehicle } from '../../../shared/models/vehicle';
         </div>
       } @else if (unavailable()) {
         <div role="alert">
-          <p class="vehicle-summary-label">{{ 'errors.server' | translate }}</p>
+          <p class="vehicle-summary-label">{{ responseError() | apiError: 'errors.server' }}</p>
         </div>
       } @else {
         <div>
@@ -34,4 +35,5 @@ import type { Vehicle } from '../../../shared/models/vehicle';
 export class VehicleSummaryCardComponent {
   readonly vehicle = input<Vehicle | null>(null);
   readonly unavailable = input(false);
+  readonly responseError = input<unknown>(null);
 }

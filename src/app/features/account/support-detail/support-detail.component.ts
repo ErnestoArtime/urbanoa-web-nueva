@@ -1,3 +1,4 @@
+import { ApiErrorPipe } from '../../../shared/pipes/api-error.pipe';
 import { Component, computed, inject } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { LucideHeadphones, LucideImage, LucideMessageSquareReply, LucideUserRound } from '@lucide/angular';
@@ -12,6 +13,7 @@ import { LoaderComponent } from '../../../shared/components/loader/loader.compon
 @Component({
   selector: 'app-account-support-detail',
   imports: [
+    ApiErrorPipe,
     RouterLink,
     LucideHeadphones,
     LucideImage,
@@ -81,7 +83,7 @@ import { LoaderComponent } from '../../../shared/components/loader/loader.compon
         }
       } @else if (support.source() === 'error') {
         <div class="data-notice" role="alert">
-          <span>{{ 'account.support.loadError' | translate }}</span>
+          <span>{{ errorForDisplay() | apiError: 'account.support.loadError' }}</span>
           <button type="button" class="btn btn-secondary" (click)="retry()">{{ 'common.retry' | translate }}</button>
         </div>
       } @else if (!support.loading()) {
@@ -96,6 +98,10 @@ import { LoaderComponent } from '../../../shared/components/loader/loader.compon
   styleUrl: './support-detail.component.css',
 })
 export class AccountSupportDetailComponent {
+  errorForDisplay(): unknown {
+    return this.support.lastError?.();
+  }
+
   private readonly translations = inject(TranslationService);
   private readonly route = inject(ActivatedRoute);
   readonly support = inject(SupportService);

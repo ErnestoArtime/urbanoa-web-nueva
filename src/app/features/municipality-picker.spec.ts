@@ -25,7 +25,7 @@ for (const componentType of [AccountSettingsComponent, OnboardingLocationCompone
             provide: CitiesService,
             useValue: { getCities: async () => ({ data: [city] }), selectableCities: (data: unknown) => data, contractIdFor: () => 1 },
           },
-          { provide: UserService, useValue: { user: () => ({}), updatePreferredContract: update } },
+          { provide: UserService, useValue: { user: () => ({}), lastError: () => null, updatePreferredContract: update } },
           { provide: TranslationService, useValue: { translate: (key: string) => (key === 'common.save' ? 'Guardar' : key) } },
         ],
       });

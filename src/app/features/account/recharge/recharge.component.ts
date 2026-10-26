@@ -1,3 +1,5 @@
+import { ApiErrorPipe } from '../../../shared/pipes/api-error.pipe';
+import { apiErrorMessage } from '../../../core/http/api-error-key';
 import { formatEuro } from '../../../core/utils/euro-format';
 import { EuroPipe } from '../../../shared/pipes/euro.pipe';
 
@@ -22,7 +24,16 @@ import { isPaymentOutcomeUnknown } from '../../../core/utils/payment-error';
 @Component({
   selector: 'app-account-recharge',
   host: { '[class.embedded-editor]': 'embedded()' },
-  imports: [EuroPipe, ReactiveFormsModule, RouterLink, TranslatePipe, DetailPanelHeaderComponent, ResultModalComponent, LoaderComponent],
+  imports: [
+    ApiErrorPipe,
+    EuroPipe,
+    ReactiveFormsModule,
+    RouterLink,
+    TranslatePipe,
+    DetailPanelHeaderComponent,
+    ResultModalComponent,
+    LoaderComponent,
+  ],
   template: `
     <app-loader [visible]="saving()" [message]="'common.loading' | translate" />
     <div class="page account-static-page account-form-page">
@@ -32,7 +43,7 @@ import { isPaymentOutcomeUnknown } from '../../../core/utils/payment-error';
         <h2>{{ 'account.recharge.title' | translate }}</h2>
       }
       @if (walletService.source() === 'error') {
-        <p class="data-notice" role="alert">{{ 'account.recharge.serviceError' | translate }}</p>
+        <p class="data-notice" role="alert">{{ errorForDisplay() | apiError: 'account.recharge.serviceError' }}</p>
       }
       @if (submitError(); as error) {
         <p class="data-notice" role="alert">{{ error }}</p>
@@ -112,6 +123,10 @@ import { isPaymentOutcomeUnknown } from '../../../core/utils/payment-error';
   styleUrls: ['../account-editor.css', './recharge.component.css'],
 })
 export class AccountRechargeComponent {
+  errorForDisplay(): unknown {
+    return this.walletService.responseError?.();
+  }
+
   readonly formatEuro = formatEuro;
   readonly cardId = input('');
   readonly addCard = output<void>();
@@ -221,7 +236,7 @@ export class AccountRechargeComponent {
           this.submitError.set(this.translationService.translate('payment.uncertain.message'));
         } else {
           this.paymentChallenge.clear();
-          this.submitError.set(this.translationService.translate('account.recharge.serviceError'));
+          this.submitError.set(apiErrorMessage(result.error, this.translationService, {}, 'account.recharge.serviceError'));
         }
         return;
       }

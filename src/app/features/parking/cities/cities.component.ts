@@ -1,3 +1,4 @@
+import { ApiErrorPipe } from '../../../shared/pipes/api-error.pipe';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
@@ -27,7 +28,7 @@ const EMPTY_CITY: ParkingMunicipio = {
 
 @Component({
   selector: 'app-parking-cities',
-  imports: [RouterLink, TranslatePipe, LoaderComponent, LucideSearch],
+  imports: [ApiErrorPipe, RouterLink, TranslatePipe, LoaderComponent, LucideSearch],
   template: `
     <div class="page has-sticky-actions">
       <app-loader
@@ -37,7 +38,7 @@ const EMPTY_CITY: ParkingMunicipio = {
       />
       <h1 class="page-title">{{ 'parking.selectMunicipio' | translate }}</h1>
       @if (dataSource() === 'error') {
-        <p class="data-notice" role="alert">{{ 'parking.cities.loadError' | translate }}</p>
+        <p class="data-notice" role="alert">{{ requestError() | apiError: 'parking.cities.loadError' }}</p>
       }
       @if (dataSource() === 'error' || partialCities()) {
         <div class="data-notice" role="status">
@@ -130,6 +131,7 @@ const EMPTY_CITY: ParkingMunicipio = {
   standalone: true,
 })
 export class ParkingCitiesComponent implements OnInit {
+  readonly requestError = signal<unknown>(null);
   private readonly locationSettings = inject(LocationSettingsService);
   private readonly citiesService = inject(CitiesService);
   readonly flowStore = inject(ParkingFlowStore);
@@ -150,13 +152,15 @@ export class ParkingCitiesComponent implements OnInit {
   }
 
   async loadCities(force = false): Promise<void> {
+    this.requestError.set(null);
     this.dataSource.set('loading');
     try {
       const result = await this.citiesService.getCities(force);
       this.municipios.set(this.citiesService.selectableCities(result.data));
       this.dataSource.set('remote');
       this.selected.set(this.municipios().find((city) => city.id === this.selected().id) ?? this.defaultCity());
-    } catch {
+    } catch (error) {
+      this.requestError.set(error);
       this.municipios.set([]);
       this.dataSource.set('error');
     }
