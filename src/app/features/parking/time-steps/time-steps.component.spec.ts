@@ -1,3 +1,6 @@
+import { OpsApiError } from '../../../core/api/ops-api.types';
+import { ApiErrorPipe } from '../../../shared/pipes/api-error.pipe';
+import { TranslationService } from '../../../core/services/translation.service';
 import { formatEuro } from '../../../core/utils/euro-format';
 import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
@@ -160,5 +163,54 @@ describe('ParkingTimeStepsComponent extension', () => {
     await component.ngOnInit();
     expect(component.startDayLabel()).toBe('ops.tomorrow');
     expect(component.endDayLabel()).toBe('ops.tomorrow');
+  });
+});
+
+describe('parking time business rejection', () => {
+  it('shows the OPS message in all four languages and prevents continuing', async () => {
+    const language = signal<'es' | 'eu' | 'fr' | 'uk'>('es');
+    const payload = {
+      code: -2,
+      type: 1,
+      message_ES: 'La matrícula ha consumido la cantidad máxima de tiempo',
+      message_EU: 'Matrikulak gehienezko denbora erabili du',
+      message_FR: 'La plaque a utilisé le temps maximum',
+      message_EN: 'The plate has used the maximum amount of time',
+    };
+    const error = new OpsApiError('backend', 'QueryParkingOperationWithTimeStepsAPI', payload.message_ES, 200, payload);
+    TestBed.configureTestingModule({
+      providers: [
+        provideZonelessChangeDetection(),
+        { provide: OpsApiClient, useValue: { post: () => Promise.reject(error), serverNow: () => new Date() } },
+        { provide: OpsSessionService, useValue: { token: () => 'token' } },
+        { provide: ParkingSessionService, useValue: { activeParkings: signal([]) } },
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            snapshot: {
+              queryParamMap: convertToParamMap({ cityId: '1', sectorId: '60301', ticketId: '4', tariffId: '4', plate: 'PKJ321' }),
+            },
+          },
+        },
+        { provide: TranslationService, useValue: { currentLang$: language, translate: (key: string) => key } },
+      ],
+    });
+    const component = TestBed.runInInjectionContext(() => new ParkingTimeStepsComponent());
+    const pipe = TestBed.runInInjectionContext(() => new ApiErrorPipe());
+    await component.ngOnInit();
+    expect(component.requestError()).toBe(error);
+    expect(component.loading()).toBeFalse();
+    expect(component.canContinue()).toBeFalse();
+    expect(component.steps()).toEqual([]);
+    for (const [lang, message] of [
+      ['es', payload.message_ES],
+      ['eu', payload.message_EU],
+      ['fr', payload.message_FR],
+      ['uk', payload.message_EN],
+    ] as const) {
+      language.set(lang);
+      expect(pipe.transform(component.requestError(), 'parking.timeSteps.loadError')).toBe(message);
+    }
+    expect(pipe.transform(new TypeError('private network detail'), 'parking.timeSteps.loadError')).toBe('parking.timeSteps.loadError');
   });
 });

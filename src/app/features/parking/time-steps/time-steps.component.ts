@@ -1,3 +1,4 @@
+import { ApiErrorPipe } from '../../../shared/pipes/api-error.pipe';
 import { formatEuro } from '../../../core/utils/euro-format';
 import { RuntimeStyleDirective } from '../../../shared/directives/runtime-style.directive';
 import { Component, computed, effect, inject, OnInit, signal } from '@angular/core';
@@ -15,7 +16,7 @@ import { opsRelativeDayLabel, formatOpsTime, parseOpsDate } from '../../../core/
 
 @Component({
   selector: 'app-parking-time-steps',
-  imports: [RuntimeStyleDirective, RouterLink, LoaderComponent, TranslatePipe, LucideCarFront],
+  imports: [ApiErrorPipe, RuntimeStyleDirective, RouterLink, LoaderComponent, TranslatePipe, LucideCarFront],
   template: `
     <app-loader [visible]="loading()" [message]="'parking.timeSteps.loading' | translate" imageSrc="/assets/brand/login-logo.jpg" />
     <div class="page flow-page has-sticky-actions">
@@ -93,7 +94,7 @@ import { opsRelativeDayLabel, formatOpsTime, parseOpsDate } from '../../../core/
         </div>
       }
       @if (!loading() && error()) {
-        <p class="card" role="alert">{{ 'parking.timeSteps.loadError' | translate }}</p>
+        <p class="card" role="alert">{{ requestError() | apiError: 'parking.timeSteps.loadError' }}</p>
       }
       @if (!loading() && noExtensionAvailable()) {
         <p class="card no-extension-message" role="status">{{ 'parking.timeSteps.noExtensionAvailable' | translate }}</p>
@@ -122,6 +123,7 @@ import { opsRelativeDayLabel, formatOpsTime, parseOpsDate } from '../../../core/
   styleUrl: './time-steps.component.css',
 })
 export class ParkingTimeStepsComponent implements OnInit {
+  readonly requestError = signal<unknown>(null);
   private readonly route = inject(ActivatedRoute);
   private readonly store = inject(ParkingFlowStore);
   private readonly timeStepsService = inject(ParkingTimeStepsService);
@@ -172,11 +174,12 @@ export class ParkingTimeStepsComponent implements OnInit {
     return behavior !== undefined && behavior !== '' && [0, 2, 3].includes(Number(behavior));
   });
   readonly canContinue = computed(() => {
-    return this.steps().length > 0 && this.selectedStep().time > 0 && !this.invalidTicketBehavior();
+    return !this.loading() && !this.error() && this.steps().length > 0 && this.selectedStep().time > 0 && !this.invalidTicketBehavior();
   });
   private readonly startedAt = this.api.serverNow();
 
   private currentlyLoadedPlate = '';
+  private loadRevision = 0;
 
   async ngOnInit(): Promise<void> {
     this.currentlyLoadedPlate = this.query().plate;
@@ -192,7 +195,10 @@ export class ParkingTimeStepsComponent implements OnInit {
   });
 
   private async loadSteps(): Promise<void> {
+    const revision = ++this.loadRevision;
     const q = this.query();
+    this.requestError.set(null);
+    this.steps.set([]);
     this.loading.set(true);
     this.error.set(false);
     this.noExtensionAvailable.set(false);
@@ -219,16 +225,19 @@ export class ParkingTimeStepsComponent implements OnInit {
         startDate: this.startedAt,
         stepMinutes: this.isZarautz() ? 3 : 5,
       });
+      if (revision !== this.loadRevision) return;
       this.steps.set(generatedSteps);
       const oneHourIndex = generatedSteps.findIndex((step) => step.time === 60);
       const defaultIndex = oneHourIndex >= 0 ? oneHourIndex : 0;
       if (generatedSteps[defaultIndex]) this.selectedStep.set(generatedSteps[defaultIndex]);
     } catch (error) {
+      if (revision !== this.loadRevision) return;
+      this.requestError.set(error);
       this.steps.set([]);
       if (error instanceof NoParkingTimeAvailableError) this.noExtensionAvailable.set(true);
       else this.error.set(true);
     } finally {
-      this.loading.set(false);
+      if (revision === this.loadRevision) this.loading.set(false);
     }
   }
 
