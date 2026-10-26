@@ -109,7 +109,9 @@ export class ParkingSuccessComponent implements OnInit {
       amount: receipt ? formatEuro(Math.abs(receipt.amount)) : '',
     } as ParkingFlowQuery;
   });
-  readonly isExtension = computed(() => this.query().mode === 'extension');
+  readonly isExtension = computed(() =>
+    this.receipt() ? this.receipt()!.type === OperationType.PARKING_EXTENSION : this.initialQuery.mode === 'extension',
+  );
   readonly parkingType = computed(() => (this.isExtension() ? OperationType.PARKING_EXTENSION : OperationType.PARKING));
   readonly isFreeTicket = computed(() => !!this.receipt() && Math.abs(this.receipt()!.amount) < 0.005);
 
@@ -121,24 +123,31 @@ export class ParkingSuccessComponent implements OnInit {
 
   async loadReceipt(): Promise<void> {
     if (this.loadingReceipt()) return;
+    const id = this.initialQuery['operationId'];
+    if (!id) {
+      this.receipt.set(null);
+      return;
+    }
     this.loadingReceipt.set(true);
     try {
       const retryDelaysMs = [0, 500, 1_500, 3_000];
-      for (const delayMs of retryDelaysMs) {
+      for (const [index, delayMs] of retryDelaysMs.entries()) {
         if (delayMs) await new Promise<void>((resolve) => setTimeout(resolve, delayMs));
-        await Promise.all([this.operations.load(), this.wallet.load()]);
-        const id = this.initialQuery['operationId'];
+        await this.operations.load(undefined, undefined, undefined, {
+          reuseRecent: index < retryDelaysMs.length - 1,
+        });
         const matches = this.operations
           .operations()
           .filter(
             (operation) =>
               !!id &&
               (operation.id === id || operation.operationNumber === id) &&
-              operation.type === this.parkingType() &&
+              [OperationType.PARKING, OperationType.PARKING_EXTENSION].includes(operation.type) &&
               (!this.initialQuery.cityId || operation.contractId === Number(this.initialQuery.cityId)),
           );
         if (this.operations.source() === 'remote' && matches.length === 1) {
           this.receipt.set(matches[0]);
+          void this.wallet.load().catch(() => undefined);
           this.operations.syncActiveParkingsFromOperations(this.vehicles.vehicles());
           return;
         }

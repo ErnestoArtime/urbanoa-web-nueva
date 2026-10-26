@@ -63,3 +63,77 @@ describe('Parking success authoritative receipt', () => {
     fixture.destroy();
   }, 10_000);
 });
+
+describe('Parking receipt operation classification', () => {
+  for (const [mode, type] of [
+    ['parking', OperationType.PARKING_EXTENSION],
+    ['extension', OperationType.PARKING],
+  ] as const) {
+    it(`uses the exact confirmed operation even when OPS returns type ${type} for web mode ${mode}`, async () => {
+      const operation = {
+        id: 'confirmed-42',
+        operationNumber: '42',
+        type,
+        contractId: 1,
+        plate: '1234ABC',
+        amount: -5,
+        date: '26/10/2026',
+        zone: 'Zona 3',
+      };
+      const operations = {
+        source: signal('remote'),
+        load: jasmine.createSpy().and.resolveTo(),
+        operations: signal([operation]),
+        syncActiveParkingsFromOperations: jasmine.createSpy(),
+      };
+      TestBed.configureTestingModule({
+        providers: [
+          provideZonelessChangeDetection(),
+          {
+            provide: ActivatedRoute,
+            useValue: { snapshot: { queryParamMap: convertToParamMap({ operationId: '42', cityId: '1', mode }) } },
+          },
+          { provide: OperationsService, useValue: operations },
+          { provide: WalletService, useValue: { load: jasmine.createSpy().and.rejectWith(new Error('Wallet refresh unavailable')) } },
+          { provide: VehicleService, useValue: { vehicles: signal([]) } },
+        ],
+      });
+      const component = TestBed.runInInjectionContext(() => new ParkingSuccessComponent());
+      await component.loadReceipt();
+      expect(component.receipt()).toEqual(operation);
+      expect(component.isExtension()).toBe(type === OperationType.PARKING_EXTENSION);
+      expect(operations.load).toHaveBeenCalledTimes(1);
+      expect(operations.load).toHaveBeenCalledWith(undefined, undefined, undefined, { reuseRecent: true });
+    }, 10_000);
+  }
+});
+
+describe('Parking receipt reference boundaries', () => {
+  for (const operationId of ['', '42']) {
+    it(`does not use a cached operation from another contract for reference '${operationId}'`, async () => {
+      const operations = {
+        source: signal('remote'),
+        load: jasmine.createSpy().and.resolveTo(),
+        operations: signal([{ id: '42', operationNumber: '42', type: OperationType.PARKING, contractId: 3, plate: '1234ABC', amount: -5 }]),
+        syncActiveParkingsFromOperations: jasmine.createSpy(),
+      };
+      TestBed.configureTestingModule({
+        providers: [
+          provideZonelessChangeDetection(),
+          {
+            provide: ActivatedRoute,
+            useValue: { snapshot: { queryParamMap: convertToParamMap({ operationId, cityId: '1', mode: 'parking' }) } },
+          },
+          { provide: OperationsService, useValue: operations },
+          { provide: WalletService, useValue: { load: jasmine.createSpy().and.resolveTo() } },
+          { provide: VehicleService, useValue: { vehicles: signal([]) } },
+        ],
+      });
+      const component = TestBed.runInInjectionContext(() => new ParkingSuccessComponent());
+      await component.loadReceipt();
+      expect(component.receipt()).toBeNull();
+      expect(component.loadingReceipt()).toBeFalse();
+      if (!operationId) expect(operations.load).not.toHaveBeenCalled();
+    }, 10_000);
+  }
+});
