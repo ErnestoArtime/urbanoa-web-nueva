@@ -43,6 +43,7 @@ export function apiErrorMessage(
   error: unknown,
   translation: Pick<TranslationService, 'currentLang$' | 'translate'>,
   overrides: Partial<Record<ApiErrorCode, string>> = {},
+  fallbackKey?: string,
 ): string {
   if (error instanceof OpsApiError && error.backendError) {
     const messages = {
@@ -54,5 +55,5 @@ export function apiErrorMessage(
     const message = messages[translation.currentLang$()];
     if (typeof message === 'string' && message.trim()) return message;
   }
-  return translation.translate(apiErrorKey(error, overrides));
+  return translation.translate(fallbackKey ?? apiErrorKey(error, overrides));
 }

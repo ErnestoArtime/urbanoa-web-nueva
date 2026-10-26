@@ -162,6 +162,31 @@ describe('OpsApiClient', () => {
     await expectAsync(client.post('test', {})).toBeRejectedWithError(OpsApiError, 'Error genérico');
   });
 
+  for (const status of [200, 400, 500]) {
+    it(`preserves the translated business payload and status for HTTP ${status}`, async () => {
+      const backendError = {
+        code: -2,
+        type: 1,
+        message_ES: 'Máximo consumido',
+        message_EU: 'Gehienezkoa',
+        message_FR: 'Maximum',
+        message_EN: 'Maximum used',
+      };
+      const fetchSpy = spyOn(globalThis, 'fetch').and.resolveTo(
+        new Response(JSON.stringify({ value: null, isSuccess: false, error: backendError }), { status }),
+      );
+      await expectAsync(client.post(OPS_ENDPOINTS.user.operations, {})).toBeRejectedWith(
+        jasmine.objectContaining({
+          kind: status === 200 ? 'backend' : 'http',
+          status,
+          backendError,
+          message: backendError.message_ES,
+        }),
+      );
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+    });
+  }
+
   it('notifies when the backend reports an expired session with code -231', async () => {
     const sessionExpired = jasmine.createSpy('sessionExpired');
     window.addEventListener('urbanoa:session-expired', sessionExpired);

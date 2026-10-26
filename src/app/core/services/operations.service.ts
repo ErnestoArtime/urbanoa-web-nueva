@@ -149,6 +149,7 @@ export class OperationsService {
     this.source.set('idle');
     this.activeSource.set('idle');
     this.lastError.set(null);
+    this.responseError.set(null);
   }
 
   readonly operations = this._operations.asReadonly();
@@ -178,6 +179,7 @@ export class OperationsService {
   readonly activeSource = signal<'idle' | 'remote' | 'error'>('idle');
   readonly loading = signal(false);
   readonly lastError = signal<string | null>(null);
+  readonly responseError = signal<unknown>(null);
 
   load(
     dateStart?: string,
@@ -233,6 +235,7 @@ export class OperationsService {
     };
     this.loading.set(true);
     this.lastError.set(null);
+    this.responseError.set(null);
     try {
       const response = await this.api.post<OperationResponseDto[]>(OPS_ENDPOINTS.user.operations, requestBody, { token });
       if (generation !== this.generation || requestKey !== this.requestedLoadKey) return;
@@ -250,6 +253,7 @@ export class OperationsService {
       this.lastSuccessfulLoad = { key: requestKey, at: Date.now() };
     } catch (error) {
       if (generation !== this.generation || requestKey !== this.requestedLoadKey) return;
+      this.responseError.set(error);
       this.lastError.set(error instanceof Error ? error.message : 'Error desconocido al cargar las operaciones');
       const errorDetails =
         error instanceof OpsApiError

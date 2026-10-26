@@ -39,6 +39,7 @@ const DEFAULTS: NotificationPreferences = {
 export class NotificationsService {
   readonly preferences = signal<NotificationPreferences>({ ...DEFAULTS });
   readonly source = signal<'idle' | 'remote' | 'error'>('idle');
+  readonly lastError = signal<unknown>(null);
 
   private readonly api = inject(OpsApiClient);
   private readonly session = inject(OpsSessionService);
@@ -55,6 +56,7 @@ export class NotificationsService {
     this.loadRevision++;
     this.preferences.set({ ...DEFAULTS });
     this.source.set('idle');
+    this.lastError.set(null);
   }
 
   async load(): Promise<NotificationPreferences> {
@@ -70,8 +72,10 @@ export class NotificationsService {
       if (generation !== this.generation || revision !== this.loadRevision) return this.preferences();
       this.preferences.set({ ...DEFAULTS, ...response.notifications });
       this.source.set('remote');
+      this.lastError.set(null);
     } catch (error) {
       if (generation !== this.generation || revision !== this.loadRevision) return this.preferences();
+      this.lastError.set(error);
       console.warn('[OPS API] No se pudieron cargar las notificaciones', error);
       this.source.set('error');
     }
@@ -92,8 +96,10 @@ export class NotificationsService {
       this.loadRevision++;
       this.preferences.set(preferences);
       this.source.set('remote');
+      this.lastError.set(null);
     } catch (error) {
       if (generation !== this.generation) return 'error';
+      this.lastError.set(error);
       console.warn('[OPS API] No se pudieron guardar las notificaciones', error);
       this.source.set('error');
     }

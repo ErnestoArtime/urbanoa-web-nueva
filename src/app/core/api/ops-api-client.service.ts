@@ -90,7 +90,9 @@ export class OpsApiClient {
   private isTransient(error: unknown): boolean {
     return (
       error instanceof OpsApiError &&
-      (error.kind === 'transport' || error.kind === 'timeout' || (error.kind === 'http' && RETRYABLE_HTTP_STATUSES.has(error.status ?? 0)))
+      (error.kind === 'transport' ||
+        error.kind === 'timeout' ||
+        (error.kind === 'http' && !error.backendError && RETRYABLE_HTTP_STATUSES.has(error.status ?? 0)))
     );
   }
 
@@ -143,8 +145,28 @@ export class OpsApiClient {
           window.dispatchEvent(new CustomEvent('urbanoa:session-expired'));
         }
         const responseBody = await response.text().catch(() => '');
-        const detail = responseBody.trim().replace(/\s+/g, ' ').slice(0, 500);
-        throw new OpsApiError('http', endpoint, `${endpoint}: HTTP ${response.status}${detail ? ` - ${detail}` : ''}`, response.status);
+        let backendError: OpsApiEnvelope<unknown>['error'] = null;
+        try {
+          const payload: unknown = JSON.parse(responseBody);
+          if (this.isEnvelope(payload) && !payload.isSuccess) backendError = payload.error;
+        } catch {
+          // Non-JSON HTTP errors retain the transport classification and catalogue fallback.
+        }
+        if (
+          backendError &&
+          SESSION_EXPIRED_ERROR_CODES.has(backendError.code) &&
+          !endpoint.endsWith('LoginUserAPI') &&
+          response.status !== 401
+        ) {
+          window.dispatchEvent(new CustomEvent('urbanoa:session-expired'));
+        }
+        throw new OpsApiError(
+          'http',
+          endpoint,
+          backendError ? this.localizedBackendMessage(backendError, endpoint) : `${endpoint}: HTTP ${response.status}`,
+          response.status,
+          backendError,
+        );
       }
 
       const serverDate = response.headers.get('date');

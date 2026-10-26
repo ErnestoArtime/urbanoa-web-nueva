@@ -82,6 +82,7 @@ export class WalletService {
   readonly source = signal<'idle' | 'remote' | 'error'>('idle');
   readonly loading = signal(false);
   readonly lastError = signal<string | null>(null);
+  readonly responseError = signal<unknown>(null);
 
   readonly balance = signal(0);
   readonly balanceAvailable = signal(false);
@@ -111,6 +112,7 @@ export class WalletService {
       if (this.session.token() !== token) return null;
       this.source.set('remote');
       this.lastError.set(null);
+      this.responseError.set(null);
       return html;
     } catch (error) {
       if (this.session.token() !== token) return null;
@@ -134,6 +136,7 @@ export class WalletService {
     this.loading.set(true);
     if (options.balanceOnly) this.balanceAvailable.set(false);
     this.lastError.set(null);
+    this.responseError.set(null);
     try {
       const [creditResult, paymentMethodsResult] = await Promise.allSettled([
         this.api.get<number>(OPS_ENDPOINTS.wallet.credit, { token }),
@@ -167,6 +170,7 @@ export class WalletService {
         this.useError(failure);
       } else {
         this.source.set('remote');
+        this.responseError.set(failure);
         this.lastError.set(failure instanceof Error ? failure.message : null);
       }
     } catch (error) {
@@ -186,6 +190,7 @@ export class WalletService {
         if (this.session.token() !== token) return false;
         this.source.set('remote');
         this.lastError.set(null);
+        this.responseError.set(null);
       } catch (error) {
         if (this.session.token() !== token) return false;
         this.useError(error);
@@ -209,6 +214,7 @@ export class WalletService {
         if (this.session.token() !== token) return false;
         this.source.set('remote');
         this.lastError.set(null);
+        this.responseError.set(null);
       } catch (error) {
         if (this.session.token() !== token) return false;
         this.useError(error);
@@ -239,6 +245,7 @@ export class WalletService {
       if (this.session.token() !== token) return { success: false, source: 'error' };
       this.source.set('remote');
       this.lastError.set(null);
+      this.responseError.set(null);
       const order = response.order?.trim() || undefined;
       if (response.challengeUrl) {
         return { success: true, source: 'remote', ...(order ? { order } : {}), challengeUrl: response.challengeUrl };
@@ -305,6 +312,7 @@ export class WalletService {
       this.recordRefund(refunded);
       this.source.set('remote');
       this.lastError.set(null);
+      this.responseError.set(null);
       return { success: true, source: 'remote', amount: refunded };
     } catch (error) {
       if (this.session.token() !== token) return { success: false, source: 'error' };
@@ -375,6 +383,7 @@ export class WalletService {
     this.source.set('idle');
     this.loading.set(false);
     this.lastError.set(null);
+    this.responseError.set(null);
   }
 
   private mapPaymentMethod(method: PaymentMethodDto): MainCard {
@@ -417,6 +426,7 @@ export class WalletService {
       error instanceof OpsApiError
         ? error
         : new OpsApiError('transport', 'wallet', error instanceof Error ? error.message : 'Error desconocido');
+    this.responseError.set(apiError);
     this.lastError.set(apiError.message);
     return apiError;
   }
