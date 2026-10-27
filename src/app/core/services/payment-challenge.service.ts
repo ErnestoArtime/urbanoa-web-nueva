@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { OpsApiError } from '../api/ops-api.types';
 
 export type PaymentChallengeKind = 'recharge' | 'parking' | 'parking-extension' | 'fine' | 'refund' | 'unparking';
 
@@ -27,6 +28,36 @@ export type PaymentChallengeRequest = Omit<PendingPaymentChallenge, 'startedAt'>
  */
 @Injectable({ providedIn: 'root' })
 export class PaymentChallengeService {
+  private readonly insertedKey = 'urbanoa.payments.inserted-parking-v1';
+  private insertedParking: { signature: string; payment: PendingPaymentChallenge; error: OpsApiError['backendError'] }[] = [];
+
+  /** An explicit duplicate response is retained separately from an unknown payment outcome. */
+  archiveInsertedParking(signature: string, error: OpsApiError): void {
+    const payment = this.getPending();
+    if (!payment || error.backendError?.code !== -13) return;
+    const records = this.readInsertedParking().filter((record) => record.signature !== signature);
+    records.push({ signature, payment, error: error.backendError });
+    this.insertedParking = records;
+    this.write(this.insertedKey, JSON.stringify(records));
+    this.clear();
+  }
+
+  insertedParkingError(signature: string): OpsApiError | undefined {
+    const record = this.readInsertedParking().find((item) => item.signature === signature);
+    return record ? new OpsApiError('backend', 'ConfirmParkingOperationAPI', '', 200, record.error) : undefined;
+  }
+
+  private readInsertedParking(): typeof this.insertedParking {
+    try {
+      const raw = this.read(this.insertedKey);
+      const records = raw ? JSON.parse(raw) : this.insertedParking;
+      return Array.isArray(records)
+        ? records.filter((item) => typeof item?.signature === 'string' && item.error?.code === -13 && item.payment)
+        : [];
+    } catch {
+      return this.insertedParking;
+    }
+  }
   private volatileConfirmed: { payment: PendingPaymentChallenge; confirmedAt: number } | null = null;
   private readonly confirmedKey = 'urbanoa.payments.last-confirmed-v1';
   private volatilePending: PendingPaymentChallenge | null = null;
@@ -121,7 +152,11 @@ export class PaymentChallengeService {
     };
   }
 
-  clear(): void {
+  clear(clearInsertedParking = false): void {
+    if (clearInsertedParking) {
+      this.insertedParking = [];
+      this.remove(this.insertedKey);
+    }
     this.volatileConfirmed = null;
     this.remove(this.confirmedKey);
     this.volatilePending = null;

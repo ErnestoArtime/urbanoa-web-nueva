@@ -1,9 +1,30 @@
 import { provideZonelessChangeDetection } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { PaymentChallengeService } from './payment-challenge.service';
+import { OpsApiError } from '../api/ops-api.types';
 
 describe('PaymentChallengeService', () => {
   let service: PaymentChallengeService;
+
+  it('retains an inserted attempt across reload without blocking a different payment, until session cleanup', () => {
+    const error = new OpsApiError('backend', 'ConfirmParkingOperationAPI', '', 200, {
+      code: -13,
+      type: 3,
+      message_ES: 'La operación ya se ha insertado',
+      message_EN: 'Operation already inserted',
+    });
+    service.begin({ kind: 'parking', returnUrl: '/app/operations', amount: 1, status: 'uncertain' });
+    service.archiveInsertedParking('attempt-a', error);
+    const restored = new PaymentChallengeService();
+    expect(restored.hasPendingPayment()).toBeFalse();
+    expect(restored.insertedParkingError('attempt-a')?.backendError?.message_EN).toBe('Operation already inserted');
+    expect(restored.insertedParkingError('attempt-b')).toBeUndefined();
+    restored.begin({ kind: 'parking', returnUrl: '/app/operations', amount: 2, status: 'uncertain' });
+    restored.clear();
+    expect(restored.insertedParkingError('attempt-a')).toBeDefined();
+    restored.clear(true);
+    expect(new PaymentChallengeService().insertedParkingError('attempt-a')).toBeUndefined();
+  });
 
   it('keeps free parking pending while its write is uncertain', () => {
     service.begin({ kind: 'parking', returnUrl: '/app/operations', amount: 0, status: 'uncertain' });

@@ -245,7 +245,7 @@ export class AuthService {
       });
       if (!response.token?.trim()) throw new Error('LoginUserAPI no devolvió token');
       if (attempt !== this.loginAttempt) throw new Error('Login cancelled');
-      this.paymentChallenge.clear();
+      this.paymentChallenge.clear(true);
       // Claim ownership by the login identity while the profile is loading so
       // request validation remains active during the whole login flow.
       this.windowSession.activate(email);
@@ -472,7 +472,7 @@ export class AuthService {
   }
 
   private clearSession(): void {
-    this.paymentChallenge.clear();
+    this.paymentChallenge.clear(true);
     this.paymentDepartureArmed = false;
     try {
       sessionStorage.removeItem(this.reloadSessionKey);

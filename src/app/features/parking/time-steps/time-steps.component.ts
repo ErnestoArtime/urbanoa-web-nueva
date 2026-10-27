@@ -282,6 +282,8 @@ export class ParkingTimeStepsComponent implements OnInit {
     return {
       ...this.query(),
       duration: step.timeFormatted,
+      startDatetimeRaw: step.startDatetimeRaw,
+      endDatetimeRaw: step.datetimeRaw,
       minutes: String(step.time),
       amount: String(step.amount),
       startTime: this.startTime(),

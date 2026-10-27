@@ -20,6 +20,8 @@ import { isCardUsable } from '../../../core/utils/card-expiry';
 import { TranslationService } from '../../../core/services/translation.service';
 import { PaymentChallengeService } from '../../../core/services/payment-challenge.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { OpsApiError } from '../../../core/api/ops-api.types';
+import { formatOpsDate } from '../../../core/utils/ops-date';
 
 @Component({
   selector: 'app-parking-confirm',
@@ -40,6 +42,9 @@ import { AuthService } from '../../../core/services/auth.service';
       <h1 class="page-title">{{ 'parking.confirm.title' | translate }}</h1>
       @if (submitError()) {
         <p class="submit-error" role="alert">{{ submitError() }}</p>
+        @if (paymentUncertain()) {
+          <a routerLink="/app/operations" class="btn btn-secondary">{{ 'ops.title' | translate }}</a>
+        }
       }
 
       <div class="card summary">
@@ -166,9 +171,33 @@ export class ParkingConfirmComponent implements OnInit {
   readonly paymentAlertOpen = signal(false);
   readonly loading = signal(false);
   readonly submitError = signal<string | null>(
-    this.paymentChallenge.hasPendingPayment() ? this.translations.translate('payment.uncertain.message') : null,
+    this.paymentChallenge.insertedParkingError(this.parkingSignature())
+      ? apiErrorMessage(this.paymentChallenge.insertedParkingError(this.parkingSignature()), this.translations)
+      : this.paymentChallenge.hasPendingPayment()
+        ? this.translations.translate('payment.uncertain.message')
+        : null,
   );
-  readonly paymentUncertain = signal(this.paymentChallenge.hasPendingPayment());
+  readonly paymentUncertain = signal(
+    this.paymentChallenge.hasPendingPayment() || !!this.paymentChallenge.insertedParkingError(this.parkingSignature()),
+  );
+
+  private parkingSignature(): string {
+    const q = this.query();
+    const day = formatOpsDate(this.parkingApi.serverNow?.() ?? new Date()).slice(6);
+    return JSON.stringify([
+      q.cityId,
+      q.plate?.replace(/\s/g, '').toUpperCase(),
+      q.sectorId,
+      q.ticketId || q.tariffId,
+      q.tariffType,
+      q.minutes,
+      q.amount?.replace('€', '').replace(',', '.').trim(),
+      q.startDatetimeRaw || `${day}:${q.startDayLabel}:${q.startTime}`,
+      q.endDatetimeRaw || `${day}:${q.endDayLabel}:${q.endTime}`,
+      q.mode || 'parking',
+      q.opBaseId,
+    ]);
+  }
   private confirmationPending = false;
   readonly backendConfirmed = signal(false);
   private confirmedReceipt: { walletAmount: number; operationId?: number | string } | null = null;
@@ -215,9 +244,13 @@ export class ParkingConfirmComponent implements OnInit {
       await this.showConfirmedReceipt();
       return;
     }
-    if (this.paymentUncertain() || this.paymentChallenge.hasPendingPayment()) {
+    if (
+      this.paymentUncertain() ||
+      this.paymentChallenge.hasPendingPayment() ||
+      this.paymentChallenge.insertedParkingError(this.parkingSignature())
+    ) {
       this.paymentUncertain.set(true);
-      this.submitError.set(this.translations.translate('payment.uncertain.message'));
+      this.submitError.update((message) => message ?? this.translations.translate('payment.uncertain.message'));
       this.swipePay.reset();
       return;
     }
@@ -234,6 +267,7 @@ export class ParkingConfirmComponent implements OnInit {
       this.selectedCardId.set(selected.id);
     }
     const walletAmount = Math.min(amount, this.walletService.balance());
+    const attemptSignature = this.parkingSignature();
     this.confirmationPending = true;
     this.loading.set(true);
     this.submitError.set(null);
@@ -264,11 +298,14 @@ export class ParkingConfirmComponent implements OnInit {
           : await this.parkingApi.confirmParking(confirmation);
       this.paymentChallenge.updateReferences({ operationId: result.operationId });
       if (!result.success) {
-        if (isPaymentOutcomeUnknown(result.error)) {
+        if (result.error instanceof OpsApiError && result.error.kind === 'backend' && result.error.backendError?.code === -13) {
+          this.paymentChallenge.archiveInsertedParking(attemptSignature, result.error);
           this.paymentUncertain.set(true);
-          const pendingMessage = this.translations.translate('payment.uncertain.message');
-          const serverMessage = apiErrorMessage(result.error, this.translations, {}, 'payment.uncertain.message');
-          this.submitError.set(serverMessage === pendingMessage ? pendingMessage : `${pendingMessage} ${serverMessage}`);
+          this.submitError.set(apiErrorMessage(result.error, this.translations));
+          await Promise.allSettled([this.operations.load(), this.walletService.load()]);
+        } else if (isPaymentOutcomeUnknown(result.error)) {
+          this.paymentUncertain.set(true);
+          this.submitError.set(apiErrorMessage(result.error, this.translations, {}, 'payment.uncertain.message'));
           await this.operations.load();
         } else {
           this.paymentChallenge.clear();
@@ -287,9 +324,11 @@ export class ParkingConfirmComponent implements OnInit {
       this.backendConfirmed.set(true);
       this.paymentChallenge.confirm(result.operationId);
       await this.showConfirmedReceipt();
-    } catch {
+    } catch (error) {
       this.paymentUncertain.set(!this.backendConfirmed());
-      this.submitError.set(this.translations.translate(this.backendConfirmed() ? 'errors.server' : 'payment.uncertain.message'));
+      this.submitError.set(
+        apiErrorMessage(error, this.translations, {}, this.backendConfirmed() ? 'errors.server' : 'payment.uncertain.message'),
+      );
     } finally {
       this.loading.set(false);
       this.confirmationPending = false;
