@@ -1,3 +1,4 @@
+import { ApiErrorPipe } from '../../../shared/pipes/api-error.pipe';
 import { formatEuro } from '../../../core/utils/euro-format';
 import { RuntimeStyleDirective } from '../../../shared/directives/runtime-style.directive';
 import { Component, computed, inject, OnInit, DestroyRef, signal } from '@angular/core';
@@ -18,7 +19,7 @@ import { LoaderComponent } from '../../../shared/components/loader/loader.compon
 
 @Component({
   selector: 'app-parking-success',
-  imports: [RuntimeStyleDirective, RouterLink, OperationIconComponent, TranslatePipe, AppIconComponent, LoaderComponent],
+  imports: [ApiErrorPipe, RuntimeStyleDirective, RouterLink, OperationIconComponent, TranslatePipe, AppIconComponent, LoaderComponent],
   template: `
     <app-loader [visible]="loadingReceipt()" [message]="'common.loading' | translate" />
     <div class="page success-page">
@@ -68,7 +69,7 @@ import { LoaderComponent } from '../../../shared/components/loader/loader.compon
             </div>
           } @else {
             <h1 class="page-title">{{ 'parking.success.receiptPending' | translate }}</h1>
-            <p role="status">{{ 'parking.success.receiptPendingDetail' | translate }}</p>
+            <p role="status">{{ requestError() | apiError: 'parking.success.receiptPendingDetail' }}</p>
             <button class="btn btn-secondary" (click)="loadReceipt()">{{ 'common.retry' | translate }}</button>
           }
           <div class="actions">
@@ -93,6 +94,7 @@ export class ParkingSuccessComponent implements OnInit {
   private readonly initialQuery = readParkingFlowQuery(this.route);
   readonly receipt = signal<Operation | null>(null);
   readonly loadingReceipt = signal(false);
+  readonly requestError = signal<unknown>(null);
   readonly now = signal(Date.now());
   readonly sectorColor = computed(() => normalizeSectorColor(this.receipt()?.sectorColor));
   readonly query = computed(() => {
@@ -128,6 +130,7 @@ export class ParkingSuccessComponent implements OnInit {
       this.receipt.set(null);
       return;
     }
+    this.requestError.set(null);
     this.loadingReceipt.set(true);
     try {
       const retryDelaysMs = [0, 500, 1_500, 3_000];
@@ -154,7 +157,8 @@ export class ParkingSuccessComponent implements OnInit {
       }
       this.receipt.set(null);
       this.operations.syncActiveParkingsFromOperations(this.vehicles.vehicles());
-    } catch {
+    } catch (error) {
+      this.requestError.set(error);
       this.receipt.set(null);
     } finally {
       this.loadingReceipt.set(false);

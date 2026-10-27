@@ -264,7 +264,7 @@ export class AccountSupportFormComponent implements OnInit {
   readonly loadFailed = signal(false);
   readonly requestError = signal<unknown>(null);
   supportError(): unknown {
-    return this.support.lastError?.() ?? this.requestError();
+    return this.requestError() ?? this.support.lastError?.();
   }
   readonly sendFailed = signal(false);
   readonly attachmentReading = signal(false);
@@ -399,6 +399,7 @@ export class AccountSupportFormComponent implements OnInit {
       this.showError.set(true);
       return;
     }
+    this.requestError.set(null);
     this.submitting.set(true);
     this.form.disable({ emitEvent: false });
     try {
@@ -426,8 +427,9 @@ export class AccountSupportFormComponent implements OnInit {
         this.sendFailed.set(true);
         this.showError.set(true);
       }
-    } catch {
+    } catch (error) {
       if (revision === this.loadRevision) {
+        this.requestError.set(error);
         this.sendFailed.set(true);
         this.showError.set(true);
       }

@@ -14,7 +14,7 @@ import { UserService } from '../../../core/services/user.service';
       <h1 class="page-title">{{ 'onboarding.user.title' | translate }}</h1>
       <p class="page-subtitle">{{ 'onboarding.user.subtitle' | translate }}</p>
       @if (failed()) {
-        <p class="form-error" role="alert">{{ userService.lastError() | apiError: 'account.profile.saveErrorDetail' }}</p>
+        <p class="form-error" role="alert">{{ requestError() ?? userService.lastError() | apiError: 'account.profile.saveErrorDetail' }}</p>
       }
       <form [formGroup]="form" (ngSubmit)="continue()">
         <div class="form-group">
@@ -46,6 +46,7 @@ import { UserService } from '../../../core/services/user.service';
   `,
 })
 export class OnboardingUserComponent implements OnInit {
+  readonly requestError = signal<unknown>(null);
   readonly saving = signal(false);
   readonly failed = signal(false);
   private readonly fb = inject(FormBuilder);
@@ -66,6 +67,7 @@ export class OnboardingUserComponent implements OnInit {
   async continue(): Promise<void> {
     this.form.markAllAsTouched();
     if (this.form.invalid || this.saving()) return;
+    this.requestError.set(null);
     this.saving.set(true);
     this.failed.set(false);
     try {
@@ -75,7 +77,8 @@ export class OnboardingUserComponent implements OnInit {
         return;
       }
       await this.router.navigate(['/onboarding/payment']);
-    } catch {
+    } catch (error) {
+      this.requestError.set(error);
       this.failed.set(true);
     } finally {
       this.saving.set(false);

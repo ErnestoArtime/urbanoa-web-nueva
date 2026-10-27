@@ -1,3 +1,4 @@
+import { ApiErrorPipe } from '../../../shared/pipes/api-error.pipe';
 import { formatEuro } from '../../../core/utils/euro-format';
 import { EuroPipe } from '../../../shared/pipes/euro.pipe';
 import { RuntimeStyleDirective } from '../../../shared/directives/runtime-style.directive';
@@ -21,6 +22,7 @@ import { TicketCutAlignDirective } from '../../../shared/directives/ticket-cut-a
 @Component({
   selector: 'app-operations-detail',
   imports: [
+    ApiErrorPipe,
     EuroPipe,
     RuntimeStyleDirective,
     OperationIconComponent,
@@ -33,6 +35,9 @@ import { TicketCutAlignDirective } from '../../../shared/directives/ticket-cut-a
   template: `
     <div class="page operation-detail-page">
       <app-detail-panel-header [title]="detailTitle() | translate" backRoute="/app/operations" />
+      @if (operationError(); as error) {
+        <p class="data-notice" role="alert">{{ error | apiError: 'ops.loadError' }}</p>
+      }
       @if (op(); as operation) {
         @if (isFinePaymentDetail()) {
           <section class="fine-payment-detail">
@@ -258,6 +263,10 @@ import { TicketCutAlignDirective } from '../../../shared/directives/ticket-cut-a
   styleUrl: './detail.component.css',
 })
 export class OperationsDetailComponent {
+  operationError(): unknown {
+    return this.service.responseError?.();
+  }
+
   private readonly route = inject(ActivatedRoute);
   private readonly service = inject(OperationsService);
   private readonly translationService = inject(TranslationService);

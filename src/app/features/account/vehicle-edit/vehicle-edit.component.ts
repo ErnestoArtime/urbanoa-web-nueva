@@ -138,8 +138,8 @@ export class VehicleEditComponent implements OnInit {
         this.deleteErrorMessage.set(mutation.error);
         this.deleteFailed.set(true);
       }
-    } catch {
-      this.deleteErrorMessage.set(null);
+    } catch (error) {
+      this.deleteErrorMessage.set(error);
       this.deleteFailed.set(true);
     } finally {
       this.saving.set(false);
@@ -173,8 +173,8 @@ export class VehicleEditComponent implements OnInit {
         this.deleteErrorMessage.set(mutation.error);
         this.deleteFailed.set(true);
       }
-    } catch {
-      this.deleteErrorMessage.set(null);
+    } catch (error) {
+      this.deleteErrorMessage.set(error);
       this.deleteFailed.set(true);
     } finally {
       this.saving.set(false);

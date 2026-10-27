@@ -116,8 +116,9 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
   styleUrls: ['../account-editor.css', './profile.component.css'],
 })
 export class AccountProfileComponent {
+  readonly requestError = signal<unknown>(null);
   errorForDisplay(): unknown {
-    return this.userService.lastError?.();
+    return this.requestError() ?? this.userService.lastError?.();
   }
 
   readonly saved = signal(false);
@@ -153,6 +154,7 @@ export class AccountProfileComponent {
     this.form.markAllAsTouched();
     if (this.form.invalid || this.saving()) return;
 
+    this.requestError.set(null);
     this.saving.set(true);
     try {
       const result = await this.userService.save(this.form.getRawValue());
@@ -161,7 +163,8 @@ export class AccountProfileComponent {
       } else {
         this.saveFailed.set(true);
       }
-    } catch {
+    } catch (error) {
+      this.requestError.set(error);
       this.saveFailed.set(true);
     } finally {
       this.saving.set(false);

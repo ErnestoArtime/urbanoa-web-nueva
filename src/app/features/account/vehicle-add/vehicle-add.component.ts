@@ -126,8 +126,8 @@ export class VehicleAddComponent {
         this.addErrorMessage.set(mutation.error);
         this.addFailed.set(true);
       }
-    } catch {
-      this.addErrorMessage.set(null);
+    } catch (error) {
+      this.addErrorMessage.set(error);
       this.addFailed.set(true);
     } finally {
       this.saving.set(false);

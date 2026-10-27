@@ -162,8 +162,9 @@ import { UserService, type UserAddress } from '../../../core/services/user.servi
   styleUrls: ['../account-editor.css', './tax-data.component.css'],
 })
 export class AccountTaxDataComponent {
+  readonly requestError = signal<unknown>(null);
   errorForDisplay(): unknown {
-    return this.userService.lastError?.();
+    return this.requestError() ?? this.userService.lastError?.();
   }
 
   private readonly userService = inject(UserService);
@@ -211,6 +212,7 @@ export class AccountTaxDataComponent {
     if (!this.canSave()) return;
     if (this.saving()) return;
 
+    this.requestError.set(null);
     this.saving.set(true);
     try {
       const result = await this.userService.save({ nif: this.nif().trim(), address: current });
@@ -219,7 +221,8 @@ export class AccountTaxDataComponent {
       } else {
         this.saveFailed.set(true);
       }
-    } catch {
+    } catch (error) {
+      this.requestError.set(error);
       this.saveFailed.set(true);
     } finally {
       this.saving.set(false);

@@ -14,7 +14,9 @@ import { NotificationsService } from '../../../core/services/notifications.servi
       <p class="page-subtitle">{{ 'onboarding.notification.subtitle' | translate }}</p>
       <p class="text-muted">{{ 'onboarding.notification.webNotice' | translate }}</p>
       @if (failed()) {
-        <p class="form-error" role="alert">{{ notifications.lastError() | apiError: 'onboarding.notification.saveError' }}</p>
+        <p class="form-error" role="alert">
+          {{ requestError() ?? notifications.lastError() | apiError: 'onboarding.notification.saveError' }}
+        </p>
       }
       <button type="button" class="btn btn-primary btn-block mt-2" [disabled]="saving()" (click)="activate()">
         {{ 'onboarding.notification.savePreferences' | translate }}
@@ -24,6 +26,7 @@ import { NotificationsService } from '../../../core/services/notifications.servi
   `,
 })
 export class OnboardingNotificationComponent {
+  readonly requestError = signal<unknown>(null);
   readonly saving = signal(false);
   readonly failed = signal(false);
   readonly notifications = inject(NotificationsService);
@@ -31,13 +34,15 @@ export class OnboardingNotificationComponent {
 
   async activate(): Promise<void> {
     if (this.saving()) return;
+    this.requestError.set(null);
     this.saving.set(true);
     this.failed.set(false);
     try {
       const result = await this.notifications.save(this.notifications.preferences());
       if (result === 'remote') await this.router.navigate(['/onboarding/ready']);
       else this.failed.set(true);
-    } catch {
+    } catch (error) {
+      this.requestError.set(error);
       this.failed.set(true);
     } finally {
       this.saving.set(false);

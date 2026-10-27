@@ -63,9 +63,11 @@ interface LocationMessage {
         @if (locationMessage(); as msg) {
           <p class="inline-message">
             {{
-              msg.key === 'account.settings.location.citySyncPending'
-                ? (userService.lastError() | apiError: msg.key)
-                : (msg.key | translate: msg.params)
+              requestError()
+                ? (requestError() | apiError: msg.key)
+                : msg.key === 'account.settings.location.citySyncPending'
+                  ? (userService.lastError() | apiError: msg.key)
+                  : (msg.key | translate: msg.params)
             }}
           </p>
         }
@@ -94,9 +96,11 @@ interface LocationMessage {
             @if (locationMessage(); as msg) {
               <p class="inline-message" role="status">
                 {{
-                  msg.key === 'account.settings.location.citySyncPending'
-                    ? (userService.lastError() | apiError: msg.key)
-                    : (msg.key | translate: msg.params)
+                  requestError()
+                    ? (requestError() | apiError: msg.key)
+                    : msg.key === 'account.settings.location.citySyncPending'
+                      ? (userService.lastError() | apiError: msg.key)
+                      : (msg.key | translate: msg.params)
                 }}
               </p>
             }
@@ -114,6 +118,7 @@ interface LocationMessage {
   styleUrl: './settings.component.css',
 })
 export class AccountSettingsComponent {
+  readonly requestError = signal<unknown>(null);
   readonly locationService = inject(LocationSettingsService);
   private readonly citiesService = inject(CitiesService);
   readonly userService = inject(UserService);
@@ -135,7 +140,11 @@ export class AccountSettingsComponent {
           this.locationService.setPreferredCity(remoteCity.id, remoteCity.nombre, remoteCity.contractId);
         }
       })
-      .catch(() => this.municipios.set([]));
+      .catch((error) => {
+        this.requestError.set(error);
+        this.municipios.set([]);
+        this.locationMessage.set({ key: 'parking.cities.loadError' });
+      });
   }
 
   permissionLabelKey(): string {
@@ -150,6 +159,7 @@ export class AccountSettingsComponent {
   }
   openCityPicker(): void {
     this.selectedCity.set(this.municipios().find((city) => city.id === this.locationService.settings().preferredCityId) ?? null);
+    this.requestError.set(null);
     this.locationMessage.set(null);
     this.showCityPicker.set(true);
   }
@@ -163,6 +173,7 @@ export class AccountSettingsComponent {
     if (city) await this.selectCity(city.id, city.nombre);
   }
   async requestLocation(): Promise<void> {
+    this.requestError.set(null);
     this.locationMessage.set(null);
     const result = await this.locationService.requestCurrentLocation();
     this.locationMessage.set({
@@ -175,6 +186,7 @@ export class AccountSettingsComponent {
   }
   async selectCity(id: string, name: string): Promise<void> {
     if (this.savingCity()) return;
+    this.requestError.set(null);
     this.savingCity.set(true);
     try {
       const contractId = this.citiesService.contractIdFor(id);
@@ -185,7 +197,8 @@ export class AccountSettingsComponent {
       try {
         const result = await this.userService.updatePreferredContract(contractId);
         if (result.success) this.locationService.confirmPreferredCitySync(savedSettings);
-      } catch {
+      } catch (error) {
+        this.requestError.set(error);
         // Remote failure must not block a municipality already saved locally.
       }
       this.showCityPicker.set(false);
@@ -195,7 +208,8 @@ export class AccountSettingsComponent {
           : 'account.settings.location.citySavedMessage',
         params: { city: name },
       });
-    } catch {
+    } catch (error) {
+      this.requestError.set(error);
       this.locationMessage.set({ key: 'account.settings.location.citySaveError' });
     } finally {
       this.savingCity.set(false);

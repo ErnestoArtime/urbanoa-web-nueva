@@ -42,7 +42,13 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 
           @if (message(); as msg) {
             <p class="location-feedback">
-              {{ msg === 'onboarding.location.citySyncPending' ? (userService.lastError() | apiError: msg) : (msg | translate) }}
+              {{
+                requestError()
+                  ? (requestError() | apiError: msg)
+                  : msg === 'onboarding.location.citySyncPending'
+                    ? (userService.lastError() | apiError: msg)
+                    : (msg | translate)
+              }}
             </p>
           }
         </section>
@@ -84,6 +90,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
   styleUrl: './location.component.css',
 })
 export class OnboardingLocationComponent {
+  readonly requestError = signal<unknown>(null);
   private readonly router = inject(Router);
   private readonly locationService = inject(LocationSettingsService);
   private readonly citiesService = inject(CitiesService);
@@ -99,10 +106,15 @@ export class OnboardingLocationComponent {
     void this.citiesService
       .getCities()
       .then((result) => this.municipios.set(this.citiesService.selectableCities(result.data)))
-      .catch(() => this.municipios.set([]));
+      .catch((error) => {
+        this.requestError.set(error);
+        this.municipios.set([]);
+        this.message.set('parking.cities.loadError');
+      });
   }
 
   async grantPermission(): Promise<void> {
+    this.requestError.set(null);
     this.message.set('');
     const ok = await this.locationService.requestCurrentLocation();
     if (ok.ok) {
@@ -116,6 +128,7 @@ export class OnboardingLocationComponent {
   async selectCity(id: string, name: string): Promise<void> {
     if (this.savingCity()) return;
     this.savingCity.set(true);
+    this.requestError.set(null);
     this.message.set('');
     try {
       const contractId = this.citiesService.contractIdFor(id);
@@ -125,7 +138,8 @@ export class OnboardingLocationComponent {
       try {
         const result = await this.userService.updatePreferredContract(contractId);
         if (result.success) this.locationService.confirmPreferredCitySync(savedSettings);
-      } catch {
+      } catch (error) {
+        this.requestError.set(error);
         // The local choice remains usable even when OPS cannot synchronize it.
       }
       this.showCityPicker.set(false);
@@ -135,7 +149,8 @@ export class OnboardingLocationComponent {
           : 'onboarding.location.citySavedRedirect',
       );
       setTimeout(() => void this.router.navigate(['/onboarding/notification']), 1000);
-    } catch {
+    } catch (error) {
+      this.requestError.set(error);
       this.message.set('onboarding.location.citySaveError');
     } finally {
       this.savingCity.set(false);
@@ -144,6 +159,7 @@ export class OnboardingLocationComponent {
 
   openCityPicker(): void {
     this.selectedCity.set(this.municipios().find((city) => city.id === this.locationService.settings().preferredCityId) ?? null);
+    this.requestError.set(null);
     this.message.set('');
     this.showCityPicker.set(true);
   }
@@ -159,6 +175,7 @@ export class OnboardingLocationComponent {
 
   skip(): void {
     this.showCityPicker.set(false);
+    this.requestError.set(null);
     this.message.set('');
     void this.router.navigate(['/app'], { replaceUrl: true });
   }

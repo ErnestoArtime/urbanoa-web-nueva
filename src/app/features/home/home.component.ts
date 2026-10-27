@@ -1,3 +1,4 @@
+import { ApiErrorPipe } from '../../shared/pipes/api-error.pipe';
 import { apiErrorMessage } from '../../core/http/api-error-key';
 import { formatEuro } from '../../core/utils/euro-format';
 import { Component, computed, inject, signal } from '@angular/core';
@@ -26,6 +27,7 @@ import { TranslationService } from '../../core/services/translation.service';
 @Component({
   selector: 'app-home',
   imports: [
+    ApiErrorPipe,
     TranslatePipe,
     RouterLink,
     ParkingTicketCardComponent,
@@ -116,6 +118,9 @@ import { TranslationService } from '../../core/services/translation.service';
                 <a routerLink="/app/parking" class="btn btn-primary btn-block mt-2">{{ 'parking.title' | translate }}</a>
               </div>
             }
+            @if (operationError(); as error) {
+              <p class="data-notice" role="alert">{{ error | apiError: 'ops.loadError' }}</p>
+            }
             <app-recent-operations-card [operations]="recentOps()" (viewAll)="onViewAll()" />
           </div>
 
@@ -179,6 +184,10 @@ import { TranslationService } from '../../core/services/translation.service';
   styleUrl: './home.component.css',
 })
 export class HomeComponent {
+  operationError(): unknown {
+    return this.operationsService.responseError?.();
+  }
+
   vehicleErrorForDisplay(): unknown {
     return this.vehicleService.lastError?.();
   }

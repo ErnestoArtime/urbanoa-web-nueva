@@ -1,3 +1,4 @@
+import { ApiErrorPipe } from '../../../shared/pipes/api-error.pipe';
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -36,7 +37,7 @@ interface ReportRangeItem {
 
 @Component({
   selector: 'app-report',
-  imports: [ReactiveFormsModule, TranslatePipe, DateRangeFilterComponent, LoaderComponent],
+  imports: [ApiErrorPipe, ReactiveFormsModule, TranslatePipe, DateRangeFilterComponent, LoaderComponent],
   template: `
     <app-loader [visible]="isGenerating()" [message]="'common.loading' | translate" />
     <div class="report-page has-sticky-actions" [formGroup]="form">
@@ -105,7 +106,7 @@ interface ReportRangeItem {
           {{ isGenerating() ? ('ops.report.generating' | translate) : ('ops.report.generateButton' | translate) }}
         </button>
         @if (reportError()) {
-          <p class="form-error" role="alert">{{ 'ops.report.pdfError' | translate }}</p>
+          <p class="form-error" role="alert">{{ requestError() | apiError: 'ops.report.pdfError' }}</p>
         }
       </div>
     </div>
@@ -161,6 +162,7 @@ export class ReportComponent {
   ];
   readonly isGenerating = signal(false);
   readonly reportError = signal(false);
+  readonly requestError = signal<unknown>(null);
 
   readonly reportOperations = () => this.buildFilteredOperations();
 
@@ -204,6 +206,7 @@ export class ReportComponent {
     }
     this.isGenerating.set(true);
     this.reportError.set(false);
+    this.requestError.set(null);
     const viewer = globalThis.open('', '_blank');
     let completed = false;
     try {
@@ -231,7 +234,8 @@ export class ReportComponent {
       if (viewer) viewer.location.href = url;
       else globalThis.open(url, '_blank');
       completed = true;
-    } catch {
+    } catch (error) {
+      this.requestError.set(error);
       viewer?.close();
       this.reportError.set(true);
     } finally {
