@@ -103,7 +103,7 @@ describe('UnpaidFineDetailComponent', () => {
     await fixture.componentInstance.pay();
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain('ops.fineDetail.payFailed: La tarjeta ha sido rechazada');
+    expect(fixture.componentInstance.errorMessage()).toBe('La tarjeta ha sido rechazada');
   });
 
   it('shows the fine location map when the API provides valid coordinates', () => {
@@ -127,6 +127,21 @@ describe('UnpaidFineDetailComponent', () => {
     expect(TestBed.inject(UnpaidFinesService).payFine).toHaveBeenCalledTimes(1);
   });
 
+  it('shows the exact generic OPS error while keeping an uncertain payment blocked', async () => {
+    const error = new OpsApiError('backend', 'ConfirmFinePaymentAPI', 'unused', 200, {
+      code: -9,
+      type: 2,
+      message_ES: 'Error genérico - 1025',
+    });
+    configure(payableFine, { payFine: jasmine.createSpy('payFine').and.resolveTo({ success: false, error }) });
+    await fixture.componentInstance.pay();
+    expect(fixture.componentInstance.errorMessage()).toBe('Error genérico - 1025');
+    expect(fixture.componentInstance.paymentUncertain()).toBeTrue();
+    await fixture.componentInstance.pay();
+    expect(fixture.componentInstance.errorMessage()).toBe('Error genérico - 1025');
+    expect(TestBed.inject(UnpaidFinesService).payFine).toHaveBeenCalledTimes(1);
+  });
+
   it('shows the failure modal when acknowledging an expired fine fails', async () => {
     const backendError = new OpsApiError('backend', 'OPSWebServicesAPI/UpdateFineStatusAPI', 'No se pudo archivar', 200, {
       code: -21,
@@ -139,7 +154,7 @@ describe('UnpaidFineDetailComponent', () => {
     await fixture.componentInstance.acknowledgeExpired();
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain('ops.fineDetail.actionFailed: No se pudo archivar');
+    expect(fixture.componentInstance.errorMessage()).toBe('No se pudo archivar');
   });
 
   it('shows the acknowledged success modal when the fine is moved to history', async () => {

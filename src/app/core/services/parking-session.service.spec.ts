@@ -1,3 +1,5 @@
+import { OpsApiError } from '../api/ops-api.types';
+import { PaymentChallengeService } from './payment-challenge.service';
 import { provideZonelessChangeDetection } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
@@ -275,5 +277,36 @@ describe('ParkingSessionService', () => {
 
     expect(api.post).not.toHaveBeenCalled();
     expect(service.activeSource()).toBe('error');
+  });
+});
+
+describe('Unparking error message priority', () => {
+  it('shows the OPS message and retains the duplicate payment guard', async () => {
+    sessionStorage.clear();
+    const error = new OpsApiError('backend', 'ConfirmUnParkingOperationAPI', 'unused', 200, {
+      code: -9,
+      type: 2,
+      message_ES: 'Error genérico - 1025',
+    });
+    const unpark = jasmine.createSpy().and.resolveTo({ success: false, error });
+    const parking = { contractId: 1, plate: '1234ABC', refundable: 2, tariffId: 4, sectorId: 60301 };
+    TestBed.configureTestingModule({
+      providers: [
+        provideZonelessChangeDetection(),
+        provideHttpClient(),
+        { provide: ParkingApiService, useValue: { unpark } },
+        { provide: OperationsService, useValue: { getActiveParking: () => parking } },
+        { provide: WalletService, useValue: {} },
+      ],
+    });
+    const service = TestBed.inject(ParkingSessionService);
+    TestBed.inject(OpsSessionService).setToken('test');
+    await service.leaveParking('42');
+    expect(service.unparkError()).toBe('Error genérico - 1025');
+    expect(TestBed.inject(PaymentChallengeService).hasPendingPayment()).toBeTrue();
+    await service.leaveParking('42');
+    expect(service.unparkError()).toBe('Error genérico - 1025');
+    expect(unpark).toHaveBeenCalledTimes(1);
+    sessionStorage.clear();
   });
 });

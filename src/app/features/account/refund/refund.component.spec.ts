@@ -1,3 +1,4 @@
+import { OpsApiError } from '../../../core/api/ops-api.types';
 import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { OperationsService } from '../../../core/services/operations.service';
@@ -36,6 +37,24 @@ describe('AccountRefundComponent', () => {
       ],
     });
     TestBed.overrideComponent(AccountRefundComponent, { set: { template: '' } });
+  });
+
+  it('retains the OPS error for display even when the refund outcome is uncertain', async () => {
+    const error = new OpsApiError('backend', 'RefundUserCreditAPI', 'unused', 200, {
+      code: -9,
+      type: 2,
+      message_ES: 'Error genérico - 1025',
+    });
+    const refund = jasmine.createSpy().and.resolveTo({ success: false, error });
+    Object.assign(TestBed.inject(WalletService), { refund });
+    const component = mount().componentInstance;
+    component.requestRefund();
+    await component.confirmRefund();
+    expect(component.refundError()).toBe(error);
+    expect(component.paymentUncertain()).toBeTrue();
+    component.requestRefund();
+    await component.confirmRefund();
+    expect(refund).toHaveBeenCalledTimes(1);
   });
 
   it('requests a refund from the remote balance contract without a fake card selector', async () => {

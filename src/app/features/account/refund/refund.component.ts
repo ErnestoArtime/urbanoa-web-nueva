@@ -24,7 +24,7 @@ import { LoaderComponent } from '../../../shared/components/loader/loader.compon
         <h2>{{ 'account.refund.title' | translate }}</h2>
       }
       @if (paymentUncertain()) {
-        <p class="data-notice" role="alert">{{ 'payment.uncertain.message' | translate }}</p>
+        <p class="data-notice" role="alert">{{ refundError() | apiError: 'payment.uncertain.message' }}</p>
       } @else if (failed() || walletService.source() === 'error') {
         <p class="data-notice" role="alert">{{ errorForDisplay() | apiError: 'account.refund.error' }}</p>
       }
@@ -130,7 +130,8 @@ export class AccountRefundComponent {
       // WalletService already applied the amount confirmed by OPS. A stale read
       // must not restore the pre-refund balance and enable another refund.
       void this.operationsService.load().catch(() => undefined);
-    } catch {
+    } catch (error) {
+      this.refundError.set(error);
       if (!this.done()) this.paymentUncertain.set(true);
       this.refundQuote.set(null);
       this.failed.set(true);

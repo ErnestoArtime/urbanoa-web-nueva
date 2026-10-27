@@ -15,7 +15,6 @@ import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { distinctUntilChanged, map } from 'rxjs/operators';
 import { OperationsService } from '../../../core/services/operations.service';
 import { OperationType } from '../../../shared/models/operation-type';
-import { OpsApiError } from '../../../core/api/ops-api.types';
 import { apiErrorMessage } from '../../../core/http/api-error-key';
 import { isCardUsable } from '../../../core/utils/card-expiry';
 import { LocationMap } from '../../../shared/components/location-map/location-map';
@@ -302,7 +301,7 @@ export class UnpaidFineDetailComponent {
     if (this.paying() || this.movingToHistory() || this.paid()) return;
     if (this.paymentUncertain() || this.paymentChallenge.hasPendingPayment()) {
       this.paymentUncertain.set(true);
-      this.errorMessage.set(this.translationService.translate('payment.uncertain.message'));
+      this.errorMessage.update((message) => message ?? this.translationService.translate('payment.uncertain.message'));
       return;
     }
     const fine = this.fine;
@@ -345,14 +344,14 @@ export class UnpaidFineDetailComponent {
       }
       if (result.error && isPaymentOutcomeUnknown(result.error)) {
         this.paymentUncertain.set(true);
-        this.errorMessage.set(this.translationService.translate('payment.uncertain.message'));
+        this.errorMessage.set(apiErrorMessage(result.error, this.translationService, {}, 'payment.uncertain.message'));
       } else {
         this.paymentChallenge.clear();
-        this.errorMessage.set(this.failureMessage('ops.fineDetail.payFailed', result.error));
+        this.errorMessage.set(apiErrorMessage(result.error, this.translationService));
       }
-    } catch {
+    } catch (error) {
       this.paymentUncertain.set(true);
-      this.errorMessage.set(this.translationService.translate('payment.uncertain.message'));
+      this.errorMessage.set(apiErrorMessage(error, this.translationService, {}, 'payment.uncertain.message'));
     } finally {
       this.paying.set(false);
     }
@@ -367,7 +366,7 @@ export class UnpaidFineDetailComponent {
         this.acknowledged.set(true);
         return;
       }
-      this.errorMessage.set(this.failureMessage('ops.fineDetail.actionFailed', result.error));
+      this.errorMessage.set(apiErrorMessage(result.error, this.translationService));
     } finally {
       this.movingToHistory.set(false);
     }
@@ -379,13 +378,5 @@ export class UnpaidFineDetailComponent {
 
   dismissError(): void {
     this.errorMessage.set(null);
-  }
-
-  private failureMessage(key: string, error?: OpsApiError): string {
-    return this.translationService.translate(key, { message: this.localizedError(error) });
-  }
-
-  private localizedError(error?: OpsApiError): string {
-    return apiErrorMessage(error, this.translationService);
   }
 }

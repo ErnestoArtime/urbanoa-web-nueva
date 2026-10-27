@@ -40,7 +40,7 @@ export class ParkingSessionService {
 
   async leaveParking(parkingId: string, preparedQuote?: UnparkingQuoteResult): Promise<boolean> {
     if (this.paymentChallenge.hasPendingPayment()) {
-      this.unparkError.set(this.translations.translate('payment.uncertain.message'));
+      this.unparkError.update((message) => message ?? this.translations.translate('payment.uncertain.message'));
       return false;
     }
     this.unparkError.set(null);
@@ -61,16 +61,16 @@ export class ParkingSessionService {
     let result;
     try {
       result = preparedQuote ? await this.parkingApi.unpark(input, preparedQuote) : await this.parkingApi.unpark(input);
-    } catch {
+    } catch (error) {
       if (this.session.token() !== token) return false;
-      this.unparkError.set(this.translations.translate('payment.uncertain.message'));
+      this.unparkError.set(apiErrorMessage(error, this.translations, {}, 'payment.uncertain.message'));
       return false;
     }
     if (this.session.token() !== token) return false;
     if (!result.success) {
       const error = result.error;
       if (isPaymentOutcomeUnknown(error)) {
-        this.unparkError.set(this.translations.translate('payment.uncertain.message'));
+        this.unparkError.set(apiErrorMessage(error, this.translations, {}, 'payment.uncertain.message'));
       } else {
         this.paymentChallenge.clear();
         this.operationsService.restoreActiveParking(parking);

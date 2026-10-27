@@ -108,6 +108,23 @@ describe('AccountRechargeComponent', () => {
     expect(recharge).toHaveBeenCalledTimes(1);
   });
 
+  it('shows the exact OPS message for a generic error without allowing a duplicate recharge', async () => {
+    const error = new OpsApiError('backend', 'RechargeUserCreditAPI', 'unused', 200, {
+      code: -9,
+      type: 2,
+      message_ES: 'Error genérico - 1025',
+    });
+    const recharge = jasmine.createSpy().and.resolveTo({ success: false, error });
+    Object.assign(TestBed.inject(WalletService), { recharge });
+    const component = mount().componentInstance;
+    await component.confirm();
+    expect(component.submitError()).toBe('Error genérico - 1025');
+    expect(component.paymentUncertain()).toBeTrue();
+    await component.confirm();
+    expect(component.submitError()).toBe('Error genérico - 1025');
+    expect(recharge).toHaveBeenCalledTimes(1);
+  });
+
   it('allows a corrected attempt after a definitive business rejection', async () => {
     const recharge = jasmine
       .createSpy()

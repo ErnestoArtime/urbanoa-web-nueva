@@ -40,3 +40,33 @@ describe('apiErrorMessage', () => {
     expect(apiErrorMessage(new Error('internal detail'), translation)).toBe('translated:errors.server');
   });
 });
+
+describe('OPS message priority for every endpoint', () => {
+  for (const endpoint of Object.values(OPS_ENDPOINTS).flatMap((group) => Object.values(group))) {
+    it(`prioritizes all four backend translations for ${endpoint}`, () => {
+      const language = signal<'es' | 'eu' | 'fr' | 'uk'>('es');
+      const translation = { currentLang$: language, translate: (key: string) => `web:${key}` };
+      const payload = {
+        code: -9,
+        type: 2,
+        message_ES: 'Error genérico - 1025',
+        message_EU: 'Errore generikoa - 1025',
+        message_FR: 'Erreur générique - 1025',
+        message_EN: 'Generic error - 1025',
+      };
+      for (const kind of ['backend', 'http'] as const) {
+        const error = new OpsApiError(kind, endpoint, 'unused', kind === 'http' ? 500 : 200, payload);
+        for (const [lang, message] of [
+          ['es', payload.message_ES],
+          ['eu', payload.message_EU],
+          ['fr', payload.message_FR],
+          ['uk', payload.message_EN],
+        ] as const) {
+          language.set(lang);
+          expect(apiErrorMessage(error, translation, {}, 'payment.uncertain.message')).toBe(message);
+        }
+      }
+      expect(apiErrorMessage(new Error('private detail'), translation, {}, 'errors.server')).toBe('web:errors.server');
+    });
+  }
+});

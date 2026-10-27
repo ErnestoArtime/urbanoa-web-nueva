@@ -193,7 +193,7 @@ export class AccountRechargeComponent {
     if (this.done() || this.saving()) return;
     if (this.paymentUncertain() || this.paymentChallenge.hasPendingPayment()) {
       this.paymentUncertain.set(true);
-      this.submitError.set(this.translationService.translate('payment.uncertain.message'));
+      this.submitError.update((message) => message ?? this.translationService.translate('payment.uncertain.message'));
       return;
     }
     if (!this.usableCards().some((card) => card.id === this.selectedCardId())) {
@@ -233,7 +233,7 @@ export class AccountRechargeComponent {
       if (!result.success) {
         if (isPaymentOutcomeUnknown(result.error)) {
           this.paymentUncertain.set(true);
-          this.submitError.set(this.translationService.translate('payment.uncertain.message'));
+          this.submitError.set(apiErrorMessage(result.error, this.translationService, {}, 'payment.uncertain.message'));
         } else {
           this.paymentChallenge.clear();
           this.submitError.set(apiErrorMessage(result.error, this.translationService, {}, 'account.recharge.serviceError'));
@@ -243,9 +243,11 @@ export class AccountRechargeComponent {
       this.paymentChallenge.clear();
       this.done.set(true);
       void this.operationsService.load().catch(() => undefined);
-    } catch {
+    } catch (error) {
       if (!this.done()) this.paymentUncertain.set(true);
-      this.submitError.set(this.translationService.translate(this.done() ? 'errors.server' : 'payment.uncertain.message'));
+      this.submitError.set(
+        apiErrorMessage(error, this.translationService, {}, this.done() ? 'errors.server' : 'payment.uncertain.message'),
+      );
     } finally {
       this.saving.set(false);
     }
