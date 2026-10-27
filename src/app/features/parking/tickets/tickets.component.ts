@@ -74,12 +74,16 @@ import { TranslationService } from '../../../core/services/translation.service';
           </article>
         }
         @if (!loading() && !tariffs().length) {
-          <div class="card" [attr.role]="error() ? 'alert' : 'status'">
-            <p>{{ error() ? (requestError() | apiError: 'parking.tickets.loadError') : ('parking.tickets.empty' | translate) }}</p>
-            @if (error()) {
-              <button type="button" class="btn btn-secondary" (click)="loadTariffs()">{{ 'common.retry' | translate }}</button>
-            }
-          </div>
+          @if (error()) {
+            <div class="data-notice data-notice--retry" role="alert">
+              <span>{{ requestError() | apiError: 'parking.tickets.loadError' }}</span>
+              <button type="button" class="btn btn-secondary btn-sm" (click)="loadTariffs()">{{ 'common.retry' | translate }}</button>
+            </div>
+          } @else {
+            <div class="card" role="status">
+              <p>{{ 'parking.tickets.empty' | translate }}</p>
+            </div>
+          }
         }
       </div>
     </div>

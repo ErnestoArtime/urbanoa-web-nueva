@@ -22,7 +22,7 @@ import { LoaderComponent } from '../../../shared/components/loader/loader.compon
         <strong>{{ selectedCityName }}</strong>
       </div>
       @if (dataSource() === 'error') {
-        <div class="data-notice" role="alert">
+        <div class="data-notice data-notice--retry" role="alert">
           <span>{{ requestError() | apiError: 'parking.streets.loadError' }}</span>
           <button type="button" class="btn btn-secondary btn-sm" (click)="loadStreets()">{{ 'common.retry' | translate }}</button>
         </div>
