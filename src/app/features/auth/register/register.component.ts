@@ -8,7 +8,7 @@ import { apiErrorMessage } from '../../../core/http/api-error-key';
 import { AuthService } from '../../../core/services/auth.service';
 import { APP_BRAND } from '../../../shared/constants/app-brand';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
-import { FOREIGN_PLATE_MAX_LENGTH, isValidPlate } from '../../../shared/utils/plate-validation';
+import { FOREIGN_PLATE_MAX_LENGTH, isValidPlate, normalizePlate } from '../../../shared/utils/plate-validation';
 
 function passwordsMatch(control: AbstractControl): ValidationErrors | null {
   const password = control.get('password')?.value;
@@ -167,6 +167,7 @@ export class RegisterComponent {
 
   async onSubmit(): Promise<void> {
     if (this.submitting()) return;
+    this.form.controls.plate.setValue(normalizePlate(this.form.controls.plate.value));
     const values = this.form.getRawValue();
     if (!isValidPlate(values.plate, values.foreignPlate)) {
       this.form.controls.plate.setErrors({ ...(this.form.controls.plate.errors ?? {}), plateInvalid: true });

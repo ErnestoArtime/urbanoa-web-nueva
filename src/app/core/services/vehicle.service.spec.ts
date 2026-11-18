@@ -97,21 +97,19 @@ describe('VehicleService', () => {
     await service.load();
     api.post.calls.reset();
 
-    const result = await service.add({ plate: ' 9999 xyz ', isDefault: true });
+    const result = await service.add({ plate: ' \t9999 x\nyz\u00a0', isDefault: true });
 
-    expect(api.post.calls.argsFor(0)).toEqual([
-      'OPSWebServicesAPI/AddUserPlateAPI',
-      { plate: '9999 XYZ', favorite: 1 },
-      { token: 'token' },
-    ]);
+    expect(api.post.calls.argsFor(0)).toEqual(['OPSWebServicesAPI/AddUserPlateAPI', { plate: '9999XYZ', favorite: 1 }, { token: 'token' }]);
     expect(api.post.calls.argsFor(1)).toEqual([
       'OPSWebServicesAPI/UpdateUserPlateAPI',
-      { plate: '9999 XYZ', favorite: 1 },
+      { plate: '9999XYZ', favorite: 1 },
       { token: 'token' },
     ]);
     expect(api.post.calls.count()).toBe(2);
     expect(result.source).toBe('remote');
-    expect(service.vehicles().find((v) => v.plate === '9999 XYZ')?.isDefault).toBeTrue();
+    expect(service.vehicles().find((v) => v.plate === '9999XYZ')?.isDefault).toBeTrue();
+    expect(service.hasPlate(' 9999 x yz ')).toBeTrue();
+    expect(service.hasPlate('1234abc')).toBeTrue();
     expect(service.vehicles().find((v) => v.plate === '1234 ABC')?.isDefault).toBeFalse();
   });
 
@@ -261,11 +259,11 @@ describe('VehicleService', () => {
 
     expect(api.post.calls.argsFor(0)).toEqual([
       'OPSWebServicesAPI/AddUserPlateAPI',
-      { plate: '9999 XYZ', favorite: 0 },
+      { plate: '9999XYZ', favorite: 0 },
       { token: 'token' },
     ]);
     expect(api.post.calls.count()).toBe(1);
-    expect(service.vehicles().find((v) => v.plate === '9999 XYZ')?.isDefault).toBeFalse();
+    expect(service.vehicles().find((v) => v.plate === '9999XYZ')?.isDefault).toBeFalse();
     expect(result.source).toBe('remote');
   });
 

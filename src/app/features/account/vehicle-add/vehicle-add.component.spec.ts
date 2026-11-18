@@ -101,12 +101,13 @@ describe('VehicleAddComponent', () => {
 
   it('reports success when the plate is added', async () => {
     const fixture = TestBed.createComponent(VehicleAddComponent);
-    fixture.componentInstance.plate.set('1234 BCD');
+    fixture.componentInstance.plate.set(' \t1234 b cd ');
     vehicleService.add.and.resolveTo({ success: true, source: 'remote' } satisfies VehicleMutationResult);
 
     await fixture.componentInstance.save();
 
     expect(fixture.componentInstance.saved()).toBeTrue();
+    expect(vehicleService.add).toHaveBeenCalledWith(jasmine.objectContaining({ plate: '1234BCD' }));
     expect(fixture.componentInstance.addFailed()).toBeFalse();
   });
 
@@ -118,6 +119,7 @@ describe('VehicleAddComponent', () => {
     await fixture.componentInstance.save();
 
     expect(fixture.componentInstance.plateDuplicate()).toBeTrue();
+    expect(vehicleService.hasPlate).toHaveBeenCalledWith('1234BCD');
     expect(fixture.componentInstance.saved()).toBeFalse();
     expect(vehicleService.add).not.toHaveBeenCalled();
   });

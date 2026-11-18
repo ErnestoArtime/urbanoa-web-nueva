@@ -4,6 +4,7 @@ import { OpsApiClient } from '../api/ops-api-client.service';
 import { OpsApiError } from '../api/ops-api.types';
 import { OPS_ENDPOINTS } from '../api/ops-endpoints';
 import { OpsSessionService } from '../api/ops-session.service';
+import { normalizePlate } from '../../shared/utils/plate-validation';
 
 interface PlateApiItem {
   plate: string;
@@ -107,13 +108,13 @@ export class VehicleService {
   }
 
   hasPlate(plate: string): boolean {
-    const target = plate.replace(/\s/g, '').toUpperCase();
-    return this.state().some((vehicle) => vehicle.plate.replace(/\s/g, '').toUpperCase() === target);
+    const target = normalizePlate(plate);
+    return this.state().some((vehicle) => normalizePlate(vehicle.plate) === target);
   }
 
   async add(input: Omit<Vehicle, 'id'>): Promise<VehicleMutationResult> {
     const generation = this.generation;
-    const plate = this.normalizePlate(input.plate);
+    const plate = normalizePlate(input.plate);
     const result = await this.remoteMutation(OPS_ENDPOINTS.user.addPlate, { plate, favorite: input.isDefault ? 1 : 0 });
     if (generation !== this.generation) return { success: false, source: 'error' };
     if (!result.success) return result;
@@ -222,10 +223,6 @@ export class VehicleService {
 
   private fromApi(item: PlateApiItem): Vehicle {
     return { id: item.plate, plate: item.plate, isDefault: item.favorite === true || item.favorite === 1 };
-  }
-
-  private normalizePlate(plate: string): string {
-    return plate.trim().toUpperCase();
   }
 
   private useError(error: unknown, endpoint: string): void {

@@ -6,8 +6,13 @@ const FOREIGN_PLATE_PATTERN = /^[A-Z0-9-]+$/;
 export const FOREIGN_PLATE_MIN_LENGTH = 4;
 export const FOREIGN_PLATE_MAX_LENGTH = 10;
 
+/** Same normalization as the APK: uppercase letters and remove all whitespace. */
+export function normalizePlate(value: string): string {
+  return value.toUpperCase().replace(/\s/g, '');
+}
+
 export function isValidPlate(value: string, foreign: boolean): boolean {
-  const plate = value.replace(/\s/g, '').toUpperCase();
+  const plate = normalizePlate(value);
   if (!plate) return false;
   if (foreign)
     return plate.length >= FOREIGN_PLATE_MIN_LENGTH && plate.length <= FOREIGN_PLATE_MAX_LENGTH && FOREIGN_PLATE_PATTERN.test(plate);

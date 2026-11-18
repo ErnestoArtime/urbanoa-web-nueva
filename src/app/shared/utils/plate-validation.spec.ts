@@ -1,6 +1,13 @@
-import { isValidPlate } from './plate-validation';
+import { isValidPlate, normalizePlate } from './plate-validation';
 
 describe('plate validation', () => {
+  it('normalizes all whitespace and case without changing other characters', () => {
+    expect(normalizePlate(' \tttt\n 12345\u00a0')).toBe('TTT12345');
+    expect(normalizePlate(' ab - 12 - cd ')).toBe('AB-12-CD');
+    expect(normalizePlate(' \t\n')).toBe('');
+    expect(isValidPlate(' ab - 12 - cd ', true)).toBeTrue();
+    expect(isValidPlate(' ab_123 ', true)).toBeFalse();
+  });
   it('accepts the current and old national formats', () => {
     expect(isValidPlate('1234 BCD', false)).toBeTrue();
     expect(isValidPlate('M 1234 AB', false)).toBeTrue();

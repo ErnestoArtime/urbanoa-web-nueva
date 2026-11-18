@@ -412,11 +412,11 @@ describe('AuthService', () => {
   it('registers plates as APK plate objects for the merged form payload', async () => {
     opsApi.post.and.resolveTo('ok');
 
-    await service.register({ email: ' user@example.com ', password: 'secret', plates: [' 1234 abc '] });
+    await service.register({ email: ' user@example.com ', password: 'secret', plates: [' \t1234 a\nbc\u00a0'] });
 
     expect(opsApi.post).toHaveBeenCalledOnceWith(
       OPS_ENDPOINTS.auth.register,
-      { contractId: 0, email: 'user@example.com', password: 'secret', plates: [{ plate: '1234 ABC' }] },
+      { contractId: 0, email: 'user@example.com', password: 'secret', plates: [{ plate: '1234ABC' }] },
       { headers: { 'Accept-Language': 'es-ES' } },
     );
   });

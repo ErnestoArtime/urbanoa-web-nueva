@@ -5,7 +5,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
 import { ResultModalComponent } from '../../../shared/components/result-modal/result-modal.component';
 import { VehicleService } from '../../../core/services/vehicle.service';
-import { FOREIGN_PLATE_MAX_LENGTH, isValidPlate } from '../../../shared/utils/plate-validation';
+import { FOREIGN_PLATE_MAX_LENGTH, isValidPlate, normalizePlate } from '../../../shared/utils/plate-validation';
 import { OperationsService } from '../../../core/services/operations.service';
 import { LoaderComponent } from '../../../shared/components/loader/loader.component';
 
@@ -98,7 +98,7 @@ export class VehicleAddComponent {
 
   async save(): Promise<void> {
     if (this.saving()) return;
-    const plate = this.plate().trim();
+    const plate = normalizePlate(this.plate());
     if (!plate) {
       this.plateError.set(true);
       return;

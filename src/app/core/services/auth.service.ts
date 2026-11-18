@@ -1,4 +1,5 @@
 import { OpsApiError } from '../api/ops-api.types';
+import { normalizePlate } from '../../shared/utils/plate-validation';
 import { computed, DestroyRef, inject, Injectable, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { OpsLoginRequest, OpsLoginResponse, OpsRegisterRequest, OpsUserResponse } from '../api/ops-auth.types';
@@ -289,12 +290,12 @@ export class AuthService {
   }
 
   async register(input: RegisterInput | RegisterPayload): Promise<void> {
-    const plate = 'plate' in input ? input.plate : (input.plates[0] ?? '');
+    const plate = normalizePlate('plate' in input ? input.plate : (input.plates[0] ?? ''));
     const body: OpsRegisterRequest = {
       contractId: 0,
       email: input.email.trim(),
       password: input.password,
-      plates: plate.trim() ? [{ plate: plate.trim().toUpperCase() }] : [],
+      plates: plate ? [{ plate }] : [],
     };
 
     try {
