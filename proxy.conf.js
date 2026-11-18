@@ -2,7 +2,7 @@ const opsBackendUrl = process.env.URBANOA_OPS_BACKEND_URL || 'http://185.76.212.
 
 module.exports = {
   '/external-content': {
-    target: 'https://arinpark.gerteksa.eus',
+    target: 'https://arinpark.eus',
     secure: true,
     changeOrigin: true,
     pathRewrite: {

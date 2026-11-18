@@ -7,7 +7,7 @@ export const environment = {
     domain: 'https://arinpark.gerteksa.eus',
   },
   externalContentBaseUrl: '/external-content',
-  externalContentOrigin: 'https://arinpark.gerteksa.eus',
+  externalContentOrigin: 'https://arinpark.eus',
   storeUrl: 'https://play.google.com/store/apps/details?id=com.gerteksa.r.c.mugipark',
   // Leave empty to keep the current Leaflet/OpenStreetMap fallback.
   googleMapsApiKey: '',

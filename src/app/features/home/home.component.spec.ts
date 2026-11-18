@@ -82,4 +82,42 @@ describe('HomeComponent parking status progress', () => {
 
     expect(fixture.nativeElement.querySelector('.parking-status-progress')).toBeNull();
   });
+
+  it('orders recent operations of the same day by time, newest first', async () => {
+    const op = (id: string, date: string, operationTime: string) => ({ id, date, operationTime, type: 1, amount: 1 });
+    const operations = signal([op('a', '10/11/2026', '09:15'), op('c', '11/11/2026', '08:00'), op('b', '10/11/2026', '18:40')]);
+
+    await TestBed.configureTestingModule({
+      imports: [HomeComponent],
+      providers: [
+        provideZonelessChangeDetection(),
+        provideRouter([]),
+        { provide: TranslationService, useValue: { translate: (key: string) => key } },
+        { provide: OperationsService, useValue: { activeLoading: signal(false).asReadonly(), operations } },
+        { provide: ParkingSessionService, useValue: { activeParkings: signal([]), unparkError: signal(null) } },
+        { provide: UserService, useValue: { user: signal({ name: 'Test', surname: 'User', email: 'test@example.com' }) } },
+        { provide: VehicleService, useValue: { mainVehicle: signal(undefined) } },
+        {
+          provide: WalletService,
+          useValue: {
+            balance: signal(0),
+            balanceAvailable: signal(false),
+            lastError: signal(null),
+            responseError: signal(null),
+            cards: signal([]),
+            mainCard: undefined,
+          },
+        },
+        { provide: DashboardApiService, useValue: { source: signal<'remote'>('remote'), load: jasmine.createSpy('load').and.resolveTo() } },
+        { provide: NavigationToCarService, useValue: jasmine.createSpyObj('NavigationToCarService', ['open']) },
+      ],
+    })
+      .overrideComponent(HomeComponent, { set: { imports: [TranslatePipe, RouterLink], schemas: [NO_ERRORS_SCHEMA] } })
+      .compileComponents();
+
+    const fixture = TestBed.createComponent(HomeComponent);
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.recentOps().map((item) => item.id)).toEqual(['c', 'b', 'a']);
+  });
 });

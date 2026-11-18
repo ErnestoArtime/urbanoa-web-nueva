@@ -25,6 +25,7 @@ import { TranslationService } from '../../../core/services/translation.service';
 import { AppIconComponent } from '../../../shared/icons/app-icon.component';
 import { APP_BRAND } from '../../../shared/constants/app-brand';
 import { environment } from '../../../../environments/environment';
+import { legalContentPath, type LegalContentType } from '../../../core/utils/legal-content-path';
 
 @Component({
   selector: 'app-account-menu',
@@ -225,19 +226,13 @@ export class AccountMenuComponent implements OnInit {
   readonly vehiclesSub = signal<string | null>(null);
   readonly paymentSub = signal<string | null>(null);
   readonly brand = APP_BRAND;
-  readonly helpUrl = computed(() => `${environment.externalContentBaseUrl}/Arinpark/ArinparkFAQ-${this.legalLanguage().faq}.html`);
-  readonly termsUrl = computed(() => `${environment.externalContentBaseUrl}/arinpark/CU_${this.legalLanguage().code}.html`);
-  readonly privacyUrl = computed(() => `${environment.externalContentBaseUrl}/arinpark/${this.legalLanguage().code}.html`);
+  readonly helpUrl = computed(() => this.legalUrl('help'));
+  readonly termsUrl = computed(() => this.legalUrl('terms'));
+  readonly privacyUrl = computed(() => this.legalUrl('privacy'));
   readonly toast = signal('');
 
-  private legalLanguage(): { code: string; faq: string } {
-    const language = this.translationService.currentLang$();
-    return {
-      es: { code: 'es', faq: 'ESP' },
-      eu: { code: 'eus', faq: 'EUS' },
-      fr: { code: 'fr', faq: 'FRA' },
-      uk: { code: 'en', faq: 'ENG' },
-    }[language];
+  private legalUrl(type: LegalContentType): string {
+    return `${environment.externalContentBaseUrl}${legalContentPath(type, this.translationService.currentLang$())}`;
   }
 
   constructor() {

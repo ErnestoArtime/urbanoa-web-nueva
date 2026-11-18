@@ -4,6 +4,7 @@ import { DomSanitizer } from '@angular/platform-browser';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { TranslationService } from '../../../core/services/translation.service';
 import { environment } from '../../../../environments/environment';
+import { legalContentPath, type LegalContentType } from '../../../core/utils/legal-content-path';
 
 @Component({
   selector: 'app-web-content',
@@ -64,16 +65,8 @@ export class WebContentComponent {
   });
 
   private legalUrl(base: string, contentType: string): string {
-    const language = this.translationService.currentLang$();
-    const code = language === 'uk' ? 'en' : language === 'eu' ? 'eus' : language;
-    const faq = { es: 'ESP', eu: 'EUS', fr: 'FRA', uk: 'ENG' }[language];
-    const path =
-      contentType === 'help'
-        ? `/Arinpark/ArinparkFAQ-${faq}.html`
-        : contentType === 'terms'
-          ? `/arinpark/CU_${code}.html`
-          : `/arinpark/${code}.html`;
-    return `${environment.externalContentOrigin}${path}`;
+    const type: LegalContentType = contentType === 'help' ? 'help' : contentType === 'terms' ? 'terms' : 'privacy';
+    return `${environment.externalContentOrigin}${legalContentPath(type, this.translationService.currentLang$())}`;
   }
 
   readonly rawUrl = computed(() => this.resolvedUrl());
