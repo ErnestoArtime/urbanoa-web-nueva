@@ -40,11 +40,16 @@ import { formatOpsDate } from '../../../core/utils/ops-date';
       <app-loader [visible]="loading()" [message]="'parking.confirm.loading' | translate" imageSrc="/assets/brand/login-logo.jpg" />
       <a routerLink="/app/parking/time-steps" [queryParams]="query()" class="back-link">{{ 'parking.confirm.back' | translate }}</a>
       <h1 class="page-title">{{ 'parking.confirm.title' | translate }}</h1>
-      @if (submitError()) {
-        <p class="submit-error" role="alert">{{ submitError() }}</p>
-        @if (paymentUncertain()) {
-          <a routerLink="/app/operations" class="btn btn-secondary">{{ 'ops.title' | translate }}</a>
-        }
+      @if (submitError(); as error) {
+        <app-result-modal
+          type="error"
+          [title]="'ops.fineDetail.errorTitle' | translate"
+          [message]="error"
+          [primaryText]="paymentUncertain() ? ('ops.title' | translate) : ('common.accept' | translate)"
+          [secondaryText]="paymentUncertain() ? ('common.accept' | translate) : undefined"
+          (primaryAction)="paymentUncertain() ? openOperations() : dismissSubmitError()"
+          (secondaryAction)="dismissSubmitError()"
+        />
       }
 
       <div class="card summary">
@@ -339,6 +344,14 @@ export class ParkingConfirmComponent implements OnInit {
   openPaymentMethods(): void {
     this.paymentAlertOpen.set(false);
     this.walletManagerOpen.set(true);
+  }
+
+  dismissSubmitError(): void {
+    this.submitError.set(null);
+  }
+
+  openOperations(): void {
+    void this.router.navigate(['/app/operations']);
   }
 
   private async finishConfirmation(walletAmount: number, operationId?: number | string): Promise<void> {
