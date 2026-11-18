@@ -58,10 +58,18 @@ import { RuntimeStyleDirective } from '../../../shared/directives/runtime-style.
       <app-split-view class="payment-split" [hideList]="isChildRoute()" [hideDetail]="false">
         <div splitList class="payment-master"><ng-container [ngTemplateOutlet]="walletContent" /></div>
         @switch (routeScreen()) {
-          @case ('add') { <app-payment-add splitDetail /> }
-          @case ('recharge') { <app-account-recharge splitDetail [cardId]="routeCardId()" /> }
-          @case ('refund') { <app-account-refund splitDetail [cardId]="routeCardId()" /> }
-          @default { <div splitDetail class="payment-detail-empty"></div> }
+          @case ('add') {
+            <app-payment-add splitDetail />
+          }
+          @case ('recharge') {
+            <app-account-recharge splitDetail [cardId]="routeCardId()" />
+          }
+          @case ('refund') {
+            <app-account-refund splitDetail [cardId]="routeCardId()" />
+          }
+          @default {
+            <div splitDetail class="payment-detail-empty"></div>
+          }
         }
       </app-split-view>
     }
@@ -70,7 +78,7 @@ import { RuntimeStyleDirective } from '../../../shared/directives/runtime-style.
         @if (!embedded()) {
           <h1 class="page-title">{{ 'account.menu.paymentMethods' | translate }}</h1>
         }
-        <div class="wallet-scroll">
+        <div class="wallet-scroll" (scroll)="closeCardMenuOnScroll()">
           @if (walletService.source() === 'error' || walletService.lastError()) {
             <p class="data-notice" role="alert">{{ errorForDisplay() | apiError: 'account.paymentMethods.loadError' }}</p>
           }
@@ -81,57 +89,73 @@ import { RuntimeStyleDirective } from '../../../shared/directives/runtime-style.
             </div>
           </div>
           <p class="section-title cards-heading">
-            {{ 'account.cards' | translate }} <span class="cards-count">({{ walletService.cards().length }})</span>
+            {{ 'account.cards' | translate }}
+            @if (!walletService.loading()) {
+              <span class="cards-count">({{ walletService.cards().length }})</span>
+            }
           </p>
           <div class="card">
-            @for (card of walletService.cards(); track card.id) {
-              <div class="card-item">
-                <span class="card-brand-mark">
-                  @if (brandAsset(card.brand); as asset) {
-                    <img [src]="asset" [alt]="card.brand" />
-                  } @else {
-                    <span>{{ card.brand.slice(0, 2).toUpperCase() }}</span>
-                  }
-                </span>
-                <div class="card-info">
-                  <strong>{{ card.brand }} •••• {{ card.last4 }}</strong>
-                  <span>{{ card.cardholderName }}</span>
-                  <small>{{ card.expiryDate }}</small>
-                </div>
-                @if (walletService.defaultCardId() === card.id) {
-                  <span class="primary-label">{{ 'account.cardPrimary' | translate }}</span>
-                }
-                <button
-                  type="button"
-                  class="kebab-button"
-                  (click)="toggleCardMenu(card.id, $event)"
-                  [attr.aria-label]="'account.cardOptions' | translate: { brand: card.brand, last4: card.last4 }"
-                  [attr.aria-expanded]="activeCardMenu() === card.id"
-                >
-                  ⋮
-                </button>
-                @if (activeCardMenu() === card.id) {
-                  <div class="card-menu" [appRuntimeStyle]="cardMenuStyles()">
-                    <button type="button" (click)="rechargeCard(card.id)">
-                      <span>＋</span> {{ 'account.recharge.button' | translate }}
-                    </button>
-                    <button type="button" (click)="refundToCard(card.id)">
-                      <span>↗</span> {{ 'account.withdrawBalance' | translate }}
-                    </button>
-                    @if (walletService.defaultCardId() !== card.id) {
-                      <button type="button" (click)="setAsDefault(card.id)">
-                        <span>☆</span> {{ 'account.setPrimaryCard' | translate }}
-                      </button>
-                    }
-                    <button type="button" class="delete-option" (click)="requestDelete(card.id)">
-                      <span>▣</span> {{ 'account.deleteCard' | translate }}
-                    </button>
+            @if (walletService.loading()) {
+              <div class="cards-skeleton" aria-hidden="true">
+                @for (row of skeletonRows; track row) {
+                  <div class="card-skeleton-row">
+                    <span class="skeleton-block skeleton-brand"></span>
+                    <span class="skeleton-copy"><i class="skeleton-block"></i><i class="skeleton-block"></i></span>
+                    <span class="skeleton-block skeleton-menu"></span>
                   </div>
                 }
               </div>
-            }
-            @if (walletService.cards().length === 0) {
-              <p class="empty-cards">{{ 'account.cardsEmpty' | translate }}</p>
+            } @else {
+              @for (card of walletService.cards(); track card.id) {
+                <div class="card-item">
+                  <span class="card-brand-mark">
+                    @if (brandAsset(card.brand); as asset) {
+                      <img [src]="asset" [alt]="card.brand" />
+                    } @else {
+                      <span>{{ card.brand.slice(0, 2).toUpperCase() }}</span>
+                    }
+                  </span>
+                  <div class="card-info">
+                    <strong>{{ card.brand }} •••• {{ card.last4 }}</strong>
+                    <span>{{ card.cardholderName }}</span>
+                    <small>{{ card.expiryDate }}</small>
+                  </div>
+                  @if (walletService.defaultCardId() === card.id) {
+                    <span class="primary-label">{{ 'account.cardPrimary' | translate }}</span>
+                  }
+                  <button
+                    #cardMenuButton
+                    type="button"
+                    class="kebab-button"
+                    (click)="toggleCardMenu(card.id, $event)"
+                    [attr.aria-label]="'account.cardOptions' | translate: { brand: card.brand, last4: card.last4 }"
+                    [attr.aria-expanded]="activeCardMenu() === card.id"
+                  >
+                    ⋮
+                  </button>
+                  @if (activeCardMenu() === card.id) {
+                    <div class="card-menu" [appRuntimeStyle]="cardMenuStyles()">
+                      <button type="button" (click)="rechargeCard(card.id)">
+                        <span>＋</span> {{ 'account.recharge.button' | translate }}
+                      </button>
+                      <button type="button" (click)="refundToCard(card.id)">
+                        <span>↗</span> {{ 'account.withdrawBalance' | translate }}
+                      </button>
+                      @if (walletService.defaultCardId() !== card.id) {
+                        <button type="button" (click)="setAsDefault(card.id)">
+                          <span>☆</span> {{ 'account.setPrimaryCard' | translate }}
+                        </button>
+                      }
+                      <button type="button" class="delete-option" (click)="requestDelete(card.id)">
+                        <span>▣</span> {{ 'account.deleteCard' | translate }}
+                      </button>
+                    </div>
+                  }
+                </div>
+              }
+              @if (!walletService.loading() && walletService.cards().length === 0) {
+                <p class="empty-cards">{{ 'account.cardsEmpty' | translate }}</p>
+              }
             }
           </div>
         </div>
@@ -165,12 +189,14 @@ import { RuntimeStyleDirective } from '../../../shared/directives/runtime-style.
   styleUrl: './payment-layout.component.css',
 })
 export class PaymentLayoutComponent implements OnInit {
+  readonly skeletonRows = [0, 1, 2];
   errorForDisplay(): unknown {
     return this.walletService.responseError?.();
   }
 
   @ViewChild(AccountRechargeComponent) private recharge?: AccountRechargeComponent;
   @ViewChild(AccountRefundComponent) private refund?: AccountRefundComponent;
+  private cardMenuTrigger?: HTMLElement;
   readonly updating = signal(false);
   busy(): boolean {
     return (
@@ -249,18 +275,8 @@ export class PaymentLayoutComponent implements OnInit {
       return;
     }
     const trigger = event.currentTarget as HTMLElement;
-    const bounds = trigger.getBoundingClientRect();
-    const menuHeight = 220;
-    const menuWidth = 235;
-    const gap = 8;
-    const viewportPadding = 8;
-    const spaceBelow = window.innerHeight - bounds.bottom - gap - viewportPadding;
-    const spaceAbove = bounds.top - gap - viewportPadding;
-    const openAbove = spaceBelow < menuHeight && spaceAbove > spaceBelow;
-    const availableHeight = Math.max(120, openAbove ? spaceAbove : spaceBelow);
-    const top = openAbove ? Math.max(viewportPadding, bounds.top - Math.min(menuHeight, availableHeight) - gap) : bounds.bottom + gap;
-    const left = Math.max(8, Math.min(bounds.right - menuWidth, window.innerWidth - menuWidth - 8));
-    this.cardMenuPosition.set({ top, left, maxHeight: availableHeight });
+    this.cardMenuTrigger = trigger;
+    this.toggleCardMenuPosition(trigger, trigger.getBoundingClientRect());
     this.activeCardMenu.set(id);
   }
   @HostListener('document:click', ['$event'])
@@ -269,6 +285,7 @@ export class PaymentLayoutComponent implements OnInit {
     if (target instanceof Element && !target.closest('.kebab-button, .card-menu')) {
       this.activeCardMenu.set(null);
       this.cardMenuPosition.set(null);
+      this.cardMenuTrigger = undefined;
     }
   }
 
@@ -276,6 +293,44 @@ export class PaymentLayoutComponent implements OnInit {
   closeCardMenuOnEscape(): void {
     this.activeCardMenu.set(null);
     this.cardMenuPosition.set(null);
+  }
+  @HostListener('window:scroll')
+  closeCardMenuOnScroll(): void {
+    if (!this.activeCardMenu()) return;
+    this.activeCardMenu.set(null);
+    this.cardMenuPosition.set(null);
+    this.cardMenuTrigger = undefined;
+  }
+  closeCardMenuIfTriggerLeavesViewport(): void {
+    if (!this.activeCardMenu()) return;
+    const trigger = this.cardMenuTrigger;
+    if (!trigger?.isConnected) {
+      this.activeCardMenu.set(null);
+      this.cardMenuPosition.set(null);
+      this.cardMenuTrigger = undefined;
+      return;
+    }
+    const bounds = trigger.getBoundingClientRect();
+    if (bounds.bottom <= 0 || bounds.top >= window.innerHeight) {
+      this.activeCardMenu.set(null);
+      this.cardMenuPosition.set(null);
+      this.cardMenuTrigger = undefined;
+    } else {
+      this.toggleCardMenuPosition(trigger, bounds);
+    }
+  }
+  private toggleCardMenuPosition(trigger: HTMLElement, bounds: DOMRect): void {
+    const menuHeight = 220;
+    const menuWidth = 235;
+    const gap = 4;
+    const viewportPadding = 8;
+    const spaceBelow = window.innerHeight - bounds.bottom - gap - viewportPadding;
+    const spaceAbove = bounds.top - gap - viewportPadding;
+    const openAbove = spaceBelow < menuHeight && spaceAbove > spaceBelow;
+    const availableHeight = Math.max(80, openAbove ? spaceAbove : spaceBelow);
+    const top = openAbove ? Math.max(viewportPadding, bounds.top - Math.min(menuHeight, availableHeight) - gap) : bounds.bottom + gap;
+    const left = Math.max(8, Math.min(bounds.right - menuWidth, window.innerWidth - menuWidth - 8));
+    this.cardMenuPosition.set({ top, left, maxHeight: availableHeight });
   }
   async setAsDefault(id: string): Promise<void> {
     if (this.updating()) return;

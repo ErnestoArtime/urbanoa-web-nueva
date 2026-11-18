@@ -199,6 +199,57 @@
   color: var(--color-text-muted);
   line-height: var(--line-readable);
 }
+.cards-skeleton {
+  padding: 0.35rem 0.75rem;
+}
+.card-skeleton-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 82px;
+  border-bottom: 1px solid var(--color-border);
+}
+.skeleton-block {
+  display: block;
+  height: 0.75rem;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(90deg, var(--color-background) 25%, var(--color-border) 45%, var(--color-background) 65%);
+  background-size: 220% 100%;
+  animation: payment-skeleton-shimmer 1.25s ease-in-out infinite;
+}
+.skeleton-brand {
+  width: 54px;
+  height: 34px;
+  flex: none;
+  border-radius: 6px;
+}
+.skeleton-copy {
+  display: grid;
+  flex: 1;
+  gap: 0.5rem;
+  max-width: 150px;
+}
+.skeleton-copy .skeleton-block:first-child {
+  width: 100%;
+}
+.skeleton-copy .skeleton-block:last-child {
+  width: 65%;
+}
+.skeleton-menu {
+  width: 1rem;
+  height: 1rem;
+  flex: none;
+}
+@keyframes payment-skeleton-shimmer {
+  to {
+    background-position: -220% 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-block {
+    animation: none;
+  }
+}
 
 @media (max-width: 420px) {
   .card-item {
