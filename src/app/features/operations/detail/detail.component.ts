@@ -95,10 +95,19 @@ import { TicketCutAlignDirective } from '../../../shared/directives/ticket-cut-a
                     ><strong>{{ operation.plate }}</strong>
                   </div>
                 </div>
+                @if (operation.fineProcessingDate) {
+                  <div class="fine-payment-row">
+                    <span class="fine-payment-row-icon"><app-icon name="dateRange" [stroke]="false" /></span>
+                    <div>
+                      <span>{{ 'ops.fineDetail.fineDate' | translate }}</span
+                      ><strong>{{ operation.fineProcessingDate }}</strong>
+                    </div>
+                  </div>
+                }
                 <div class="fine-payment-row">
                   <span class="fine-payment-row-icon"><app-icon name="dateRange" [stroke]="false" /></span>
                   <div>
-                    <span>{{ 'ops.detail.datetime' | translate }}</span
+                    <span>{{ 'ops.fineDetail.paymentDate' | translate }}</span
                     ><strong>{{ dateTime(operation) }}</strong>
                   </div>
                 </div>

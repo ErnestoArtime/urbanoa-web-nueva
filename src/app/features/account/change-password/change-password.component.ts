@@ -137,8 +137,18 @@ export class AccountChangePasswordComponent {
       this.result.set('error');
       return;
     }
-    if (!isValidApkPassword(this.next()) || this.next() !== this.confirmation()) {
-      this.errorKey.set(this.next() !== this.confirmation() ? 'account.changePassword.mismatch' : 'account.changePassword.invalid');
+    if (this.next().length < 6) {
+      this.errorKey.set('account.changePassword.invalidLength');
+      this.result.set('error');
+      return;
+    }
+    if (!isValidApkPassword(this.next())) {
+      this.errorKey.set('account.changePassword.invalid');
+      this.result.set('error');
+      return;
+    }
+    if (this.next() !== this.confirmation()) {
+      this.errorKey.set('account.changePassword.mismatch');
       this.result.set('error');
       return;
     }

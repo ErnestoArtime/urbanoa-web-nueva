@@ -41,4 +41,8 @@ describe('UnpaidFinesComponent', () => {
     expect(text).toContain('2 sept 2026');
     expect(text).not.toContain('ops.fineDetail.status.1');
   });
+
+  it('offers the detail link on each fine', () => {
+    expect(fixture.nativeElement.textContent as string).toContain('ops.unpaidFines.seeDetail');
+  });
 });

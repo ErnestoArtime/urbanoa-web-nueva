@@ -108,6 +108,13 @@
     gap: 0.75rem;
   }
 }
+.fine-list-detail-link {
+  display: block;
+  margin-top: 1rem;
+  color: var(--color-primary);
+  font-weight: 600;
+  text-align: right;
+}
 .empty-fines {
   text-align: center;
   padding: 2rem 1rem;

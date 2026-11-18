@@ -76,7 +76,11 @@ import { TranslationService } from '../../../core/services/translation.service';
               >
                 <div class="sanctions-alert-copy">
                   <strong>{{ 'ops.unpaidFines.bannerTitle' | translate }}</strong>
-                  <span>{{ 'ops.unpaidFines.bannerCount' | translate: { count: unpaidFinesCount() } }} &gt;</span>
+                  @if (unpaidFinesCount() === 1) {
+                    <span>{{ 'ops.unpaidFines.bannerCountOne' | translate }}</span>
+                  } @else {
+                    <span>{{ 'ops.unpaidFines.bannerCount' | translate: { count: unpaidFinesCount() } }}</span>
+                  }
                 </div>
                 <app-operation-icon [type]="OperationType.UNPAID_FINES" />
               </a>

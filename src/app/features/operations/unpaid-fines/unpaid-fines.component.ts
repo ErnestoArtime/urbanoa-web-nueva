@@ -39,6 +39,7 @@ import { TranslationService } from '../../../core/services/translation.service';
                   <app-icon name="dateRange" [size]="24" [stroke]="false" />
                   <span>{{ displayDate(fine.date) }}</span>
                 </div>
+                <span class="fine-list-detail-link">{{ 'ops.unpaidFines.seeDetail' | translate }}</span>
               </a>
             </li>
           }
