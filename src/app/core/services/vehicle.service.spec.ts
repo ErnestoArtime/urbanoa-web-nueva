@@ -41,7 +41,7 @@ describe('VehicleService', () => {
 
     await service.load();
 
-    expect(api.getOrNull).toHaveBeenCalledWith('OPSWebServicesAPI/QueryUserPlatesAPI', { token: 'token' });
+    expect(api.getOrNull).toHaveBeenCalledWith('OPSWebServicesUrbAPI/QueryUserPlatesAPI', { token: 'token' });
     expect(service.source()).toBe('remote');
     expect(service.vehicles()).toEqual([{ id: '1234ABC', plate: '1234ABC', isDefault: true }]);
   });
@@ -99,9 +99,13 @@ describe('VehicleService', () => {
 
     const result = await service.add({ plate: ' \t9999 x\nyz\u00a0', isDefault: true });
 
-    expect(api.post.calls.argsFor(0)).toEqual(['OPSWebServicesAPI/AddUserPlateAPI', { plate: '9999XYZ', favorite: 1 }, { token: 'token' }]);
+    expect(api.post.calls.argsFor(0)).toEqual([
+      'OPSWebServicesUrbAPI/AddUserPlateAPI',
+      { plate: '9999XYZ', favorite: 1 },
+      { token: 'token' },
+    ]);
     expect(api.post.calls.argsFor(1)).toEqual([
-      'OPSWebServicesAPI/UpdateUserPlateAPI',
+      'OPSWebServicesUrbAPI/UpdateUserPlateAPI',
       { plate: '9999XYZ', favorite: 1 },
       { token: 'token' },
     ]);
@@ -145,7 +149,7 @@ describe('VehicleService', () => {
 
     const result = await service.remove(favorite.id);
 
-    expect(api.post).toHaveBeenCalledWith('OPSWebServicesAPI/RemoveUserPlateAPI', { plate: favorite.plate }, { token: 'token' });
+    expect(api.post).toHaveBeenCalledWith('OPSWebServicesUrbAPI/RemoveUserPlateAPI', { plate: favorite.plate }, { token: 'token' });
     expect(api.post.calls.count()).toBe(1);
     expect(service.vehicles().find((v) => v.id === other.id)?.isDefault).toBeFalse();
     expect(result.success).toBeTrue();
@@ -168,7 +172,7 @@ describe('VehicleService', () => {
 
     await service.remove(nonFavorite.id);
 
-    expect(api.post).toHaveBeenCalledWith('OPSWebServicesAPI/RemoveUserPlateAPI', { plate: nonFavorite.plate }, { token: 'token' });
+    expect(api.post).toHaveBeenCalledWith('OPSWebServicesUrbAPI/RemoveUserPlateAPI', { plate: nonFavorite.plate }, { token: 'token' });
     expect(api.post.calls.count()).toBe(1);
     expect(service.vehicles().find((v) => v.isDefault)).toBeTruthy();
   });
@@ -223,7 +227,9 @@ describe('VehicleService', () => {
   it('treats the known QueryUserPlatesAPI HTTP 500-for-empty-account quirk as a real empty list', async () => {
     localStorage.setItem('urbanoa.vehicles', JSON.stringify([{ id: '7777 KKK', plate: '7777 KKK', isDefault: false }]));
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'getOrNull', 'post']);
-    api.getOrNull.and.rejectWith(new OpsApiError('http', 'OPSWebServicesAPI/QueryUserPlatesAPI', 'HTTP 500 - {"Message":"Error."}', 500));
+    api.getOrNull.and.rejectWith(
+      new OpsApiError('http', 'OPSWebServicesUrbAPI/QueryUserPlatesAPI', 'HTTP 500 - {"Message":"Error."}', 500),
+    );
     const service = serviceWith(api);
     TestBed.inject(OpsSessionService).setToken('token');
 
@@ -237,7 +243,7 @@ describe('VehicleService', () => {
   it('preserves other plates load failures as errors', async () => {
     localStorage.setItem('urbanoa.vehicles', JSON.stringify([{ id: '7777 KKK', plate: '7777 KKK', isDefault: false }]));
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'getOrNull', 'post']);
-    api.getOrNull.and.rejectWith(new OpsApiError('transport', 'OPSWebServicesAPI/QueryUserPlatesAPI', 'Network error'));
+    api.getOrNull.and.rejectWith(new OpsApiError('transport', 'OPSWebServicesUrbAPI/QueryUserPlatesAPI', 'Network error'));
     const service = serviceWith(api);
     TestBed.inject(OpsSessionService).setToken('token');
 
@@ -258,7 +264,7 @@ describe('VehicleService', () => {
     const result = await service.add({ plate: '9999 XYZ', isDefault: false });
 
     expect(api.post.calls.argsFor(0)).toEqual([
-      'OPSWebServicesAPI/AddUserPlateAPI',
+      'OPSWebServicesUrbAPI/AddUserPlateAPI',
       { plate: '9999XYZ', favorite: 0 },
       { token: 'token' },
     ]);
@@ -279,9 +285,13 @@ describe('VehicleService', () => {
     const vehicle = service.vehicles()[0];
     const result = await service.update(vehicle.id, { isDefault: true });
 
-    expect(api.post).toHaveBeenCalledWith('OPSWebServicesAPI/UpdateUserPlateAPI', { plate: '5678 XYZ', favorite: 1 }, { token: 'token' });
-    expect(api.post).not.toHaveBeenCalledWith('OPSWebServicesAPI/RemoveUserPlateAPI', jasmine.anything(), jasmine.anything());
-    expect(api.post).not.toHaveBeenCalledWith('OPSWebServicesAPI/AddUserPlateAPI', jasmine.anything(), jasmine.anything());
+    expect(api.post).toHaveBeenCalledWith(
+      'OPSWebServicesUrbAPI/UpdateUserPlateAPI',
+      { plate: '5678 XYZ', favorite: 1 },
+      { token: 'token' },
+    );
+    expect(api.post).not.toHaveBeenCalledWith('OPSWebServicesUrbAPI/RemoveUserPlateAPI', jasmine.anything(), jasmine.anything());
+    expect(api.post).not.toHaveBeenCalledWith('OPSWebServicesUrbAPI/AddUserPlateAPI', jasmine.anything(), jasmine.anything());
     expect(service.vehicles()[0].plate).toBe('5678 XYZ');
     expect(result.success).toBeTrue();
   });
@@ -308,9 +318,13 @@ describe('VehicleService', () => {
 
     const result = await service.update(nonFavorite.id, { isDefault: true });
 
-    expect(api.post).toHaveBeenCalledWith('OPSWebServicesAPI/UpdateUserPlateAPI', { plate: '5678 XYZ', favorite: 1 }, { token: 'token' });
+    expect(api.post).toHaveBeenCalledWith(
+      'OPSWebServicesUrbAPI/UpdateUserPlateAPI',
+      { plate: '5678 XYZ', favorite: 1 },
+      { token: 'token' },
+    );
     expect(api.post).not.toHaveBeenCalledWith(
-      'OPSWebServicesAPI/UpdateUserPlateAPI',
+      'OPSWebServicesUrbAPI/UpdateUserPlateAPI',
       { plate: '1234 ABC', favorite: 0 },
       { token: 'token' },
     );
@@ -343,9 +357,13 @@ describe('VehicleService', () => {
 
     const result = await service.update(nonFavorite.id, { isDefault: true });
 
-    expect(api.post).toHaveBeenCalledWith('OPSWebServicesAPI/UpdateUserPlateAPI', { plate: '5678 XYZ', favorite: 1 }, { token: 'token' });
+    expect(api.post).toHaveBeenCalledWith(
+      'OPSWebServicesUrbAPI/UpdateUserPlateAPI',
+      { plate: '5678 XYZ', favorite: 1 },
+      { token: 'token' },
+    );
     expect(api.post).not.toHaveBeenCalledWith(
-      'OPSWebServicesAPI/UpdateUserPlateAPI',
+      'OPSWebServicesUrbAPI/UpdateUserPlateAPI',
       { plate: '1234 ABC', favorite: 0 },
       { token: 'token' },
     );

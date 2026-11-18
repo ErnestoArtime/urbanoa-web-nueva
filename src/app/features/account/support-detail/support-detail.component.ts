@@ -152,11 +152,11 @@ export class AccountSupportDetailComponent {
   }
 
   typeKey(): string {
-    return `account.support.type.${this.thread()?.type ?? 'inquiry'}`;
+    return `account.support.type.${this.thread()?.type ?? 'unknown'}`;
   }
 
   subtypeKey(): string {
-    return `account.support.subtype.${this.thread()?.subtype ?? 'information'}`;
+    return `account.support.subtype.${this.thread()?.subtype ?? 'unknown'}`;
   }
 
   statusKey(): string {

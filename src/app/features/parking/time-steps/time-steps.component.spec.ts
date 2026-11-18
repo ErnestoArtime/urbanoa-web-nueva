@@ -50,7 +50,7 @@ describe('ParkingTimeStepsComponent extension', () => {
     const component = TestBed.runInInjectionContext(() => new ParkingTimeStepsComponent());
     await component.ngOnInit();
     expect(api.post).toHaveBeenCalledWith(
-      'OPSWebServicesAPI/QueryParkingOperationWithTimeStepsAPI',
+      'OPSWebServicesUrbAPI/QueryParkingOperationWithTimeStepsAPI',
       jasmine.objectContaining({ contractId: 3, sector: 22002, ticket: 4, plate: '1234567' }),
       { token: 'test-token' },
     );

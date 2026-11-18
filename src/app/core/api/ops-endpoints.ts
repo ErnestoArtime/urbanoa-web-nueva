@@ -1,4 +1,4 @@
-const API_PREFIX = 'OPSWebServicesAPI/';
+const API_PREFIX = 'OPSWebServicesUrbAPI/';
 
 const endpoint = (name: string): string => `${API_PREFIX}${name}`;
 

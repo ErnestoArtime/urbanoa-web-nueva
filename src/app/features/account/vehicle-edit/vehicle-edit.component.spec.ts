@@ -109,7 +109,7 @@ describe('VehicleEditComponent', () => {
 
   it('shows the localized backend error message when the API fails', async () => {
     const fixture = mount();
-    const error = new OpsApiError('backend', 'OPSWebServicesAPI/RemovePlateAPI', 'Error genérico', 200, {
+    const error = new OpsApiError('backend', 'OPSWebServicesUrbAPI/RemovePlateAPI', 'Error genérico', 200, {
       code: -9,
       type: 2,
       message_EN: 'Generic error',
@@ -128,7 +128,7 @@ describe('VehicleEditComponent', () => {
 
   it('shows the generic fallback message when the API error is not parseable', async () => {
     const fixture = mount();
-    const error = new OpsApiError('transport', 'OPSWebServicesAPI/RemovePlateAPI', 'Network error', 0);
+    const error = new OpsApiError('transport', 'OPSWebServicesUrbAPI/RemovePlateAPI', 'Network error', 0);
     vehicleService.remove.and.resolveTo({ success: false, source: 'error', error } as VehicleMutationResult);
 
     await fixture.componentInstance.confirmRemove();

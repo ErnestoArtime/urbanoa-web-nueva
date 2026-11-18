@@ -161,7 +161,7 @@ describe('WalletService', () => {
     const result = await service.recharge(2.5, '7');
 
     expect(api.post).toHaveBeenCalledWith(
-      'OPSWebServicesAPI/RechargeUserCreditAPI',
+      'OPSWebServicesUrbAPI/RechargeUserCreditAPI',
       { contractId: 0, amount: 250, payMethodId: 7 },
       { token: 'token' },
     );
@@ -224,7 +224,7 @@ describe('WalletService', () => {
     const result = await service.refund(5, 'cloud-token');
 
     expect(api.post).toHaveBeenCalledWith(
-      'OPSWebServicesAPI/RefundUserCreditAPI',
+      'OPSWebServicesUrbAPI/RefundUserCreditAPI',
       { contractId: 0, cloudToken: 'cloud-token', operatingSystem: OPS_UNVERIFIED_OPERATING_SYSTEM, amount: 500, simulate: 0 },
       { token: 'token' },
     );

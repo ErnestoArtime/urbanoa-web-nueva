@@ -34,7 +34,7 @@ describe('ParkingTimeStepsService', () => {
     });
 
     expect(api.post).toHaveBeenCalledWith(
-      'OPSWebServicesAPI/QueryParkingOperationWithTimeStepsAPI',
+      'OPSWebServicesUrbAPI/QueryParkingOperationWithTimeStepsAPI',
       jasmine.objectContaining({
         contractId: 3,
         sector: 22002,

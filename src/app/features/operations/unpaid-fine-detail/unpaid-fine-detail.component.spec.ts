@@ -94,7 +94,7 @@ describe('UnpaidFineDetailComponent', () => {
   }
 
   it('shows the pay error message including the localized backend error', async () => {
-    const backendError = new OpsApiError('backend', 'OPSWebServicesAPI/ConfirmPaymentAPI', 'La tarjeta ha sido rechazada', 200, {
+    const backendError = new OpsApiError('backend', 'OPSWebServicesUrbAPI/ConfirmPaymentAPI', 'La tarjeta ha sido rechazada', 200, {
       code: -21,
       type: 2,
       message_ES: 'La tarjeta ha sido rechazada',
@@ -116,7 +116,7 @@ describe('UnpaidFineDetailComponent', () => {
   });
 
   it('keeps a lost payment response pending and prevents another charge', async () => {
-    const transportError = new OpsApiError('transport', 'OPSWebServicesAPI/ConfirmPaymentAPI', 'connection lost');
+    const transportError = new OpsApiError('transport', 'OPSWebServicesUrbAPI/ConfirmPaymentAPI', 'connection lost');
     configure(payableFine, { payFine: jasmine.createSpy('payFine').and.resolveTo({ success: false, error: transportError }) });
     await fixture.componentInstance.pay();
     fixture.detectChanges();
@@ -143,7 +143,7 @@ describe('UnpaidFineDetailComponent', () => {
   });
 
   it('shows the failure modal when acknowledging an expired fine fails', async () => {
-    const backendError = new OpsApiError('backend', 'OPSWebServicesAPI/UpdateFineStatusAPI', 'No se pudo archivar', 200, {
+    const backendError = new OpsApiError('backend', 'OPSWebServicesUrbAPI/UpdateFineStatusAPI', 'No se pudo archivar', 200, {
       code: -21,
       type: 2,
       message_ES: 'No se pudo archivar',
@@ -166,7 +166,7 @@ describe('UnpaidFineDetailComponent', () => {
   });
 
   it('dismisses the error modal when the close action is triggered', async () => {
-    const backendError = new OpsApiError('backend', 'OPSWebServicesAPI/UpdateFineStatusAPI', 'No se pudo archivar', 200, {
+    const backendError = new OpsApiError('backend', 'OPSWebServicesUrbAPI/UpdateFineStatusAPI', 'No se pudo archivar', 200, {
       code: -21,
       type: 2,
       message_ES: 'No se pudo archivar',

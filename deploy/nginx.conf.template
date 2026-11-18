@@ -41,7 +41,8 @@ server {
   }
 
   location /ops-api/ {
-    rewrite ^/ops-api/OPSWebServicesAPI/(.*)$ /OPSWebServicesAPI/$1 break;
+    rewrite ^/ops-api/OPSWebServices(?:Legacy)?API/(.*)$ /OPSWebServicesUrbAPI/$1 break;
+    rewrite ^/ops-api/OPSWebServicesUrbAPI/(.*)$ /OPSWebServicesUrbAPI/$1 break;
     proxy_pass __OPS_BACKEND_URL__;
     proxy_set_header Host $proxy_host;
     proxy_set_header X-Real-IP $remote_addr;

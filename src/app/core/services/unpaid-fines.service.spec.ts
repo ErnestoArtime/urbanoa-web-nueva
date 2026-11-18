@@ -74,7 +74,7 @@ describe('UnpaidFinesService acknowledgeExpired', () => {
     const result = await service.acknowledgeExpired('fine-1');
 
     expect(api.post).toHaveBeenCalledOnceWith(
-      'OPSWebServicesAPI/UpdateFineStatusAPI',
+      'OPSWebServicesUrbAPI/UpdateFineStatusAPI',
       { contractId: 7, fineNumber: 'FN-2026-001' },
       { token: 'token' },
     );
@@ -161,7 +161,7 @@ describe('UnpaidFinesService acknowledgeExpired', () => {
   it('returns failure with a backend error when the API reports one', async () => {
     const api = {
       post: jasmine.createSpy('post').and.rejectWith(
-        new OpsApiError('backend', 'OPSWebServicesAPI/UpdateFineStatusAPI', 'Error al archivar la sanción', 200, {
+        new OpsApiError('backend', 'OPSWebServicesUrbAPI/UpdateFineStatusAPI', 'Error al archivar la sanción', 200, {
           code: -21,
           type: 2,
           message_ES: 'No se pudo archivar la sanción',

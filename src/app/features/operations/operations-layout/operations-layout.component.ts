@@ -153,7 +153,7 @@ import { TranslationService } from '../../../core/services/translation.service';
 
             <section class="history-filter-panel">
               <p class="section-label history-label">{{ 'dashboard.recentOps' | translate }}</p>
-              <app-date-range-filter (rangeChange)="onRangeChange($event)" />
+              <app-date-range-filter initialPreset="month" (rangeChange)="onRangeChange($event)" />
             </section>
           </div>
 

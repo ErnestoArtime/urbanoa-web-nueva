@@ -416,7 +416,7 @@ describe('AuthService', () => {
 
     expect(opsApi.post).toHaveBeenCalledOnceWith(
       OPS_ENDPOINTS.auth.register,
-      { contractId: 0, email: 'user@example.com', password: 'secret', plates: [{ plate: '1234ABC' }] },
+      { contractId: 0, email: 'user@example.com', password: 'secret', plates: [{ plate: '1234ABC' }], language: 'es' },
       { headers: { 'Accept-Language': 'es-ES' } },
     );
   });

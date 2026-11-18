@@ -73,8 +73,8 @@ describe('CitiesService', () => {
         },
       ],
     });
-    api.post.withArgs('OPSWebServicesAPI/QueryStreetsAPI', { contractId: 3 }).and.resolveTo({ streetsFulllist: [] });
-    api.post.withArgs('OPSWebServicesAPI/QueryMapStretchesAPI', { contractId: 3, version: '0' }).and.resolveTo({
+    api.post.withArgs('OPSWebServicesUrbAPI/QueryStreetsAPI', { contractId: 3 }).and.resolveTo({ streetsFulllist: [] });
+    api.post.withArgs('OPSWebServicesUrbAPI/QueryMapStretchesAPI', { contractId: 3, version: '0' }).and.resolveTo({
       data: `<kml><Document><Placemark><name>SECTOR 01</name><description>SECTOR 01 AZUL</description><ExtendedData><zoneId>7</zoneId></ExtendedData></Placemark></Document></kml>`,
     });
     TestBed.configureTestingModule({ providers: [provideZonelessChangeDetection(), { provide: OpsApiClient, useValue: api }] });
@@ -116,9 +116,9 @@ describe('CitiesService', () => {
         },
       ],
     });
-    api.post.withArgs('OPSWebServicesAPI/QueryStreetsAPI', { contractId: 1 }).and.resolveTo({ streetsFulllist: [] });
-    api.post.withArgs('OPSWebServicesAPI/QueryMapStretchesAPI', { contractId: 1, version: '0' }).and.resolveTo({ data: '' });
-    api.post.withArgs('OPSWebServicesAPI/QueryStreetsAPI', { contractId: 3 }).and.resolveTo({
+    api.post.withArgs('OPSWebServicesUrbAPI/QueryStreetsAPI', { contractId: 1 }).and.resolveTo({ streetsFulllist: [] });
+    api.post.withArgs('OPSWebServicesUrbAPI/QueryMapStretchesAPI', { contractId: 1, version: '0' }).and.resolveTo({ data: '' });
+    api.post.withArgs('OPSWebServicesUrbAPI/QueryStreetsAPI', { contractId: 3 }).and.resolveTo({
       streetsFulllist: [{ zone: 22002, zoneDesc: 'Z2 AZUL' }],
     });
     TestBed.configureTestingModule({ providers: [provideZonelessChangeDetection(), { provide: OpsApiClient, useValue: api }] });

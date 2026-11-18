@@ -12,7 +12,7 @@ async (page) => {
     const address = route.request().url();
     const url = { pathname: address.replace(/^https?:\/\/[^/]+/, '').split('?')[0] };
     if (!/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\//.test(address)) return route.abort();
-    if (!url.pathname.includes('ops-api') && !url.pathname.includes('OPSWebServicesAPI')) return route.continue();
+    if (!url.pathname.includes('ops-api') && !url.pathname.includes('OPSWebServicesUrbAPI')) return route.continue();
     let value = [];
     if (url.pathname.includes('QueryUserOperations')) value = fixtures;
     else if (url.pathname.includes('QueryUserCredit')) value = 25215;

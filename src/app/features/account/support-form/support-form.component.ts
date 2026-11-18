@@ -28,19 +28,15 @@ const FEEDBACK_TYPES: SelectOption<FeedbackType>[] = [
   { value: 'incident', labelKey: 'account.support.type.incident' },
   { value: 'suggestion', labelKey: 'account.support.type.suggestion' },
   { value: 'inquiry', labelKey: 'account.support.type.inquiry' },
-  { value: 'service-complaint', labelKey: 'account.support.type.service-complaint' },
   { value: 'compliment', labelKey: 'account.support.type.compliment' },
 ];
 
 const FEEDBACK_SUBTYPES: SelectOption<FeedbackSubtype>[] = [
   { value: 'app', labelKey: 'account.support.subtype.app' },
-  { value: 'citizen-services', labelKey: 'account.support.subtype.citizen-services' },
-  { value: 'information', labelKey: 'account.support.subtype.information' },
-  { value: 'regulations', labelKey: 'account.support.subtype.regulations' },
-  { value: 'areas-hours', labelKey: 'account.support.subtype.areas-hours' },
   { value: 'parking-meters', labelKey: 'account.support.subtype.parking-meters' },
-  { value: 'fines', labelKey: 'account.support.subtype.fines' },
-  { value: 'surveillance', labelKey: 'account.support.subtype.surveillance' },
+  { value: 'user-service', labelKey: 'account.support.subtype.user-service' },
+  { value: 'surveillance-fines', labelKey: 'account.support.subtype.surveillance-fines' },
+  { value: 'regulations', labelKey: 'account.support.subtype.regulations' },
   { value: 'web', labelKey: 'account.support.subtype.web' },
 ];
 

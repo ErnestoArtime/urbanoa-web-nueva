@@ -14,6 +14,20 @@ describe('DateRangeFilterComponent popup placement', () => {
     });
   });
 
+  it('applies the initial preset on load and lets the user widen the range', () => {
+    const fixture = TestBed.createComponent(DateRangeFilterComponent);
+    const emitted: { from: string; to: string }[] = [];
+    fixture.componentInstance.rangeChange.subscribe((range) => emitted.push(range));
+    fixture.componentRef.setInput('initialPreset', 'month');
+    fixture.detectChanges();
+    expect(fixture.componentInstance.activePreset()).toBe('month');
+    expect(emitted.length).toBe(1);
+    expect(emitted[0].from).not.toBe('');
+    fixture.componentInstance.applyPreset('month');
+    expect(emitted[1]).toEqual({ from: '', to: '' });
+    fixture.destroy();
+  });
+
   for (const side of ['above', 'below'] as const) {
     it(`keeps the calendar adjacent to the field ${side}, through the runtime stylesheet`, () => {
       const fixture = TestBed.createComponent(DateRangeFilterComponent);

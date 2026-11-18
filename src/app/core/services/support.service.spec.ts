@@ -160,7 +160,7 @@ describe('SupportService', () => {
       { contractId: 0, startDate: '000000010100', endDate: jasmine.stringMatching(/^\d{12}$/) },
       { token: 'token' },
     );
-    expect(OPS_ENDPOINTS.support.query).toBe('OPSWebServicesAPI/QueryUserFeedbackAPI');
+    expect(OPS_ENDPOINTS.support.query).toBe('OPSWebServicesUrbAPI/QueryUserFeedbackAPI');
     expect(service.threads()[0]).toEqual(jasmine.objectContaining({ id: '12', plate: '1234567', unread: true }));
   });
 
@@ -331,10 +331,43 @@ describe('SupportService', () => {
 
     expect(created?.id).toBe('123');
     expect(api.post).toHaveBeenCalledWith(
-      'OPSWebServicesAPI/AddUserFeedbackAPI',
+      'OPSWebServicesUrbAPI/AddUserFeedbackAPI',
       jasmine.objectContaining({ contractId: 1, plate: '', userEmail: null }),
       { token: 'token' },
     );
+  });
+
+  it('maps the APK 4.0.1 categories and subcategories to codes 1-4 and 1-5', async () => {
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
+    api.post.and.resolveTo('123');
+    TestBed.configureTestingModule({
+      providers: [
+        provideZonelessChangeDetection(),
+        { provide: OpsApiClient, useValue: api },
+        { provide: OpsSessionService, useValue: { token: () => 'token' } },
+        { provide: CitiesService, useValue: { contractIdFor: () => 1 } },
+        { provide: UserService, useValue: { user: signal({ email: 'user@example.com' }), load: jasmine.createSpy() } },
+      ],
+    });
+    const service = TestBed.inject(SupportService);
+    const base = { cityId: 'durango', cityName: 'Durango', plate: '', message: 'test' };
+    const cases = [
+      ['incident', 'app', 1, 1],
+      ['compliment', 'parking-meters', 4, 2],
+      ['inquiry', 'user-service', 3, 3],
+      ['suggestion', 'surveillance-fines', 2, 4],
+      ['incident', 'regulations', 1, 5],
+      ['incident', 'web', 1, 1],
+    ] as const;
+    for (const [type, subtype, typeCode, subtypeCode] of cases) {
+      api.post.calls.reset();
+      await service.create({ ...base, type, subtype });
+      expect(api.post).toHaveBeenCalledWith(
+        'OPSWebServicesUrbAPI/AddUserFeedbackAPI',
+        jasmine.objectContaining({ type: typeCode, subtype: subtypeCode }),
+        { token: 'token' },
+      );
+    }
   });
 
   it('sends feedback using the contract expected by the APK', async () => {

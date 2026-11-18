@@ -80,9 +80,13 @@ describe('ParkingApiService', () => {
 
       await service.tickets({ contractId: 3, plate: '1234ABC', zone: 22002, date: '183423260826' });
 
-      expect(api.post).toHaveBeenCalledOnceWith('OPSWebServicesAPI/QueryTicketsAPI', jasmine.objectContaining({ language: opsLanguage }), {
-        token: 'token',
-      });
+      expect(api.post).toHaveBeenCalledOnceWith(
+        'OPSWebServicesUrbAPI/QueryTicketsAPI',
+        jasmine.objectContaining({ language: opsLanguage }),
+        {
+          token: 'token',
+        },
+      );
     });
   }
 
@@ -107,7 +111,7 @@ describe('ParkingApiService', () => {
     });
 
     expect(api.post).toHaveBeenCalledWith(
-      'OPSWebServicesAPI/ConfirmParkingOperationAPI',
+      'OPSWebServicesUrbAPI/ConfirmParkingOperationAPI',
       {
         contractId: 3,
         plate: '1234ABC',
@@ -176,7 +180,7 @@ describe('ParkingApiService', () => {
     });
 
     expect(api.post).toHaveBeenCalledOnceWith(
-      'OPSWebServicesAPI/ConfirmParkingOperationAPI',
+      'OPSWebServicesUrbAPI/ConfirmParkingOperationAPI',
       jasmine.objectContaining({
         contractId: 3,
         plate: '1234ABC',
@@ -244,7 +248,7 @@ describe('ParkingApiService', () => {
     );
 
     expect(api.post).toHaveBeenCalledOnceWith(
-      'OPSWebServicesAPI/ConfirmUnParkingOperationAPI',
+      'OPSWebServicesUrbAPI/ConfirmUnParkingOperationAPI',
       jasmine.objectContaining({
         contractId: 3,
         plate: '1234ABC',
@@ -309,7 +313,7 @@ describe('ParkingApiService', () => {
     });
 
     expect(api.post).toHaveBeenCalledOnceWith(
-      'OPSWebServicesAPI/QueryTicketsAPI',
+      'OPSWebServicesUrbAPI/QueryTicketsAPI',
       { contractId: 3, plate: '1234567', date: '183423260826', zone: 22002, language: 'es' },
       { token: 'token' },
     );
@@ -431,9 +435,9 @@ describe('ParkingApiService', () => {
     await service.mapStretches(3, '');
     await service.sectors({ contractId: 3, streetId: 2601, latitude: 43.28, longitude: -2.16 });
 
-    expect(api.post.calls.argsFor(0)).toEqual(['OPSWebServicesAPI/QueryMapStretchesAPI', { contractId: 3, version: '0' }]);
+    expect(api.post.calls.argsFor(0)).toEqual(['OPSWebServicesUrbAPI/QueryMapStretchesAPI', { contractId: 3, version: '0' }]);
     expect(api.post.calls.argsFor(1)).toEqual([
-      'OPSWebServicesAPI/QuerySectorsAPI',
+      'OPSWebServicesUrbAPI/QuerySectorsAPI',
       { contractId: 3, streetId: 2601, latitude: 43.28, longitude: -2.16 },
     ]);
   });
@@ -445,7 +449,7 @@ describe('ParkingApiService', () => {
 
     await service.sectors({ contractId: 23, latitude: 43.11599, longitude: -2.41484 });
 
-    expect(api.post).toHaveBeenCalledOnceWith('OPSWebServicesAPI/QuerySectorsAPI', {
+    expect(api.post).toHaveBeenCalledOnceWith('OPSWebServicesUrbAPI/QuerySectorsAPI', {
       contractId: 23,
       streetId: 0,
       latitude: 43.11599,
@@ -462,12 +466,12 @@ describe('ParkingApiService', () => {
     const result = await service.unpark({ contractId: 3, plate: '1234ABC', ticketId: 7 });
 
     expect(api.post.calls.argsFor(0)).toEqual([
-      'OPSWebServicesAPI/QueryUnParkingOperationAPI',
+      'OPSWebServicesUrbAPI/QueryUnParkingOperationAPI',
       jasmine.objectContaining({ contractId: 3, plate: '1234ABC', ticketId: 7, datetime: jasmine.stringMatching(/^\d{12}$/) }),
       { token: 'token' },
     ]);
     expect(api.post.calls.argsFor(1)).toEqual([
-      'OPSWebServicesAPI/ConfirmUnParkingOperationAPI',
+      'OPSWebServicesUrbAPI/ConfirmUnParkingOperationAPI',
       jasmine.objectContaining({
         contractId: 3,
         plate: '1234ABC',
@@ -490,7 +494,7 @@ describe('ParkingApiService', () => {
     const result = await service.unpark({ contractId: 3, plate: '1234567', groupId: 22002, ticketId: 108 });
 
     expect(api.post).toHaveBeenCalledOnceWith(
-      'OPSWebServicesAPI/QueryUnParkingOperationAPI',
+      'OPSWebServicesUrbAPI/QueryUnParkingOperationAPI',
       jasmine.objectContaining({ contractId: 3, plate: '1234567', groupId: 22002, ticketId: 108 }),
       { token: 'token' },
     );

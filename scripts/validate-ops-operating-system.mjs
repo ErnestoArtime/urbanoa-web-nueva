@@ -2,7 +2,7 @@ import { writeFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 
 // Credentials and bearer tokens stay in memory; evidence excludes personal data.
-const base = process.env.OPS_VALIDATION_BASE ?? 'http://127.0.0.1:10213/ops-api/OPSWebServicesAPI';
+const base = process.env.OPS_VALIDATION_BASE ?? 'http://127.0.0.1:10213/ops-api/OPSWebServicesUrbAPI';
 const username = process.env.OPS_VALIDATION_USER;
 const password = process.env.OPS_VALIDATION_PASSWORD;
 if (!username || !password) throw new Error('Set OPS_VALIDATION_USER and OPS_VALIDATION_PASSWORD');

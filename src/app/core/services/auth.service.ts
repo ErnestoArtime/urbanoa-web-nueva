@@ -296,6 +296,7 @@ export class AuthService {
       email: input.email.trim(),
       password: input.password,
       plates: plate ? [{ plate }] : [],
+      language: this.opsLanguage(),
     };
 
     try {

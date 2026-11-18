@@ -17,6 +17,7 @@ export interface OpsRegisterRequest {
   email: string;
   password: string;
   plates: { plate: string }[];
+  language: string;
 }
 
 export interface OpsUserResponse {

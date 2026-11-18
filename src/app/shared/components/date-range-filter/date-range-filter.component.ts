@@ -1,6 +1,18 @@
 import { RuntimeStyleDirective } from '../../directives/runtime-style.directive';
 import { TitleCasePipe } from '@angular/common';
-import { ChangeDetectorRef, Component, computed, DestroyRef, ElementRef, inject, input, output, signal, viewChild } from '@angular/core';
+import {
+  ChangeDetectorRef,
+  Component,
+  computed,
+  DestroyRef,
+  ElementRef,
+  inject,
+  input,
+  OnInit,
+  output,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { AppIconComponent } from '../../icons/app-icon.component';
 import { TranslatePipe } from '../../pipes/translate.pipe';
 import { TranslationService } from '../../../core/services/translation.service';
@@ -88,7 +100,7 @@ export interface DateRange {
   `,
   styleUrl: './date-range-filter.component.css',
 })
-export class DateRangeFilterComponent {
+export class DateRangeFilterComponent implements OnInit {
   private readonly popup = viewChild.required<ElementRef<HTMLElement>>('calendarPopup');
   private readonly changeDetector = inject(ChangeDetectorRef);
   readonly popupPosition = signal({ left: '0px', '--calendar-top': '0px', width: '260px', '--calendar-max-height': 'calc(100dvh - 16px)' });
@@ -118,6 +130,7 @@ export class DateRangeFilterComponent {
   private readonly translationService = inject(TranslationService);
 
   readonly simple = input(false);
+  readonly initialPreset = input<string | null>(null);
   readonly from = signal('');
   readonly to = signal('');
   readonly showCalendar = signal(false);
@@ -160,6 +173,11 @@ export class DateRangeFilterComponent {
     { key: 'week', label: 'ops.thisWeek' },
     { key: 'month', label: 'ops.thisMonth' },
   ];
+
+  ngOnInit(): void {
+    const preset = this.initialPreset();
+    if (preset && !this.simple()) this.applyPreset(preset);
+  }
 
   applyPreset(key: string): void {
     if (this.activePreset() === key) {

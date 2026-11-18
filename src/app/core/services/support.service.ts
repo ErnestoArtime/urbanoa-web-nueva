@@ -7,9 +7,11 @@ import { CitiesService } from './cities.service';
 import { UserService } from './user.service';
 import { parseOpsDate, formatOpsDate } from '../utils/ops-date';
 
-export type FeedbackType = 'incident' | 'suggestion' | 'inquiry' | 'service-complaint' | 'compliment';
-export type FeedbackSubtype =
-  'app' | 'citizen-services' | 'information' | 'regulations' | 'areas-hours' | 'parking-meters' | 'fines' | 'surveillance' | 'web';
+const FEEDBACK_TYPES = ['incident', 'suggestion', 'inquiry', 'compliment'] as const;
+const FEEDBACK_SUBTYPES = ['app', 'parking-meters', 'user-service', 'surveillance-fines', 'regulations'] as const;
+
+export type FeedbackType = (typeof FEEDBACK_TYPES)[number] | 'unknown';
+export type FeedbackSubtype = (typeof FEEDBACK_SUBTYPES)[number] | 'web' | 'unknown';
 export type FeedbackStatus = 'submitted' | 'assigned' | 'in-progress' | 'closed';
 
 export interface SupportAttachment {
@@ -485,7 +487,7 @@ export class SupportService {
   }
 
   private feedbackType(type: FeedbackType): number {
-    return ['incident', 'suggestion', 'inquiry', 'service-complaint', 'compliment'].indexOf(type) + 1;
+    return (FEEDBACK_TYPES as readonly string[]).indexOf(type) + 1;
   }
 
   private backendDate(value: Date): string {
@@ -494,21 +496,15 @@ export class SupportService {
 
   private feedbackSubtype(subtype: FeedbackSubtype): number {
     if (subtype === 'web') return 1;
-    return (
-      ['app', 'citizen-services', 'information', 'regulations', 'areas-hours', 'parking-meters', 'fines', 'surveillance', 'web'].indexOf(
-        subtype,
-      ) + 1
-    );
+    return (FEEDBACK_SUBTYPES as readonly string[]).indexOf(subtype) + 1;
   }
 
   private localType(type: number): FeedbackType {
-    return (['incident', 'suggestion', 'inquiry', 'service-complaint', 'compliment'][type - 1] ?? 'inquiry') as FeedbackType;
+    return FEEDBACK_TYPES[type - 1] ?? 'unknown';
   }
 
   private localSubtype(subtype: number): FeedbackSubtype {
-    return (['app', 'citizen-services', 'information', 'regulations', 'areas-hours', 'parking-meters', 'fines', 'surveillance', 'web'][
-      subtype - 1
-    ] ?? 'information') as FeedbackSubtype;
+    return FEEDBACK_SUBTYPES[subtype - 1] ?? 'unknown';
   }
 
   private fail(error: OpsApiError): false {
