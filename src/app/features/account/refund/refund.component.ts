@@ -47,8 +47,8 @@ import { LoaderComponent } from '../../../shared/components/loader/loader.compon
       @if (refundQuote(); as amount) {
         <app-result-modal
           type="confirmation"
-          [title]="'account.refund.confirm' | translate"
-          [message]="'account.refund.confirmDetail' | translate: { amount: formatAmount(amount) }"
+          [title]="'account.refund.dialogTitle' | translate"
+          [message]="'account.refund.dialogMessage' | translate: { amount: formatAmount(amount) }"
           [primaryText]="'account.refund.confirm' | translate"
           [secondaryText]="'common.cancel' | translate"
           [busy]="requesting()"

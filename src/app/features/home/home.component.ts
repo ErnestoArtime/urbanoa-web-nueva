@@ -148,7 +148,7 @@ import { TranslationService } from '../../core/services/translation.service';
         <app-result-modal
           type="unpark"
           [title]="'parking.ended' | translate"
-          [message]="unparkedRefundAmount() > 0 ? ('dashboard.unparkSuccessDetail' | translate) : undefined"
+          [message]="(unparkedRefundAmount() > 0 ? 'dashboard.unparkSuccessDetail' : 'dashboard.unparkSuccess') | translate"
           [primaryText]="'common.accept' | translate"
           (primaryAction)="dismissUnparked()"
         />
