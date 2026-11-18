@@ -198,10 +198,10 @@ export class PaymentLayoutComponent implements OnInit {
   private readonly router = inject(Router);
   readonly cardToDelete = signal<string | null>(null);
   readonly activeCardMenu = signal<string | null>(null);
-  readonly cardMenuPosition = signal<{ top: number; left: number } | null>(null);
+  readonly cardMenuPosition = signal<{ top: number; left: number; maxHeight: number } | null>(null);
   cardMenuStyles(): Record<string, string> {
     const position = this.cardMenuPosition();
-    return position ? { top: `${position.top}px`, left: `${position.left}px` } : {};
+    return position ? { top: `${position.top}px`, left: `${position.left}px`, 'max-height': `${position.maxHeight}px` } : {};
   }
   private readonly url = toSignal(
     this.router.events.pipe(
@@ -252,9 +252,15 @@ export class PaymentLayoutComponent implements OnInit {
     const bounds = trigger.getBoundingClientRect();
     const menuHeight = 220;
     const menuWidth = 235;
-    const top = bounds.bottom + menuHeight + 8 <= window.innerHeight ? bounds.bottom + 8 : Math.max(8, bounds.top - menuHeight - 8);
+    const gap = 8;
+    const viewportPadding = 8;
+    const spaceBelow = window.innerHeight - bounds.bottom - gap - viewportPadding;
+    const spaceAbove = bounds.top - gap - viewportPadding;
+    const openAbove = spaceBelow < menuHeight && spaceAbove > spaceBelow;
+    const availableHeight = Math.max(120, openAbove ? spaceAbove : spaceBelow);
+    const top = openAbove ? Math.max(viewportPadding, bounds.top - Math.min(menuHeight, availableHeight) - gap) : bounds.bottom + gap;
     const left = Math.max(8, Math.min(bounds.right - menuWidth, window.innerWidth - menuWidth - 8));
-    this.cardMenuPosition.set({ top, left });
+    this.cardMenuPosition.set({ top, left, maxHeight: availableHeight });
     this.activeCardMenu.set(id);
   }
   @HostListener('document:click', ['$event'])
@@ -269,6 +275,7 @@ export class PaymentLayoutComponent implements OnInit {
   @HostListener('document:keydown.escape')
   closeCardMenuOnEscape(): void {
     this.activeCardMenu.set(null);
+    this.cardMenuPosition.set(null);
   }
   async setAsDefault(id: string): Promise<void> {
     if (this.updating()) return;
