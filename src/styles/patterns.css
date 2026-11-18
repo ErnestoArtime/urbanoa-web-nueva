@@ -214,6 +214,25 @@
     padding: 2rem;
   }
 }
+/* Keep the recharge panel reserved beside the payment-method list. */
+@media (min-width: 960px) {
+  .payment-split > .split-view > .split-view-list {
+    width: min(560px, 50%);
+    min-width: 310px;
+    flex: 0 0 min(560px, 50%);
+  }
+  .payment-split > .split-view > .split-view-list.split-hidden {
+    display: none;
+  }
+  .payment-split > .split-view > .split-view-detail {
+    display: block;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .payment-split > .split-view > .split-view-detail.split-hidden {
+    display: block;
+  }
+}
 @media (max-width: 959px) {
   .split-view-detail:not(.split-hidden) {
     height: 100%;
@@ -223,6 +242,13 @@
     overflow-y: auto;
     height: 100%;
     padding-bottom: calc(var(--bottom-nav-height) + 1rem);
+  }
+  .payment-split > .split-view > .split-view-list:not(.split-hidden) {
+    padding-bottom: 0;
+  }
+  .payment-split > .split-view > .split-view-list.split-hidden,
+  .payment-split > .split-view > .split-view-detail.split-hidden {
+    display: none;
   }
   .split-view-list.split-hidden {
     display: none;
@@ -245,7 +271,7 @@
     min-width: 0;
   }
 }
-@media (min-width: 1280px) {
+@media (min-width: 960px) {
   .account-split > .split-view > .split-view-list {
     display: block;
     width: clamp(250px, 22vw, 420px);

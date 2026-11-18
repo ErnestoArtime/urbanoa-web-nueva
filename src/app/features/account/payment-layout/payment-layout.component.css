@@ -1,3 +1,8 @@
+.payment-detail-empty {
+  height: 100%;
+  min-height: 16rem;
+}
+
 .compact {
   padding: 0;
 }
@@ -7,13 +12,16 @@
 }
 .card-info {
   min-width: 0;
-  overflow-wrap: anywhere;
+  overflow-wrap: normal;
+  word-break: normal;
 }
 .payment-wallet-card {
   position: relative;
   isolation: isolate;
   display: flex;
   aspect-ratio: 382 / 220;
+  min-height: 190px;
+  max-height: 320px;
   overflow: hidden;
   padding: 1.4rem 1.5rem;
   border: 1px solid var(--color-payment-wallet-card-border);
@@ -148,10 +156,10 @@
   background: var(--color-background);
 }
 .card-menu {
-  position: absolute;
-  z-index: 20;
-  right: 0.5rem;
-  top: 3.2rem;
+  position: fixed;
+  z-index: 1000;
+  right: auto;
+  top: 0;
   display: grid;
   min-width: 235px;
   padding: 0.4rem;
@@ -209,6 +217,10 @@
   height: 100%;
   min-height: 0;
 }
+.payment-detail-empty {
+  height: 100%;
+  min-height: 16rem;
+}
 .wallet-page {
   display: flex;
   flex-direction: column;
@@ -250,4 +262,44 @@
 }
 .compact .wallet-scroll {
   overflow: visible;
+}
+
+@media (min-width: 960px) and (max-width: 1279px) {
+  .wallet-page {
+    height: 100%;
+  }
+}
+
+@media (max-width: 959px) {
+  .wallet-page:not(.compact) {
+    height: 100%;
+    min-height: 0;
+  }
+  .wallet-page:not(.compact) .wallet-scroll {
+    padding-bottom: 10rem;
+  }
+  .wallet-page:not(.compact) .wallet-actions {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 100;
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
+    padding-bottom: 0.75rem;
+  }
+}
+
+@media (max-width: 520px) {
+  .payment-wallet-card {
+    min-height: 150px;
+    max-height: 210px;
+    padding: 1rem;
+  }
+  .wallet-actions {
+    padding: 0.65rem;
+  }
+  .card-item {
+    min-height: 72px;
+    padding: 0.65rem 0.55rem;
+  }
 }

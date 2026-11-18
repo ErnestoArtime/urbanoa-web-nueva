@@ -45,8 +45,10 @@ import { isPaymentOutcomeUnknown } from '../../../core/utils/payment-error';
       @if (walletService.source() === 'error') {
         <p class="data-notice" role="alert">{{ errorForDisplay() | apiError: 'account.recharge.serviceError' }}</p>
       }
-      @if (submitError(); as error) {
-        <p class="data-notice" role="alert">{{ error }}</p>
+      @if (!paymentUncertain()) {
+        @if (submitError(); as error) {
+          <p class="data-notice" role="alert">{{ error }}</p>
+        }
       }
       @if (!usableCards().length) {
         <div class="card empty-recharge-state">
@@ -118,6 +120,16 @@ import { isPaymentOutcomeUnknown } from '../../../core/utils/payment-error';
           (primaryAction)="done.set(false)"
         />
       }
+      @if (paymentUncertain()) {
+        <app-result-modal
+          type="warning"
+          [title]="'account.recharge.title' | translate"
+          [message]="submitError() ?? ('payment.uncertain.message' | translate)"
+          [primaryText]="'common.accept' | translate"
+          [busy]="refreshing()"
+          (primaryAction)="refreshAfterUncertainPayment()"
+        />
+      }
     </div>
   `,
   styleUrls: ['../account-editor.css', './recharge.component.css'],
@@ -143,6 +155,7 @@ export class AccountRechargeComponent {
   readonly rechargeAmounts = [1, 2, 5, 10, 20, 30, 40] as const;
   readonly done = signal(false);
   readonly saving = signal(false);
+  readonly refreshing = signal(false);
   readonly submitError = signal<string | null>(
     this.paymentChallenge.hasPendingPayment() ? this.translationService.translate('payment.uncertain.message') : null,
   );
@@ -179,6 +192,23 @@ export class AccountRechargeComponent {
 
   selectedCardId(): string {
     return this.form.controls.cardId.value;
+  }
+
+  async refreshAfterUncertainPayment(): Promise<void> {
+    if (this.refreshing()) return;
+    this.refreshing.set(true);
+    try {
+      await this.walletService.load();
+      if (this.walletService.balanceAvailable()) {
+        this.paymentChallenge.clear();
+        this.paymentUncertain.set(false);
+        this.submitError.set(null);
+      } else {
+        this.submitError.set(this.translationService.translate('account.recharge.serviceError'));
+      }
+    } finally {
+      this.refreshing.set(false);
+    }
   }
 
   get amountControl() {

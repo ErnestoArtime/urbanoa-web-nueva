@@ -82,7 +82,7 @@ export class RuntimeStyleRegistry {
     const next = new Map<string, string>();
     for (const styles of entry.owners.values()) {
       for (const [property, value] of Object.entries(styles)) {
-        if (!/^(?:--[a-z0-9-]+|width|height|left|background)$/.test(property)) continue;
+        if (!/^(?:--[a-z0-9-]+|width|height|left|top|background)$/.test(property)) continue;
         if (value !== null && value !== undefined && value !== '') next.set(property, String(value));
       }
     }
