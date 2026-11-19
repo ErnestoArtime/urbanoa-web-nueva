@@ -277,7 +277,7 @@ export class WalletService {
     } catch (error) {
       // A rejected recharge does not invalidate the wallet data already shown
       // on screen. Keep that state and expose the operation error to its form.
-      return { success: false, source: 'error', error: this.actionError(error) };
+      return { success: false, source: 'error', error: this.toApiError(error) };
     }
   }
 
@@ -316,7 +316,7 @@ export class WalletService {
       return { success: true, source: 'remote', amount: refunded };
     } catch (error) {
       if (this.session.token() !== token) return { success: false, source: 'error' };
-      return { success: false, source: 'error', error: this.useError(error) };
+      return { success: false, source: 'error', error: this.toApiError(error) };
     }
   }
 
@@ -421,11 +421,14 @@ export class WalletService {
     return apiError;
   }
 
+  private toApiError(error: unknown): OpsApiError {
+    return error instanceof OpsApiError
+      ? error
+      : new OpsApiError('transport', 'wallet', error instanceof Error ? error.message : 'Error desconocido');
+  }
+
   private actionError(error: unknown): OpsApiError {
-    const apiError =
-      error instanceof OpsApiError
-        ? error
-        : new OpsApiError('transport', 'wallet', error instanceof Error ? error.message : 'Error desconocido');
+    const apiError = this.toApiError(error);
     this.responseError.set(apiError);
     this.lastError.set(apiError.message);
     return apiError;

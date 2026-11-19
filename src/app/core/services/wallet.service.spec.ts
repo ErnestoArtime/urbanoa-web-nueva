@@ -212,6 +212,24 @@ describe('WalletService', () => {
     expect(result.success).toBeFalse();
     expect(result.error?.message).toBe('Error genérico');
     expect(service.source()).toBe('remote');
+    expect(service.lastError()).toBeNull();
+    expect(service.responseError()).toBeNull();
+  });
+
+  it('does not publish a rejected refund as a wallet-level error', async () => {
+    const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['get', 'post']);
+    api.post.and.rejectWith(new OpsApiError('backend', 'BalanceRefundAPI', 'Error genérico'));
+    const service = serviceWith(api);
+    TestBed.inject(OpsSessionService).setToken('token');
+    service.source.set('remote');
+    service.balance.set(5);
+
+    const result = await service.refund(5);
+
+    expect(result.success).toBeFalse();
+    expect(result.error?.message).toBe('Error genérico');
+    expect(service.source()).toBe('remote');
+    expect(service.lastError()).toBeNull();
   });
 
   it('refunds with the exact APK fields and converts cents to euros', async () => {
