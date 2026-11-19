@@ -1,3 +1,5 @@
+import { OpsApiError } from '../../../core/api/ops-api.types';
+import { ConnectivityService } from '../../../core/services/connectivity.service';
 import { apiErrorMessage } from '../../../core/http/api-error-key';
 import { formatEuroNumber } from '../../../core/utils/euro-format';
 import { EuroPipe } from '../../../shared/pipes/euro.pipe';
@@ -33,7 +35,7 @@ import { LoaderComponent } from '../../../shared/components/loader/loader.compon
         <button
           type="button"
           class="btn btn-primary btn-block"
-          [disabled]="requesting() || walletService.balance() <= 0"
+          [disabled]="requesting() || walletService.balance() <= 0 || !connectivity.online()"
           (click)="requestRefund()"
         >
           {{ (requesting() ? 'account.refund.calculating' : 'account.refund.request') | translate }}
@@ -81,6 +83,7 @@ export class AccountRefundComponent {
   readonly back = output<void>();
 
   readonly walletService = inject(WalletService);
+  readonly connectivity = inject(ConnectivityService);
   private readonly operationsService = inject(OperationsService);
   readonly requesting = signal(false);
   readonly refundQuote = signal<number | null>(null);
@@ -96,6 +99,7 @@ export class AccountRefundComponent {
   }
   requestRefund(): void {
     if (this.done() || this.requesting() || this.walletService.loading() || this.walletService.balance() <= 0) return;
+    if (!this.connectivity.online()) return;
     this.failed.set(false);
     this.refundError.set(null);
     this.refundQuote.set(this.walletService.balance());
@@ -106,6 +110,12 @@ export class AccountRefundComponent {
   async confirmRefund(): Promise<void> {
     const amount = this.refundQuote();
     if (!amount || this.requesting()) return;
+    if (!this.connectivity.online()) {
+      this.refundQuote.set(null);
+      this.refundError.set(new OpsApiError('transport', 'refund', 'offline'));
+      this.failed.set(true);
+      return;
+    }
     this.requesting.set(true);
     this.failed.set(false);
     this.refundError.set(null);

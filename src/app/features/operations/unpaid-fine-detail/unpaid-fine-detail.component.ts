@@ -1,5 +1,6 @@
 import { formatEuroNumber } from '../../../core/utils/euro-format';
 import { EuroPipe } from '../../../shared/pipes/euro.pipe';
+import { ConnectivityService } from '../../../core/services/connectivity.service';
 import { Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
@@ -165,7 +166,7 @@ import { AuthService } from '../../../core/services/auth.service';
                 type="button"
                 class="btn btn-primary btn-block"
                 (click)="pay()"
-                [disabled]="paying() || (insufficientFunds() && !selectedCardId())"
+                [disabled]="paying() || !connectivity.online() || (insufficientFunds() && !selectedCardId())"
               >
                 {{ 'ops.fineDetail.pay' | translate }} {{ fine.amount }}
               </button>
@@ -205,6 +206,7 @@ export class UnpaidFineDetailComponent {
   private readonly paymentChallenge = inject(PaymentChallengeService);
   private readonly authService = inject(AuthService);
   readonly walletService = inject(WalletService);
+  readonly connectivity = inject(ConnectivityService);
   readonly fineStatus = FineStatus;
   readonly operationType = OperationType;
 
@@ -295,6 +297,10 @@ export class UnpaidFineDetailComponent {
 
   async pay(): Promise<void> {
     if (this.paying() || this.movingToHistory() || this.paid()) return;
+    if (!this.connectivity.online()) {
+      this.errorMessage.set(this.translationService.translate('connectivity.offline'));
+      return;
+    }
     const fine = this.fine;
     if (!fine) return;
     const walletAmt = this.walletAmount();

@@ -3,6 +3,7 @@ import { OpsApiError } from './ops-api.types';
 import { OpsSessionService } from './ops-session.service';
 import { provideZonelessChangeDetection } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { ConnectivityService } from '../services/connectivity.service';
 import { WindowSessionService } from '../services/window-session.service';
 import { OPS_ENDPOINTS } from './ops-endpoints';
 
@@ -23,7 +24,8 @@ describe('OpsApiClient', () => {
     );
     await expectAsync(client.post(OPS_ENDPOINTS.user.operations, { page: 1 })).toBeResolvedTo(0);
     expect(fetchSpy).toHaveBeenCalledTimes(2);
-    expect(pause.calls.first().args[0]).toBe(250);
+    expect(pause.calls.first().args[0]).toBeGreaterThanOrEqual(500);
+    expect(pause.calls.first().args[0]).toBeLessThanOrEqual(750);
   });
 
   it('stops after three retries and keeps the final error', async () => {
@@ -31,7 +33,12 @@ describe('OpsApiClient', () => {
     const fetchSpy = spyOn(globalThis, 'fetch').and.callFake(async () => new Response('', { status: 503 }));
     await expectAsync(client.get(OPS_ENDPOINTS.wallet.credit)).toBeRejectedWith(jasmine.objectContaining({ kind: 'http', status: 503 }));
     expect(fetchSpy).toHaveBeenCalledTimes(4);
-    expect(pause.calls.allArgs().map((args) => args[0])).toEqual([250, 500, 1000]);
+    const delays = pause.calls.allArgs().map((args) => args[0]);
+    expect(delays.length).toBe(3);
+    [500, 1000, 2000].forEach((base, index) => {
+      expect(delays[index]).toBeGreaterThanOrEqual(base);
+      expect(delays[index]).toBeLessThanOrEqual(base * 1.5);
+    });
   });
 
   it('never retries mutations, login, or payment quotes', async () => {
@@ -104,7 +111,14 @@ describe('OpsApiClient', () => {
   });
 
   beforeEach(() => {
-    TestBed.configureTestingModule({ providers: [provideZonelessChangeDetection(), OpsApiClient, OpsSessionService] });
+    TestBed.configureTestingModule({
+      providers: [
+        provideZonelessChangeDetection(),
+        OpsApiClient,
+        OpsSessionService,
+        { provide: ConnectivityService, useValue: { reportSuccess: () => undefined, reportTransportFailure: () => undefined } },
+      ],
+    });
     client = TestBed.inject(OpsApiClient);
   });
 

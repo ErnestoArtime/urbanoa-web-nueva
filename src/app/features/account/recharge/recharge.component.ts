@@ -2,6 +2,7 @@ import { apiErrorMessage } from '../../../core/http/api-error-key';
 import { formatEuro } from '../../../core/utils/euro-format';
 import { EuroPipe } from '../../../shared/pipes/euro.pipe';
 
+import { ConnectivityService } from '../../../core/services/connectivity.service';
 import { Component, effect, input, output, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -86,7 +87,7 @@ import { isCardUsable } from '../../../core/utils/card-expiry';
             </div>
           </div>
           <div class="account-editor-actions">
-            <button type="submit" class="btn btn-primary btn-block" [disabled]="saving()">
+            <button type="submit" class="btn btn-primary btn-block" [disabled]="saving() || !connectivity.online()">
               {{ (saving() ? 'common.loading' : 'account.recharge.button') | translate }}
             </button>
           </div>
@@ -122,6 +123,7 @@ export class AccountRechargeComponent {
   readonly back = output<void>();
 
   readonly walletService = inject(WalletService);
+  readonly connectivity = inject(ConnectivityService);
   private readonly route = inject(ActivatedRoute);
   private readonly operationsService = inject(OperationsService);
   private readonly paymentChallenge = inject(PaymentChallengeService);
@@ -180,6 +182,10 @@ export class AccountRechargeComponent {
 
   async confirm(): Promise<void> {
     if (this.done() || this.saving()) return;
+    if (!this.connectivity.online()) {
+      this.submitError.set(this.translationService.translate('connectivity.offline'));
+      return;
+    }
     if (!this.usableCards().some((card) => card.id === this.selectedCardId())) {
       this.form.controls.cardId.setErrors({ unavailable: true });
       this.form.controls.cardId.markAsTouched();

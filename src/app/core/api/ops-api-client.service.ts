@@ -4,6 +4,7 @@ import { OpsApiEnvelope, OpsApiError } from './ops-api.types';
 import { OpsSessionService } from './ops-session.service';
 import { TranslationService } from '../services/translation.service';
 import { WindowSessionService } from '../services/window-session.service';
+import { ConnectivityService } from '../services/connectivity.service';
 import { OPS_ENDPOINTS } from './ops-endpoints';
 
 const SESSION_EXPIRED_ERROR_CODES = new Set([-23, -231]);
@@ -25,7 +26,7 @@ const RETRYABLE_QUERIES = new Set<string>([
   OPS_ENDPOINTS.wallet.paymentMethods,
   OPS_ENDPOINTS.support.query,
 ]);
-const RETRY_DELAYS_MS = [250, 500, 1000];
+const RETRY_DELAYS_MS = [500, 1000, 2000];
 const RETRYABLE_HTTP_STATUSES = new Set([408, 429, 500, 502, 503, 504]);
 
 interface OpsRequestOptions {
@@ -44,6 +45,7 @@ export class OpsApiClient {
   private readonly session = inject(OpsSessionService);
   private readonly translation = inject(TranslationService);
   private readonly windowSession = inject(WindowSessionService);
+  private readonly connectivity = inject(ConnectivityService);
 
   get<T>(endpoint: string, options: Omit<OpsRequestOptions, 'body'> = {}): Promise<T> {
     return this.request<T>('GET', endpoint, options);
@@ -79,7 +81,7 @@ export class OpsApiClient {
         } catch (error) {
           if (lifecycle.signal.aborted) throw new OpsApiError('abort', endpoint, `${endpoint}: la solicitud fue cancelada`);
           if (!RETRYABLE_QUERIES.has(endpoint) || attempt >= RETRY_DELAYS_MS.length || !this.isTransient(error)) throw error;
-          await this.waitForRetry(RETRY_DELAYS_MS[attempt], lifecycle.signal, endpoint);
+          await this.waitForRetry(RETRY_DELAYS_MS[attempt] * (1 + Math.random() * 0.5), lifecycle.signal, endpoint);
         }
       }
     } finally {
@@ -138,6 +140,7 @@ export class OpsApiClient {
         signal: controller.signal,
       });
       controller.signal.throwIfAborted();
+      this.connectivity.reportSuccess();
       this.verifyWindowSession(endpoint, options.token);
 
       if (!response.ok) {
@@ -210,6 +213,7 @@ export class OpsApiClient {
         const detail = kind === 'timeout' ? 'la solicitud agotó el tiempo de espera' : 'la solicitud fue cancelada';
         throw new OpsApiError(kind, endpoint, `${endpoint}: ${detail}`);
       }
+      this.connectivity.reportTransportFailure();
       const message = error instanceof Error ? error.message : 'Error de red desconocido';
       throw new OpsApiError('transport', endpoint, `${endpoint}: ${message}`);
     } finally {

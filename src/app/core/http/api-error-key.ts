@@ -19,7 +19,8 @@ export function apiErrorKey(error: unknown, overrides: Partial<Record<ApiErrorCo
 }
 
 function opsErrorCode(error: OpsApiError): ApiErrorCode {
-  if (error.kind === 'transport') return 'network';
+  if (error.kind === 'transport' || error.kind === 'timeout') return 'network';
+  if (error.kind === 'http' && !error.backendError && [408, 502, 503, 504].includes(error.status ?? 0)) return 'network';
   if (error.endpoint === OPS_ENDPOINTS.auth.recoverPassword && error.backendError?.code === -20) return 'unauthorized';
   if (error.status === 401 || error.backendError?.code === -1) return 'unauthorized';
   switch (error.backendError?.code) {

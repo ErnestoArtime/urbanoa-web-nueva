@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { Router, RouterOutlet, NavigationEnd, NavigationStart, NavigationCancel, NavigationError } from '@angular/router';
 import { filter, map, startWith } from 'rxjs/operators';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
@@ -8,6 +8,9 @@ import { AppHeaderComponent } from '../app-header/app-header.component';
 import { AppBreadcrumbComponent } from '../../shared/components/breadcrumb/breadcrumb.component';
 import { LangSelectorComponent } from '../../shared/components/lang-selector/lang-selector.component';
 import { LoaderComponent } from '../../shared/components/loader/loader.component';
+import { ConnectivityBannerComponent } from '../../shared/components/connectivity-banner/connectivity-banner.component';
+import { ConnectivityService } from '../../core/services/connectivity.service';
+import { WalletService } from '../../core/services/wallet.service';
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 import { BreadcrumbService } from '../../core/services/breadcrumb.service';
 import { TranslationService } from '../../core/services/translation.service';
@@ -62,12 +65,14 @@ const TITLE_KEYS: Record<string, string> = {
     AppBreadcrumbComponent,
     LangSelectorComponent,
     LoaderComponent,
+    ConnectivityBannerComponent,
     TranslatePipe,
   ],
   template: `
     <div class="app-shell">
       <app-sidebar class="app-shell-sidebar" />
       <div class="app-shell-main">
+        <app-connectivity-banner />
         <app-loader [visible]="routeTransitionLoading()" [message]="'common.loading' | translate" imageSrc="/assets/brand/login-logo.jpg" />
         @if (showHeader()) {
           <app-header [title]="headerTitle()" [showBack]="showBack()" />
@@ -105,6 +110,8 @@ export class AppShellComponent {
   private readonly opsSession = inject(OpsSessionService);
   private readonly authService = inject(AuthService);
   private readonly userService = inject(UserService);
+  private readonly connectivity = inject(ConnectivityService);
+  private readonly walletService = inject(WalletService);
   readonly connectedUserName = computed(() => {
     const profile = this.userService.user();
     const session = this.authService.user();
@@ -125,6 +132,14 @@ export class AppShellComponent {
   constructor() {
     void this.initializeSessionData();
 
+    let lastRestored = this.connectivity.restored();
+    effect(() => {
+      const restored = this.connectivity.restored();
+      if (restored === lastRestored) return;
+      lastRestored = restored;
+      untracked(() => void this.refreshAfterReconnect());
+    });
+
     this.router.events
       .pipe(
         filter((e): e is NavigationEnd => e instanceof NavigationEnd),
@@ -143,6 +158,16 @@ export class AppShellComponent {
         this.routeTransitionLoading.set(false);
       }
     });
+  }
+
+  private async refreshAfterReconnect(): Promise<void> {
+    if (!this.opsSession.token() || !this.isAppRoute()) return;
+    await Promise.allSettled([
+      this.operationsService.load(),
+      this.vehicleService.load(),
+      this.userService.load(),
+      this.walletService.load(),
+    ]);
   }
 
   private async initializeSessionData(): Promise<void> {

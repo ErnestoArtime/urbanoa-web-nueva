@@ -1,3 +1,4 @@
+import { ConnectivityService } from './connectivity.service';
 import { apiErrorMessage } from '../http/api-error-key';
 import { OpsSessionService } from '../api/ops-session.service';
 import { PaymentChallengeService } from './payment-challenge.service';
@@ -18,6 +19,7 @@ export class ParkingSessionService {
   private readonly parkingApi = inject(ParkingApiService);
   private readonly ticketStore = inject(ParkingTicketStoreService);
   private readonly walletService = inject(WalletService);
+  private readonly connectivity = inject(ConnectivityService);
 
   readonly activeParkings = this.operationsService.activeParkings;
   readonly activeParkingsCount = this.operationsService.activeParkingsCount;
@@ -43,6 +45,10 @@ export class ParkingSessionService {
     const parking = this.operationsService.getActiveParking(parkingId);
     if (!parking?.contractId || parking.refundable !== 2) {
       this.unparkError.set('No se encontró el aparcamiento activo.');
+      return false;
+    }
+    if (!this.connectivity.online()) {
+      this.unparkError.set(this.translations.translate('connectivity.offline'));
       return false;
     }
     const input = {

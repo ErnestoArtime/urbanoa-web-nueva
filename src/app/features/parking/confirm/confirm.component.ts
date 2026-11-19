@@ -2,6 +2,7 @@ import { apiErrorMessage } from '../../../core/http/api-error-key';
 import { formatEuro, formatEuroNumber } from '../../../core/utils/euro-format';
 import { RuntimeStyleDirective } from '../../../shared/directives/runtime-style.directive';
 import { WalletManagerModalComponent } from '../../account/wallet-manager-modal/wallet-manager-modal.component';
+import { ConnectivityService } from '../../../core/services/connectivity.service';
 import { Component, computed, inject, OnInit, signal, ViewChild } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { LoaderComponent } from '../../../shared/components/loader/loader.component';
@@ -109,7 +110,7 @@ import { AuthService } from '../../../core/services/auth.service';
       <div class="sticky-actions" [attr.aria-busy]="loading()">
         <app-swipe-to-pay
           #swipePay
-          [disabled]="loading() || walletService.loading() || walletManagerOpen()"
+          [disabled]="loading() || walletService.loading() || walletManagerOpen() || !connectivity.online()"
           [label]="loading() ? ('parking.confirm.loading' | translate) : backendConfirmed() ? ('common.retry' | translate) : undefined"
           [completedLabel]="
             loading() ? ('parking.confirm.loading' | translate) : backendConfirmed() ? ('common.retry' | translate) : undefined
@@ -146,6 +147,7 @@ export class ParkingConfirmComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly store = inject(ParkingFlowStore);
   readonly walletService = inject(WalletService);
+  readonly connectivity = inject(ConnectivityService);
   private readonly parkingApi = inject(ParkingApiService);
   private readonly ticketStore = inject(ParkingTicketStoreService);
   private readonly operations = inject(OperationsService);
@@ -213,6 +215,10 @@ export class ParkingConfirmComponent implements OnInit {
 
   async onSwipeComplete(): Promise<void> {
     if (this.confirmationPending || this.walletService.loading() || this.walletManagerOpen()) return;
+    if (!this.connectivity.online()) {
+      this.submitError.set(this.translations.translate('connectivity.offline'));
+      return;
+    }
     if (this.backendConfirmed()) {
       await this.showConfirmedReceipt();
       return;
