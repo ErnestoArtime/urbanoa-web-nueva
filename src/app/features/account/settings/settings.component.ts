@@ -60,7 +60,7 @@ interface LocationMessage {
             }}
           </button>
         </div>
-        @if (locationMessage(); as msg) {
+        @if (!showCityPicker() && locationMessage(); as msg) {
           <p class="inline-message">
             {{
               requestError()
