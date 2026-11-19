@@ -1,7 +1,7 @@
 import { TranslationService } from '../../../core/services/translation.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { isValidApkPassword } from '../../../shared/utils/password-validation';
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { LucideEye, LucideEyeOff } from '@lucide/angular';
 import { apiErrorMessage } from '../../../core/http/api-error-key';
 import { PasswordService } from '../../../core/services/password.service';
@@ -83,7 +83,7 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
         </div>
       </div>
       <div class="account-editor-actions">
-        <button type="button" class="btn btn-primary btn-block" (click)="save()" [disabled]="saving()">
+        <button type="button" class="btn btn-primary btn-block" (click)="save()" [disabled]="saving() || !canSubmit()">
           {{ (saving() ? 'common.saving' : 'common.save') | translate }}
         </button>
       </div>
@@ -114,6 +114,7 @@ export class AccountChangePasswordComponent {
   readonly result = signal<'success' | 'error' | null>(null);
   readonly errorKey = signal('');
   readonly saving = signal(false);
+  readonly canSubmit = computed(() => !!this.current() && !!this.next() && !!this.confirmation());
 
   async dismissResult(): Promise<void> {
     if (this.result() === 'success') await this.authService.logout();

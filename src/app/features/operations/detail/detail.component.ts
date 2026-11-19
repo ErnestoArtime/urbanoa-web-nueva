@@ -1,3 +1,4 @@
+import { joinParts } from '../../../shared/utils/join-parts';
 import { ApiErrorPipe } from '../../../shared/pipes/api-error.pipe';
 import { formatEuro } from '../../../core/utils/euro-format';
 import { EuroPipe } from '../../../shared/pipes/euro.pipe';
@@ -185,7 +186,7 @@ import { TicketCutAlignDirective } from '../../../shared/directives/ticket-cut-a
                   <app-operation-icon [type]="operation.type" />
                   <div>
                     <strong>{{ operation.plate }}</strong
-                    ><span>{{ operation.zone }}{{ operation.cityName ? ' · ' + operation.cityName : '' }}</span>
+                    ><span>{{ joinParts([operation.zone, operation.cityName]) }}</span>
                     @if (operation.ticketName) {
                       <small class="ticket-context">{{ operation.ticketName }}</small>
                     }
@@ -272,6 +273,7 @@ import { TicketCutAlignDirective } from '../../../shared/directives/ticket-cut-a
   styleUrl: './detail.component.css',
 })
 export class OperationsDetailComponent {
+  readonly joinParts = joinParts;
   operationError(): unknown {
     return this.service.responseError?.();
   }

@@ -1,3 +1,4 @@
+import { joinParts } from '../../../shared/utils/join-parts';
 import { apiErrorMessage } from '../../../core/http/api-error-key';
 import { ApiErrorPipe } from '../../../shared/pipes/api-error.pipe';
 import { formatEuro } from '../../../core/utils/euro-format';
@@ -183,7 +184,7 @@ import { TranslationService } from '../../../core/services/translation.service';
                             }
                           </div>
                           <div class="list-item-subtitle">
-                            {{ op.zone }}{{ op.cityName ? ' · ' + op.cityName : '' }}{{ op.ticketName ? ' · ' + op.ticketName : '' }}
+                            {{ joinParts([op.zone, op.cityName, op.ticketName]) }}
                             @if (isFreeParking(op)) {
                               <span> · {{ 'parking.tickets.free' | translate }}</span>
                             }
@@ -196,7 +197,7 @@ import { TranslationService } from '../../../core/services/translation.service';
                               }
                             </div>
                           }
-                          @if (op.type === OperationType.TOP_UP && op.cardLabel) {
+                          @if ((op.type === OperationType.TOP_UP || op.type === OperationType.BALANCE_REFUND) && op.cardLabel) {
                             <div class="operation-meta">{{ op.cardLabel }}</div>
                           }
                         </div>
@@ -272,6 +273,7 @@ import { TranslationService } from '../../../core/services/translation.service';
   styleUrl: './operations-layout.component.css',
 })
 export class OperationsLayoutComponent implements OnInit, AfterViewInit {
+  readonly joinParts = joinParts;
   errorForDisplay(): unknown {
     return this.operationsService.responseError?.();
   }

@@ -1,3 +1,4 @@
+import { joinParts } from '../../../shared/utils/join-parts';
 import { ApiErrorPipe } from '../../../shared/pipes/api-error.pipe';
 import { formatEuro } from '../../../core/utils/euro-format';
 import { RuntimeStyleDirective } from '../../../shared/directives/runtime-style.directive';
@@ -38,7 +39,7 @@ import { LoaderComponent } from '../../../shared/components/loader/loader.compon
                   <app-operation-icon [type]="parkingType()" />
                   <div>
                     <strong>{{ query().plate }}</strong
-                    ><span>{{ query().zone }} · {{ query().cityName }}</span>
+                    ><span>{{ joinParts([query().zone, query().cityName]) }}</span>
                     @if (query().tariff) {
                       <small>{{ query().tariff }}</small>
                     }
@@ -85,6 +86,7 @@ import { LoaderComponent } from '../../../shared/components/loader/loader.compon
   styleUrl: './success.component.css',
 })
 export class ParkingSuccessComponent implements OnInit {
+  readonly joinParts = joinParts;
   private readonly route = inject(ActivatedRoute);
   private readonly destroyRef = inject(DestroyRef);
   private readonly translations = inject(TranslationService);
@@ -181,8 +183,10 @@ export class ParkingSuccessComponent implements OnInit {
     const start = this.parkingDate('start');
     const end = this.parkingDate('end');
     if (!start || !end) return '';
+    const minutes = Number(this.initialQuery.minutes);
+    const endMs = minutes > 0 ? start.getTime() + minutes * 60_000 : end.getTime();
     const countdownFrom = Math.max(this.now(), start.getTime());
-    const remaining = Math.max(0, Math.ceil((end.getTime() - countdownFrom) / 1000));
+    const remaining = Math.max(0, Math.ceil((endMs - countdownFrom) / 1000));
     return [Math.floor(remaining / 3600), Math.floor((remaining % 3600) / 60), remaining % 60]
       .map((value) => String(value).padStart(2, '0'))
       .join(':');

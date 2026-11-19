@@ -1,3 +1,4 @@
+import { joinParts } from '../../../shared/utils/join-parts';
 import { EuroPipe } from '../../../shared/pipes/euro.pipe';
 import { Component, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
@@ -34,7 +35,7 @@ import { isAcknowledgedFine } from '../../../core/services/unpaid-fines.service'
                 </div>
               }
               <div class="list-item-subtitle">
-                {{ op.zone }}{{ op.cityName ? ' · ' + op.cityName : '' }}{{ op.ticketName ? ' · ' + op.ticketName : '' }}
+                {{ joinParts([op.zone, op.cityName, op.ticketName]) }}
                 @if (isFreeParking(op)) {
                   <span> · {{ 'parking.tickets.free' | translate }}</span>
                 }
@@ -69,6 +70,7 @@ import { isAcknowledgedFine } from '../../../core/services/unpaid-fines.service'
   styleUrl: './recent-operations-card.component.css',
 })
 export class RecentOperationsCardComponent {
+  readonly joinParts = joinParts;
   readonly operations = input.required<Operation[]>();
   readonly viewAll = output<void>();
   readonly OPERATION_TYPE_LABELS = OPERATION_TYPE_LABELS;

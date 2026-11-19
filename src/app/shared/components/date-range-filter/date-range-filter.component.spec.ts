@@ -23,6 +23,12 @@ describe('DateRangeFilterComponent popup placement', () => {
     expect(fixture.componentInstance.activePreset()).toBe('month');
     expect(emitted.length).toBe(1);
     expect(emitted[0].from).not.toBe('');
+    const [fromDay, fromMonth, fromYear] = emitted[0].from.split('/').map(Number);
+    const today = new Date();
+    const expected = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+    expect(fromMonth).toBe(expected.getMonth() + 1);
+    expect(fromYear).toBe(expected.getFullYear());
+    expect(fromDay).toBeLessThanOrEqual(today.getDate());
     fixture.componentInstance.applyPreset('month');
     expect(emitted[1]).toEqual({ from: '', to: '' });
     fixture.destroy();

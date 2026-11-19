@@ -201,7 +201,7 @@ export class DateRangeFilterComponent implements OnInit {
         isoTo = today;
         break;
       case 'month':
-        isoFrom = this.daysAgo(29);
+        isoFrom = this.monthsAgo(1);
         isoTo = today;
         break;
     }
@@ -279,6 +279,19 @@ export class DateRangeFilterComponent implements OnInit {
 
   private today(): string {
     return new Date().toISOString().slice(0, 10);
+  }
+
+  private monthsAgo(n: number): string {
+    const d = new Date();
+    const day = d.getDate();
+    d.setDate(1);
+    d.setMonth(d.getMonth() - n);
+    d.setDate(Math.min(day, new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()));
+    return this.localIso(d);
+  }
+
+  private localIso(d: Date): string {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   }
 
   private daysAgo(n: number): string {
