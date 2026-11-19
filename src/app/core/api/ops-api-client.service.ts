@@ -8,6 +8,7 @@ import { ConnectivityService } from '../services/connectivity.service';
 import { OPS_ENDPOINTS } from './ops-endpoints';
 
 const SESSION_EXPIRED_ERROR_CODES = new Set([-23, -231]);
+const AMBIGUOUS_WRITE_ERROR_CODES = new Set([-9, -12, -13]);
 // Explicit read-only operations: POST is also used for queries by OPS.
 const RETRYABLE_QUERIES = new Set<string>([
   OPS_ENDPOINTS.parking.contracts,
@@ -41,6 +42,7 @@ interface OpsRequestOptions {
 @Injectable({ providedIn: 'root' })
 export class OpsApiClient {
   private serverOffsetMs = 0;
+  private sessionProbe: Promise<void> | null = null;
 
   private readonly session = inject(OpsSessionService);
   private readonly translation = inject(TranslationService);
@@ -80,13 +82,38 @@ export class OpsApiClient {
           return value;
         } catch (error) {
           if (lifecycle.signal.aborted) throw new OpsApiError('abort', endpoint, `${endpoint}: la solicitud fue cancelada`);
-          if (!RETRYABLE_QUERIES.has(endpoint) || attempt >= RETRY_DELAYS_MS.length || !this.isTransient(error)) throw error;
+          if (!RETRYABLE_QUERIES.has(endpoint) || attempt >= RETRY_DELAYS_MS.length || !this.isTransient(error)) {
+            if (this.isAmbiguousWriteFailure(endpoint, options, error)) await this.revalidateSession(options.token!);
+            throw error;
+          }
           await this.waitForRetry(RETRY_DELAYS_MS[attempt] * (1 + Math.random() * 0.5), lifecycle.signal, endpoint);
         }
       }
     } finally {
       this.session.unregisterRequest(lifecycle);
     }
+  }
+
+  private isAmbiguousWriteFailure(endpoint: string, options: OpsRequestOptions, error: unknown): boolean {
+    return (
+      !!options.token &&
+      !RETRYABLE_QUERIES.has(endpoint) &&
+      !endpoint.endsWith('LoginUserAPI') &&
+      error instanceof OpsApiError &&
+      error.kind === 'backend' &&
+      !!error.backendError &&
+      AMBIGUOUS_WRITE_ERROR_CODES.has(error.backendError.code)
+    );
+  }
+
+  private revalidateSession(token: string): Promise<void> {
+    this.sessionProbe ??= this.requestOnce<unknown>('GET', OPS_ENDPOINTS.user.query, { token })
+      .then(() => undefined)
+      .catch(() => undefined)
+      .finally(() => {
+        this.sessionProbe = null;
+      });
+    return this.sessionProbe;
   }
 
   private isTransient(error: unknown): boolean {

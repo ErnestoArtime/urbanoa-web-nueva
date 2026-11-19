@@ -223,6 +223,52 @@ describe('OpsApiClient', () => {
     }
   });
 
+  describe('session revalidation after an ambiguous write failure', () => {
+    const envelope = (code: number) =>
+      new Response(JSON.stringify({ value: null, isSuccess: false, error: { code, type: 1, message_ES: 'Error' } }), { status: 200 });
+
+    beforeEach(() => {
+      TestBed.inject(WindowSessionService).activate();
+      TestBed.inject(OpsSessionService).setToken('live-token');
+    });
+
+    it('probes the session after -9 on a write and logs out when the probe reports -23', async () => {
+      const sessionExpired = jasmine.createSpy('sessionExpired');
+      window.addEventListener('urbanoa:session-expired', sessionExpired);
+      const fetchSpy = spyOn(globalThis, 'fetch').and.returnValues(Promise.resolve(envelope(-9)), Promise.resolve(envelope(-23)));
+      try {
+        await expectAsync(client.post(OPS_ENDPOINTS.wallet.recharge, {}, { token: 'live-token' })).toBeRejectedWith(
+          jasmine.objectContaining({ kind: 'backend' }),
+        );
+        expect(fetchSpy).toHaveBeenCalledTimes(2);
+        expect(String(fetchSpy.calls.argsFor(1)[0])).toContain(OPS_ENDPOINTS.user.query);
+        expect(sessionExpired).toHaveBeenCalledTimes(1);
+      } finally {
+        window.removeEventListener('urbanoa:session-expired', sessionExpired);
+      }
+    });
+
+    it('keeps the generic error and the session when the probe succeeds', async () => {
+      const sessionExpired = jasmine.createSpy('sessionExpired');
+      window.addEventListener('urbanoa:session-expired', sessionExpired);
+      spyOn(globalThis, 'fetch').and.returnValues(Promise.resolve(envelope(-9)), Promise.resolve(success()));
+      try {
+        await expectAsync(client.post(OPS_ENDPOINTS.wallet.recharge, {}, { token: 'live-token' })).toBeRejectedWith(
+          jasmine.objectContaining({ kind: 'backend' }),
+        );
+        expect(sessionExpired).not.toHaveBeenCalled();
+      } finally {
+        window.removeEventListener('urbanoa:session-expired', sessionExpired);
+      }
+    });
+
+    it('does not probe for other backend codes', async () => {
+      const fetchSpy = spyOn(globalThis, 'fetch').and.resolveTo(envelope(-2));
+      await expectAsync(client.post(OPS_ENDPOINTS.wallet.recharge, {}, { token: 'live-token' })).toBeRejected();
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+    });
+  });
+
   it('getOrNull resolves to null on a successful envelope without data', async () => {
     spyOn(globalThis, 'fetch').and.resolveTo(
       new Response(JSON.stringify({ value: null, isSuccess: true, error: null }), {
