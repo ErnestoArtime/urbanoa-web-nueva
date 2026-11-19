@@ -48,7 +48,7 @@ import { RuntimeStyleDirective } from '../../../shared/directives/runtime-style.
           <app-account-recharge [embedded]="true" [cardId]="actionCardId()" (addCard)="screen.set('add')" />
         }
         @case ('refund') {
-          <app-account-refund [embedded]="true" [cardId]="actionCardId()" />
+          <app-account-refund [embedded]="true" (back)="screen.set('list')" />
         }
         @default {
           <ng-container [ngTemplateOutlet]="walletContent" />
@@ -65,7 +65,7 @@ import { RuntimeStyleDirective } from '../../../shared/directives/runtime-style.
             <app-account-recharge splitDetail [cardId]="routeCardId()" />
           }
           @case ('refund') {
-            <app-account-refund splitDetail [cardId]="routeCardId()" />
+            <app-account-refund splitDetail />
           }
           @default {
             <div splitDetail class="payment-detail-empty"></div>
@@ -135,9 +135,6 @@ import { RuntimeStyleDirective } from '../../../shared/directives/runtime-style.
                       <button type="button" (click)="rechargeCard(card.id)">
                         <span>＋</span> {{ 'account.recharge.button' | translate }}
                       </button>
-                      <button type="button" (click)="refundToCard(card.id)">
-                        <span>↗</span> {{ 'account.withdrawBalance' | translate }}
-                      </button>
                       @if (walletService.defaultCardId() !== card.id) {
                         <button type="button" (click)="setAsDefault(card.id)">
                           <span>☆</span> {{ 'account.setPrimaryCard' | translate }}
@@ -161,7 +158,12 @@ import { RuntimeStyleDirective } from '../../../shared/directives/runtime-style.
             <button type="button" class="btn btn-primary btn-sm" [disabled]="walletService.cards().length === 0" (click)="goToRecharge()">
               {{ 'dashboard.recharge' | translate }}
             </button>
-            <button type="button" (click)="refundToCard(walletService.defaultCardId())" class="btn btn-secondary btn-sm">
+            <button
+              type="button"
+              (click)="refundBalance()"
+              [disabled]="walletService.balance() <= 0 || busy()"
+              class="btn btn-secondary btn-sm"
+            >
               {{ 'account.withdrawBalance' | translate }}
             </button>
           </div>
@@ -331,7 +333,7 @@ export class PaymentLayoutComponent implements OnInit {
     }
   }
   private toggleCardMenuPosition(trigger: HTMLElement, bounds: DOMRect): void {
-    const menuHeight = 220;
+    const menuHeight = 170;
     const menuWidth = 235;
     const gap = 4;
     const viewportPadding = 8;
@@ -366,9 +368,8 @@ export class PaymentLayoutComponent implements OnInit {
     if (!this.walletService.cards().length || !cardId) return;
     this.openScreen('recharge', cardId);
   }
-  refundToCard(id: string): void {
-    this.activeCardMenu.set(null);
-    this.openScreen('refund', id);
+  refundBalance(): void {
+    this.openScreen('refund');
   }
   async confirmDelete(): Promise<void> {
     if (this.updating()) return;

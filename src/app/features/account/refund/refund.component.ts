@@ -2,45 +2,21 @@ import { OpsApiError } from '../../../core/api/ops-api.types';
 import { ConnectivityService } from '../../../core/services/connectivity.service';
 import { apiErrorMessage } from '../../../core/http/api-error-key';
 import { formatEuroNumber } from '../../../core/utils/euro-format';
-import { EuroPipe } from '../../../shared/pipes/euro.pipe';
 import { PaymentChallengeService } from '../../../core/services/payment-challenge.service';
 import { TranslationService } from '../../../core/services/translation.service';
 
-import { Component, computed, input, output, inject, signal } from '@angular/core';
+import { Component, computed, effect, input, output, inject, signal } from '@angular/core';
+import { Router } from '@angular/router';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { WalletService } from '../../../core/services/wallet.service';
 import { OperationsService } from '../../../core/services/operations.service';
-import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
 import { ResultModalComponent } from '../../../shared/components/result-modal/result-modal.component';
-import { LoaderComponent } from '../../../shared/components/loader/loader.component';
 
 @Component({
   selector: 'app-account-refund',
-  imports: [EuroPipe, TranslatePipe, DetailPanelHeaderComponent, ResultModalComponent, LoaderComponent],
+  imports: [TranslatePipe, ResultModalComponent],
   template: `
-    <app-loader [visible]="requesting() && !refundQuote()" [message]="'common.loading' | translate" />
-    <div class="page account-static-page account-form-page">
-      @if (!embedded()) {
-        <app-detail-panel-header [title]="'account.refund.title' | translate" backRoute="/app/account/payment-methods" />
-      } @else {
-        <h2>{{ 'account.refund.title' | translate }}</h2>
-      }
-      <div class="card refund-summary">
-        <p class="text-muted">{{ 'account.refund.availableBalance' | translate }}</p>
-        <strong class="available-balance">{{ walletService.balance() | euro }}</strong>
-        <p class="refund-explanation">
-          {{ 'account.refund.explanation' | translate }}
-        </p>
-        <p class="refund-destination">{{ 'account.refund.destinationManaged' | translate }}</p>
-        <button
-          type="button"
-          class="btn btn-primary btn-block"
-          [disabled]="requesting() || walletService.balance() <= 0 || !connectivity.online()"
-          (click)="requestRefund()"
-        >
-          {{ (requesting() ? 'account.refund.calculating' : 'account.refund.request') | translate }}
-        </button>
-      </div>
+    <div class="refund-host">
       @if (refundQuote(); as amount) {
         <app-result-modal
           type="confirmation"
@@ -59,7 +35,7 @@ import { LoaderComponent } from '../../../shared/components/loader/loader.compon
           [title]="'account.refund.successTitle' | translate"
           [message]="'account.refund.successDetail' | translate: { amount: formatAmount(refundedAmount()) }"
           [primaryText]="'common.accept' | translate"
-          (primaryAction)="done.set(false)"
+          (primaryAction)="closeSuccess()"
         />
       }
       @if (alertMessage(); as message) {
@@ -78,7 +54,6 @@ import { LoaderComponent } from '../../../shared/components/loader/loader.compon
 export class AccountRefundComponent {
   private readonly pendingPayment = inject(PaymentChallengeService);
   private readonly translationService = inject(TranslationService);
-  readonly cardId = input('');
   readonly embedded = input(false);
   readonly back = output<void>();
 
@@ -94,8 +69,25 @@ export class AccountRefundComponent {
   readonly alertMessage = computed(() =>
     this.failed() ? apiErrorMessage(this.refundError(), this.translationService, {}, 'account.refund.error') : null,
   );
+  private readonly router = inject(Router);
+  private started = false;
+  private readonly autoStart = effect(() => {
+    if (this.started || this.walletService.loading()) return;
+    this.started = true;
+    this.requestRefund();
+    if (this.refundQuote() === null) this.leave();
+  });
   dismissAlert(): void {
     this.failed.set(false);
+    this.leave();
+  }
+  closeSuccess(): void {
+    this.done.set(false);
+    this.leave();
+  }
+  private leave(): void {
+    this.back.emit();
+    if (!this.embedded()) void this.router.navigate(['/app/account/payment-methods']);
   }
   requestRefund(): void {
     if (this.done() || this.requesting() || this.walletService.loading() || this.walletService.balance() <= 0) return;
@@ -105,7 +97,9 @@ export class AccountRefundComponent {
     this.refundQuote.set(this.walletService.balance());
   }
   cancelRefund(): void {
-    if (!this.requesting()) this.refundQuote.set(null);
+    if (this.requesting()) return;
+    this.refundQuote.set(null);
+    this.leave();
   }
   async confirmRefund(): Promise<void> {
     const amount = this.refundQuote();

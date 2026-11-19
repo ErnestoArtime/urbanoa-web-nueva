@@ -1,6 +1,7 @@
 import { OpsApiError } from '../../../core/api/ops-api.types';
 import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { Router } from '@angular/router';
 import { OperationsService } from '../../../core/services/operations.service';
 import { WalletService } from '../../../core/services/wallet.service';
 import { AccountRefundComponent } from './refund.component';
@@ -33,6 +34,7 @@ describe('AccountRefundComponent', () => {
             defaultCard: () => ({ id: 'card-4021', brand: 'VISA', last4: '4021', expiryDate: '2027/05', cardholderName: 'Test' }),
           },
         },
+        { provide: Router, useValue: { navigate: jasmine.createSpy().and.resolveTo(true) } },
         { provide: OperationsService, useValue: { load: jasmine.createSpy().and.resolveTo() } },
       ],
     });
@@ -81,5 +83,13 @@ describe('AccountRefundComponent', () => {
     component.requestRefund();
     await component.confirmRefund();
     expect(wallet.refund).toHaveBeenCalledTimes(1);
+  });
+  it('opens the confirmation on its own and returns to the list when cancelled', () => {
+    const fixture = mount();
+    const component = fixture.componentInstance;
+    expect(component.refundQuote()).toBe(2);
+    component.cancelRefund();
+    expect(component.refundQuote()).toBeNull();
+    expect(TestBed.inject(Router).navigate).toHaveBeenCalledWith(['/app/account/payment-methods']);
   });
 });
