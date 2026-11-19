@@ -13,7 +13,7 @@ module.exports = {
     target: opsBackendUrl,
     secure: false,
     changeOrigin: true,
-    pathRewrite: (path) => path.replace(/^\/ops-api\/OPSWebServices(?:Legacy|Urb)?API/, '/OPSWebServicesUrbAPI'),
+    rewrite: (path) => path.replace(/^\/ops-api\/OPSWebServices(?:Legacy|Urb)?API/, '/OPSWebServicesUrbAPI'),
   },
   '/healthz': {
     target: "http://127.0.0.1:10213",
