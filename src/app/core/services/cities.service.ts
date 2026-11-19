@@ -170,7 +170,7 @@ export class CitiesService {
       description1: item.description1 ?? '',
       address: item.address ?? '',
       email: item.email ?? '',
-      imagePath: item.imagePath ? `https://arinpark.gerteksa.eus/Arinpark/images/${item.imagePath}` : '',
+      imagePath: item.imagePath ? `https://arinpark.eus/Arinpark/images/${item.imagePath}` : '',
       longitude: item.longitude ?? 0,
       latitude: item.latitude ?? 0,
       phone: item.phone ?? '',
