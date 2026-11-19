@@ -46,6 +46,16 @@ describe('AppShellComponent real navigation loading', () => {
     });
   }
 
+  it('does not stack the route loader on top of the entry loader', () => {
+    const component = TestBed.createComponent(AppShellComponent).componentInstance;
+    events.next(new NavigationStart(1, '/app/parking'));
+    expect(component.routeTransitionLoading()).toBeTrue();
+    expect(component.showRouteLoader()).toBeFalse();
+    events.next(new NavigationEnd(1, '/app/parking', '/app/parking'));
+    events.next(new NavigationStart(2, '/app/home'));
+    expect(component.showRouteLoader()).toBeTrue();
+  });
+
   it('keeps loading during an unfinished navigation and releases subscriptions on destroy', async () => {
     const fixture = TestBed.createComponent(AppShellComponent);
     events.next(new NavigationStart(1, '/app/home'));

@@ -73,7 +73,7 @@ const TITLE_KEYS: Record<string, string> = {
       <app-sidebar class="app-shell-sidebar" />
       <div class="app-shell-main">
         <app-connectivity-banner />
-        <app-loader [visible]="routeTransitionLoading()" [message]="'common.loading' | translate" imageSrc="/assets/brand/login-logo.jpg" />
+        <app-loader [visible]="showRouteLoader()" [message]="'common.loading' | translate" imageSrc="/assets/brand/login-logo.jpg" />
         @if (showHeader()) {
           <app-header [title]="headerTitle()" [showBack]="showBack()" />
         }
@@ -119,6 +119,7 @@ export class AppShellComponent {
   });
   readonly connectedUserEmail = computed(() => this.userService.user().email || this.authService.user().email);
   readonly routeTransitionLoading = signal(false);
+  readonly showRouteLoader = computed(() => this.routeTransitionLoading() && this.url().split(/[?#]/)[0].replace(/\/$/, '') !== '/app');
 
   private readonly url = toSignal(
     this.router.events.pipe(
