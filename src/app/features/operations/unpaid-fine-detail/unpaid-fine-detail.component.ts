@@ -1,6 +1,5 @@
 import { formatEuroNumber } from '../../../core/utils/euro-format';
 import { EuroPipe } from '../../../shared/pipes/euro.pipe';
-import { isPaymentOutcomeUnknown } from '../../../core/utils/payment-error';
 import { Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
@@ -166,7 +165,7 @@ import { AuthService } from '../../../core/services/auth.service';
                 type="button"
                 class="btn btn-primary btn-block"
                 (click)="pay()"
-                [disabled]="paying() || paymentUncertain() || (insufficientFunds() && !selectedCardId())"
+                [disabled]="paying() || (insufficientFunds() && !selectedCardId())"
               >
                 {{ 'ops.fineDetail.pay' | translate }} {{ fine.amount }}
               </button>
@@ -204,7 +203,6 @@ export class UnpaidFineDetailComponent {
   private readonly unpaidFinesService = inject(UnpaidFinesService);
   private readonly translationService = inject(TranslationService);
   private readonly paymentChallenge = inject(PaymentChallengeService);
-  readonly paymentUncertain = signal(this.paymentChallenge.hasPendingPayment());
   private readonly authService = inject(AuthService);
   readonly walletService = inject(WalletService);
   readonly fineStatus = FineStatus;
@@ -267,9 +265,7 @@ export class UnpaidFineDetailComponent {
       .subscribe((id) => {
         this.paid.set(false);
         this.acknowledged.set(false);
-        this.errorMessage.set(
-          this.paymentChallenge.hasPendingPayment() ? this.translationService.translate('payment.uncertain.message') : null,
-        );
+        this.errorMessage.set(null);
         this.selectedCardId.set(this.walletService.defaultCardId());
         if (id) void operationsService.loadDetail(id);
       });
@@ -299,27 +295,16 @@ export class UnpaidFineDetailComponent {
 
   async pay(): Promise<void> {
     if (this.paying() || this.movingToHistory() || this.paid()) return;
-    if (this.paymentUncertain() || this.paymentChallenge.hasPendingPayment()) {
-      this.paymentUncertain.set(true);
-      this.errorMessage.update((message) => message ?? this.translationService.translate('payment.uncertain.message'));
-      return;
-    }
     const fine = this.fine;
     if (!fine) return;
     const walletAmt = this.walletAmount();
     const cardAmt = this.cardAmount();
     this.paying.set(true);
-    this.paymentChallenge.begin({
-      kind: 'fine',
-      returnUrl: `/app/operations/unpaid-fine-detail/${encodeURIComponent(fine.id)}`,
-      amount: this.numericAmount(),
-      status: 'uncertain',
-    });
+    this.paymentChallenge.clear();
     try {
       const result = await this.unpaidFinesService.payFine(fine.id, this.selectedCardId());
       if (this.fineId !== fine.id) return;
       if (result.challengeUrl) {
-        this.paymentUncertain.set(true);
         this.paymentChallenge.begin({
           kind: 'fine',
           returnUrl: `/app/operations/unpaid-fine-detail/${encodeURIComponent(fine.id)}`,
@@ -329,29 +314,21 @@ export class UnpaidFineDetailComponent {
           this.authService.preparePaymentRedirect(result.challengeUrl);
           window.location.assign(result.challengeUrl);
         } catch (error) {
-          this.paymentChallenge.begin({ kind: 'fine', returnUrl: '/app/operations', status: 'uncertain' });
+          this.paymentChallenge.clear();
           throw error;
         }
         return;
       }
       if (result.success) {
-        this.paymentChallenge.clear();
         this.paidFine.set(fine);
         this.capturedWalletAmount.set(walletAmt);
         this.capturedCardAmount.set(cardAmt);
         this.paid.set(true);
         return;
       }
-      if (result.error && isPaymentOutcomeUnknown(result.error)) {
-        this.paymentUncertain.set(true);
-        this.errorMessage.set(apiErrorMessage(result.error, this.translationService, {}, 'payment.uncertain.message'));
-      } else {
-        this.paymentChallenge.clear();
-        this.errorMessage.set(apiErrorMessage(result.error, this.translationService));
-      }
+      this.errorMessage.set(apiErrorMessage(result.error, this.translationService));
     } catch (error) {
-      this.paymentUncertain.set(true);
-      this.errorMessage.set(apiErrorMessage(error, this.translationService, {}, 'payment.uncertain.message'));
+      this.errorMessage.set(apiErrorMessage(error, this.translationService));
     } finally {
       this.paying.set(false);
     }

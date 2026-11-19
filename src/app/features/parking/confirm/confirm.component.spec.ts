@@ -310,39 +310,13 @@ describe('ParkingConfirmComponent', () => {
       if (recoverableError.backendError?.message_ES) {
         expect(fixture.componentInstance.submitError()).toBe(recoverableError.backendError.message_ES);
       }
-      expect(fixture.componentInstance.paymentUncertain()).toBeTrue();
       const displayedMessage = fixture.componentInstance.submitError();
+      fixture.componentInstance.dismissSubmitError();
+      expect(fixture.componentInstance.submitError()).toBeNull();
       await fixture.componentInstance.onSwipeComplete();
       expect(fixture.componentInstance.submitError()).toBe(displayedMessage);
-      expect(TestBed.inject(ParkingApiService).confirmParking).toHaveBeenCalledTimes(1);
-      if (recoverableError.backendError?.code === -13) {
-        expect(TestBed.inject(PaymentChallengeService).hasPendingPayment()).toBeFalse();
-        const sameAttempt = TestBed.createComponent(ParkingConfirmComponent);
-        expect(sameAttempt.componentInstance.paymentUncertain()).toBeTrue();
-        expect(sameAttempt.componentInstance.submitError()).toBe('La operación ya se ha insertado');
-        const flow = TestBed.inject(ParkingFlowStore);
-        const previous = flow.fromStore();
-        const readFlow = spyOn(flow, 'fromStore');
-        for (const change of [
-          { plate: '5678DEF' },
-          { sectorId: '5' },
-          { tariffType: '3' },
-          { minutes: '90' },
-          { startDatetimeRaw: '090000081026', endDatetimeRaw: '100000081026' },
-        ]) {
-          readFlow.and.returnValue({ ...previous, ...change });
-          expect(TestBed.createComponent(ParkingConfirmComponent).componentInstance.paymentUncertain()).toBeFalse();
-        }
-        readFlow.and.returnValue({ ...previous, cityId: '1', sectorId: '60301' });
-        const differentAttempt = TestBed.createComponent(ParkingConfirmComponent);
-        expect(differentAttempt.componentInstance.paymentUncertain()).toBeFalse();
-        expect(differentAttempt.componentInstance.submitError()).toBeNull();
-        differentAttempt.componentInstance.swipePay = { reset: jasmine.createSpy() } as never;
-        await differentAttempt.componentInstance.onSwipeComplete();
-        expect(TestBed.inject(ParkingApiService).confirmParking).toHaveBeenCalledTimes(2);
-      } else {
-        expect(TestBed.inject(PaymentChallengeService).hasPendingPayment()).toBeTrue();
-      }
+      expect(TestBed.inject(ParkingApiService).confirmParking).toHaveBeenCalledTimes(2);
+      expect(TestBed.inject(PaymentChallengeService).hasPendingPayment()).toBeFalse();
     });
   }
 
@@ -425,6 +399,6 @@ describe('ParkingConfirmComponent', () => {
 
     expect(loadOperations).toHaveBeenCalledTimes(1);
     expect(navigate).not.toHaveBeenCalled();
-    expect(fixture.componentInstance.paymentUncertain()).toBeTrue();
+    expect(fixture.componentInstance.submitError()).not.toBeNull();
   });
 });

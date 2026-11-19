@@ -281,7 +281,7 @@ describe('ParkingSessionService', () => {
 });
 
 describe('Unparking error message priority', () => {
-  it('shows the OPS message and retains the duplicate payment guard', async () => {
+  it('shows the OPS message and allows another attempt', async () => {
     sessionStorage.clear();
     const error = new OpsApiError('backend', 'ConfirmUnParkingOperationAPI', 'unused', 200, {
       code: -9,
@@ -303,10 +303,10 @@ describe('Unparking error message priority', () => {
     TestBed.inject(OpsSessionService).setToken('test');
     await service.leaveParking('42');
     expect(service.unparkError()).toBe('Error genérico - 1025');
-    expect(TestBed.inject(PaymentChallengeService).hasPendingPayment()).toBeTrue();
+    expect(TestBed.inject(PaymentChallengeService).hasPendingPayment()).toBeFalse();
     await service.leaveParking('42');
     expect(service.unparkError()).toBe('Error genérico - 1025');
-    expect(unpark).toHaveBeenCalledTimes(1);
+    expect(unpark).toHaveBeenCalledTimes(2);
     sessionStorage.clear();
   });
 });

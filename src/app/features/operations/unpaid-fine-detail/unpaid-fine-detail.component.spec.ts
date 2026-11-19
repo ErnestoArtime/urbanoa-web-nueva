@@ -115,19 +115,19 @@ describe('UnpaidFineDetailComponent', () => {
     expect(fixture.nativeElement.querySelector('app-location-map')).not.toBeNull();
   });
 
-  it('keeps a lost payment response pending and prevents another charge', async () => {
+  it('shows a lost payment response as an error and allows another attempt', async () => {
     const transportError = new OpsApiError('transport', 'OPSWebServicesUrbAPI/ConfirmPaymentAPI', 'connection lost');
     configure(payableFine, { payFine: jasmine.createSpy('payFine').and.resolveTo({ success: false, error: transportError }) });
     await fixture.componentInstance.pay();
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain('payment.uncertain.message');
-    expect(fixture.componentInstance.paymentUncertain()).toBeTrue();
+    expect(fixture.componentInstance.errorMessage()).not.toBeNull();
+    fixture.componentInstance.dismissError();
     await fixture.componentInstance.pay();
-    expect(TestBed.inject(UnpaidFinesService).payFine).toHaveBeenCalledTimes(1);
+    expect(TestBed.inject(UnpaidFinesService).payFine).toHaveBeenCalledTimes(2);
   });
 
-  it('shows the exact generic OPS error while keeping an uncertain payment blocked', async () => {
+  it('shows the exact generic OPS error and allows another attempt', async () => {
     const error = new OpsApiError('backend', 'ConfirmFinePaymentAPI', 'unused', 200, {
       code: -9,
       type: 2,
@@ -136,10 +136,9 @@ describe('UnpaidFineDetailComponent', () => {
     configure(payableFine, { payFine: jasmine.createSpy('payFine').and.resolveTo({ success: false, error }) });
     await fixture.componentInstance.pay();
     expect(fixture.componentInstance.errorMessage()).toBe('Error genérico - 1025');
-    expect(fixture.componentInstance.paymentUncertain()).toBeTrue();
     await fixture.componentInstance.pay();
     expect(fixture.componentInstance.errorMessage()).toBe('Error genérico - 1025');
-    expect(TestBed.inject(UnpaidFinesService).payFine).toHaveBeenCalledTimes(1);
+    expect(TestBed.inject(UnpaidFinesService).payFine).toHaveBeenCalledTimes(2);
   });
 
   it('shows the failure modal when acknowledging an expired fine fails', async () => {

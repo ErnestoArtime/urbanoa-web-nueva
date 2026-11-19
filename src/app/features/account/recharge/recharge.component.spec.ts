@@ -83,17 +83,16 @@ describe('AccountRechargeComponent', () => {
     expect(fixture.componentInstance.balanceAfterRecharge()).toBe(62.99);
   });
 
-  it('releases loading but blocks repeat charges after timeout, including a new instance of the form', async () => {
+  it('releases loading and allows a new attempt after a timeout', async () => {
     const recharge = jasmine.createSpy().and.resolveTo({ success: false, error: new OpsApiError('timeout', 'recharge', 'timeout') });
     Object.assign(TestBed.inject(WalletService), { recharge });
     const component = mount().componentInstance;
     await component.confirm();
     expect(component.saving()).toBeFalse();
-    expect(component.paymentUncertain()).toBeTrue();
+    expect(component.submitError()).not.toBeNull();
     await component.confirm();
-    await mount().componentInstance.confirm();
-    expect(recharge).toHaveBeenCalledTimes(1);
-    expect(TestBed.inject(PaymentChallengeService).hasUncertainPayment()).toBeTrue();
+    expect(recharge).toHaveBeenCalledTimes(2);
+    expect(TestBed.inject(PaymentChallengeService).hasPendingPayment()).toBeFalse();
   });
 
   it('finishes a confirmed recharge without waiting for operation history', async () => {
@@ -108,7 +107,7 @@ describe('AccountRechargeComponent', () => {
     expect(recharge).toHaveBeenCalledTimes(1);
   });
 
-  it('shows the exact OPS message for a generic error without allowing a duplicate recharge', async () => {
+  it('shows the exact OPS message for a generic error and lets the user dismiss it', async () => {
     const error = new OpsApiError('backend', 'RechargeUserCreditAPI', 'unused', 200, {
       code: -9,
       type: 2,
@@ -119,10 +118,11 @@ describe('AccountRechargeComponent', () => {
     const component = mount().componentInstance;
     await component.confirm();
     expect(component.submitError()).toBe('Error genérico - 1025');
-    expect(component.paymentUncertain()).toBeTrue();
+    component.dismissAlert();
+    expect(component.submitError()).toBeNull();
     await component.confirm();
     expect(component.submitError()).toBe('Error genérico - 1025');
-    expect(recharge).toHaveBeenCalledTimes(1);
+    expect(recharge).toHaveBeenCalledTimes(2);
   });
 
   it('allows a corrected attempt after a definitive business rejection', async () => {
@@ -132,7 +132,6 @@ describe('AccountRechargeComponent', () => {
     Object.assign(TestBed.inject(WalletService), { recharge });
     const component = mount().componentInstance;
     await component.confirm();
-    expect(component.paymentUncertain()).toBeFalse();
     expect(TestBed.inject(PaymentChallengeService).hasPendingPayment()).toBeFalse();
     await component.confirm();
     expect(recharge).toHaveBeenCalledTimes(2);

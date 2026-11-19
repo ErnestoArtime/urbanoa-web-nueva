@@ -11,6 +11,12 @@ import { AuthService } from '../../core/services/auth.service';
 import { DashboardApiService } from '../../core/services/dashboard-api.service';
 import { TranslationService } from '../../core/services/translation.service';
 
+function recentOpDate(): string {
+  const day = new Date(Date.now() - 86_400_000);
+  const part = (value: number) => String(value).padStart(2, '0');
+  return `120000${part(day.getDate())}${part(day.getMonth() + 1)}${part(day.getFullYear() % 100)}`;
+}
+
 describe('Home navigation to actual feature routes', () => {
   let harness: RouterTestingHarness;
   let router: Router;
@@ -19,7 +25,7 @@ describe('Home navigation to actual feature routes', () => {
     const responses = new Map<string, unknown>([
       [OPS_ENDPOINTS.user.query, { names: 'Navigation', firstSurname: 'Test', email: 'navigation@example.test' }],
       [OPS_ENDPOINTS.user.plates, { plates: [{ plate: '1234ABC', favorite: 1 }] }],
-      [OPS_ENDPOINTS.user.operations, [{ operationNumber: 123, operationType: 7, paymentAmount: 100, opDate: '120000201026' }]],
+      [OPS_ENDPOINTS.user.operations, [{ operationNumber: 123, operationType: 7, paymentAmount: 100, opDate: recentOpDate() }]],
       [OPS_ENDPOINTS.wallet.credit, 2000],
       [OPS_ENDPOINTS.wallet.paymentMethods, { payMethods: [] }],
       [OPS_ENDPOINTS.parking.contracts, { contractlist: [] }],

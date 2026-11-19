@@ -1,10 +1,10 @@
-import { ApiErrorPipe } from '../../../shared/pipes/api-error.pipe';
+import { apiErrorMessage } from '../../../core/http/api-error-key';
 import { formatEuroNumber } from '../../../core/utils/euro-format';
 import { EuroPipe } from '../../../shared/pipes/euro.pipe';
 import { PaymentChallengeService } from '../../../core/services/payment-challenge.service';
-import { isPaymentOutcomeUnknown } from '../../../core/utils/payment-error';
+import { TranslationService } from '../../../core/services/translation.service';
 
-import { Component, input, output, inject, signal } from '@angular/core';
+import { Component, computed, input, output, inject, signal } from '@angular/core';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { WalletService } from '../../../core/services/wallet.service';
 import { OperationsService } from '../../../core/services/operations.service';
@@ -14,7 +14,7 @@ import { LoaderComponent } from '../../../shared/components/loader/loader.compon
 
 @Component({
   selector: 'app-account-refund',
-  imports: [ApiErrorPipe, EuroPipe, TranslatePipe, DetailPanelHeaderComponent, ResultModalComponent, LoaderComponent],
+  imports: [EuroPipe, TranslatePipe, DetailPanelHeaderComponent, ResultModalComponent, LoaderComponent],
   template: `
     <app-loader [visible]="requesting() && !refundQuote()" [message]="'common.loading' | translate" />
     <div class="page account-static-page account-form-page">
@@ -22,11 +22,6 @@ import { LoaderComponent } from '../../../shared/components/loader/loader.compon
         <app-detail-panel-header [title]="'account.refund.title' | translate" backRoute="/app/account/payment-methods" />
       } @else {
         <h2>{{ 'account.refund.title' | translate }}</h2>
-      }
-      @if (paymentUncertain()) {
-        <p class="data-notice" role="alert">{{ refundError() | apiError: 'payment.uncertain.message' }}</p>
-      } @else if (failed() || walletService.source() === 'error') {
-        <p class="data-notice" role="alert">{{ errorForDisplay() | apiError: 'account.refund.error' }}</p>
       }
       <div class="card refund-summary">
         <p class="text-muted">{{ 'account.refund.availableBalance' | translate }}</p>
@@ -38,7 +33,7 @@ import { LoaderComponent } from '../../../shared/components/loader/loader.compon
         <button
           type="button"
           class="btn btn-primary btn-block"
-          [disabled]="requesting() || paymentUncertain() || walletService.balance() <= 0"
+          [disabled]="requesting() || walletService.balance() <= 0"
           (click)="requestRefund()"
         >
           {{ (requesting() ? 'account.refund.calculating' : 'account.refund.request') | translate }}
@@ -65,17 +60,22 @@ import { LoaderComponent } from '../../../shared/components/loader/loader.compon
           (primaryAction)="done.set(false)"
         />
       }
+      @if (alertMessage(); as message) {
+        <app-result-modal
+          type="error"
+          [title]="'ops.fineDetail.errorTitle' | translate"
+          [message]="message"
+          [primaryText]="'common.accept' | translate"
+          (primaryAction)="dismissAlert()"
+        />
+      }
     </div>
   `,
   styleUrl: './refund.component.css',
 })
 export class AccountRefundComponent {
-  errorForDisplay(): unknown {
-    return this.refundError() ?? this.walletService.responseError?.();
-  }
-
   private readonly pendingPayment = inject(PaymentChallengeService);
-  readonly paymentUncertain = signal(this.pendingPayment.hasPendingPayment());
+  private readonly translationService = inject(TranslationService);
   readonly cardId = input('');
   readonly embedded = input(false);
   readonly back = output<void>();
@@ -88,11 +88,13 @@ export class AccountRefundComponent {
   readonly done = signal(false);
   readonly failed = signal(false);
   readonly refundError = signal<unknown>(null);
+  readonly alertMessage = computed(() =>
+    this.failed() ? apiErrorMessage(this.refundError(), this.translationService, {}, 'account.refund.error') : null,
+  );
+  dismissAlert(): void {
+    this.failed.set(false);
+  }
   requestRefund(): void {
-    if (this.pendingPayment.hasPendingPayment()) {
-      this.paymentUncertain.set(true);
-      return;
-    }
     if (this.done() || this.requesting() || this.walletService.loading() || this.walletService.balance() <= 0) return;
     this.failed.set(false);
     this.refundError.set(null);
@@ -104,35 +106,26 @@ export class AccountRefundComponent {
   async confirmRefund(): Promise<void> {
     const amount = this.refundQuote();
     if (!amount || this.requesting()) return;
-    if (this.pendingPayment.hasPendingPayment()) {
-      this.paymentUncertain.set(true);
-      this.refundQuote.set(null);
-      return;
-    }
     this.requesting.set(true);
     this.failed.set(false);
     this.refundError.set(null);
-    this.pendingPayment.begin({ kind: 'refund', returnUrl: '/app/operations', amount, status: 'uncertain' });
+    this.pendingPayment.clear();
     try {
       const result = await this.walletService.refund(amount);
       this.refundQuote.set(null);
       if (!result.success || result.amount == null) {
         this.refundError.set(result.error);
-        if (!isPaymentOutcomeUnknown(result.error)) this.pendingPayment.clear();
-        else this.paymentUncertain.set(true);
         this.failed.set(true);
         void this.walletService.load({ balanceOnly: true }).catch(() => undefined);
         return;
       }
       this.refundedAmount.set(result.amount);
-      this.pendingPayment.clear();
       this.done.set(true);
       // WalletService already applied the amount confirmed by OPS. A stale read
       // must not restore the pre-refund balance and enable another refund.
       void this.operationsService.load().catch(() => undefined);
     } catch (error) {
       this.refundError.set(error);
-      if (!this.done()) this.paymentUncertain.set(true);
       this.refundQuote.set(null);
       this.failed.set(true);
     } finally {

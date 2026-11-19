@@ -273,7 +273,6 @@ export class AuthService {
     const current = this.session();
     const attempt = this.loginAttempt;
     if (!current || !currentPassword) throw new OpsApiError('backend', OPS_ENDPOINTS.auth.login, 'Authentication required', 401);
-    if (this.paymentChallenge.hasPendingPayment()) throw new Error(this.translation.translate('payment.uncertain.message'));
     const response = await this.opsApi.post<OpsLoginResponse>(
       OPS_ENDPOINTS.auth.login,
       this.loginRequest(current.user.userName || current.user.email, currentPassword),

@@ -79,7 +79,7 @@ describe('Error state consistency', () => {
     expect(wallet.source()).toBe('remote');
   });
 
-  it('redirect failure releases the loader and keeps the payment pending', async () => {
+  it('redirect failure releases the loader and shows the error', async () => {
     const confirmParking = jasmine.createSpy().and.resolveTo({ success: true, challengeUrl: 'https://example.invalid' });
     TestBed.configureTestingModule({
       providers: [
@@ -110,8 +110,6 @@ describe('Error state consistency', () => {
     await expectAsync(component.onSwipeComplete()).toBeResolved();
     expect(component.loading()).toBeFalse();
     expect(component.submitError()).not.toBeNull();
-    await component.onSwipeComplete();
-    expect(confirmParking).toHaveBeenCalledTimes(1);
     sessionStorage.removeItem('urbanoa.paycomet.pending-payment-v1');
   });
 
@@ -150,8 +148,6 @@ describe('Error state consistency', () => {
     expect(challenge.hasPendingPayment()).toBeFalse();
     expect(challenge.getLastConfirmed()?.payment.operationId).toBe('confirmed-operation');
     expect(component.backendConfirmed()).toBeTrue();
-    expect(component.paymentUncertain()).toBeFalse();
-    expect(component.submitError()).not.toBe(TestBed.inject(TranslationService).translate('payment.uncertain.message'));
     const router = TestBed.inject(Router);
     (router.navigate as jasmine.Spy).and.resolveTo(true);
     await component.onSwipeComplete();
@@ -212,7 +208,6 @@ describe('Error state consistency', () => {
     component.swipePay = { reset: jasmine.createSpy() } as never;
     await component.onSwipeComplete();
     expect(navigate).not.toHaveBeenCalled();
-    expect(component.paymentUncertain()).toBeTrue();
     expect(component.submitError()).not.toBeNull();
   });
 });

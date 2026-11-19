@@ -39,10 +39,6 @@ export class ParkingSessionService {
   }
 
   async leaveParking(parkingId: string, preparedQuote?: UnparkingQuoteResult): Promise<boolean> {
-    if (this.paymentChallenge.hasPendingPayment()) {
-      this.unparkError.update((message) => message ?? this.translations.translate('payment.uncertain.message'));
-      return false;
-    }
     this.unparkError.set(null);
     const parking = this.operationsService.getActiveParking(parkingId);
     if (!parking?.contractId || parking.refundable !== 2) {
@@ -57,28 +53,21 @@ export class ParkingSessionService {
       ...(parking.operationDate ? { datetime: parking.operationDate } : {}),
     };
     const token = this.session.token();
-    this.paymentChallenge.begin({ kind: 'unparking', returnUrl: '/app/operations', status: 'uncertain' });
+    this.paymentChallenge.clear();
     let result;
     try {
       result = preparedQuote ? await this.parkingApi.unpark(input, preparedQuote) : await this.parkingApi.unpark(input);
     } catch (error) {
       if (this.session.token() !== token) return false;
-      this.unparkError.set(apiErrorMessage(error, this.translations, {}, 'payment.uncertain.message'));
+      this.unparkError.set(apiErrorMessage(error, this.translations));
       return false;
     }
     if (this.session.token() !== token) return false;
     if (!result.success) {
-      const error = result.error;
-      if (isPaymentOutcomeUnknown(error)) {
-        this.unparkError.set(apiErrorMessage(error, this.translations, {}, 'payment.uncertain.message'));
-      } else {
-        this.paymentChallenge.clear();
-        this.operationsService.restoreActiveParking(parking);
-        this.unparkError.set(apiErrorMessage(error, this.translations));
-      }
+      if (!isPaymentOutcomeUnknown(result.error)) this.operationsService.restoreActiveParking(parking);
+      this.unparkError.set(apiErrorMessage(result.error, this.translations));
       return false;
     }
-    this.paymentChallenge.clear();
     this.operationsService.markParkingEnded(parking.id);
     // Confirmation is final. Auxiliary reads must not keep the action modal blocked.
     const vehicles = this.activeParkings().map(({ vehicleId: id, plate }) => ({ id, plate }));

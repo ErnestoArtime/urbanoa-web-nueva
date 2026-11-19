@@ -1,4 +1,3 @@
-import { ApiErrorPipe } from '../../../shared/pipes/api-error.pipe';
 import { apiErrorMessage } from '../../../core/http/api-error-key';
 import { formatEuro } from '../../../core/utils/euro-format';
 import { EuroPipe } from '../../../shared/pipes/euro.pipe';
@@ -19,21 +18,11 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { LoaderComponent } from '../../../shared/components/loader/loader.component';
 import { isCardUsable } from '../../../core/utils/card-expiry';
-import { isPaymentOutcomeUnknown } from '../../../core/utils/payment-error';
 
 @Component({
   selector: 'app-account-recharge',
   host: { '[class.embedded-editor]': 'embedded()' },
-  imports: [
-    ApiErrorPipe,
-    EuroPipe,
-    ReactiveFormsModule,
-    RouterLink,
-    TranslatePipe,
-    DetailPanelHeaderComponent,
-    ResultModalComponent,
-    LoaderComponent,
-  ],
+  imports: [EuroPipe, ReactiveFormsModule, RouterLink, TranslatePipe, DetailPanelHeaderComponent, ResultModalComponent, LoaderComponent],
   template: `
     <app-loader [visible]="saving()" [message]="'common.loading' | translate" />
     <div class="page account-static-page account-form-page">
@@ -41,14 +30,6 @@ import { isPaymentOutcomeUnknown } from '../../../core/utils/payment-error';
         <app-detail-panel-header [title]="'account.recharge.title' | translate" backRoute="/app/account/payment-methods" />
       } @else {
         <h2>{{ 'account.recharge.title' | translate }}</h2>
-      }
-      @if (walletService.source() === 'error') {
-        <p class="data-notice" role="alert">{{ errorForDisplay() | apiError: 'account.recharge.serviceError' }}</p>
-      }
-      @if (!paymentUncertain()) {
-        @if (submitError(); as error) {
-          <p class="data-notice" role="alert">{{ error }}</p>
-        }
       }
       @if (!usableCards().length) {
         <div class="card empty-recharge-state">
@@ -105,7 +86,7 @@ import { isPaymentOutcomeUnknown } from '../../../core/utils/payment-error';
             </div>
           </div>
           <div class="account-editor-actions">
-            <button type="submit" class="btn btn-primary btn-block" [disabled]="saving() || paymentUncertain()">
+            <button type="submit" class="btn btn-primary btn-block" [disabled]="saving()">
               {{ (saving() ? 'common.loading' : 'account.recharge.button') | translate }}
             </button>
           </div>
@@ -120,14 +101,13 @@ import { isPaymentOutcomeUnknown } from '../../../core/utils/payment-error';
           (primaryAction)="done.set(false)"
         />
       }
-      @if (paymentUncertain()) {
+      @if (submitError(); as message) {
         <app-result-modal
-          type="warning"
-          [title]="'account.recharge.title' | translate"
-          [message]="submitError() ?? ('payment.uncertain.message' | translate)"
+          type="error"
+          [title]="'ops.fineDetail.errorTitle' | translate"
+          [message]="message"
           [primaryText]="'common.accept' | translate"
-          [busy]="refreshing()"
-          (primaryAction)="refreshAfterUncertainPayment()"
+          (primaryAction)="dismissAlert()"
         />
       }
     </div>
@@ -135,10 +115,6 @@ import { isPaymentOutcomeUnknown } from '../../../core/utils/payment-error';
   styleUrls: ['../account-editor.css', './recharge.component.css'],
 })
 export class AccountRechargeComponent {
-  errorForDisplay(): unknown {
-    return this.walletService.responseError?.();
-  }
-
   readonly formatEuro = formatEuro;
   readonly cardId = input('');
   readonly addCard = output<void>();
@@ -155,11 +131,7 @@ export class AccountRechargeComponent {
   readonly rechargeAmounts = [1, 2, 5, 10, 20, 30, 40] as const;
   readonly done = signal(false);
   readonly saving = signal(false);
-  readonly refreshing = signal(false);
-  readonly submitError = signal<string | null>(
-    this.paymentChallenge.hasPendingPayment() ? this.translationService.translate('payment.uncertain.message') : null,
-  );
-  readonly paymentUncertain = signal(this.paymentChallenge.hasPendingPayment());
+  readonly submitError = signal<string | null>(null);
   readonly isCardUsable = isCardUsable;
   readonly usableCards = () => this.walletService.cards().filter((card) => isCardUsable(card));
   private readonly queryCardId = toSignal(this.route.queryParamMap.pipe(map((params) => params.get('cardId'))), {
@@ -194,21 +166,8 @@ export class AccountRechargeComponent {
     return this.form.controls.cardId.value;
   }
 
-  async refreshAfterUncertainPayment(): Promise<void> {
-    if (this.refreshing()) return;
-    this.refreshing.set(true);
-    try {
-      await this.walletService.load();
-      if (this.walletService.balanceAvailable()) {
-        this.paymentChallenge.clear();
-        this.paymentUncertain.set(false);
-        this.submitError.set(null);
-      } else {
-        this.submitError.set(this.translationService.translate('account.recharge.serviceError'));
-      }
-    } finally {
-      this.refreshing.set(false);
-    }
+  dismissAlert(): void {
+    this.submitError.set(null);
   }
 
   get amountControl() {
@@ -221,11 +180,6 @@ export class AccountRechargeComponent {
 
   async confirm(): Promise<void> {
     if (this.done() || this.saving()) return;
-    if (this.paymentUncertain() || this.paymentChallenge.hasPendingPayment()) {
-      this.paymentUncertain.set(true);
-      this.submitError.update((message) => message ?? this.translationService.translate('payment.uncertain.message'));
-      return;
-    }
     if (!this.usableCards().some((card) => card.id === this.selectedCardId())) {
       this.form.controls.cardId.setErrors({ unavailable: true });
       this.form.controls.cardId.markAsTouched();
@@ -239,45 +193,28 @@ export class AccountRechargeComponent {
     const amount = this.selectedAmount();
     this.submitError.set(null);
     this.saving.set(true);
-    this.paymentChallenge.begin({ kind: 'recharge', returnUrl: '/app/account/payment-methods/recharge', amount, status: 'uncertain' });
+    this.paymentChallenge.clear();
     try {
       const result = await this.walletService.recharge(amount, this.selectedCardId());
       if (result.challengeUrl) {
-        this.paymentUncertain.set(true);
         this.paymentChallenge.beginRecharge({ amount, ...(result.order ? { order: result.order } : {}) });
         try {
           this.authService.preparePaymentRedirect(result.challengeUrl);
           window.location.assign(result.challengeUrl);
         } catch (error) {
-          this.paymentChallenge.begin({
-            kind: 'recharge',
-            returnUrl: '/app/account/payment-methods/recharge',
-            amount,
-            status: 'uncertain',
-            ...(result.order ? { order: result.order } : {}),
-          });
+          this.paymentChallenge.clear();
           throw error;
         }
         return;
       }
       if (!result.success) {
-        if (isPaymentOutcomeUnknown(result.error)) {
-          this.paymentUncertain.set(true);
-          this.submitError.set(apiErrorMessage(result.error, this.translationService, {}, 'payment.uncertain.message'));
-        } else {
-          this.paymentChallenge.clear();
-          this.submitError.set(apiErrorMessage(result.error, this.translationService, {}, 'account.recharge.serviceError'));
-        }
+        this.submitError.set(apiErrorMessage(result.error, this.translationService, {}, 'account.recharge.serviceError'));
         return;
       }
-      this.paymentChallenge.clear();
       this.done.set(true);
       void this.operationsService.load().catch(() => undefined);
     } catch (error) {
-      if (!this.done()) this.paymentUncertain.set(true);
-      this.submitError.set(
-        apiErrorMessage(error, this.translationService, {}, this.done() ? 'errors.server' : 'payment.uncertain.message'),
-      );
+      this.submitError.set(apiErrorMessage(error, this.translationService, {}, 'account.recharge.serviceError'));
     } finally {
       this.saving.set(false);
     }

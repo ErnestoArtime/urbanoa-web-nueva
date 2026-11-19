@@ -39,7 +39,7 @@ describe('AccountRefundComponent', () => {
     TestBed.overrideComponent(AccountRefundComponent, { set: { template: '' } });
   });
 
-  it('retains the OPS error for display even when the refund outcome is uncertain', async () => {
+  it('shows the OPS error in a modal and allows a new attempt', async () => {
     const error = new OpsApiError('backend', 'RefundUserCreditAPI', 'unused', 200, {
       code: -9,
       type: 2,
@@ -51,10 +51,12 @@ describe('AccountRefundComponent', () => {
     component.requestRefund();
     await component.confirmRefund();
     expect(component.refundError()).toBe(error);
-    expect(component.paymentUncertain()).toBeTrue();
+    expect(component.alertMessage()).toBe('Error genérico - 1025');
+    component.dismissAlert();
+    expect(component.alertMessage()).toBeNull();
     component.requestRefund();
     await component.confirmRefund();
-    expect(refund).toHaveBeenCalledTimes(1);
+    expect(refund).toHaveBeenCalledTimes(2);
   });
 
   it('requests a refund from the remote balance contract without a fake card selector', async () => {

@@ -14,14 +14,11 @@ import { WalletService } from '../../../core/services/wallet.service';
 import { ParkingApiService } from '../../../core/services/parking-api.service';
 import { ParkingTicketStoreService } from '../../../core/services/parking-ticket-store.service';
 import { OperationsService } from '../../../core/services/operations.service';
-import { isPaymentOutcomeUnknown } from '../../../core/utils/payment-error';
 import { ResultModalComponent } from '../../../shared/components/result-modal/result-modal.component';
 import { isCardUsable } from '../../../core/utils/card-expiry';
 import { TranslationService } from '../../../core/services/translation.service';
 import { PaymentChallengeService } from '../../../core/services/payment-challenge.service';
 import { AuthService } from '../../../core/services/auth.service';
-import { OpsApiError } from '../../../core/api/ops-api.types';
-import { formatOpsDate } from '../../../core/utils/ops-date';
 
 @Component({
   selector: 'app-parking-confirm',
@@ -45,10 +42,8 @@ import { formatOpsDate } from '../../../core/utils/ops-date';
           type="error"
           [title]="'ops.fineDetail.errorTitle' | translate"
           [message]="error"
-          [primaryText]="paymentUncertain() ? ('ops.title' | translate) : ('common.accept' | translate)"
-          [secondaryText]="paymentUncertain() ? ('common.accept' | translate) : undefined"
-          (primaryAction)="paymentUncertain() ? openOperations() : dismissSubmitError()"
-          (secondaryAction)="dismissSubmitError()"
+          [primaryText]="'common.accept' | translate"
+          (primaryAction)="dismissSubmitError()"
         />
       }
 
@@ -114,7 +109,7 @@ import { formatOpsDate } from '../../../core/utils/ops-date';
       <div class="sticky-actions" [attr.aria-busy]="loading()">
         <app-swipe-to-pay
           #swipePay
-          [disabled]="loading() || walletService.loading() || walletManagerOpen() || paymentUncertain()"
+          [disabled]="loading() || walletService.loading() || walletManagerOpen()"
           [label]="loading() ? ('parking.confirm.loading' | translate) : backendConfirmed() ? ('common.retry' | translate) : undefined"
           [completedLabel]="
             loading() ? ('parking.confirm.loading' | translate) : backendConfirmed() ? ('common.retry' | translate) : undefined
@@ -175,34 +170,7 @@ export class ParkingConfirmComponent implements OnInit {
   readonly walletManagerOpen = signal(false);
   readonly paymentAlertOpen = signal(false);
   readonly loading = signal(false);
-  readonly submitError = signal<string | null>(
-    this.paymentChallenge.insertedParkingError(this.parkingSignature())
-      ? apiErrorMessage(this.paymentChallenge.insertedParkingError(this.parkingSignature()), this.translations)
-      : this.paymentChallenge.hasPendingPayment()
-        ? this.translations.translate('payment.uncertain.message')
-        : null,
-  );
-  readonly paymentUncertain = signal(
-    this.paymentChallenge.hasPendingPayment() || !!this.paymentChallenge.insertedParkingError(this.parkingSignature()),
-  );
-
-  private parkingSignature(): string {
-    const q = this.query();
-    const day = formatOpsDate(this.parkingApi.serverNow?.() ?? new Date()).slice(6);
-    return JSON.stringify([
-      q.cityId,
-      q.plate?.replace(/\s/g, '').toUpperCase(),
-      q.sectorId,
-      q.ticketId || q.tariffId,
-      q.tariffType,
-      q.minutes,
-      q.amount?.replace('€', '').replace(',', '.').trim(),
-      q.startDatetimeRaw || `${day}:${q.startDayLabel}:${q.startTime}`,
-      q.endDatetimeRaw || `${day}:${q.endDayLabel}:${q.endTime}`,
-      q.mode || 'parking',
-      q.opBaseId,
-    ]);
-  }
+  readonly submitError = signal<string | null>(null);
   private confirmationPending = false;
   readonly backendConfirmed = signal(false);
   private confirmedReceipt: { walletAmount: number; operationId?: number | string } | null = null;
@@ -249,16 +217,6 @@ export class ParkingConfirmComponent implements OnInit {
       await this.showConfirmedReceipt();
       return;
     }
-    if (
-      this.paymentUncertain() ||
-      this.paymentChallenge.hasPendingPayment() ||
-      this.paymentChallenge.insertedParkingError(this.parkingSignature())
-    ) {
-      this.paymentUncertain.set(true);
-      this.submitError.update((message) => message ?? this.translations.translate('payment.uncertain.message'));
-      this.swipePay.reset();
-      return;
-    }
     const amount = this.totalAmount();
     const cards = this.usableCards();
     if (this.requiresCard() && !cards.length) {
@@ -272,16 +230,10 @@ export class ParkingConfirmComponent implements OnInit {
       this.selectedCardId.set(selected.id);
     }
     const walletAmount = Math.min(amount, this.walletService.balance());
-    const attemptSignature = this.parkingSignature();
     this.confirmationPending = true;
     this.loading.set(true);
     this.submitError.set(null);
-    this.paymentChallenge.begin({
-      kind: this.query().mode === 'extension' ? 'parking-extension' : 'parking',
-      returnUrl: '/app/operations',
-      amount,
-      status: 'uncertain',
-    });
+    this.paymentChallenge.clear();
     try {
       const confirmation = {
         contractId: Number(this.query().cityId || 0),
@@ -301,25 +253,18 @@ export class ParkingConfirmComponent implements OnInit {
         this.query().mode === 'extension'
           ? await this.parkingApi.confirmExtension({ ...confirmation, latitude: 0, longitude: 0, street: '' })
           : await this.parkingApi.confirmParking(confirmation);
-      this.paymentChallenge.updateReferences({ operationId: result.operationId });
       if (!result.success) {
-        if (result.error instanceof OpsApiError && result.error.kind === 'backend' && result.error.backendError?.code === -13) {
-          this.paymentChallenge.archiveInsertedParking(attemptSignature, result.error);
-          this.paymentUncertain.set(true);
-          this.submitError.set(apiErrorMessage(result.error, this.translations));
-          await Promise.allSettled([this.operations.load(), this.walletService.load()]);
-        } else if (isPaymentOutcomeUnknown(result.error)) {
-          this.paymentUncertain.set(true);
-          this.submitError.set(apiErrorMessage(result.error, this.translations, {}, 'payment.uncertain.message'));
-          await this.operations.load();
-        } else {
-          this.paymentChallenge.clear();
-          this.submitError.set(apiErrorMessage(result.error, this.translations, {}, 'parking.confirm.operationError'));
-        }
+        this.submitError.set(apiErrorMessage(result.error, this.translations, {}, 'parking.confirm.operationError'));
+        await Promise.allSettled([this.operations.load(), this.walletService.load()]);
         return;
       }
       if (result.challengeUrl) {
-        this.paymentUncertain.set(true);
+        this.paymentChallenge.begin({
+          kind: this.query().mode === 'extension' ? 'parking-extension' : 'parking',
+          returnUrl: '/app/operations',
+          amount,
+          ...(result.operationId !== undefined ? { operationId: String(result.operationId) } : {}),
+        });
         this.authService.preparePaymentRedirect(result.challengeUrl);
         window.location.assign(result.challengeUrl);
         return;
@@ -327,13 +272,15 @@ export class ParkingConfirmComponent implements OnInit {
 
       this.confirmedReceipt = { walletAmount, operationId: result.operationId };
       this.backendConfirmed.set(true);
+      this.paymentChallenge.begin({
+        kind: this.query().mode === 'extension' ? 'parking-extension' : 'parking',
+        returnUrl: '/app/operations',
+        amount,
+      });
       this.paymentChallenge.confirm(result.operationId);
       await this.showConfirmedReceipt();
     } catch (error) {
-      this.paymentUncertain.set(!this.backendConfirmed());
-      this.submitError.set(
-        apiErrorMessage(error, this.translations, {}, this.backendConfirmed() ? 'errors.server' : 'payment.uncertain.message'),
-      );
+      this.submitError.set(apiErrorMessage(error, this.translations, {}, 'errors.server'));
     } finally {
       this.loading.set(false);
       this.confirmationPending = false;

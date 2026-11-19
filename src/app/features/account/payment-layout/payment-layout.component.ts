@@ -1,9 +1,10 @@
-import { ApiErrorPipe } from '../../../shared/pipes/api-error.pipe';
+import { apiErrorMessage } from '../../../core/http/api-error-key';
+import { TranslationService } from '../../../core/services/translation.service';
 import { EuroPipe } from '../../../shared/pipes/euro.pipe';
 import { PaymentAddComponent } from '../payment-add/payment-add.component';
 import { AccountRechargeComponent } from '../recharge/recharge.component';
 import { AccountRefundComponent } from '../refund/refund.component';
-import { Component, HostListener, inject, input, OnInit, signal, ViewChild } from '@angular/core';
+import { Component, computed, HostListener, inject, input, OnInit, signal, ViewChild } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { NavigationEnd, Router } from '@angular/router';
 import { Observable } from 'rxjs';
@@ -20,7 +21,6 @@ import { RuntimeStyleDirective } from '../../../shared/directives/runtime-style.
 @Component({
   selector: 'app-payment-layout',
   imports: [
-    ApiErrorPipe,
     EuroPipe,
     NgTemplateOutlet,
     PaymentAddComponent,
@@ -79,9 +79,6 @@ import { RuntimeStyleDirective } from '../../../shared/directives/runtime-style.
           <h1 class="page-title">{{ 'account.menu.paymentMethods' | translate }}</h1>
         }
         <div class="wallet-scroll" (scroll)="closeCardMenuOnScroll()">
-          @if (walletService.source() === 'error' || walletService.lastError()) {
-            <p class="data-notice" role="alert">{{ errorForDisplay() | apiError: 'account.paymentMethods.loadError' }}</p>
-          }
           <div class="wallet-card payment-wallet-card mb-2">
             <div class="wallet-section">
               <strong>{{ 'account.wallet' | translate }}</strong>
@@ -174,6 +171,15 @@ import { RuntimeStyleDirective } from '../../../shared/directives/runtime-style.
         </div>
       </div>
     </ng-template>
+    @if (walletAlert(); as message) {
+      <app-result-modal
+        type="error"
+        [title]="'ops.fineDetail.errorTitle' | translate"
+        [message]="message"
+        [primaryText]="'common.accept' | translate"
+        (primaryAction)="walletErrorDismissed.set(true)"
+      />
+    }
     @if (cardToDelete()) {
       <app-result-modal
         type="confirmation"
@@ -190,9 +196,13 @@ import { RuntimeStyleDirective } from '../../../shared/directives/runtime-style.
 })
 export class PaymentLayoutComponent implements OnInit {
   readonly skeletonRows = [0, 1, 2];
-  errorForDisplay(): unknown {
-    return this.walletService.responseError?.();
-  }
+  private readonly translationService = inject(TranslationService);
+  readonly walletErrorDismissed = signal(false);
+  readonly walletAlert = computed(() =>
+    (this.walletService.source() === 'error' || this.walletService.lastError()) && !this.walletErrorDismissed()
+      ? apiErrorMessage(this.walletService.responseError?.(), this.translationService, {}, 'account.paymentMethods.loadError')
+      : null,
+  );
 
   @ViewChild(AccountRechargeComponent) private recharge?: AccountRechargeComponent;
   @ViewChild(AccountRefundComponent) private refund?: AccountRefundComponent;
@@ -238,6 +248,7 @@ export class PaymentLayoutComponent implements OnInit {
     { initialValue: this.router.url },
   );
   ngOnInit(): void {
+    this.walletErrorDismissed.set(false);
     void this.walletService.load();
   }
   private readonly wideLayout = toSignal(
