@@ -5,6 +5,23 @@ import { LoaderComponent } from '../../../shared/components/loader/loader.compon
 import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
 import { ResultModalComponent } from '../../../shared/components/result-modal/result-modal.component';
 import { UserService, type UserAddress } from '../../../core/services/user.service';
+import { FRENCH_PROVINCES, MUNICIPALITIES_BY_PROVINCE_ID, SPANISH_PROVINCES, type RegionOption } from './address-regions';
+
+const SPAIN_NAMES = new Set(['', 'es', 'esp', 'espana', 'spain', 'espainia']);
+const FRANCE_NAMES = new Set(['fr', 'fra', 'francia', 'france', 'frantzia']);
+
+function normalizeName(value: string): string {
+  return value.normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase();
+}
+
+function findByName<T>(items: readonly T[], value: string, nameOf: (item: T) => string): T | undefined {
+  const wanted = normalizeName(value);
+  if (!wanted) return undefined;
+  return items.find((item) => {
+    const name = nameOf(item);
+    return normalizeName(name) === wanted || normalizeName(name).split('/').includes(wanted);
+  });
+}
 
 @Component({
   selector: 'app-account-tax-data',
@@ -94,14 +111,8 @@ import { UserService, type UserAddress } from '../../../core/services/user.servi
             </div>
           </div>
           <div class="form-group">
-            <label for="tax-data-field-8">{{ 'account.taxData.city' | translate }}</label
-            ><input
-              id="tax-data-field-8"
-              class="form-input"
-              [value]="address().city"
-              (input)="setAddress('city', $any($event.target).value)"
-              [placeholder]="'account.taxData.city' | translate"
-            />
+            <label for="tax-data-country">{{ 'account.taxData.country' | translate }}</label>
+            <input id="tax-data-country" class="form-input" [value]="address().country" (input)="setCountry($any($event.target).value)" />
           </div>
           <div class="form-group">
             <label for="tax-data-field-9">{{ 'account.taxData.province' | translate }}</label
@@ -109,9 +120,39 @@ import { UserService, type UserAddress } from '../../../core/services/user.servi
               id="tax-data-field-9"
               class="form-input"
               [value]="address().province"
-              (input)="setAddress('province', $any($event.target).value)"
+              [attr.list]="provinceOptions().length ? 'tax-data-provinces' : null"
+              autocomplete="off"
+              (input)="setProvince($any($event.target).value)"
+              (change)="commitProvince($any($event.target))"
               [placeholder]="'account.taxData.province' | translate"
             />
+            @if (provinceOptions().length) {
+              <datalist id="tax-data-provinces">
+                @for (option of provinceOptions(); track option.id) {
+                  <option [value]="option.name"></option>
+                }
+              </datalist>
+            }
+          </div>
+          <div class="form-group">
+            <label for="tax-data-field-8">{{ 'account.taxData.city' | translate }}</label
+            ><input
+              id="tax-data-field-8"
+              class="form-input"
+              [value]="address().city"
+              [attr.list]="municipalityOptions().length ? 'tax-data-municipalities' : null"
+              autocomplete="off"
+              (input)="setAddress('city', $any($event.target).value)"
+              (change)="commitCity($any($event.target))"
+              [placeholder]="'account.taxData.city' | translate"
+            />
+            @if (municipalityOptions().length) {
+              <datalist id="tax-data-municipalities">
+                @for (name of municipalityOptions(); track name) {
+                  <option [value]="name"></option>
+                }
+              </datalist>
+            }
           </div>
           <div class="form-group">
             <label for="tax-data-field-10">{{ 'account.taxData.postalCode' | translate }}</label
@@ -121,15 +162,6 @@ import { UserService, type UserAddress } from '../../../core/services/user.servi
               [value]="address().postalCode"
               (input)="setAddress('postalCode', $any($event.target).value)"
               [placeholder]="'account.taxData.postalCode' | translate"
-            />
-          </div>
-          <div class="form-group">
-            <label for="tax-data-country">{{ 'account.taxData.country' | translate }}</label>
-            <input
-              id="tax-data-country"
-              class="form-input"
-              [value]="address().country"
-              (input)="setAddress('country', $any($event.target).value)"
             />
           </div>
         </div>
@@ -199,6 +231,49 @@ export class AccountTaxDataComponent {
   setNif(value: string): void {
     this.edited = true;
     this.nif.set(value);
+  }
+
+  readonly provinceOptions = computed<readonly RegionOption[]>(() => {
+    const country = normalizeName(this.address().country);
+    if (SPAIN_NAMES.has(country)) return SPANISH_PROVINCES;
+    return FRANCE_NAMES.has(country) ? FRENCH_PROVINCES : [];
+  });
+  readonly selectedProvince = computed(() => findByName(this.provinceOptions(), this.address().province, (option) => option.name));
+  readonly municipalityOptions = computed<readonly string[]>(() => {
+    const province = this.selectedProvince();
+    return province ? (MUNICIPALITIES_BY_PROVINCE_ID[province.id] ?? []) : [];
+  });
+
+  setCountry(value: string): void {
+    this.edited = true;
+    this.address.update((current) => {
+      if (normalizeName(current.country) === normalizeName(value)) return { ...current, country: value };
+      return { ...current, country: value, province: '', city: '' };
+    });
+  }
+
+  setProvince(value: string): void {
+    this.edited = true;
+    this.address.update((current) => {
+      const previous = findByName(this.provinceOptions(), current.province, (option) => option.name);
+      const next = findByName(this.provinceOptions(), value, (option) => option.name);
+      return { ...current, province: value, city: previous?.id === next?.id ? current.city : '' };
+    });
+  }
+
+  commitProvince(input: HTMLInputElement): void {
+    if (!this.provinceOptions().length) return;
+    const match = this.selectedProvince();
+    input.value = match?.name ?? '';
+    this.setProvince(input.value);
+  }
+
+  commitCity(input: HTMLInputElement): void {
+    const options = this.municipalityOptions();
+    if (!options.length) return;
+    const match = findByName(options, input.value, (name) => name);
+    input.value = match ?? '';
+    this.setAddress('city', input.value);
   }
 
   setAddress<K extends keyof UserAddress>(key: K, value: string): void {

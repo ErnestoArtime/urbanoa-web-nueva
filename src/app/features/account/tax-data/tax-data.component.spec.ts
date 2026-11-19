@@ -51,6 +51,54 @@ describe('APK fiscal data rules', () => {
     component.setAddress('country', 'ES');
     expect(component.canSave()).toBeTrue();
   });
+  describe('province and municipality dependency', () => {
+    it('offers Spanish provinces when the country is empty or Spain and French ones for France', () => {
+      expect(component.provinceOptions().length).toBeGreaterThan(40);
+      component.setCountry('Francia');
+      expect(component.provinceOptions().some((option) => option.id === 'FR-L')).toBeTrue();
+      component.setCountry('Portugal');
+      expect(component.provinceOptions()).toEqual([]);
+    });
+    it('restricts municipalities to the selected province when a list exists', () => {
+      component.setProvince('Bizkaia');
+      expect(component.municipalityOptions()).toContain('Bilbao');
+      component.setProvince('Madrid');
+      expect(component.municipalityOptions()).toEqual([]);
+    });
+    it('clears the city when the province changes and both fields when the country changes', () => {
+      component.setProvince('Bizkaia');
+      component.setAddress('city', 'Bilbao');
+      component.setProvince('Gipuzkoa');
+      expect(component.address().city).toBe('');
+      component.setProvince('Gipuzkoa');
+      component.setAddress('city', 'Donostia');
+      component.setCountry('Francia');
+      expect(component.address().province).toBe('');
+      expect(component.address().city).toBe('');
+    });
+    it('discards free text that is not in the province or municipality lists', () => {
+      const input = document.createElement('input');
+      input.value = 'Bizk';
+      component.setProvince(input.value);
+      component.commitProvince(input);
+      expect(component.address().province).toBe('');
+      component.setProvince('Araba');
+      input.value = 'Nowhere';
+      component.commitCity(input);
+      expect(component.address().city).toBe('');
+      input.value = 'Amurrio';
+      component.commitCity(input);
+      expect(component.address().city).toBe('Amurrio');
+    });
+    it('keeps free text for countries without a list', () => {
+      component.setCountry('Portugal');
+      const input = document.createElement('input');
+      input.value = 'Porto';
+      component.setAddress('city', 'Porto');
+      component.commitCity(input);
+      expect(component.address().city).toBe('Porto');
+    });
+  });
   for (const [nif, valid] of [
     ['12345678A', true],
     ['X1234567L', true],
