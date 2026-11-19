@@ -9,6 +9,15 @@ import { OPS_ENDPOINTS } from './ops-endpoints';
 
 const SESSION_EXPIRED_ERROR_CODES = new Set([-23, -231]);
 const AMBIGUOUS_WRITE_ERROR_CODES = new Set([-9, -12, -13]);
+// Reads of account data: OPS answers -9 instead of -23 when another login invalidated the token.
+const SESSION_BOUND_READS = new Set<string>([
+  OPS_ENDPOINTS.user.plates,
+  OPS_ENDPOINTS.user.notifications,
+  OPS_ENDPOINTS.user.operations,
+  OPS_ENDPOINTS.wallet.credit,
+  OPS_ENDPOINTS.wallet.paymentMethods,
+  OPS_ENDPOINTS.support.query,
+]);
 // Explicit read-only operations: POST is also used for queries by OPS.
 const RETRYABLE_QUERIES = new Set<string>([
   OPS_ENDPOINTS.parking.contracts,
@@ -97,10 +106,11 @@ export class OpsApiClient {
   private isAmbiguousWriteFailure(endpoint: string, options: OpsRequestOptions, error: unknown): boolean {
     return (
       !!options.token &&
-      !RETRYABLE_QUERIES.has(endpoint) &&
+      endpoint !== OPS_ENDPOINTS.user.query &&
       !endpoint.endsWith('LoginUserAPI') &&
+      (!RETRYABLE_QUERIES.has(endpoint) || SESSION_BOUND_READS.has(endpoint)) &&
       error instanceof OpsApiError &&
-      error.kind === 'backend' &&
+      (error.kind === 'backend' || error.kind === 'http') &&
       !!error.backendError &&
       AMBIGUOUS_WRITE_ERROR_CODES.has(error.backendError.code)
     );

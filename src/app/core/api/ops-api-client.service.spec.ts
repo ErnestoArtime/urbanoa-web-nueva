@@ -262,6 +262,39 @@ describe('OpsApiClient', () => {
       }
     });
 
+    it('probes after -9 delivered with a non-200 HTTP status', async () => {
+      const fetchSpy = spyOn(globalThis, 'fetch').and.returnValues(
+        Promise.resolve(
+          new Response(JSON.stringify({ value: null, isSuccess: false, error: { code: -9, type: 2, message_ES: 'Error' } }), {
+            status: 400,
+          }),
+        ),
+        Promise.resolve(success()),
+      );
+      await expectAsync(client.post(OPS_ENDPOINTS.wallet.recharge, {}, { token: 'live-token' })).toBeRejected();
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+    });
+
+    it('probes after -9 on an account data read and logs out when the probe reports -23', async () => {
+      const sessionExpired = jasmine.createSpy('sessionExpired');
+      window.addEventListener('urbanoa:session-expired', sessionExpired);
+      const fetchSpy = spyOn(globalThis, 'fetch').and.returnValues(Promise.resolve(envelope(-9)), Promise.resolve(envelope(-23)));
+      try {
+        await expectAsync(client.post(OPS_ENDPOINTS.user.operations, {}, { token: 'live-token' })).toBeRejected();
+        expect(fetchSpy).toHaveBeenCalledTimes(2);
+        expect(sessionExpired).toHaveBeenCalledTimes(1);
+      } finally {
+        window.removeEventListener('urbanoa:session-expired', sessionExpired);
+      }
+    });
+
+    it('does not probe after -9 on public parking reads or on the probe endpoint itself', async () => {
+      const fetchSpy = spyOn(globalThis, 'fetch').and.callFake(async () => envelope(-9));
+      await expectAsync(client.post(OPS_ENDPOINTS.parking.streets, {}, { token: 'live-token' })).toBeRejected();
+      await expectAsync(client.get(OPS_ENDPOINTS.user.query, { token: 'live-token' })).toBeRejected();
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+    });
+
     it('does not probe for other backend codes', async () => {
       const fetchSpy = spyOn(globalThis, 'fetch').and.resolveTo(envelope(-2));
       await expectAsync(client.post(OPS_ENDPOINTS.wallet.recharge, {}, { token: 'live-token' })).toBeRejected();
