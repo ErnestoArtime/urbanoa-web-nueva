@@ -177,8 +177,9 @@ export class UnpaidFinesService {
   }
 
   private mapOperation(operation: Operation): UnpaidFine {
-    const amountValue = Math.abs(operation.amount);
     const originalAmountValue = operation.fineAmount;
+    const amountValue =
+      operation.fineStatus !== FineStatus.PAYABLE && originalAmountValue ? originalAmountValue : Math.abs(operation.amount);
     const discountPercent =
       originalAmountValue && originalAmountValue > amountValue
         ? Math.round(((originalAmountValue - amountValue) / originalAmountValue) * 100)
