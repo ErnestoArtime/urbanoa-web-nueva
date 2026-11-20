@@ -302,7 +302,7 @@
   "account.taxData.door": "Puerta",
   "account.taxData.stair": "Escalera",
   "account.taxData.letter": "Letra",
-  "account.taxData.city": "Ciudad",
+  "account.taxData.city": "Municipio",
   "account.taxData.province": "Provincia",
   "account.taxData.postalCode": "Código postal",
   "account.taxData.saveSuccess": "¡Datos fiscales actualizados con éxito!",

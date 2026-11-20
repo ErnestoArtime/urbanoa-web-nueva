@@ -505,6 +505,7 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
   }
 
   private async loadRealZones(): Promise<void> {
+    if (!(this.selected.contractId > 0)) return;
     try {
       const response = await this.parkingApi.mapStretches(this.selected.contractId);
       if (!response.data?.trim()) throw new Error('QueryMapStretchesAPI no devolvió KML');
