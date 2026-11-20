@@ -63,6 +63,7 @@
 .view-all-link {
   display: block;
   margin-top: 1rem;
+  padding-block: 0.6rem;
   text-align: right;
 }
 

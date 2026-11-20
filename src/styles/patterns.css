@@ -350,6 +350,10 @@
   margin-bottom: 1rem;
 }
 .chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--control-height-compact);
   padding: 0.375rem 0.75rem;
   border-radius: var(--radius-pill);
   font-size: var(--text-xs);
@@ -459,8 +463,8 @@
   translate: none;
   display: grid;
   place-items: center;
-  width: 34px;
-  height: 34px;
+  width: var(--control-height-compact);
+  height: var(--control-height-compact);
   padding: 0;
   border: 0;
   border-radius: 50%;
@@ -562,4 +566,8 @@
   .account-form-page .card:has(> .form-group) {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+
+.card > .section-title:first-child {
+  margin-top: 0;
 }

@@ -95,6 +95,7 @@
   place-items: center;
   width: 2rem;
   height: 2rem;
+  position: relative;
   border: 1px solid var(--color-border);
   border-radius: 50%;
   color: var(--color-primary);
@@ -320,4 +321,9 @@
     width: 1.5rem;
     height: 1.5rem;
   }
+}
+.municipio-info::after {
+  content: '';
+  position: absolute;
+  inset: -0.5rem;
 }

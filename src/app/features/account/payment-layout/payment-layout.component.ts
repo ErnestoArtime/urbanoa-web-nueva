@@ -55,7 +55,7 @@ import { RuntimeStyleDirective } from '../../../shared/directives/runtime-style.
         }
       }
     } @else {
-      <app-split-view class="payment-split" [hideList]="isChildRoute()" [hideDetail]="false">
+      <app-split-view class="payment-split" [hideList]="isChildRoute()" [hideDetail]="!isChildRoute()">
         <div splitList class="payment-master"><ng-container [ngTemplateOutlet]="walletContent" /></div>
         @switch (routeScreen()) {
           @case ('add') {
