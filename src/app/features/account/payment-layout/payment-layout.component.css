@@ -316,8 +316,16 @@
   padding: 0.35rem 0.9rem;
   font-size: var(--text-xs);
 }
+.wallet-main-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+.wallet-main-actions .btn {
+  min-width: 0;
+  padding-inline: 0.5rem;
+}
 .wallet-topup {
-  margin-bottom: 0.5rem;
   background: var(--color-primary);
   color: var(--color-on-primary);
 }

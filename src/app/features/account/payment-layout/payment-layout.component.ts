@@ -154,17 +154,19 @@ import { RuntimeStyleDirective } from '../../../shared/directives/runtime-style.
           </div>
         </div>
         <div class="wallet-actions">
-          <button
-            type="button"
-            class="btn btn-primary btn-block wallet-topup"
-            [disabled]="walletService.cards().length === 0"
-            (click)="goToRecharge()"
-          >
-            {{ 'account.recharge.title' | translate }}
-          </button>
-          <button type="button" (click)="openScreen('add')" class="btn btn-secondary btn-block">
-            {{ 'account.addCard' | translate }}
-          </button>
+          <div class="wallet-main-actions">
+            <button
+              type="button"
+              class="btn btn-primary wallet-topup"
+              [disabled]="walletService.cards().length === 0"
+              (click)="goToRecharge()"
+            >
+              {{ 'account.recharge.title' | translate }}
+            </button>
+            <button type="button" (click)="openScreen('add')" class="btn btn-secondary">
+              {{ 'account.addCard' | translate }}
+            </button>
+          </div>
           <div class="payment-actions">
             <button
               type="button"
