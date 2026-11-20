@@ -57,9 +57,12 @@ import { isAcknowledgedFine } from '../../../core/services/unpaid-fines.service'
               @if (operationTime(op)) {
                 <span class="operation-time">{{ operationTime(op) }}</span>
               }
-              <span [class]="op.amount > 0 ? 'operation-amount operation-amount-credit' : 'operation-amount operation-amount-debit'">
-                {{ op.amount > 0 ? '+' : '' }}{{ op.amount | euro }}
-              </span>
+              <div class="operation-amount-row">
+                <span [class]="op.amount > 0 ? 'operation-amount operation-amount-credit' : 'operation-amount operation-amount-debit'">
+                  {{ op.amount > 0 ? '+' : '' }}{{ op.amount | euro }}
+                </span>
+                <span class="operation-chevron" aria-hidden="true"></span>
+              </div>
             </div>
           </a>
         }
