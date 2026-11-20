@@ -309,6 +309,7 @@
   "account.recharge.expires": "fr_Expira",
   "account.recharge.balanceAfter": "Solde après rechargement",
   "account.recharge.button": "fr_Recargar",
+  "account.recharge.swipe": "Glissez pour recharger {{amount}}",
   "account.recharge.success": "Rechargement terminé avec succès!",
   "account.recharge.successDetail": "fr_Se han añadido {{amount}} a tu monedero.",
   "account.refund.title": "Vider le portefeuille",

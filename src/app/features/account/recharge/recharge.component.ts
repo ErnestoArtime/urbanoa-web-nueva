@@ -3,7 +3,7 @@ import { formatEuro } from '../../../core/utils/euro-format';
 import { EuroPipe } from '../../../shared/pipes/euro.pipe';
 
 import { ConnectivityService } from '../../../core/services/connectivity.service';
-import { Component, computed, effect, input, output, inject, signal } from '@angular/core';
+import { Component, computed, effect, input, output, inject, signal, viewChild } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
@@ -18,12 +18,22 @@ import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/
 import { ResultModalComponent } from '../../../shared/components/result-modal/result-modal.component';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { LoaderComponent } from '../../../shared/components/loader/loader.component';
+import { SwipeToPayComponent } from '../../../shared/components/swipe-to-pay/swipe-to-pay.component';
 import { isCardUsable } from '../../../core/utils/card-expiry';
 
 @Component({
   selector: 'app-account-recharge',
   host: { '[class.embedded-editor]': 'embedded()' },
-  imports: [EuroPipe, ReactiveFormsModule, RouterLink, TranslatePipe, DetailPanelHeaderComponent, ResultModalComponent, LoaderComponent],
+  imports: [
+    EuroPipe,
+    ReactiveFormsModule,
+    RouterLink,
+    TranslatePipe,
+    DetailPanelHeaderComponent,
+    ResultModalComponent,
+    LoaderComponent,
+    SwipeToPayComponent,
+  ],
   template: `
     <app-loader [visible]="saving()" [message]="'common.loading' | translate" />
     <div class="page account-static-page account-form-page">
@@ -87,9 +97,15 @@ import { isCardUsable } from '../../../core/utils/card-expiry';
             </div>
           </div>
           <div class="account-editor-actions">
-            <button type="submit" class="btn btn-primary btn-block" [disabled]="saving() || !connectivity.online()">
-              {{ (saving() ? 'common.loading' : 'account.recharge.button') | translate }}
-            </button>
+            <app-swipe-to-pay
+              #swipeRecharge
+              [disabled]="saving() || !connectivity.online() || !selectedCardUsable()"
+              [label]="
+                saving() ? ('common.loading' | translate) : ('account.recharge.swipe' | translate: { amount: formatEuro(selectedAmount()) })
+              "
+              [completedLabel]="'common.loading' | translate"
+              (complete)="submit()"
+            />
           </div>
         </form>
       }
@@ -158,6 +174,13 @@ export class AccountRechargeComponent {
     if (this.usableCards().some((card) => card.id === this.cardId())) this.form.controls.cardId.setValue(this.cardId());
   });
 
+  private readonly ensureSelectedCard = effect(() => {
+    const cards = this.usableCards();
+    if (cards.length && !cards.some((card) => card.id === this.form.controls.cardId.value)) {
+      this.form.controls.cardId.setValue(this.initialCardId());
+    }
+  });
+
   selectedAmount(): number {
     return Number(this.form.controls.amount.value) || 0;
   }
@@ -166,6 +189,17 @@ export class AccountRechargeComponent {
     const balanceInCents = Math.round(this.walletService.balance() * 100);
     const amountInCents = Math.round(this.selectedAmount() * 100);
     return (balanceInCents + amountInCents) / 100;
+  }
+
+  private readonly swipe = viewChild(SwipeToPayComponent);
+
+  selectedCardUsable(): boolean {
+    return this.usableCards().some((card) => card.id === this.selectedCardId());
+  }
+
+  async submit(): Promise<void> {
+    await this.confirm();
+    this.swipe()?.reset();
   }
 
   selectedCardId(): string {
@@ -232,8 +266,9 @@ export class AccountRechargeComponent {
 
   private initialCardId(): string {
     const requested = this.queryCardId();
-    return requested && this.usableCards().some((card) => card.id === requested)
-      ? requested
-      : (this.walletService.defaultCard?.()?.id ?? this.walletService.defaultCardId());
+    const usable = this.usableCards();
+    if (requested && usable.some((card) => card.id === requested)) return requested;
+    const preferred = this.walletService.defaultCard?.()?.id ?? this.walletService.defaultCardId();
+    return usable.some((card) => card.id === preferred) ? preferred : (usable[0]?.id ?? preferred);
   }
 }

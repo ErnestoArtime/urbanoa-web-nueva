@@ -309,6 +309,7 @@
   "account.recharge.expires": "eu_Expira",
   "account.recharge.balanceAfter": "Birkarga ondorengo saldoa",
   "account.recharge.button": "eu_Recargar",
+  "account.recharge.swipe": "Birkargatzeko irristatu {{amount}}",
   "account.recharge.success": "Birkarga behar bezala gauzatu da!",
   "account.recharge.successDetail": "eu_Se han añadido {{amount}} a tu monedero.",
   "account.refund.title": "Zorroa hustea",

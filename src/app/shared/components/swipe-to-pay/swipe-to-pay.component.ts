@@ -1,7 +1,11 @@
 import { RuntimeStyleDirective } from '../../directives/runtime-style.directive';
-import { Component, computed, inject, input, output, signal, ElementRef, ViewChild } from '@angular/core';
+import { Component, computed, DestroyRef, ElementRef, inject, input, output, signal, viewChild } from '@angular/core';
 import { AppIconComponent } from '../../icons/app-icon.component';
 import { TranslationService } from '../../../core/services/translation.service';
+
+const THUMB_INSET = 4;
+const THUMB_SIZE = 48;
+const RESET_DURATION_MS = 300;
 
 @Component({
   selector: 'app-swipe-to-pay',
@@ -11,18 +15,19 @@ import { TranslationService } from '../../../core/services/translation.service';
     <div class="swipe-area" #swipeArea>
       <div
         class="swipe-track"
+        [class.complete]="swipeComplete()"
+        [class.disabled]="disabled()"
         role="button"
         [attr.aria-label]="displayLabel()"
-        [attr.aria-disabled]="disabled() || swipeComplete()"
-        tabindex="0"
+        [attr.aria-disabled]="isDisabled()"
+        [tabindex]="disabled() ? -1 : 0"
+        [appRuntimeStyle]="{ '--swipe-ratio': ratio() }"
         (keydown.enter)="confirmByKeyboard()"
         (keydown.space)="$event.preventDefault(); confirmByKeyboard()"
       >
-        <div class="swipe-progress" [appRuntimeStyle]="{ width: swipeProgress() + 'px' }"></div>
         <div
           class="swipe-thumb"
           [class.dragging]="dragging()"
-          [class.success]="swipeComplete()"
           [class.disabled]="disabled()"
           (pointerdown)="startSwipe($event)"
           [appRuntimeStyle]="{ left: thumbX() + 'px' }"
@@ -31,7 +36,7 @@ import { TranslationService } from '../../../core/services/translation.service';
         </div>
         <span class="swipe-label">{{ displayLabel() }}</span>
       </div>
-      @if (disabled()) {
+      @if (disabled() && disabledHint()) {
         <p class="swipe-disabled-hint">{{ disabledHint() }}</p>
       }
     </div>
@@ -39,7 +44,7 @@ import { TranslationService } from '../../../core/services/translation.service';
   styleUrl: './swipe-to-pay.component.css',
 })
 export class SwipeToPayComponent {
-  @ViewChild('swipeArea') swipeArea!: ElementRef<HTMLElement>;
+  private readonly swipeArea = viewChild.required<ElementRef<HTMLElement>>('swipeArea');
   private readonly translationService = inject(TranslationService);
 
   readonly label = input<string>();
@@ -54,72 +59,100 @@ export class SwipeToPayComponent {
       : (this.label() ?? this.translationService.translate('payment.swipeToPay'));
 
   readonly swipeComplete = signal(false);
-  readonly thumbX = signal(4);
-  readonly swipeProgress = signal(50);
+  readonly thumbX = signal(THUMB_INSET);
+  readonly travel = signal(1);
   readonly dragging = signal(false);
+  readonly ratio = computed(() => Math.min(1, Math.max(0, (this.thumbX() - THUMB_INSET) / this.travel())));
 
   private pointerStartX = 0;
-  private initialThumbX = 4;
+  private initialThumbX = THUMB_INSET;
+  private animationFrame = 0;
+  private removeListeners: (() => void) | null = null;
 
   readonly isDisabled = computed(() => this.disabled() || this.swipeComplete());
 
+  constructor() {
+    inject(DestroyRef).onDestroy(() => {
+      cancelAnimationFrame(this.animationFrame);
+      this.removeListeners?.();
+    });
+  }
+
   reset(): void {
-    this.thumbX.set(4);
-    this.swipeProgress.set(50);
     this.swipeComplete.set(false);
+    this.animateTo(THUMB_INSET);
   }
 
   confirmByKeyboard(): void {
     if (this.isDisabled()) return;
+    this.measure();
     this.completeSwipe();
   }
 
   startSwipe(event: PointerEvent): void {
     if (this.isDisabled()) return;
     event.preventDefault();
+    cancelAnimationFrame(this.animationFrame);
+    this.measure();
     this.dragging.set(true);
     this.pointerStartX = event.clientX;
     this.initialThumbX = this.thumbX();
     const move = (moveEvent: PointerEvent) => this.moveSwipe(moveEvent);
     const end = () => {
-      document.removeEventListener('pointermove', move);
-      document.removeEventListener('pointerup', end);
+      this.removeListeners?.();
       this.endSwipe();
     };
+    this.removeListeners = () => {
+      document.removeEventListener('pointermove', move);
+      document.removeEventListener('pointerup', end);
+      document.removeEventListener('pointercancel', end);
+      this.removeListeners = null;
+    };
     document.addEventListener('pointermove', move);
-    document.addEventListener('pointerup', end, { once: true });
+    document.addEventListener('pointerup', end);
+    document.addEventListener('pointercancel', end);
   }
 
   private moveSwipe(event: PointerEvent): void {
     if (!this.dragging()) return;
-    const trackWidth = this.trackWidth();
-    const maxX = trackWidth - 48;
-    const nextX = Math.max(4, Math.min(this.initialThumbX + event.clientX - this.pointerStartX, maxX));
-    this.thumbX.set(nextX);
-    this.swipeProgress.set(nextX + 48);
+    const maxX = THUMB_INSET + this.travel();
+    this.thumbX.set(Math.max(THUMB_INSET, Math.min(this.initialThumbX + event.clientX - this.pointerStartX, maxX)));
   }
 
   private endSwipe(): void {
     if (!this.dragging()) return;
     this.dragging.set(false);
-    const maxX = this.trackWidth() - 48;
-    if (this.thumbX() >= maxX * 0.75) {
+    if (this.ratio() >= 0.98) {
       this.completeSwipe();
       return;
     }
-    this.thumbX.set(4);
-    this.swipeProgress.set(50);
+    this.animateTo(THUMB_INSET);
   }
 
   private completeSwipe(): void {
-    const maxX = this.trackWidth() - 48;
-    this.thumbX.set(maxX);
-    this.swipeProgress.set(this.trackWidth());
+    cancelAnimationFrame(this.animationFrame);
+    this.thumbX.set(THUMB_INSET + this.travel());
     this.swipeComplete.set(true);
     this.complete.emit();
   }
 
-  private trackWidth(): number {
-    return this.swipeArea?.nativeElement?.querySelector('.swipe-track')?.getBoundingClientRect().width ?? 320;
+  private animateTo(target: number): void {
+    cancelAnimationFrame(this.animationFrame);
+    const from = this.thumbX();
+    if (from === target) return;
+    const startedAt = performance.now();
+    const step = (now: number) => {
+      const progress = Math.min(1, (now - startedAt) / RESET_DURATION_MS);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      this.thumbX.set(from + (target - from) * eased);
+      if (progress < 1) this.animationFrame = requestAnimationFrame(step);
+    };
+    this.animationFrame = requestAnimationFrame(step);
+  }
+
+  private measure(): void {
+    const track = this.swipeArea().nativeElement.querySelector('.swipe-track');
+    const width = track?.getBoundingClientRect().width ?? 320;
+    this.travel.set(Math.max(1, width - THUMB_SIZE - THUMB_INSET * 2));
   }
 }

@@ -176,8 +176,10 @@
   --color-warning-soft: #fff4db;
   --color-info-soft: #e7f3f1;
   --color-swipe-track-shadow: rgba(43, 103, 103, 0.35);
-  --color-swipe-progress-surface: #4b9b96;
-  --color-swipe-thumb-shadow: rgba(0, 0, 0, 0.22);
+  --color-swipe-track-start: #dfe2d7;
+  --color-swipe-track-end: #00897b;
+  --color-swipe-thumb: #006a68;
+  --color-swipe-thumb-disabled: #cbcec3;
   --color-wallet-watermark-text: rgba(255, 255, 255, 0.16);
   --color-wallet-actions-surface-2: rgba(255, 255, 255, 0.12);
   --color-wallet-actions-border: rgba(255, 255, 255, 0.55);

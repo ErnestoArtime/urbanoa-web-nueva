@@ -316,6 +316,7 @@
   "account.recharge.expires": "Expira",
   "account.recharge.balanceAfter": "Saldo tras la recarga",
   "account.recharge.button": "Recargar",
+  "account.recharge.swipe": "Desliza para recargar {{amount}}",
   "account.recharge.success": "¡Recarga realizada con éxito!",
   "account.recharge.successDetail": "Se han añadido {{amount}} a tu monedero.",
   "account.refund.title": "Retirada de saldo",
