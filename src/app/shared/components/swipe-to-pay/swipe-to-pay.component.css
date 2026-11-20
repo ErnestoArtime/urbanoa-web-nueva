@@ -48,11 +48,8 @@
   display: block;
   width: 24px;
   height: 24px;
-  fill: none;
-  stroke: var(--color-on-primary);
-  stroke-width: 2.4;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+  fill: var(--color-on-primary);
+  stroke: none;
 }
 .swipe-label {
   position: relative;

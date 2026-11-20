@@ -1,6 +1,5 @@
 import { RuntimeStyleDirective } from '../../directives/runtime-style.directive';
 import { Component, computed, DestroyRef, ElementRef, inject, input, output, signal, viewChild } from '@angular/core';
-import { AppIconComponent } from '../../icons/app-icon.component';
 import { TranslationService } from '../../../core/services/translation.service';
 
 const THUMB_INSET = 4;
@@ -10,7 +9,7 @@ const RESET_DURATION_MS = 300;
 @Component({
   selector: 'app-swipe-to-pay',
   standalone: true,
-  imports: [RuntimeStyleDirective, AppIconComponent],
+  imports: [RuntimeStyleDirective],
   template: `
     <div class="swipe-area" #swipeArea>
       <div
@@ -32,7 +31,10 @@ const RESET_DURATION_MS = 300;
           (pointerdown)="startSwipe($event)"
           [appRuntimeStyle]="{ left: thumbX() + 'px' }"
         >
-          <app-icon name="chevron" [stroke]="false" />
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M2 17.413H7.326L12.5 11.707L7.326 6H2L7.326 11.707L2 17.413Z" />
+            <path d="M12.5 17.413H17.826L23 11.707L17.826 6H12.5L17.826 11.707L12.5 17.413Z" />
+          </svg>
         </div>
         <span class="swipe-label">{{ displayLabel() }}</span>
       </div>
