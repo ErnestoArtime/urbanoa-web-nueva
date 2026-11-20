@@ -37,7 +37,6 @@ const FEEDBACK_SUBTYPES: SelectOption<FeedbackSubtype>[] = [
   { value: 'user-service', labelKey: 'account.support.subtype.user-service' },
   { value: 'surveillance-fines', labelKey: 'account.support.subtype.surveillance-fines' },
   { value: 'regulations', labelKey: 'account.support.subtype.regulations' },
-  { value: 'web', labelKey: 'account.support.subtype.web' },
 ];
 
 @Component({
@@ -118,6 +117,7 @@ const FEEDBACK_SUBTYPES: SelectOption<FeedbackSubtype>[] = [
                 @for (city of municipios(); track city.id) {
                   <option [value]="city.id">{{ city.nombre }} · {{ city.provincia }}</option>
                 }
+                <option value="0">{{ 'account.support.generic' | translate }}</option>
               </select>
             </div>
             <div class="form-group">

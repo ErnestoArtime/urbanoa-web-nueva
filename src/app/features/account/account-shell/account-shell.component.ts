@@ -1,5 +1,5 @@
 import { EuroPipe } from '../../../shared/pipes/euro.pipe';
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { filter, map, startWith } from 'rxjs/operators';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -17,7 +17,11 @@ import { TranslationService } from '../../../core/services/translation.service';
   selector: 'app-account-shell',
   imports: [EuroPipe, RouterLink, RouterLinkActive, AppIconComponent, SplitViewComponent, TranslatePipe],
   template: `
-    <app-split-view [class.account-split]="isVehicleRoute() || isPaymentMethodsRoute()" [hideList]="!isRootRoute()" [hideDetail]="isRootRoute()">
+    <app-split-view
+      [class.account-split]="isVehicleRoute() || isPaymentMethodsRoute()"
+      [hideList]="!isRootRoute()"
+      [hideDetail]="isRootRoute()"
+    >
       <div splitList class="account-master">
         <h1 class="page-title">{{ 'account.title' | translate }}</h1>
         <div class="account-profile">
@@ -56,6 +60,9 @@ import { TranslationService } from '../../../core/services/translation.service';
                 <div class="list-item-content">
                   <div class="list-item-title">{{ item.labelKey | translate }}</div>
                 </div>
+                @if (hasWarning(item.key)) {
+                  <span class="account-warning-dot" role="img" [attr.aria-label]="'account.incompleteData' | translate"></span>
+                }
                 <span class="list-item-chevron">›</span>
               </a>
             }
@@ -93,6 +100,19 @@ export class AccountShellComponent implements OnInit {
     ),
     { initialValue: this.router.url },
   );
+
+  readonly profileIncomplete = computed(() => {
+    const user = this.user();
+    return [user.name, user.surname, user.secondSurname, user.nif, user.phone].some((value) => !value?.trim());
+  });
+  readonly taxDataIncomplete = computed(() => {
+    const address = this.user().address;
+    return [this.user().nif, address.city, address.province, address.country].some((value) => !value?.trim());
+  });
+
+  hasWarning(key: string): boolean {
+    return (key === 'profile' && this.profileIncomplete()) || (key === 'tax-data' && this.taxDataIncomplete());
+  }
 
   readonly isRootRoute = () => this.url() === '/app/account';
   readonly isVehicleRoute = () => this.url().startsWith('/app/account/vehicles');

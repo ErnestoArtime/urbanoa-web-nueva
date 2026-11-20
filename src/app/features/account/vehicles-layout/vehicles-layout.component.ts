@@ -1,5 +1,5 @@
 import { ApiErrorPipe } from '../../../shared/pipes/api-error.pipe';
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { RouterLink, NavigationEnd, Router } from '@angular/router';
 import { filter, map, startWith } from 'rxjs/operators';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -27,7 +27,7 @@ import type { Vehicle } from '../../../shared/models/vehicle';
           </div>
         } @else if (vehicles().length > 0) {
           <ul class="list card vehicles-list">
-            @for (v of vehicles(); track v.id) {
+            @for (v of sortedVehicles(); track v.id) {
               <li class="list-item vehicle-item">
                 <a [routerLink]="['/app/account/vehicles/edit', v.id]" class="vehicle-item-link">
                   <span class="vehicle-icon-wrap"><app-icon name="vehicle" class="vehicle-icon" [size]="22" [stroke]="false" /></span>
@@ -75,6 +75,7 @@ export class VehiclesLayoutComponent implements OnInit {
   private readonly parkingSessionService = inject(ParkingSessionService);
   private readonly translation = inject(TranslationService);
   readonly vehicles = this.vehicleService.vehicles;
+  readonly sortedVehicles = computed(() => [...this.vehicles()].sort((a, b) => Number(b.isDefault) - Number(a.isDefault)));
   readonly loadingVehicles = signal(true);
   private readonly router = inject(Router);
   private readonly url = toSignal(

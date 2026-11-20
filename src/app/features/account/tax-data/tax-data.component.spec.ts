@@ -76,26 +76,18 @@ describe('APK fiscal data rules', () => {
       expect(component.address().province).toBe('');
       expect(component.address().city).toBe('');
     });
-    it('discards free text that is not in the province or municipality lists', () => {
-      const input = document.createElement('input');
-      input.value = 'Bizk';
-      component.setProvince(input.value);
-      component.commitProvince(input);
-      expect(component.address().province).toBe('');
-      component.setProvince('Araba');
-      input.value = 'Nowhere';
-      component.commitCity(input);
-      expect(component.address().city).toBe('');
-      input.value = 'Amurrio';
-      component.commitCity(input);
-      expect(component.address().city).toBe('Amurrio');
+    it('lists every country with Spain and France first like the APK combo', () => {
+      const names = component.countryOptions();
+      expect(names.length).toBeGreaterThan(200);
+      expect(names[0]).toBe('España');
+      expect(names[1]).toBe('Francia');
+      expect(names).toContain('Portugal');
     });
-    it('keeps free text for countries without a list', () => {
+    it('keeps free text for provinces and municipalities without a list', () => {
       component.setCountry('Portugal');
-      const input = document.createElement('input');
-      input.value = 'Porto';
+      component.setProvince('Porto');
       component.setAddress('city', 'Porto');
-      component.commitCity(input);
+      expect(component.address().province).toBe('Porto');
       expect(component.address().city).toBe('Porto');
     });
   });

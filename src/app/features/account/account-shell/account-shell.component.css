@@ -142,3 +142,12 @@
     background: transparent;
   }
 }
+
+.account-warning-dot {
+  width: 10px;
+  height: 10px;
+  flex-shrink: 0;
+  margin-right: 0.5rem;
+  border-radius: 50%;
+  background: var(--color-success);
+}

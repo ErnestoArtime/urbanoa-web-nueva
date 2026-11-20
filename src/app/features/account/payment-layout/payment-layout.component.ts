@@ -83,6 +83,14 @@ import { RuntimeStyleDirective } from '../../../shared/directives/runtime-style.
             <div class="wallet-section">
               <strong>{{ 'account.wallet' | translate }}</strong>
               <p class="wallet-balance-large">{{ walletService.balance() | euro }}</p>
+              <button
+                type="button"
+                class="btn btn-primary btn-sm wallet-topup"
+                [disabled]="walletService.cards().length === 0"
+                (click)="goToRecharge()"
+              >
+                {{ 'account.recharge.title' | translate }}
+              </button>
             </div>
           </div>
           <p class="section-title cards-heading">
@@ -103,7 +111,7 @@ import { RuntimeStyleDirective } from '../../../shared/directives/runtime-style.
                 }
               </div>
             } @else {
-              @for (card of walletService.cards(); track card.id) {
+              @for (card of sortedCards(); track card.id) {
                 <div class="card-item">
                   <span class="card-brand-mark">
                     @if (brandAsset(card.brand); as asset) {
@@ -154,22 +162,19 @@ import { RuntimeStyleDirective } from '../../../shared/directives/runtime-style.
           </div>
         </div>
         <div class="wallet-actions">
+          <button type="button" (click)="openScreen('add')" class="btn btn-secondary btn-block">
+            {{ 'account.addCard' | translate }}
+          </button>
           <div class="payment-actions">
-            <button type="button" class="btn btn-primary btn-sm" [disabled]="walletService.cards().length === 0" (click)="goToRecharge()">
-              {{ 'dashboard.recharge' | translate }}
-            </button>
             <button
               type="button"
               (click)="refundBalance()"
               [disabled]="walletService.balance() <= 0 || busy()"
-              class="btn btn-secondary btn-sm"
+              class="btn btn-ghost btn-sm refund-action"
             >
               {{ 'account.withdrawBalance' | translate }}
             </button>
           </div>
-          <button type="button" (click)="openScreen('add')" class="btn btn-secondary btn-block mt-2">
-            {{ 'account.addCard' | translate }}
-          </button>
         </div>
       </div>
     </ng-template>
@@ -198,6 +203,10 @@ import { RuntimeStyleDirective } from '../../../shared/directives/runtime-style.
 })
 export class PaymentLayoutComponent implements OnInit {
   readonly skeletonRows = [0, 1, 2];
+  readonly sortedCards = computed(() => {
+    const defaultId = this.walletService.defaultCardId();
+    return [...this.walletService.cards()].sort((a, b) => Number(b.id === defaultId) - Number(a.id === defaultId));
+  });
   private readonly translationService = inject(TranslationService);
   readonly walletErrorDismissed = signal(false);
   readonly walletAlert = computed(() =>

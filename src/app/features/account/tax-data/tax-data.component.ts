@@ -4,6 +4,8 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { LoaderComponent } from '../../../shared/components/loader/loader.component';
 import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
 import { ResultModalComponent } from '../../../shared/components/result-modal/result-modal.component';
+import { TranslationService } from '../../../core/services/translation.service';
+import { countryNames } from './countries';
 import { UserService, type UserAddress } from '../../../core/services/user.service';
 import { FRENCH_PROVINCES, MUNICIPALITIES_BY_PROVINCE_ID, SPANISH_PROVINCES, type RegionOption } from './address-regions';
 
@@ -46,6 +48,75 @@ function findByName<T>(items: readonly T[], value: string, nameOf: (item: T) => 
           @if (!validNif()) {
             <p class="form-error" role="alert">{{ 'account.taxData.nifInvalid' | translate }}</p>
           }
+          <div class="form-group">
+            <label for="tax-data-country">{{ 'account.taxData.country' | translate }}</label>
+            <select id="tax-data-country" class="form-input" [value]="address().country" (change)="setCountry($any($event.target).value)">
+              <option value="" [selected]="!address().country">{{ 'account.taxData.none' | translate }}</option>
+              @for (name of countryOptions(); track name) {
+                <option [value]="name" [selected]="name === address().country">{{ name }}</option>
+              }
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="tax-data-field-9">{{ 'account.taxData.province' | translate }}</label>
+            @if (provinceOptions().length) {
+              <select
+                id="tax-data-field-9"
+                class="form-input"
+                [value]="selectedProvince()?.name ?? ''"
+                (change)="setProvince($any($event.target).value)"
+              >
+                <option value="" [selected]="!selectedProvince()">{{ 'account.taxData.none' | translate }}</option>
+                @for (option of provinceOptions(); track option.id) {
+                  <option [value]="option.name" [selected]="option.id === selectedProvince()?.id">{{ option.name }}</option>
+                }
+              </select>
+            } @else {
+              <input
+                id="tax-data-field-9"
+                class="form-input"
+                [value]="address().province"
+                autocomplete="off"
+                (input)="setProvince($any($event.target).value)"
+                [placeholder]="'account.taxData.province' | translate"
+              />
+            }
+          </div>
+          <div class="form-group">
+            <label for="tax-data-field-8">{{ 'account.taxData.city' | translate }}</label>
+            @if (municipalityOptions().length) {
+              <select
+                id="tax-data-field-8"
+                class="form-input"
+                [value]="address().city"
+                (change)="setAddress('city', $any($event.target).value)"
+              >
+                <option value="" [selected]="!address().city">{{ 'account.taxData.none' | translate }}</option>
+                @for (name of municipalityOptions(); track name) {
+                  <option [value]="name" [selected]="name === address().city">{{ name }}</option>
+                }
+              </select>
+            } @else {
+              <input
+                id="tax-data-field-8"
+                class="form-input"
+                [value]="address().city"
+                autocomplete="off"
+                (input)="setAddress('city', $any($event.target).value)"
+                [placeholder]="'account.taxData.city' | translate"
+              />
+            }
+          </div>
+          <div class="form-group">
+            <label for="tax-data-field-10">{{ 'account.taxData.postalCode' | translate }}</label
+            ><input
+              id="tax-data-field-10"
+              class="form-input"
+              [value]="address().postalCode"
+              (input)="setAddress('postalCode', $any($event.target).value)"
+              [placeholder]="'account.taxData.postalCode' | translate"
+            />
+          </div>
           <div class="form-group">
             <label for="tax-data-field-2">{{ 'account.taxData.street' | translate }}</label
             ><input
@@ -110,60 +181,6 @@ function findByName<T>(items: readonly T[], value: string, nameOf: (item: T) => 
               />
             </div>
           </div>
-          <div class="form-group">
-            <label for="tax-data-country">{{ 'account.taxData.country' | translate }}</label>
-            <input id="tax-data-country" class="form-input" [value]="address().country" (input)="setCountry($any($event.target).value)" />
-          </div>
-          <div class="form-group">
-            <label for="tax-data-field-9">{{ 'account.taxData.province' | translate }}</label
-            ><input
-              id="tax-data-field-9"
-              class="form-input"
-              [value]="address().province"
-              [attr.list]="provinceOptions().length ? 'tax-data-provinces' : null"
-              autocomplete="off"
-              (input)="setProvince($any($event.target).value)"
-              (change)="commitProvince($any($event.target))"
-              [placeholder]="'account.taxData.province' | translate"
-            />
-            @if (provinceOptions().length) {
-              <datalist id="tax-data-provinces">
-                @for (option of provinceOptions(); track option.id) {
-                  <option [value]="option.name"></option>
-                }
-              </datalist>
-            }
-          </div>
-          <div class="form-group">
-            <label for="tax-data-field-8">{{ 'account.taxData.city' | translate }}</label
-            ><input
-              id="tax-data-field-8"
-              class="form-input"
-              [value]="address().city"
-              [attr.list]="municipalityOptions().length ? 'tax-data-municipalities' : null"
-              autocomplete="off"
-              (input)="setAddress('city', $any($event.target).value)"
-              (change)="commitCity($any($event.target))"
-              [placeholder]="'account.taxData.city' | translate"
-            />
-            @if (municipalityOptions().length) {
-              <datalist id="tax-data-municipalities">
-                @for (name of municipalityOptions(); track name) {
-                  <option [value]="name"></option>
-                }
-              </datalist>
-            }
-          </div>
-          <div class="form-group">
-            <label for="tax-data-field-10">{{ 'account.taxData.postalCode' | translate }}</label
-            ><input
-              id="tax-data-field-10"
-              class="form-input"
-              [value]="address().postalCode"
-              (input)="setAddress('postalCode', $any($event.target).value)"
-              [placeholder]="'account.taxData.postalCode' | translate"
-            />
-          </div>
         </div>
       </div>
       <div class="account-editor-actions">
@@ -200,8 +217,10 @@ export class AccountTaxDataComponent {
   }
 
   private readonly userService = inject(UserService);
+  private readonly translation = inject(TranslationService);
 
   readonly nif = signal('');
+  readonly countryOptions = computed(() => countryNames(this.translation.currentLang$()));
   readonly address = signal<UserAddress>({ ...this.userService.user().address });
   readonly submitted = signal(false);
   readonly saved = signal(false);
@@ -259,21 +278,6 @@ export class AccountTaxDataComponent {
       const next = findByName(this.provinceOptions(), value, (option) => option.name);
       return { ...current, province: value, city: previous?.id === next?.id ? current.city : '' };
     });
-  }
-
-  commitProvince(input: HTMLInputElement): void {
-    if (!this.provinceOptions().length) return;
-    const match = this.selectedProvince();
-    input.value = match?.name ?? '';
-    this.setProvince(input.value);
-  }
-
-  commitCity(input: HTMLInputElement): void {
-    const options = this.municipalityOptions();
-    if (!options.length) return;
-    const match = findByName(options, input.value, (name) => name);
-    input.value = match ?? '';
-    this.setAddress('city', input.value);
   }
 
   setAddress<K extends keyof UserAddress>(key: K, value: string): void {

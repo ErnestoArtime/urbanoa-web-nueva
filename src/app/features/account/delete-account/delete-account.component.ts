@@ -1,76 +1,65 @@
 import { TranslationService } from '../../../core/services/translation.service';
 import { Component, inject, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { apiErrorMessage } from '../../../core/http/api-error-key';
 import { AuthService } from '../../../core/services/auth.service';
 import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { LoaderComponent } from '../../../shared/components/loader/loader.component';
+import { ResultModalComponent } from '../../../shared/components/result-modal/result-modal.component';
 
 @Component({
   selector: 'app-account-delete-account',
-  imports: [ReactiveFormsModule, TranslatePipe, DetailPanelHeaderComponent, LoaderComponent],
+  imports: [TranslatePipe, DetailPanelHeaderComponent, LoaderComponent, ResultModalComponent],
   template: `
     <app-loader [visible]="submitting()" [message]="'common.loading' | translate" />
     <div class="page account-static-page">
       <app-detail-panel-header [title]="'account.deleteAccount.title' | translate" backRoute="/app/account" />
-      <form [formGroup]="form" (ngSubmit)="onSubmit()">
-        <div class="card">
-          <p class="text-error">{{ 'account.deleteAccount.warning' | translate }}</p>
-          <div class="form-group">
-            <label class="form-label">{{ 'account.deleteAccount.password' | translate }}</label>
-            <input class="form-input" type="password" formControlName="password" autocomplete="current-password" />
-            @if (form.controls.password.touched && form.controls.password.invalid) {
-              <p class="form-error">{{ 'account.deleteAccount.passwordRequired' | translate }}</p>
-            }
-          </div>
-          <div class="form-group">
-            <label class="form-label">{{ 'account.deleteAccount.reason' | translate }}</label>
-            <input class="form-input" formControlName="reason" />
-          </div>
-          @if (errorKey()) {
-            <p class="form-error" role="alert">{{ errorKey() }}</p>
-          }
-          <button type="submit" class="btn btn-danger btn-block" [disabled]="submitting()">
-            {{ (submitting() ? 'account.deleteAccount.deleting' : 'account.deleteAccount.confirm') | translate }}
-          </button>
-        </div>
-      </form>
     </div>
+    @if (errorMessage(); as message) {
+      <app-result-modal
+        type="error"
+        [title]="'account.deleteAccount.title' | translate"
+        [message]="message"
+        [primaryText]="'common.accept' | translate"
+        (primaryAction)="errorMessage.set('')"
+      />
+    } @else if (!submitting()) {
+      <app-result-modal
+        type="confirmation"
+        [title]="'account.deleteAccount.title' | translate"
+        [message]="'account.deleteAccount.warning' | translate"
+        [primaryText]="'common.accept' | translate"
+        [secondaryText]="'common.cancel' | translate"
+        (primaryAction)="confirm()"
+        (secondaryAction)="cancel()"
+      />
+    }
   `,
 })
 export class AccountDeleteAccountComponent {
   private readonly errorTranslation = inject(TranslationService);
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
-  private readonly formBuilder = inject(FormBuilder);
 
   readonly submitting = signal(false);
-  readonly errorKey = signal('');
+  readonly errorMessage = signal('');
 
-  readonly form = this.formBuilder.nonNullable.group({
-    password: ['', Validators.required],
-    reason: [''],
-  });
-
-  async onSubmit(): Promise<void> {
+  async confirm(): Promise<void> {
     if (this.submitting()) return;
-    if (this.form.invalid) {
-      this.form.markAllAsTouched();
-      return;
-    }
-
     this.submitting.set(true);
-    this.errorKey.set('');
-
+    this.errorMessage.set('');
     try {
       await this.authService.cancelAccount();
       await this.router.navigateByUrl('/auth/login');
     } catch (error) {
-      this.errorKey.set(apiErrorMessage(error, this.errorTranslation));
+      this.errorMessage.set(apiErrorMessage(error, this.errorTranslation));
     } finally {
       this.submitting.set(false);
     }
+  }
+
+  cancel(): void {
+    void this.router.navigateByUrl('/app/account');
   }
 }

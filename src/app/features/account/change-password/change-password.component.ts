@@ -43,43 +43,45 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
               </button>
             </div>
           </div>
-          <div class="form-group">
-            <label>{{ 'account.changePassword.new' | translate }} <span class="text-error">*</span></label>
-            <div class="password-field">
-              <input class="form-input" [type]="showNext() ? 'text' : 'password'" (input)="next.set(valueOf($event))" /><button
-                type="button"
-                (click)="toggleVisibility('next')"
-                [attr.aria-label]="'account.changePassword.togglePassword' | translate"
-              >
-                @if (showNext()) {
-                  <svg lucideEyeOff size="21"></svg>
-                } @else {
-                  <svg lucideEye size="21"></svg>
-                }
-              </button>
+          <div class="row">
+            <div class="form-group">
+              <label>{{ 'account.changePassword.new' | translate }} <span class="text-error">*</span></label>
+              <div class="password-field">
+                <input class="form-input" [type]="showNext() ? 'text' : 'password'" (input)="next.set(valueOf($event))" /><button
+                  type="button"
+                  (click)="toggleVisibility('next')"
+                  [attr.aria-label]="'account.changePassword.togglePassword' | translate"
+                >
+                  @if (showNext()) {
+                    <svg lucideEyeOff size="21"></svg>
+                  } @else {
+                    <svg lucideEye size="21"></svg>
+                  }
+                </button>
+              </div>
             </div>
-            <small class="text-muted">{{ 'account.changePassword.minLength' | translate }}</small>
-          </div>
-          <div class="form-group">
-            <label>{{ 'account.changePassword.confirm' | translate }} <span class="text-error">*</span></label>
-            <div class="password-field">
-              <input
-                class="form-input"
-                [type]="showConfirmation() ? 'text' : 'password'"
-                (input)="confirmation.set(valueOf($event))"
-              /><button
-                type="button"
-                (click)="toggleVisibility('confirmation')"
-                [attr.aria-label]="'account.changePassword.togglePassword' | translate"
-              >
-                @if (showConfirmation()) {
-                  <svg lucideEyeOff size="21"></svg>
-                } @else {
-                  <svg lucideEye size="21"></svg>
-                }
-              </button>
+            <div class="form-group">
+              <label>{{ 'account.changePassword.confirm' | translate }} <span class="text-error">*</span></label>
+              <div class="password-field">
+                <input
+                  class="form-input"
+                  [type]="showConfirmation() ? 'text' : 'password'"
+                  (input)="confirmation.set(valueOf($event))"
+                /><button
+                  type="button"
+                  (click)="toggleVisibility('confirmation')"
+                  [attr.aria-label]="'account.changePassword.togglePassword' | translate"
+                >
+                  @if (showConfirmation()) {
+                    <svg lucideEyeOff size="21"></svg>
+                  } @else {
+                    <svg lucideEye size="21"></svg>
+                  }
+                </button>
+              </div>
             </div>
           </div>
+          <small class="text-muted">{{ 'account.changePassword.minLength' | translate }}</small>
         </div>
       </div>
       <div class="account-editor-actions">

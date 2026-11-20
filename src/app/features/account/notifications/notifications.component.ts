@@ -43,7 +43,6 @@ import { NotificationsService } from '../../../core/services/notifications.servi
         </div>
         <div class="card mt-1">
           <p class="section-title">{{ 'account.notifications.email' | translate }}</p>
-          <p class="text-muted">{{ 'account.notifications.emailHint' | translate }}</p>
           @for (notif of emailNotifications; track notif.key) {
             <label class="switch-row"
               ><span>{{ notif.labelKey | translate }}</span
@@ -99,7 +98,6 @@ export class AccountNotificationsComponent implements OnInit {
   ];
   readonly emailNotifications = [
     { key: 'parking-receipt', labelKey: 'account.notifications.parkingReceipt', enabled: true },
-    { key: 'ending-parking', labelKey: 'account.notifications.endingParking', enabled: false },
     { key: 'fine-warning', labelKey: 'account.notifications.fineWarning', enabled: false },
     { key: 'recharge-confirm', labelKey: 'account.notifications.rechargeConfirm', enabled: false },
   ];
@@ -123,9 +121,8 @@ export class AccountNotificationsComponent implements OnInit {
       this.appNotifications[1].enabled = value.fineNotifications === 1;
       this.appNotifications[2].enabled = value.rechargeNotifications === 1;
       this.emailNotifications[0].enabled = value.emailParkingNotifications === 1;
-      this.emailNotifications[1].enabled = value.emailUnparkingNotifications === 1;
-      this.emailNotifications[2].enabled = value.emailFineNotifications === 1;
-      this.emailNotifications[3].enabled = value.emailRechargeNotifications === 1;
+      this.emailNotifications[1].enabled = value.emailFineNotifications === 1;
+      this.emailNotifications[2].enabled = value.emailRechargeNotifications === 1;
       this.feedbackApp = value.feedbackNotifications === 1;
       this.feedbackEmail = value.emailFeedbackNotifications === 1;
     } catch {
@@ -146,9 +143,8 @@ export class AccountNotificationsComponent implements OnInit {
         fineNotifications: Number(this.appNotifications[1].enabled),
         rechargeNotifications: Number(this.appNotifications[2].enabled),
         emailParkingNotifications: Number(this.emailNotifications[0].enabled),
-        emailUnparkingNotifications: Number(this.emailNotifications[1].enabled),
-        emailFineNotifications: Number(this.emailNotifications[2].enabled),
-        emailRechargeNotifications: Number(this.emailNotifications[3].enabled),
+        emailFineNotifications: Number(this.emailNotifications[1].enabled),
+        emailRechargeNotifications: Number(this.emailNotifications[2].enabled),
         feedbackNotifications: Number(this.feedbackApp),
         emailFeedbackNotifications: Number(this.feedbackEmail),
       });

@@ -28,14 +28,16 @@ import { LoaderComponent } from '../../../shared/components/loader/loader.compon
               readonly
             />
           </div>
-          <label class="switch-row"
-            ><span>{{ 'account.vehicleEdit.favorite' | translate }}</span
-            ><input type="checkbox" [checked]="favorite()" (change)="favorite.set(checked($event))" /><span class="switch"></span
-          ></label>
-          <button type="button" class="btn btn-primary btn-block mt-2" [disabled]="saving()" (click)="save()">
-            {{ 'account.vehicleEdit.save' | translate }}
-          </button>
-          <button type="button" class="btn btn-danger btn-block mt-1" [disabled]="saving()" (click)="remove()">
+          @if (!isFavorite()) {
+            <label class="switch-row"
+              ><span>{{ 'account.vehicleEdit.favorite' | translate }}</span
+              ><input type="checkbox" [checked]="favorite()" (change)="favorite.set(checked($event))" /><span class="switch"></span
+            ></label>
+            <button type="button" class="btn btn-primary btn-block mt-2" [disabled]="saving()" (click)="save()">
+              {{ 'account.vehicleEdit.save' | translate }}
+            </button>
+          }
+          <button type="button" class="btn btn-danger btn-block mt-1" [disabled]="saving() || isFavorite()" (click)="remove()">
             {{ 'account.vehicleEdit.delete' | translate }}
           </button>
         </div>
@@ -91,6 +93,7 @@ export class VehicleEditComponent implements OnInit {
   private readonly paramMap = toSignal(this.route.paramMap, { initialValue: this.route.snapshot.paramMap });
   readonly id = computed(() => this.paramMap().get('id') ?? '');
   private readonly vehicle = computed(() => this.vehicleService.getById(this.id()));
+  readonly isFavorite = computed(() => this.vehicle()?.isDefault ?? false);
   readonly plate = signal('');
   readonly favorite = signal(false);
   readonly result = signal<'saved' | 'deleted' | null>(null);
@@ -147,7 +150,7 @@ export class VehicleEditComponent implements OnInit {
   }
 
   remove(): void {
-    if (this.saving()) return;
+    if (this.saving() || this.isFavorite()) return;
     const current = this.vehicle();
     const isActive =
       this.parkingSessionService.isVehicleParked(this.id()) ||

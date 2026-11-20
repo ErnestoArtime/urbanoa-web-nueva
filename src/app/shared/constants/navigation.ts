@@ -18,6 +18,20 @@ export const NAV_ITEMS: readonly NavigationItem[] = [
 
 export const ACCOUNT_MENU: readonly AccountMenuItem[] = [
   {
+    key: 'vehicles',
+    path: '/app/account/vehicles',
+    labelKey: 'account.menu.vehicles',
+    icon: 'vehicle',
+    groupKey: 'account.menu.group.myAccount',
+  },
+  {
+    key: 'payment-methods',
+    path: '/app/account/payment-methods',
+    labelKey: 'account.menu.paymentMethods',
+    icon: 'payment',
+    groupKey: 'account.menu.group.myAccount',
+  },
+  {
     key: 'profile',
     path: '/app/account/profile',
     labelKey: 'account.menu.profile',
@@ -36,20 +50,6 @@ export const ACCOUNT_MENU: readonly AccountMenuItem[] = [
     path: '/app/account/change-password',
     labelKey: 'account.menu.changePassword',
     icon: 'lock',
-    groupKey: 'account.menu.group.myAccount',
-  },
-  {
-    key: 'payment-methods',
-    path: '/app/account/payment-methods',
-    labelKey: 'account.menu.paymentMethods',
-    icon: 'payment',
-    groupKey: 'account.menu.group.myAccount',
-  },
-  {
-    key: 'vehicles',
-    path: '/app/account/vehicles',
-    labelKey: 'account.menu.vehicles',
-    icon: 'vehicle',
     groupKey: 'account.menu.group.myAccount',
   },
   {

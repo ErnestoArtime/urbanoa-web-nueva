@@ -305,7 +305,7 @@ export class SupportService {
     if (generation !== this.generation) return null;
     const contractId = this.cities.contractIdFor(input.cityId);
     const plate = input.plate.trim().toUpperCase();
-    if (contractId <= 0) {
+    if (contractId <= 0 && input.cityId !== '0') {
       this.fail(new OpsApiError('invalid-response', OPS_ENDPOINTS.support.add, 'El municipio es obligatorio'));
       return null;
     }

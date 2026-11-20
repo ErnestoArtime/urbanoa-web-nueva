@@ -77,6 +77,8 @@ describe('VehicleEditComponent', () => {
 
   it('allows deletion when the plate has no active parking', () => {
     const fixture = mount();
+    paramMap$.next(convertToParamMap({ id: '2' }));
+    fixture.detectChanges();
     parkingSessionService.isVehicleParked.and.returnValue(false);
 
     fixture.componentInstance.remove();
@@ -87,12 +89,22 @@ describe('VehicleEditComponent', () => {
 
   it('blocks deletion when the plate has an active parking', () => {
     const fixture = mount();
+    paramMap$.next(convertToParamMap({ id: '2' }));
+    fixture.detectChanges();
     parkingSessionService.isVehicleParked.and.returnValue(true);
 
     fixture.componentInstance.remove();
 
     expect(fixture.componentInstance.confirmDelete()).toBeFalse();
     expect(fixture.componentInstance.blockedDelete()).toBeTrue();
+  });
+
+  it('never deletes the favorite vehicle', () => {
+    const fixture = mount();
+
+    fixture.componentInstance.remove();
+
+    expect(fixture.componentInstance.confirmDelete()).toBeFalse();
   });
 
   it('hides the edit form and reports success when the vehicle is deleted', async () => {

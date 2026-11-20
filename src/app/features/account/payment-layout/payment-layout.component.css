@@ -306,8 +306,21 @@
   background: var(--color-surface);
   box-shadow: var(--shadow-sm);
 }
-.wallet-actions > .btn {
-  margin-top: 0.65rem;
+.payment-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 0.5rem;
+}
+.refund-action {
+  min-height: 0;
+  padding: 0.35rem 0.9rem;
+  font-size: var(--text-xs);
+}
+.wallet-topup {
+  margin-top: 0.5rem;
+  border: 1px solid color-mix(in srgb, var(--color-on-primary) 55%, transparent);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
 }
 .wallet-page.compact {
   height: auto;
