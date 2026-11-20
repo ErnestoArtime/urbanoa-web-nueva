@@ -115,7 +115,7 @@ const FEEDBACK_SUBTYPES: SelectOption<FeedbackSubtype>[] = [
               >
                 <option value="">{{ 'account.support.selectMunicipio' | translate }}</option>
                 @for (city of municipios(); track city.id) {
-                  <option [value]="city.id">{{ city.nombre }} · {{ city.provincia }}</option>
+                  <option [value]="city.id">{{ city.nombre }}</option>
                 }
                 <option value="0">{{ 'account.support.generic' | translate }}</option>
               </select>
