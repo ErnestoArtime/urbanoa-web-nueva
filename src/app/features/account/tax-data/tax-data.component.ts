@@ -5,6 +5,7 @@ import { LoaderComponent } from '../../../shared/components/loader/loader.compon
 import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
 import { ResultModalComponent } from '../../../shared/components/result-modal/result-modal.component';
 import { TranslationService } from '../../../core/services/translation.service';
+import { SelectComponent, type SelectOption } from '../../../shared/components/select/select.component';
 import { countryNames } from './countries';
 import { UserService, type UserAddress } from '../../../core/services/user.service';
 import { FRENCH_PROVINCES, MUNICIPALITIES_BY_PROVINCE_ID, SPANISH_PROVINCES, type RegionOption } from './address-regions';
@@ -27,7 +28,7 @@ function findByName<T>(items: readonly T[], value: string, nameOf: (item: T) => 
 
 @Component({
   selector: 'app-account-tax-data',
-  imports: [ApiErrorPipe, TranslatePipe, DetailPanelHeaderComponent, ResultModalComponent, LoaderComponent],
+  imports: [SelectComponent, ApiErrorPipe, TranslatePipe, DetailPanelHeaderComponent, ResultModalComponent, LoaderComponent],
   template: `
     <app-loader [visible]="saving()" [message]="'common.loading' | translate" />
     <div class="page account-static-page account-form-page">
@@ -50,27 +51,22 @@ function findByName<T>(items: readonly T[], value: string, nameOf: (item: T) => 
           }
           <div class="form-group">
             <label for="tax-data-country">{{ 'account.taxData.country' | translate }}</label>
-            <select id="tax-data-country" class="form-input" [value]="address().country" (change)="setCountry($any($event.target).value)">
-              <option value="" [selected]="!address().country">{{ 'account.taxData.none' | translate }}</option>
-              @for (name of countryOptions(); track name) {
-                <option [value]="name" [selected]="name === address().country">{{ name }}</option>
-              }
-            </select>
+            <app-select
+              inputId="tax-data-country"
+              [options]="countrySelectOptions()"
+              [value]="countrySelectValue()"
+              (valueChange)="setCountry($event)"
+            />
           </div>
           <div class="form-group">
             <label for="tax-data-field-9">{{ 'account.taxData.province' | translate }}</label>
             @if (provinceOptions().length) {
-              <select
-                id="tax-data-field-9"
-                class="form-input"
+              <app-select
+                inputId="tax-data-field-9"
+                [options]="provinceSelectOptions()"
                 [value]="selectedProvince()?.name ?? ''"
-                (change)="setProvince($any($event.target).value)"
-              >
-                <option value="" [selected]="!selectedProvince()">{{ 'account.taxData.none' | translate }}</option>
-                @for (option of provinceOptions(); track option.id) {
-                  <option [value]="option.name" [selected]="option.id === selectedProvince()?.id">{{ option.name }}</option>
-                }
-              </select>
+                (valueChange)="setProvince($event)"
+              />
             } @else {
               <input
                 id="tax-data-field-9"
@@ -85,17 +81,12 @@ function findByName<T>(items: readonly T[], value: string, nameOf: (item: T) => 
           <div class="form-group">
             <label for="tax-data-field-8">{{ 'account.taxData.city' | translate }}</label>
             @if (municipalityOptions().length) {
-              <select
-                id="tax-data-field-8"
-                class="form-input"
+              <app-select
+                inputId="tax-data-field-8"
+                [options]="citySelectOptions()"
                 [value]="address().city"
-                (change)="setAddress('city', $any($event.target).value)"
-              >
-                <option value="" [selected]="!address().city">{{ 'account.taxData.none' | translate }}</option>
-                @for (name of municipalityOptions(); track name) {
-                  <option [value]="name" [selected]="name === address().city">{{ name }}</option>
-                }
-              </select>
+                (valueChange)="setAddress('city', $event)"
+              />
             } @else {
               <input
                 id="tax-data-field-8"
@@ -221,6 +212,30 @@ export class AccountTaxDataComponent {
 
   readonly nif = signal('');
   readonly countryOptions = computed(() => countryNames(this.translation.currentLang$()));
+  private readonly noneOption = computed<SelectOption>(() => ({ value: '', label: this.translation.translate('account.taxData.none') }));
+  readonly countrySelectOptions = computed<SelectOption[]>(() => [
+    this.noneOption(),
+    ...this.countryOptions().map((name) => ({ value: name, label: name })),
+  ]);
+  readonly countrySelectValue = computed(() => {
+    const current = normalizeName(this.address().country);
+    if (!current) return '';
+    const names = this.countryOptions();
+    const aliases = SPAIN_NAMES.has(current) ? SPAIN_NAMES : FRANCE_NAMES.has(current) ? FRANCE_NAMES : null;
+    const match = names.find((name) => {
+      const candidate = normalizeName(name);
+      return candidate === current || (aliases?.has(candidate) ?? false);
+    });
+    return match ?? this.address().country;
+  });
+  readonly provinceSelectOptions = computed<SelectOption[]>(() => [
+    this.noneOption(),
+    ...this.provinceOptions().map((option) => ({ value: option.name, label: option.name })),
+  ]);
+  readonly citySelectOptions = computed<SelectOption[]>(() => [
+    this.noneOption(),
+    ...this.municipalityOptions().map((name) => ({ value: name, label: name })),
+  ]);
   readonly address = signal<UserAddress>({ ...this.userService.user().address });
   readonly submitted = signal(false);
   readonly saved = signal(false);

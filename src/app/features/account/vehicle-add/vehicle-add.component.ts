@@ -1,5 +1,5 @@
 import { ApiErrorPipe } from '../../../shared/pipes/api-error.pipe';
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, input, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
@@ -15,7 +15,11 @@ import { LoaderComponent } from '../../../shared/components/loader/loader.compon
   template: `
     <app-loader [visible]="saving()" [message]="'common.loading' | translate" />
     <div class="page account-static-page account-form-page">
-      <app-detail-panel-header backRoute="/app/account/vehicles" [title]="'account.vehicleAdd.title' | translate" [backDesktop]="true" />
+      @if (embedded()) {
+        <h2 class="detail-title">{{ 'account.vehicleAdd.title' | translate }}</h2>
+      } @else {
+        <app-detail-panel-header backRoute="/app/account/vehicles" [title]="'account.vehicleAdd.title' | translate" [backDesktop]="true" />
+      }
       <div class="card">
         <div class="form-group">
           <input
@@ -72,6 +76,7 @@ export class VehicleAddComponent {
   private readonly vehicleService = inject(VehicleService);
   private readonly operationsService = inject(OperationsService);
   private readonly router = inject(Router);
+  readonly embedded = input(false);
   readonly plate = signal('');
   readonly foreignPlate = signal(false);
   readonly plateError = signal(false);
@@ -135,6 +140,12 @@ export class VehicleAddComponent {
   }
 
   goBack(): void {
+    if (this.embedded()) {
+      this.saved.set(false);
+      this.plate.set('');
+      this.foreignPlate.set(false);
+      return;
+    }
     void this.router.navigate(['/app/account/vehicles']);
   }
 }

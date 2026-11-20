@@ -60,8 +60,8 @@
   --card-border: var(--color-border);
   --card-bg: var(--color-surface);
   --card-shadow: var(--shadow-card);
-  --card-padding-block: 0.8rem;
-  --card-padding-inline: 0.9rem;
+  --card-padding-block: 1rem;
+  --card-padding-inline: 1rem;
   --card-padding: var(--card-padding-block) var(--card-padding-inline);
 
   --breakpoint-split: 960px;

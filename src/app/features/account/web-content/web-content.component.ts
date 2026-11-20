@@ -12,12 +12,14 @@ import { legalContentPath, type LegalContentType } from '../../../core/utils/leg
   imports: [AppIconComponent, RouterLink, TranslatePipe],
   template: `
     <div class="web-content-shell">
-      <header class="web-content-header">
-        <a [routerLink]="backLink() ?? '/app/account'" class="web-content-back"
-          ><app-icon name="arrowBackBlack24" [size]="24" [stroke]="false"
-        /></a>
-        <h1 class="page-title">{{ resolvedTitle() }}</h1>
-      </header>
+      @if (!hideHeader()) {
+        <header class="web-content-header">
+          <a [routerLink]="backLink() ?? '/app/account'" class="web-content-back"
+            ><app-icon name="arrowBackBlack24" [size]="24" [stroke]="false"
+          /></a>
+          <h1 class="page-title">{{ resolvedTitle() }}</h1>
+        </header>
+      }
 
       <section class="web-content-frame" [attr.aria-busy]="loading()">
         @if (loading()) {
@@ -48,6 +50,7 @@ export class WebContentComponent {
   readonly url = input(environment.externalContentBaseUrl);
   readonly title = input('');
   readonly backLink = input<string | null>(null);
+  readonly hideHeader = input(false);
   readonly loading = signal(true);
   readonly error = signal(false);
   private readonly sanitizer = inject(DomSanitizer);

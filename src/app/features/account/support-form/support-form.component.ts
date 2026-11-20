@@ -15,10 +15,12 @@ import {
 } from '../../../core/services/support.service';
 import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
 import { ResultModalComponent } from '../../../shared/components/result-modal/result-modal.component';
+import { SelectComponent, type SelectOption as SelectChoice } from '../../../shared/components/select/select.component';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { LoaderComponent } from '../../../shared/components/loader/loader.component';
 import { CitiesService, type ParkingMunicipio } from '../../../core/services/cities.service';
 import { VehicleService } from '../../../core/services/vehicle.service';
+import { TranslationService } from '../../../core/services/translation.service';
 
 interface SelectOption<T extends string> {
   value: T;
@@ -43,6 +45,7 @@ const FEEDBACK_SUBTYPES: SelectOption<FeedbackSubtype>[] = [
 @Component({
   selector: 'app-account-support-form',
   imports: [
+    SelectComponent,
     AppIconComponent,
     ApiErrorPipe,
     ReactiveFormsModule,
@@ -77,58 +80,43 @@ const FEEDBACK_SUBTYPES: SelectOption<FeedbackSubtype>[] = [
           <div class="form-grid">
             <div class="form-group">
               <label class="form-label" for="support-category">{{ 'account.support.category' | translate }}</label>
-              <select
-                id="support-category"
-                class="form-input"
+              <app-select
+                inputId="support-category"
                 formControlName="type"
-                required
-                [attr.aria-invalid]="form.controls.type.invalid && form.controls.type.touched"
-              >
-                <option value="">{{ 'account.support.selectCategory' | translate }}</option>
-                @for (option of types; track option.value) {
-                  <option [value]="option.value">{{ option.labelKey | translate }}</option>
-                }
-              </select>
+                [options]="typeOptions()"
+                [placeholder]="'account.support.selectCategory' | translate"
+                [invalid]="form.controls.type.invalid && form.controls.type.touched"
+              />
             </div>
             <div class="form-group">
               <label class="form-label" for="support-subcategory">{{ 'account.support.subcategory' | translate }}</label>
-              <select
-                id="support-subcategory"
-                class="form-input"
+              <app-select
+                inputId="support-subcategory"
                 formControlName="subtype"
-                required
-                [attr.aria-invalid]="form.controls.subtype.invalid && form.controls.subtype.touched"
-              >
-                <option value="">{{ 'account.support.selectSubcategory' | translate }}</option>
-                @for (option of subtypes; track option.value) {
-                  <option [value]="option.value">{{ option.labelKey | translate }}</option>
-                }
-              </select>
+                [options]="subtypeOptions()"
+                [placeholder]="'account.support.selectSubcategory' | translate"
+                [invalid]="form.controls.subtype.invalid && form.controls.subtype.touched"
+              />
             </div>
             <div class="form-group">
               <label class="form-label" for="support-city">{{ 'account.support.municipio' | translate }}</label>
-              <select
-                id="support-city"
-                class="form-input"
+              <app-select
+                inputId="support-city"
                 formControlName="cityId"
-                required
-                [attr.aria-invalid]="form.controls.cityId.invalid && form.controls.cityId.touched"
-              >
-                <option value="">{{ 'account.support.selectMunicipio' | translate }}</option>
-                @for (city of municipios(); track city.id) {
-                  <option [value]="city.id">{{ city.nombre }}</option>
-                }
-                <option value="0">{{ 'account.support.generic' | translate }}</option>
-              </select>
+                [options]="cityOptions()"
+                [placeholder]="'account.support.selectMunicipio' | translate"
+                [invalid]="form.controls.cityId.invalid && form.controls.cityId.touched"
+              />
             </div>
             <div class="form-group">
               <label class="form-label" for="support-plate">{{ 'account.support.plate' | translate }}</label>
-              <select id="support-plate" class="form-input plate-input" formControlName="plate">
-                <option value="">{{ 'account.support.noPlate' | translate }}</option>
-                @for (vehicle of vehicles(); track vehicle.id) {
-                  <option [value]="vehicle.plate">{{ vehicle.plate }}</option>
-                }
-              </select>
+              <app-select
+                inputId="support-plate"
+                formControlName="plate"
+                [options]="plateOptions()"
+                [placeholder]="'account.support.noPlate' | translate"
+                [invalid]="form.controls.plate.invalid && form.controls.plate.touched"
+              />
             </div>
           </div>
         }
@@ -239,6 +227,7 @@ export class AccountSupportFormComponent implements OnInit {
   private readonly support = inject(SupportService);
   private readonly cities = inject(CitiesService);
   private readonly vehicleService = inject(VehicleService);
+  private readonly translation = inject(TranslationService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly params = toSignal(this.route.paramMap, { initialValue: this.route.snapshot.paramMap });
   private get threadId(): string | null {
@@ -251,6 +240,20 @@ export class AccountSupportFormComponent implements OnInit {
   readonly types = FEEDBACK_TYPES;
   readonly subtypes = FEEDBACK_SUBTYPES;
   readonly municipios = signal<ParkingMunicipio[]>([]);
+  private readonly labelled = (options: SelectOption<string>[]): SelectChoice[] => {
+    this.translation.currentLang$();
+    return options.map((option) => ({ value: option.value, label: this.translation.translate(option.labelKey) }));
+  };
+  readonly typeOptions = computed<SelectChoice[]>(() => this.labelled(this.types));
+  readonly subtypeOptions = computed<SelectChoice[]>(() => this.labelled(this.subtypes));
+  readonly cityOptions = computed<SelectChoice[]>(() => [
+    ...this.municipios().map((city) => ({ value: String(city.id), label: city.nombre })),
+    { value: '0', label: this.translation.translate('account.support.generic') },
+  ]);
+  readonly plateOptions = computed<SelectChoice[]>(() => [
+    { value: '', label: this.translation.translate('account.support.noPlate') },
+    ...this.vehicles().map((vehicle) => ({ value: vehicle.plate, label: vehicle.plate })),
+  ]);
   readonly vehicles = this.vehicleService.vehicles;
   readonly replyThread = computed(() => (this.threadId ? this.support.getById(this.threadId) : undefined));
   readonly attachment = signal<SupportAttachment | null>(null);
