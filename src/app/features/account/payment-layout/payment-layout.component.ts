@@ -16,6 +16,7 @@ import { SplitViewComponent } from '../../../layout/split-view/split-view.compon
 import { UserService } from '../../../core/services/user.service';
 import { WalletService } from '../../../core/services/wallet.service';
 import { ResultModalComponent } from '../../../shared/components/result-modal/result-modal.component';
+import { AppIconComponent } from '../../../shared/icons/app-icon.component';
 import { RuntimeStyleDirective } from '../../../shared/directives/runtime-style.directive';
 
 @Component({
@@ -31,6 +32,7 @@ import { RuntimeStyleDirective } from '../../../shared/directives/runtime-style.
     ResultModalComponent,
     LoaderComponent,
     RuntimeStyleDirective,
+    AppIconComponent,
   ],
   template: `
     <app-loader [visible]="updating()" [message]="'common.loading' | translate" />
@@ -55,7 +57,7 @@ import { RuntimeStyleDirective } from '../../../shared/directives/runtime-style.
         }
       }
     } @else {
-      <app-split-view class="payment-split" [hideList]="isChildRoute()" [hideDetail]="!isChildRoute()">
+      <app-split-view class="payment-split" [hideList]="isChildRoute()" [hideDetail]="!isChildRoute()" [showOutlet]="isDetailRoute()">
         <div splitList class="payment-master"><ng-container [ngTemplateOutlet]="walletContent" /></div>
         @switch (routeScreen()) {
           @case ('add') {
@@ -131,17 +133,17 @@ import { RuntimeStyleDirective } from '../../../shared/directives/runtime-style.
                     ⋮
                   </button>
                   @if (activeCardMenu() === card.id) {
-                    <div class="card-menu" [appRuntimeStyle]="cardMenuStyles()">
-                      <button type="button" (click)="rechargeCard(card.id)">
-                        <span>＋</span> {{ 'account.recharge.button' | translate }}
+                    <div class="card-menu" role="menu" [appRuntimeStyle]="cardMenuStyles()">
+                      <button type="button" role="menuitem" (click)="rechargeCard(card.id)">
+                        <app-icon name="plus" [size]="20" [stroke]="false" /> {{ 'account.recharge.button' | translate }}
                       </button>
                       @if (walletService.defaultCardId() !== card.id) {
-                        <button type="button" (click)="setAsDefault(card.id)">
-                          <span>☆</span> {{ 'account.setPrimaryCard' | translate }}
+                        <button type="button" role="menuitem" (click)="setAsDefault(card.id)">
+                          <app-icon name="favorite" [size]="20" [stroke]="false" /> {{ 'account.setPrimaryCard' | translate }}
                         </button>
                       }
-                      <button type="button" class="delete-option" (click)="requestDelete(card.id)">
-                        <span>▣</span> {{ 'account.deleteCard' | translate }}
+                      <button type="button" class="delete-option" role="menuitem" (click)="requestDelete(card.id)">
+                        <app-icon name="delete" [size]="20" [stroke]="false" /> {{ 'account.deleteCard' | translate }}
                       </button>
                     </div>
                   }
@@ -172,7 +174,7 @@ import { RuntimeStyleDirective } from '../../../shared/directives/runtime-style.
               type="button"
               (click)="refundBalance()"
               [disabled]="walletService.balance() <= 0 || busy()"
-              class="btn btn-ghost btn-sm refund-action"
+              class="btn btn-secondary refund-action"
             >
               {{ 'account.withdrawBalance' | translate }}
             </button>
@@ -284,6 +286,7 @@ export class PaymentLayoutComponent implements OnInit {
     const path = this.url().split('?')[0].replace(/\/$/, '');
     return path !== '/app/account/payment-methods';
   };
+  isDetailRoute = () => this.url().split('?')[0].replace(/\/$/, '') !== '/app/account/payment-methods';
   routeScreen = (): 'list' | 'add' | 'recharge' | 'refund' => {
     const path = this.url().split('?')[0].replace(/\/$/, '');
     if (path.endsWith('/payment-methods/add')) return 'add';
@@ -344,8 +347,8 @@ export class PaymentLayoutComponent implements OnInit {
     }
   }
   private toggleCardMenuPosition(trigger: HTMLElement, bounds: DOMRect): void {
-    const menuHeight = 170;
-    const menuWidth = 235;
+    const menuHeight = 150;
+    const menuWidth = 270;
     const gap = 4;
     const viewportPadding = 8;
     const spaceBelow = window.innerHeight - bounds.bottom - gap - viewportPadding;

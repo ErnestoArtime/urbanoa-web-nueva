@@ -20,9 +20,10 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
       @if (refundQuote(); as amount) {
         <app-result-modal
           type="confirmation"
+          icon="refundAmount"
           [title]="'account.refund.dialogTitle' | translate"
           [message]="'account.refund.dialogMessage' | translate: { amount: formatAmount(amount) }"
-          [primaryText]="'account.refund.confirm' | translate"
+          [primaryText]="'common.accept' | translate"
           [secondaryText]="'common.cancel' | translate"
           [busy]="requesting()"
           (primaryAction)="confirmRefund()"
@@ -33,7 +34,6 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
         <app-result-modal
           type="success"
           [title]="'account.refund.successTitle' | translate"
-          [message]="'account.refund.successDetail' | translate: { amount: formatAmount(refundedAmount()) }"
           [primaryText]="'common.accept' | translate"
           (primaryAction)="closeSuccess()"
         />

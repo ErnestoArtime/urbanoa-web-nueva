@@ -10,58 +10,82 @@
 }
 .result-modal {
   background: var(--color-surface-raised);
-  border-radius: var(--radius-lg);
-  padding: 2rem 1.5rem 1.5rem;
+  border-radius: 28px;
+  padding: 1.5rem 1.5rem 1rem;
   max-width: var(--dialog-width);
   max-height: calc(100dvh - 2rem);
   overflow-y: auto;
   width: 100%;
-  text-align: center;
+  text-align: left;
   box-shadow: 0 8px 32px var(--color-loader-dialog-shadow);
 }
-.result-icon {
-  width: 72px;
-  height: 72px;
-  border-radius: 50%;
+.result-header {
   display: flex;
   align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+.result-icon {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
   justify-content: center;
-  margin: 0 auto 1rem;
+  color: var(--color-text);
+}
+.result-icon svg {
+  width: 28px;
+  height: 28px;
 }
 .result-icon.success {
-  background: var(--color-success-soft);
   color: var(--color-success-icon);
 }
-.result-icon.error {
-  background: var(--color-error-soft);
+.result-icon.error,
+.result-icon.delete {
   color: var(--color-error-icon);
 }
 .result-icon.warning {
-  background: var(--color-warning-soft);
   color: var(--color-warning);
 }
 .result-icon.confirmation {
-  background: var(--color-info-soft);
   color: var(--color-primary);
 }
-.result-icon.delete {
-  background: var(--color-error-soft);
-  color: var(--color-error-icon);
-}
 .result-title {
-  font-size: var(--text-lg);
-  font-weight: var(--font-bold);
-  margin: 0 0 0.35rem;
+  font-size: var(--text-xl);
+  font-weight: var(--font-regular);
+  margin: 0;
   line-height: var(--line-normal);
   overflow-wrap: anywhere;
 }
 .result-message {
-  font-size: var(--text-sm);
+  font-size: var(--text-md);
   color: var(--color-text-muted);
-  margin: 0 0 1.25rem;
+  margin: 0 0 1.5rem;
   line-height: var(--line-readable);
   overflow-wrap: anywhere;
 }
 .result-actions {
-  margin-top: 0.5rem;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+.result-action {
+  min-height: 40px;
+  padding: 0.5rem 0.9rem;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--color-primary);
+  cursor: pointer;
+  font: inherit;
+  font-weight: var(--font-medium);
+  transition: background 150ms ease;
+}
+.result-action:hover:not(:disabled),
+.result-action:focus-visible {
+  background: var(--color-active);
+  outline: none;
+}
+.result-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }

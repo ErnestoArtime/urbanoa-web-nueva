@@ -56,7 +56,7 @@ import { LoaderComponent } from '../../../shared/components/loader/loader.compon
           type="delete"
           [title]="'account.vehicleEdit.confirmDeleteTitle' | translate"
           [message]="'account.vehicleEdit.confirmDeleteMessage' | translate"
-          [primaryText]="'account.vehicleEdit.delete' | translate"
+          [primaryText]="'common.delete' | translate"
           [secondaryText]="'common.cancel' | translate"
           (primaryAction)="confirmRemove()"
           (secondaryAction)="confirmDelete.set(false)"
