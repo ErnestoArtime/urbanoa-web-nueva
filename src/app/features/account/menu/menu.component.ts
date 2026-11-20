@@ -110,7 +110,7 @@ import { legalContentPath, type LegalContentType } from '../../../core/utils/leg
                 <app-account-tax-data />
               }
               @case ('help') {
-                <app-web-content [title]="'account.menu.help' | translate" backLink="/app/account" [url]="helpUrl()" />
+                <app-web-content [title]="'account.menu.help' | translate" backLink="/app/account" [hideHeader]="true" [url]="helpUrl()" />
               }
               @case ('about') {
                 <app-account-about />
@@ -122,10 +122,20 @@ import { legalContentPath, type LegalContentType } from '../../../core/utils/leg
                 <app-account-support-success />
               }
               @case ('terms-and-conditions') {
-                <app-web-content [title]="'account.menu.terms' | translate" backLink="/app/account" [url]="termsUrl()" />
+                <app-web-content
+                  [title]="'account.menu.terms' | translate"
+                  backLink="/app/account"
+                  [hideHeader]="true"
+                  [url]="termsUrl()"
+                />
               }
               @case ('privacy-policy') {
-                <app-web-content [title]="'account.menu.privacy' | translate" backLink="/app/account" [url]="privacyUrl()" />
+                <app-web-content
+                  [title]="'account.menu.privacy' | translate"
+                  backLink="/app/account"
+                  [hideHeader]="true"
+                  [url]="privacyUrl()"
+                />
               }
               @case ('delete-account') {
                 <div class="page account-static-page">

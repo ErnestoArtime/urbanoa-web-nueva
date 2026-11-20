@@ -140,9 +140,8 @@
 }
 .support-empty {
   display: grid;
+  margin-top: 1.5rem;
   justify-items: center;
-  max-width: 34rem;
-  margin-inline: auto;
   padding: 2rem 1.5rem;
   text-align: center;
 }
@@ -186,8 +185,15 @@
   transform: translateY(-1px);
 }
 @media (min-width: 960px) {
+  .support-page {
+    display: flex;
+    flex-direction: column;
+  }
   .support-fab {
-    position: absolute;
+    position: sticky;
+    right: auto;
     bottom: 1.4rem;
+    align-self: flex-end;
+    margin-top: 1.5rem;
   }
 }

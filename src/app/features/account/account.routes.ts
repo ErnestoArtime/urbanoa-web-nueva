@@ -41,19 +41,19 @@ export const ACCOUNT_ROUTES: Routes = [
         path: 'help',
         title: 'account.menu.help',
         loadComponent: () => import('./web-content/web-content.component').then((m) => m.WebContentComponent),
-        data: { title: 'account.menu.help', contentType: 'help', backLink: '/app/account' },
+        data: { title: 'account.menu.help', contentType: 'help', backLink: '/app/account', hideHeader: true },
       },
       {
         path: 'terms-and-conditions',
         title: 'account.menu.terms',
         loadComponent: () => import('./web-content/web-content.component').then((m) => m.WebContentComponent),
-        data: { title: 'account.menu.terms', contentType: 'terms', backLink: '/app/account' },
+        data: { title: 'account.menu.terms', contentType: 'terms', backLink: '/app/account', hideHeader: true },
       },
       {
         path: 'privacy-policy',
         title: 'account.menu.privacy',
         loadComponent: () => import('./web-content/web-content.component').then((m) => m.WebContentComponent),
-        data: { title: 'account.menu.privacy', contentType: 'privacy', backLink: '/app/account' },
+        data: { title: 'account.menu.privacy', contentType: 'privacy', backLink: '/app/account', hideHeader: true },
       },
       {
         path: 'about',
@@ -90,6 +90,13 @@ export const ACCOUNT_ROUTES: Routes = [
         title: 'account.vehicles',
         loadComponent: () => import('./vehicles-layout/vehicles-layout.component').then((m) => m.VehiclesLayoutComponent),
         children: [
+          {
+            path: '',
+            pathMatch: 'full',
+            title: 'account.vehicles',
+            loadComponent: () => import('./vehicle-add/vehicle-add.component').then((m) => m.VehicleAddComponent),
+            data: { embedded: true },
+          },
           {
             path: 'add',
             title: 'account.vehicleAdd.title',

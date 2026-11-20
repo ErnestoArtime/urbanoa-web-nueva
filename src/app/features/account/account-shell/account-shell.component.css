@@ -71,7 +71,7 @@
   margin: 0.75rem 0 0.25rem;
   font-size: var(--text-caption);
   font-weight: var(--font-medium);
-  padding: 0 0.9rem;
+  padding: 0 0.5rem;
   color: var(--color-text);
   line-height: var(--line-normal);
 }
@@ -101,6 +101,7 @@
   font-weight: var(--font-regular);
 }
 .account-item-icon {
+  display: block;
   width: 20px;
   height: 20px;
   flex-shrink: 0;
@@ -142,16 +143,17 @@
     background: transparent;
   }
   .account-list .list-item {
-    padding: 0.76rem 0.3rem;
+    padding: 0.76rem 0.75rem;
     background: transparent;
   }
 }
 
 .account-warning-dot {
-  width: 10px;
-  height: 10px;
+  align-self: center;
+  width: 8px;
+  height: 8px;
   flex-shrink: 0;
-  margin-right: 0.5rem;
+  margin-right: 0.35rem;
   border-radius: 50%;
   background: var(--color-success);
 }
