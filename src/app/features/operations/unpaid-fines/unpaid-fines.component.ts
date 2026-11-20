@@ -24,7 +24,7 @@ import { TranslationService } from '../../../core/services/translation.service';
                     <app-operation-icon [type]="operationType.UNPAID_FINES" />
                     <div>
                       <strong>{{ 'ops.fineDetail.sanction' | translate }}</strong>
-                      <span>{{ 'ops.fineDetail.plate' | translate }}: {{ fine.plate }}</span>
+                      <span>{{ 'ops.fineDetail.plate' | translate }} {{ fine.plate }}</span>
                     </div>
                   </div>
                   <strong class="fine-list-amount">{{ fine.amount }}</strong>
