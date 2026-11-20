@@ -300,7 +300,7 @@ export class OperationsLayoutComponent implements OnInit, AfterViewInit {
   private readonly rangeFilter = signal<DateRange>({ from: '', to: '' });
   readonly historyControlsHeight = signal(0);
   private readonly unpaidFinesService = inject(UnpaidFinesService);
-  readonly unpaidFinesCount = () => this.unpaidFinesService.fines().length;
+  readonly unpaidFinesCount = () => this.unpaidFinesService.visibleFines().length;
   readonly OperationType = OperationType;
   readonly OPERATION_TYPE_LABELS = OPERATION_TYPE_LABELS;
   readonly activeParkings = this.parkingSessionService.activeParkings;
@@ -380,6 +380,16 @@ export class OperationsLayoutComponent implements OnInit, AfterViewInit {
 
   onRangeChange(range: DateRange): void {
     this.rangeFilter.set(range);
+    this.unpaidFinesService.dateRange.set(range);
+    this.loadEarlierHistory(range.from);
+  }
+
+  private loadEarlierHistory(from: string): void {
+    if (!from) return;
+    const [day, month, year] = from.split('/').map(Number);
+    if (!year || year >= new Date().getFullYear()) return;
+    const iso = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    void this.operationsService.load(iso).catch(() => undefined);
   }
 
   async onUnpark(parkingId: string): Promise<void> {

@@ -1,5 +1,5 @@
 import { formatEuro } from '../utils/euro-format';
-import { Injectable, computed, inject } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
 import { OperationType } from '../../shared/models/operation-type';
 import type { Operation } from '../../shared/models/operation';
 import { OpsApiClient } from '../api/ops-api-client.service';
@@ -96,6 +96,18 @@ export class UnpaidFinesService {
       .filter((operation) => operation.type === OperationType.UNPAID_FINES && !isHistoricalUnpaidFine(operation))
       .map((operation) => this.mapOperation(operation)),
   );
+  readonly dateRange = signal<{ from: string; to: string }>({ from: '', to: '' });
+  readonly visibleFines = computed(() => {
+    const { from, to } = this.dateRange();
+    const start = from ? this.dayValue(from) : null;
+    const end = to ? this.dayValue(to) : null;
+    return this.fines().filter((fine) => {
+      const day = this.dayValue(fine.date.split(' ')[0]);
+      if (start !== null && day < start) return false;
+      if (end !== null && day > end) return false;
+      return true;
+    });
+  });
   readonly source = this.operationsService.source;
 
   async payFine(id: string, cardId?: string): Promise<FinePaymentResult> {
@@ -169,6 +181,11 @@ export class UnpaidFinesService {
   async acknowledgeExpired(id: string): Promise<FineStatusUpdateResult> {
     const operation = this.operationsService.operations().find((item) => item.id === id && canMoveFineToHistory(item));
     return operation ? this.moveFineToHistory(this.mapOperation(operation)) : { success: false };
+  }
+
+  private dayValue(value: string): number {
+    const [day, month, year] = value.split('/').map(Number);
+    return new Date(year, (month || 1) - 1, day || 1, 12).getTime();
   }
 
   private toApiError(error: unknown, endpoint?: string): OpsApiError {
