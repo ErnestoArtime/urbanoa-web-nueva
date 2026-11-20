@@ -1,8 +1,9 @@
+import { AppIconComponent } from '../../../shared/icons/app-icon.component';
 import { ApiErrorPipe } from '../../../shared/pipes/api-error.pipe';
 import { DatePipe, NgTemplateOutlet } from '@angular/common';
 import { Component, inject, OnInit } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { LucideChevronRight, LucideMessageCircle, LucidePlus } from '@lucide/angular';
+import { LucideMessageCircle } from '@lucide/angular';
 import { SupportService, type SupportThread } from '../../../core/services/support.service';
 import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
@@ -11,13 +12,12 @@ import { LoaderComponent } from '../../../shared/components/loader/loader.compon
 @Component({
   selector: 'app-account-support',
   imports: [
+    AppIconComponent,
     ApiErrorPipe,
     DatePipe,
     NgTemplateOutlet,
     RouterLink,
-    LucideChevronRight,
     LucideMessageCircle,
-    LucidePlus,
     DetailPanelHeaderComponent,
     TranslatePipe,
     LoaderComponent,
@@ -73,7 +73,7 @@ import { LoaderComponent } from '../../../shared/components/loader/loader.compon
       }
 
       <a class="support-fab" routerLink="/app/account/support/new" [attr.aria-label]="'account.support.newMessage' | translate">
-        <svg lucidePlus size="24" strokeWidth="2.4" aria-hidden="true"></svg>
+        <app-icon name="plus" [size]="24" [stroke]="false" />
         <span>{{ 'account.support.newMessage' | translate }}</span>
       </a>
     </div>
@@ -101,7 +101,7 @@ import { LoaderComponent } from '../../../shared/components/loader/loader.compon
           </span>
         </span>
         <span class="thread-date">{{ thread.updatedAt | date: 'dd/MM/yy' }}</span>
-        <svg class="thread-chevron" lucideChevronRight size="18" strokeWidth="2" aria-hidden="true"></svg>
+        <app-icon name="chevrolenRight" class="thread-chevron" [size]="18" [stroke]="false" />
       </a>
     </ng-template>
   `,

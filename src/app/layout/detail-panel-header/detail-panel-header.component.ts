@@ -1,14 +1,17 @@
 import { Component, input } from '@angular/core';
+import { AppIconComponent } from '../../shared/icons/app-icon.component';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 
 @Component({
   selector: 'app-detail-panel-header',
-  imports: [RouterLink, TranslatePipe],
+  imports: [RouterLink, TranslatePipe, AppIconComponent],
   template: `
     <div class="detail-panel-header">
       @if (backRoute()) {
-        <a [routerLink]="backRoute()" class="back-btn" [class.back-desktop]="backDesktop()">←</a>
+        <a [routerLink]="backRoute()" class="back-btn" [class.back-desktop]="backDesktop()" [attr.aria-label]="'common.back' | translate"
+          ><app-icon name="arrowBackBlack24" [size]="24" [stroke]="false"
+        /></a>
       }
       <h2 class="header-title">{{ title() }}</h2>
       <div class="header-actions">
@@ -24,12 +27,7 @@ import { TranslatePipe } from '../../shared/pipes/translate.pipe';
         }
         @if (showMore()) {
           <button type="button" class="icon-btn" [attr.aria-label]="'common.moreOptions' | translate">
-            <svg viewBox="0 -960 960 960" width="20" height="20">
-              <path
-                d="M480-160q-33 0-56.5-23.5T400-240q0-33 23.5-56.5T480-320q33 0 56.5 23.5T560-240q0 33-23.5 56.5T480-160Zm0-240q-33 0-56.5-23.5T400-480q0-33 23.5-56.5T480-560q33 0 56.5 23.5T560-480q0 33-23.5 56.5T480-400Zm0-240q-33 0-56.5-23.5T400-720q0-33 23.5-56.5T480-800q33 0 56.5 23.5T560-720q0 33-23.5 56.5T480-640Z"
-                fill="currentColor"
-              />
-            </svg>
+            <app-icon name="overflowDots" [size]="20" [stroke]="false" />
           </button>
         }
       </div>

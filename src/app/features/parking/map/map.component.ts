@@ -1,10 +1,10 @@
+import { AppIconComponent } from '../../../shared/icons/app-icon.component';
 import { ApiErrorPipe } from '../../../shared/pipes/api-error.pipe';
 import { readDesignToken } from '../../../shared/styles/design-token';
 import { RuntimeStyleDirective } from '../../../shared/directives/runtime-style.directive';
 import { AfterViewInit, Component, ElementRef, OnDestroy, ViewChild, computed, effect, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import * as L from 'leaflet';
-import { LucideCarFront, LucideChevronDown, LucideChevronRight, LucideSearch, LucideStar } from '@lucide/angular';
 import { preferredVehicle, type Vehicle } from '../../../shared/models/vehicle';
 import { LoaderComponent } from '../../../shared/components/loader/loader.component';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
@@ -38,19 +38,7 @@ interface MapParkingZone {
 
 @Component({
   selector: 'app-parking-map',
-  imports: [
-    ApiErrorPipe,
-    RuntimeStyleDirective,
-    RouterLink,
-    LoaderComponent,
-    TranslatePipe,
-    MapLocationControlComponent,
-    LucideCarFront,
-    LucideChevronDown,
-    LucideChevronRight,
-    LucideSearch,
-    LucideStar,
-  ],
+  imports: [AppIconComponent, ApiErrorPipe, RuntimeStyleDirective, RouterLink, LoaderComponent, TranslatePipe, MapLocationControlComponent],
   template: `
     <app-loader [visible]="mapLoading()" [message]="'parking.map.loading' | translate" imageSrc="/assets/brand/login-logo.jpg" />
     <section class="parking-map-page">
@@ -84,12 +72,12 @@ interface MapParkingZone {
         <section class="parking-controls">
           <div class="municipio-control">
             <a routerLink="/app/parking/cities" [queryParams]="vehicleQueryParams()" class="search-control"
-              ><span aria-hidden="true"><svg lucideSearch size="20" strokeWidth="2"></svg></span
+              ><span aria-hidden="true"><app-icon name="searchBlack24" [size]="20" [stroke]="false" /></span
               ><span
                 ><small>{{ 'parking.map.municipio' | translate }}</small
                 ><strong>{{ selected.nombre }}</strong></span
-              ><svg class="search-chevron" lucideChevronRight size="20" strokeWidth="2" aria-hidden="true"></svg
-            ></a>
+              ><app-icon class="search-chevron" name="chevrolenRight" [size]="20" [stroke]="false"
+            /></a>
             <a
               routerLink="/app/parking/city-info"
               [queryParams]="{
@@ -106,12 +94,12 @@ interface MapParkingZone {
 
           <div class="vehicle-control-wrapper" [class.selector-open]="showVehicleSelector()">
             <button type="button" class="vehicle-control" [disabled]="!hasAvailableVehicles()" (click)="toggleVehicleSelector()">
-              <span class="vehicle-control-icon"><svg lucideCarFront size="20" strokeWidth="2.2"></svg></span>
+              <span class="vehicle-control-icon"><app-icon name="car" [size]="20" [stroke]="false" /></span>
               <span
                 ><small>{{ 'parking.map.vehicle' | translate }}</small
                 ><strong>{{ selectedVehicle()?.plate ?? (vehiclePlaceholderKey() | translate) }}</strong></span
               >
-              <svg class="vehicle-control-chevron" lucideChevronDown size="20" strokeWidth="2" aria-hidden="true"></svg>
+              <app-icon name="dropDown" class="vehicle-control-chevron" [size]="20" [stroke]="false" />
             </button>
 
             @if (selectedVehicle() && isParkedIn(selectedVehicle()!)) {
@@ -148,7 +136,7 @@ interface MapParkingZone {
                     @if (isParkedIn(v)) {
                       <span class="badge badge-warning">{{ 'account.vehicle.alreadyParked' | translate }}</span>
                     } @else if (v.isDefault) {
-                      <span class="badge badge-primary"><svg lucideStar size="12" strokeWidth="2.5"></svg></span>
+                      <span class="badge badge-primary"><app-icon name="favorite" [size]="12" [stroke]="false" /></span>
                     }
                   </button>
                 }

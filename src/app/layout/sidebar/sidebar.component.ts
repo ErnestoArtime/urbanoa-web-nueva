@@ -1,14 +1,14 @@
+import { AppIconComponent } from '../../shared/icons/app-icon.component';
 import { OperationsService } from '../../core/services/operations.service';
 import { Component, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
-import { LucideCarFront, LucideCircleUserRound, LucideHistory, LucideLayoutGrid } from '@lucide/angular';
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 import { NAV_ITEMS } from '../../shared/constants/navigation';
 import { APP_BRAND } from '../../shared/constants/app-brand';
 
 @Component({
   selector: 'app-sidebar',
-  imports: [RouterLink, RouterLinkActive, TranslatePipe, LucideLayoutGrid, LucideCarFront, LucideHistory, LucideCircleUserRound],
+  imports: [AppIconComponent, RouterLink, RouterLinkActive, TranslatePipe],
   template: `
     <aside class="sidebar">
       <div class="sidebar-brand">
@@ -26,19 +26,19 @@ import { APP_BRAND } from '../../shared/constants/app-brand';
             <span class="nav-icon-pill">
               @switch (item.icon) {
                 @case ('home') {
-                  <svg lucideLayoutGrid class="sidebar-icon" size="25" strokeWidth="2.55"></svg>
+                  <app-icon name="home" class="sidebar-icon" [size]="25" [stroke]="false" />
                 }
                 @case ('directions_car') {
-                  <svg lucideCarFront class="sidebar-icon" size="25" strokeWidth="2.35"></svg>
+                  <app-icon name="car" class="sidebar-icon" [size]="25" [stroke]="false" />
                 }
                 @case ('operations') {
-                  <svg lucideHistory class="sidebar-icon" size="25" strokeWidth="2.35"></svg>
+                  <app-icon name="operations" class="sidebar-icon" [size]="25" [stroke]="false" />
                   @if (operationsBadgeCount() > 0) {
                     <span class="active-count">{{ operationsBadgeCount() }}</span>
                   }
                 }
                 @case ('account') {
-                  <svg lucideCircleUserRound class="sidebar-icon" size="25" strokeWidth="2.35"></svg>
+                  <app-icon name="account" class="sidebar-icon" [size]="25" [stroke]="false" />
                 }
               }
             </span>

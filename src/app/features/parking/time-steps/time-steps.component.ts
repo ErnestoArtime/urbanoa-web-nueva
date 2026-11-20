@@ -1,3 +1,4 @@
+import { AppIconComponent } from '../../../shared/icons/app-icon.component';
 import { ApiErrorPipe } from '../../../shared/pipes/api-error.pipe';
 import { formatEuro } from '../../../core/utils/euro-format';
 import { RuntimeStyleDirective } from '../../../shared/directives/runtime-style.directive';
@@ -10,13 +11,12 @@ import { NoParkingTimeAvailableError, ParkingTimeStepsService } from '../parking
 import type { ParkingTimeStep } from '../models/parking-time-step.model';
 import { ParkingSessionService } from '../../../core/services/parking-session.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
-import { LucideCarFront } from '@lucide/angular';
 import { OpsApiClient } from '../../../core/api/ops-api-client.service';
 import { opsRelativeDayLabel, formatOpsTime, parseOpsDate } from '../../../core/utils/ops-date';
 
 @Component({
   selector: 'app-parking-time-steps',
-  imports: [ApiErrorPipe, RuntimeStyleDirective, RouterLink, LoaderComponent, TranslatePipe, LucideCarFront],
+  imports: [AppIconComponent, ApiErrorPipe, RuntimeStyleDirective, RouterLink, LoaderComponent, TranslatePipe],
   template: `
     <app-loader [visible]="loading()" [message]="'parking.timeSteps.loading' | translate" imageSrc="/assets/brand/login-logo.jpg" />
     <div class="page flow-page has-sticky-actions">
@@ -32,7 +32,7 @@ import { opsRelativeDayLabel, formatOpsTime, parseOpsDate } from '../../../core/
           <small>{{ context().plate }}{{ context().tariff ? ' · ' + context().tariff : '' }}</small>
         </div>
         <div class="selected-vehicle">
-          <svg lucideCarFront size="22" strokeWidth="2.2"></svg>
+          <app-icon name="car" [size]="22" [stroke]="false" />
           <span
             ><small>{{ 'parking.timeSteps.vehicle' | translate }}</small
             ><strong>{{ context().plate }}</strong></span

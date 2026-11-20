@@ -1,7 +1,7 @@
+import { AppIconComponent } from '../../shared/icons/app-icon.component';
 import { OperationsService } from '../../core/services/operations.service';
 import { Component, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive, Router, NavigationEnd } from '@angular/router';
-import { LucideCarFront, LucideCircleUserRound, LucideHistory, LucideLayoutGrid } from '@lucide/angular';
 import { filter, map, startWith } from 'rxjs/operators';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
@@ -11,7 +11,7 @@ const CHILD_LABELS = new Map(ACCOUNT_MENU.map((m) => [m.path, m.labelKey]));
 
 @Component({
   selector: 'app-bottom-nav',
-  imports: [RouterLink, RouterLinkActive, TranslatePipe, LucideLayoutGrid, LucideCarFront, LucideHistory, LucideCircleUserRound],
+  imports: [AppIconComponent, RouterLink, RouterLinkActive, TranslatePipe],
   template: `
     <nav class="bottom-nav">
       @for (item of navItems; track item.path) {
@@ -25,19 +25,19 @@ const CHILD_LABELS = new Map(ACCOUNT_MENU.map((m) => [m.path, m.labelKey]));
           <span class="bottom-nav-pill">
             @switch (item.icon) {
               @case ('home') {
-                <svg lucideLayoutGrid class="bottom-nav-icon" size="25" strokeWidth="2.55"></svg>
+                <app-icon name="home" class="bottom-nav-icon" [size]="25" [stroke]="false" />
               }
               @case ('directions_car') {
-                <svg lucideCarFront class="bottom-nav-icon" size="25" strokeWidth="2.35"></svg>
+                <app-icon name="car" class="bottom-nav-icon" [size]="25" [stroke]="false" />
               }
               @case ('operations') {
-                <svg lucideHistory class="bottom-nav-icon" size="25" strokeWidth="2.35"></svg>
+                <app-icon name="operations" class="bottom-nav-icon" [size]="25" [stroke]="false" />
                 @if (operationsBadgeCount() > 0) {
                   <span class="active-count">{{ operationsBadgeCount() }}</span>
                 }
               }
               @case ('account') {
-                <svg lucideCircleUserRound class="bottom-nav-icon" size="25" strokeWidth="2.35"></svg>
+                <app-icon name="account" class="bottom-nav-icon" [size]="25" [stroke]="false" />
               }
             }
           </span>

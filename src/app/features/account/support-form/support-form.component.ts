@@ -1,10 +1,11 @@
+import { AppIconComponent } from '../../../shared/icons/app-icon.component';
 import { ApiErrorPipe } from '../../../shared/pipes/api-error.pipe';
 import { Component, DestroyRef, computed, inject, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { distinctUntilChanged, map } from 'rxjs/operators';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { LucideCamera, LucideImage, LucidePaperclip, LucideTrash2 } from '@lucide/angular';
+import { LucideCamera, LucideImage, LucidePaperclip } from '@lucide/angular';
 import {
   supportImageFileError,
   SupportService,
@@ -42,12 +43,12 @@ const FEEDBACK_SUBTYPES: SelectOption<FeedbackSubtype>[] = [
 @Component({
   selector: 'app-account-support-form',
   imports: [
+    AppIconComponent,
     ApiErrorPipe,
     ReactiveFormsModule,
     LucideCamera,
     LucideImage,
     LucidePaperclip,
-    LucideTrash2,
     DetailPanelHeaderComponent,
     ResultModalComponent,
     LoaderComponent,
@@ -195,7 +196,7 @@ const FEEDBACK_SUBTYPES: SelectOption<FeedbackSubtype>[] = [
                 (click)="clearAttachment()"
                 [attr.aria-label]="'account.support.removeAttachment' | translate"
               >
-                <svg lucideTrash2 size="19" aria-hidden="true"></svg>
+                <app-icon name="delete" [size]="19" [stroke]="false" />
               </button>
             </div>
           }

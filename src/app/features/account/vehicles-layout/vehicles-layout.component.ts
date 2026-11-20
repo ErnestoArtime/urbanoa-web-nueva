@@ -47,7 +47,7 @@ import type { Vehicle } from '../../../shared/models/vehicle';
                       <span class="badge badge-warning">{{ 'account.vehicle.alreadyParked' | translate }}</span>
                     }
                   </div>
-                  <span class="list-item-chevron">›</span>
+                  <span class="list-item-chevron"><app-icon name="chevrolenRight" [size]="22" [stroke]="false" /></span>
                 </a>
               </li>
             }

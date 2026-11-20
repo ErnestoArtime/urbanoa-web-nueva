@@ -1,3 +1,4 @@
+import { AppIconComponent } from '../../../shared/icons/app-icon.component';
 import { TranslationService } from '../../../core/services/translation.service';
 import { apkPasswordValidator } from '../../../shared/utils/password-validation';
 import { Component, inject, signal } from '@angular/core';
@@ -18,13 +19,15 @@ function passwordsMatch(control: AbstractControl): ValidationErrors | null {
 
 @Component({
   selector: 'app-register',
-  imports: [ReactiveFormsModule, RouterLink, LucideEye, LucideEyeOff, TranslatePipe],
+  imports: [AppIconComponent, ReactiveFormsModule, RouterLink, LucideEye, LucideEyeOff, TranslatePipe],
   template: `
     <main class="auth-page register-page">
       <section class="register-panel">
         <img [src]="brand.logoPath" [alt]="brand.name" class="register-logo" />
         <header>
-          <a routerLink="/auth/login" [attr.aria-label]="'common.back' | translate">←</a>
+          <a routerLink="/auth/login" [attr.aria-label]="'common.back' | translate"
+            ><app-icon name="arrowBackBlack24" [size]="24" [stroke]="false"
+          /></a>
           <div>
             <h1>{{ 'auth.register.title' | translate }}</h1>
             <p>{{ 'auth.register.subtitle' | translate: { brand: brand.name } }}</p>

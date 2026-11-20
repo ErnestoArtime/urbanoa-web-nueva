@@ -1,3 +1,4 @@
+import { AppIconComponent } from '../../../shared/icons/app-icon.component';
 import { ApiErrorPipe } from '../../../shared/pipes/api-error.pipe';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -6,8 +7,6 @@ import { LocationSettingsService } from '../../../core/services/location-setting
 import { ParkingFlowStore } from '../parking-flow.store';
 import { CitiesService, ParkingMunicipio } from '../../../core/services/cities.service';
 import { LoaderComponent } from '../../../shared/components/loader/loader.component';
-import { LucideSearch } from '@lucide/angular';
-
 const EMPTY_CITY: ParkingMunicipio = {
   id: '',
   nombre: '',
@@ -28,7 +27,7 @@ const EMPTY_CITY: ParkingMunicipio = {
 
 @Component({
   selector: 'app-parking-cities',
-  imports: [ApiErrorPipe, RouterLink, TranslatePipe, LoaderComponent, LucideSearch],
+  imports: [AppIconComponent, ApiErrorPipe, RouterLink, TranslatePipe, LoaderComponent],
   template: `
     <div class="page has-sticky-actions">
       <app-loader
@@ -49,7 +48,7 @@ const EMPTY_CITY: ParkingMunicipio = {
         </div>
       }
       <label class="municipio-search">
-        <svg lucideSearch size="20" strokeWidth="2" aria-hidden="true"></svg>
+        <app-icon name="searchBlack24" [size]="20" [stroke]="false" />
         <input
           type="search"
           [placeholder]="'parking.cities.searchPlaceholder' | translate"

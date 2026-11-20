@@ -1,3 +1,4 @@
+import { AppIconComponent } from '../../shared/icons/app-icon.component';
 import { Component, inject, input } from '@angular/core';
 import { Location } from '@angular/common';
 import { TranslationService } from '../../core/services/translation.service';
@@ -5,11 +6,14 @@ import { APP_BRAND } from '../../shared/constants/app-brand';
 import { Router } from '@angular/router';
 
 @Component({
+  imports: [AppIconComponent],
   selector: 'app-header',
   template: `
     <header class="app-header">
       @if (showBack()) {
-        <button type="button" class="app-header-back" (click)="goBack()" [attr.aria-label]="backAriaLabel()">‹</button>
+        <button type="button" class="app-header-back" (click)="goBack()" [attr.aria-label]="backAriaLabel()">
+          <app-icon name="arrowBackBlack24" [size]="24" [stroke]="false" />
+        </button>
       } @else {
         <span class="app-header-spacer"></span>
       }

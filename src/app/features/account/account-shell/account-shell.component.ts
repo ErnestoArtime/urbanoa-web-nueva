@@ -59,7 +59,7 @@ import { TranslationService } from '../../../core/services/translation.service';
                 <div class="list-item-content">
                   <div class="list-item-title">{{ item.labelKey | translate }}</div>
                 </div>
-                <span class="list-item-chevron">›</span>
+                <span class="list-item-chevron"><app-icon name="chevrolenRight" [size]="22" [stroke]="false" /></span>
               </button>
             } @else {
               <a
@@ -75,7 +75,7 @@ import { TranslationService } from '../../../core/services/translation.service';
                 @if (hasWarning(item.key)) {
                   <span class="account-warning-dot" role="img" [attr.aria-label]="'account.incompleteData' | translate"></span>
                 }
-                <span class="list-item-chevron">›</span>
+                <span class="list-item-chevron"><app-icon name="chevrolenRight" [size]="22" [stroke]="false" /></span>
               </a>
             }
           }

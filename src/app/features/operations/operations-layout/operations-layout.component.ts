@@ -1,3 +1,4 @@
+import { AppIconComponent } from '../../../shared/icons/app-icon.component';
 import { joinParts } from '../../../shared/utils/join-parts';
 import { apiErrorMessage } from '../../../core/http/api-error-key';
 import { ApiErrorPipe } from '../../../shared/pipes/api-error.pipe';
@@ -32,6 +33,7 @@ import { TranslationService } from '../../../core/services/translation.service';
 @Component({
   selector: 'app-operations-layout',
   imports: [
+    AppIconComponent,
     ApiErrorPipe,
     EuroPipe,
     RuntimeStyleDirective,
@@ -148,7 +150,7 @@ import { TranslationService } from '../../../core/services/translation.service';
                 <div class="list-item-content">
                   <div class="list-item-title">{{ 'ops.report' | translate }}</div>
                 </div>
-                <span class="list-item-chevron">›</span>
+                <span class="list-item-chevron"><app-icon name="chevrolenRight" [size]="22" [stroke]="false" /></span>
               </a>
             </section>
 
@@ -206,11 +208,16 @@ import { TranslationService } from '../../../core/services/translation.service';
                           @if (operationTime(op)) {
                             <span class="operation-time">{{ operationTime(op) }}</span>
                           }
-                          <span
-                            [class]="op.amount > 0 ? 'operation-amount operation-amount-credit' : 'operation-amount operation-amount-debit'"
-                          >
-                            {{ op.amount > 0 ? '+' : '' }}{{ op.amount | euro }}
-                          </span>
+                          <div class="operation-amount-row">
+                            <span
+                              [class]="
+                                op.amount > 0 ? 'operation-amount operation-amount-credit' : 'operation-amount operation-amount-debit'
+                              "
+                            >
+                              {{ op.amount > 0 ? '+' : '' }}{{ op.amount | euro }}
+                            </span>
+                            <span class="operation-chevron" aria-hidden="true"></span>
+                          </div>
                         </div>
                       </a>
                     </li>

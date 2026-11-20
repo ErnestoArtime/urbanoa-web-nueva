@@ -1,44 +1,37 @@
+import { AppIconComponent } from '../../icons/app-icon.component';
 import { Component, input } from '@angular/core';
-import {
-  LucideBanknoteArrowDown,
-  LucideBanknoteArrowUp,
-  LucideCircleStop,
-  LucideClockPlus,
-  LucideReceiptText,
-  LucideSquareParking,
-} from '@lucide/angular';
 import { OperationType } from '../../models/operation-type';
 
 @Component({
   selector: 'app-operation-icon',
   standalone: true,
-  imports: [LucideSquareParking, LucideClockPlus, LucideBanknoteArrowDown, LucideReceiptText, LucideBanknoteArrowUp, LucideCircleStop],
+  imports: [AppIconComponent],
   template: `
     <span class="operation-icon" [attr.data-type]="type()" aria-hidden="true">
       @switch (type()) {
         @case (types.PARKING) {
-          <svg lucideSquareParking></svg>
+          <app-icon name="parking" [stroke]="false" />
         }
         @case (types.PARKING_EXTENSION) {
-          <svg lucideClockPlus></svg>
+          <app-icon name="extend" [stroke]="false" />
         }
         @case (types.REFUND) {
-          <svg lucideCircleStop></svg>
+          <app-icon name="operationUnpark" [stroke]="false" />
         }
         @case (types.FINE_PAYMENT) {
-          <svg lucideReceiptText></svg>
+          <app-icon name="fine" [stroke]="false" />
         }
         @case (types.UNPAID_FINES) {
-          <svg lucideReceiptText></svg>
+          <app-icon name="fine" [stroke]="false" />
         }
         @case (types.TOP_UP) {
-          <svg lucideBanknoteArrowUp></svg>
+          <app-icon name="topUp" [stroke]="false" />
         }
         @case (types.BALANCE_REFUND) {
-          <svg lucideBanknoteArrowDown></svg>
+          <app-icon name="refundAmount" [stroke]="false" />
         }
         @default {
-          <svg lucideReceiptText></svg>
+          <app-icon name="fine" [stroke]="false" />
         }
       }
     </span>

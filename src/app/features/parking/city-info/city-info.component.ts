@@ -1,14 +1,13 @@
+import { AppIconComponent } from '../../../shared/icons/app-icon.component';
 import { ApiErrorPipe } from '../../../shared/pipes/api-error.pipe';
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { CitiesService, type ParkingMunicipio } from '../../../core/services/cities.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { ParkingFlowStore } from '../parking-flow.store';
-import { LucideMail, LucideMapPin, LucidePhone } from '@lucide/angular';
-
 @Component({
   selector: 'app-parking-city-info',
-  imports: [ApiErrorPipe, RouterLink, TranslatePipe, LucideMail, LucideMapPin, LucidePhone],
+  imports: [AppIconComponent, ApiErrorPipe, RouterLink, TranslatePipe],
   template: `
     <div class="page">
       <a routerLink="/app/parking/cities" class="back-link">{{ 'parking.cityInfo.back' | translate }}</a>
@@ -22,17 +21,17 @@ import { LucideMail, LucideMapPin, LucidePhone } from '@lucide/angular';
         <div class="card mt-2">
           @if (city.address) {
             <a class="contact-row" [href]="mapsUrl(city.address)" target="_blank" rel="noopener">
-              <svg lucideMapPin [size]="24" [strokeWidth]="1.8"></svg><span>{{ city.address }}</span>
+              <app-icon name="location" [size]="24" [stroke]="false" /><span>{{ city.address }}</span>
             </a>
           }
           @if (city.phone) {
             <a class="contact-row" [href]="'tel:' + city.phone"
-              ><svg lucidePhone [size]="24" [strokeWidth]="1.8"></svg><span>{{ city.phone }}</span></a
+              ><app-icon name="phone" [size]="24" [stroke]="false" /><span>{{ city.phone }}</span></a
             >
           }
           @if (city.email) {
             <a class="contact-row" [href]="'mailto:' + city.email"
-              ><svg lucideMail [size]="24" [strokeWidth]="1.8"></svg><span>{{ city.email }}</span></a
+              ><app-icon name="email" [size]="24" [stroke]="false" /><span>{{ city.email }}</span></a
             >
           }
         </div>

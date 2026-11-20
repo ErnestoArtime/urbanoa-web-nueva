@@ -1,7 +1,8 @@
+import { AppIconComponent } from '../../../shared/icons/app-icon.component';
 import { ApiErrorPipe } from '../../../shared/pipes/api-error.pipe';
 import { Component, computed, inject } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { LucideHeadphones, LucideImage, LucideMessageSquareReply, LucideUserRound } from '@lucide/angular';
+import { LucideImage, LucideMessageSquareReply } from '@lucide/angular';
 import { SupportAttachment, SupportMessage, SupportService } from '../../../core/services/support.service';
 import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
@@ -13,12 +14,11 @@ import { LoaderComponent } from '../../../shared/components/loader/loader.compon
 @Component({
   selector: 'app-account-support-detail',
   imports: [
+    AppIconComponent,
     ApiErrorPipe,
     RouterLink,
-    LucideHeadphones,
     LucideImage,
     LucideMessageSquareReply,
-    LucideUserRound,
     DetailPanelHeaderComponent,
     TranslatePipe,
     LoaderComponent,
@@ -42,9 +42,9 @@ import { LoaderComponent } from '../../../shared/components/loader/loader.compon
             <article class="message" [class.from-support]="message.author === 'support'">
               <span class="message-avatar">
                 @if (message.author === 'support') {
-                  <svg lucideHeadphones size="19" strokeWidth="2" aria-hidden="true"></svg>
+                  <app-icon name="support" [size]="19" [stroke]="false" />
                 } @else {
-                  <svg lucideUserRound size="19" strokeWidth="2" aria-hidden="true"></svg>
+                  <app-icon name="myAccount" [size]="19" [stroke]="false" />
                 }
               </span>
               <div class="message-bubble">

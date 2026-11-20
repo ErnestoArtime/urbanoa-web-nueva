@@ -1,12 +1,13 @@
+import { AppIconComponent } from '../../../shared/icons/app-icon.component';
 import { Component, input, output } from '@angular/core';
-import { LucideLocateFixed, LucideLoaderCircle, LucideMapPinOff } from '@lucide/angular';
+import { LucideLoaderCircle, LucideMapPinOff } from '@lucide/angular';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 
 export type MapLocationState = 'idle' | 'locating' | 'located' | 'denied' | 'unavailable';
 
 @Component({
   selector: 'app-map-location-control',
-  imports: [LucideLocateFixed, LucideLoaderCircle, LucideMapPinOff, TranslatePipe],
+  imports: [AppIconComponent, LucideLoaderCircle, LucideMapPinOff, TranslatePipe],
   template: `
     <div class="location-wrap" [class.has-message]="state() !== 'idle' && state() !== 'located'">
       @if (state() === 'locating') {
@@ -29,7 +30,7 @@ export type MapLocationState = 'idle' | 'locating' | 'located' | 'denied' | 'una
         @if (state() === 'locating') {
           <svg lucideLoaderCircle class="spinner" size="22"></svg>
         } @else {
-          <svg lucideLocateFixed size="22"></svg>
+          <app-icon name="myLocation" [size]="22" [stroke]="false" />
         }
       </button>
     </div>

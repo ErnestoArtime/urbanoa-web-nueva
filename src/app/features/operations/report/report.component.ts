@@ -1,3 +1,4 @@
+import { AppIconComponent } from '../../../shared/icons/app-icon.component';
 import { ApiErrorPipe } from '../../../shared/pipes/api-error.pipe';
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
@@ -37,7 +38,7 @@ interface ReportRangeItem {
 
 @Component({
   selector: 'app-report',
-  imports: [ApiErrorPipe, ReactiveFormsModule, TranslatePipe, DateRangeFilterComponent, LoaderComponent],
+  imports: [AppIconComponent, ApiErrorPipe, ReactiveFormsModule, TranslatePipe, DateRangeFilterComponent, LoaderComponent],
   template: `
     <app-loader [visible]="isGenerating()" [message]="'common.loading' | translate" />
     <div class="report-page has-sticky-actions" [formGroup]="form">
@@ -60,7 +61,7 @@ interface ReportRangeItem {
           @if (!customDatesEnabled()) {
             <button type="button" class="range-row" (click)="rangePickerOpen = !rangePickerOpen">
               <span>{{ currentRangeLabel() }}</span>
-              <span class="chevron">›</span>
+              <span class="chevron"><app-icon name="chevrolenRight" [size]="22" [stroke]="false" /></span>
             </button>
 
             @if (rangePickerOpen) {

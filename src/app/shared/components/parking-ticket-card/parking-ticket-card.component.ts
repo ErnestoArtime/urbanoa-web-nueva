@@ -1,8 +1,8 @@
+import { AppIconComponent } from '../../icons/app-icon.component';
 import { formatEuro } from '../../../core/utils/euro-format';
 import { RuntimeStyleDirective } from '../../directives/runtime-style.directive';
 import { Component, OnDestroy, computed, input, output, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { LucideCarFront, LucideMapPin, LucideTimerReset } from '@lucide/angular';
 import type { ActiveParking } from '../../../core/services/operations.service';
 import { TranslatePipe } from '../../pipes/translate.pipe';
 import { normalizeSectorColor } from '../../utils/sector-color';
@@ -14,7 +14,7 @@ export type ParkingTicketCardVariant = 'dashboard' | 'operations-current' | 'det
 @Component({
   selector: 'app-parking-ticket-card',
   standalone: true,
-  imports: [RuntimeStyleDirective, RouterLink, TranslatePipe, LucideCarFront, LucideMapPin, LucideTimerReset, TicketCutAlignDirective],
+  imports: [AppIconComponent, RuntimeStyleDirective, RouterLink, TranslatePipe, TicketCutAlignDirective],
   template: `
     @if (parking(); as active) {
       <article
@@ -30,13 +30,13 @@ export type ParkingTicketCardVariant = 'dashboard' | 'operations-current' | 'det
               <circle class="ticket-progress-track" cx="22" cy="22" r="18" pathLength="100"></circle>
               <circle class="ticket-progress-value" cx="22" cy="22" r="18" pathLength="100"></circle>
             </svg>
-            <svg lucideCarFront class="ticket-car-icon" size="19" strokeWidth="2.45"></svg>
+            <app-icon name="car" class="ticket-car-icon" [size]="19" [stroke]="false" />
           </div>
           <div>
             <p class="ticket-plate">{{ active.plate }}</p>
             <p class="ticket-timer">{{ liveTimeRemaining(active) }}</p>
             @if (active.street) {
-              <span class="ticket-street"><svg lucideMapPin aria-hidden="true" size="13" strokeWidth="2"></svg>{{ active.street }}</span>
+              <span class="ticket-street"><app-icon name="location" [size]="13" [stroke]="false" />{{ active.street }}</span>
             }
           </div>
           <div class="ticket-summary">
@@ -82,7 +82,7 @@ export type ParkingTicketCardVariant = 'dashboard' | 'operations-current' | 'det
                 [disabled]="active.extension !== 2"
                 (click)="active.extension === 2 && extendTime.emit(active)"
               >
-                <svg lucideTimerReset class="action-btn-icon" size="19" strokeWidth="2"></svg>
+                <app-icon name="extend" class="action-btn-icon" [size]="19" [stroke]="false" />
                 {{ 'dashboard.extend' | translate }}
               </button>
             }

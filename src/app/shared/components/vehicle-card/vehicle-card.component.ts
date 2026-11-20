@@ -1,5 +1,5 @@
+import { AppIconComponent } from '../../icons/app-icon.component';
 import { Component, inject, input, output } from '@angular/core';
-import { LucideCarFront, LucidePencil } from '@lucide/angular';
 import type { Vehicle } from '../../models/vehicle';
 import { TranslatePipe } from '../../pipes/translate.pipe';
 import { TranslationService } from '../../../core/services/translation.service';
@@ -7,16 +7,16 @@ import { TranslationService } from '../../../core/services/translation.service';
 @Component({
   selector: 'app-vehicle-card',
   standalone: true,
-  imports: [TranslatePipe, LucideCarFront, LucidePencil],
+  imports: [AppIconComponent, TranslatePipe],
   template: `
     <article class="vehicle-card card" [class.parked]="parked()">
-      <span class="vehicle-icon"><svg lucideCarFront size="22" strokeWidth="2.3"></svg></span>
+      <span class="vehicle-icon"><app-icon name="car" [size]="22" [stroke]="false" /></span>
       <div class="vehicle-body">
         <strong>{{ vehicle().plate }}</strong>
         <span>{{ subtitle() }}</span>
       </div>
       <button type="button" class="vehicle-edit" (click)="edit.emit(vehicle())" [attr.aria-label]="'common.edit' | translate">
-        <svg lucidePencil size="18" strokeWidth="2.2"></svg>
+        <app-icon name="edit" [size]="18" [stroke]="false" />
       </button>
     </article>
   `,

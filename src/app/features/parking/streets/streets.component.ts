@@ -1,3 +1,4 @@
+import { AppIconComponent } from '../../../shared/icons/app-icon.component';
 import { ApiErrorPipe } from '../../../shared/pipes/api-error.pipe';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -9,7 +10,7 @@ import { LoaderComponent } from '../../../shared/components/loader/loader.compon
 
 @Component({
   selector: 'app-parking-streets',
-  imports: [ApiErrorPipe, RouterLink, TranslatePipe, LoaderComponent],
+  imports: [AppIconComponent, ApiErrorPipe, RouterLink, TranslatePipe, LoaderComponent],
   template: `
     <div class="page">
       <app-loader [visible]="loading()" [message]="'parking.streets.loading' | translate" imageSrc="/assets/brand/login-logo.jpg" />
@@ -44,7 +45,7 @@ import { LoaderComponent } from '../../../shared/components/loader/loader.compon
               <div class="list-item-title">{{ street.name }}</div>
               <div class="list-item-subtitle">{{ street.zoneDescription }}{{ street.tariff ? ' · ' + street.tariff : '' }}</div>
             </div>
-            <span class="list-item-chevron">›</span>
+            <span class="list-item-chevron"><app-icon name="chevrolenRight" [size]="22" [stroke]="false" /></span>
           </a>
         } @empty {
           @if (!loading() && dataSource() !== 'error') {

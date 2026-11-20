@@ -75,7 +75,7 @@ import { legalContentPath, type LegalContentType } from '../../../core/utils/leg
               <div class="list-item-content">
                 <div class="list-item-title">{{ item.labelKey | translate }}</div>
               </div>
-              <span class="list-item-chevron">›</span>
+              <span class="list-item-chevron"><app-icon name="chevrolenRight" [size]="22" [stroke]="false" /></span>
             </button>
           }
         </ul>
@@ -91,7 +91,7 @@ import { legalContentPath, type LegalContentType } from '../../../core/utils/leg
           <div class="detail-placeholder">{{ 'account.selectOption' | translate }}</div>
         } @else {
           <div class="detail-toolbar">
-            <span class="back-btn" (click)="goBack()">←</span>
+            <span class="back-btn" (click)="goBack()"><app-icon name="arrowBackBlack24" [size]="24" [stroke]="false" /></span>
             <strong>{{ selectedLabel() | translate }}</strong>
             <span class="detail-toolbar-actions"></span>
           </div>

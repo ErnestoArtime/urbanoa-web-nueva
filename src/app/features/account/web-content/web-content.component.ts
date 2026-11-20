@@ -1,3 +1,4 @@
+import { AppIconComponent } from '../../../shared/icons/app-icon.component';
 import { Component, computed, inject, input, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { DomSanitizer } from '@angular/platform-browser';
@@ -8,11 +9,13 @@ import { legalContentPath, type LegalContentType } from '../../../core/utils/leg
 
 @Component({
   selector: 'app-web-content',
-  imports: [RouterLink, TranslatePipe],
+  imports: [AppIconComponent, RouterLink, TranslatePipe],
   template: `
     <div class="web-content-shell">
       <header class="web-content-header">
-        <a [routerLink]="backLink() ?? '/app/account'" class="web-content-back">←</a>
+        <a [routerLink]="backLink() ?? '/app/account'" class="web-content-back"
+          ><app-icon name="arrowBackBlack24" [size]="24" [stroke]="false"
+        /></a>
         <h1 class="page-title">{{ resolvedTitle() }}</h1>
       </header>
 

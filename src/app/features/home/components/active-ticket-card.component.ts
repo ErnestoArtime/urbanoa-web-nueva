@@ -1,8 +1,8 @@
+import { AppIconComponent } from '../../../shared/icons/app-icon.component';
 import { RuntimeStyleDirective } from '../../../shared/directives/runtime-style.directive';
 import { Component, OnDestroy, computed, input, output, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
-import { LucideCarFront, LucideNavigation, LucideTimerReset } from '@lucide/angular';
 import type { ActiveParking } from '../../../core/services/operations.service';
 import { normalizeSectorColor } from '../../../shared/utils/sector-color';
 import { formatCountdown, liveCountdownSeconds, parseCountdownToSeconds } from '../../../core/utils/parking-countdown';
@@ -10,7 +10,7 @@ import { formatCountdown, liveCountdownSeconds, parseCountdownToSeconds } from '
 @Component({
   selector: 'app-active-ticket-card',
   standalone: true,
-  imports: [RuntimeStyleDirective, RouterLink, TranslatePipe, LucideCarFront, LucideNavigation, LucideTimerReset],
+  imports: [AppIconComponent, RuntimeStyleDirective, RouterLink, TranslatePipe],
   template: `
     @if (ticket(); as active) {
       <div class="active-ticket-shell">
@@ -21,7 +21,7 @@ import { formatCountdown, liveCountdownSeconds, parseCountdownToSeconds } from '
                 <circle class="ticket-progress-track" cx="22" cy="22" r="18" pathLength="100"></circle>
                 <circle class="ticket-progress-value" cx="22" cy="22" r="18" pathLength="100"></circle>
               </svg>
-              <svg lucideCarFront class="ticket-car-icon" size="19" strokeWidth="2.45"></svg>
+              <app-icon name="car" class="ticket-car-icon" [size]="19" [stroke]="false" />
             </div>
             <div>
               <p class="ticket-plate">{{ active.plate }}</p>
@@ -53,14 +53,14 @@ import { formatCountdown, liveCountdownSeconds, parseCountdownToSeconds } from '
               [disabled]="!hasCoordinates(active)"
               (click)="$event.stopPropagation(); goToCar.emit(active)"
             >
-              <svg lucideNavigation class="action-btn-icon" size="19" strokeWidth="2"></svg>
+              <app-icon name="goToCar" class="action-btn-icon" [size]="19" [stroke]="false" />
               {{ 'dashboard.howToGetThere' | translate }}
             </button>
             <button type="button" class="btn btn-danger btn-sm" (click)="$event.stopPropagation(); unpark.emit()">
               {{ 'dashboard.unpark' | translate }}
             </button>
             <button type="button" class="btn btn-primary btn-sm" (click)="$event.stopPropagation(); extend.emit()">
-              <svg lucideTimerReset class="action-btn-icon" size="19" strokeWidth="2"></svg>
+              <app-icon name="extend" class="action-btn-icon" [size]="19" [stroke]="false" />
               {{ 'dashboard.extendTime' | translate }}
             </button>
           </div>

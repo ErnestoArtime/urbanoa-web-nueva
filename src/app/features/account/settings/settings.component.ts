@@ -1,6 +1,6 @@
+import { AppIconComponent } from '../../../shared/icons/app-icon.component';
 import { ApiErrorPipe } from '../../../shared/pipes/api-error.pipe';
 import { Component, inject, signal } from '@angular/core';
-import { LucideLocateFixed } from '@lucide/angular';
 import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
 import { LocationSettingsService, type LocationPermissionState } from '../../../core/services/location-settings.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
@@ -16,7 +16,7 @@ interface LocationMessage {
 
 @Component({
   selector: 'app-account-settings',
-  imports: [ApiErrorPipe, TranslatePipe, DetailPanelHeaderComponent, LucideLocateFixed, LoaderComponent],
+  imports: [AppIconComponent, ApiErrorPipe, TranslatePipe, DetailPanelHeaderComponent, LoaderComponent],
   template: `
     <app-loader [visible]="savingCity()" [message]="'common.loading' | translate" />
     <div class="page account-static-page settings-page">
@@ -25,7 +25,7 @@ interface LocationMessage {
       <section class="card settings-card" aria-labelledby="location-settings-title">
         <div class="section-heading">
           <div class="heading-with-icon">
-            <svg lucideLocateFixed size="21"></svg>
+            <app-icon name="myLocation" [size]="21" [stroke]="false" />
             <h3 id="location-settings-title">{{ 'account.settings.location.title' | translate }}</h3>
           </div>
           <span class="security-state" [class.active]="locationService.settings().permissionState === 'granted'">{{
