@@ -106,12 +106,15 @@ export interface ActiveParking {
   refundable?: 0 | 1 | 2;
 }
 
+const DEFAULT_OPERATION_TYPES = [1, 2, 3, 4, 5, 7, 101, 102, 103, 104];
+
 @Injectable({ providedIn: 'root' })
 export class OperationsService {
   private readonly api = inject(OpsApiClient);
   private readonly session = inject(OpsSessionService);
   private readonly _operations = signal<Operation[]>([]);
   private readonly _activeParkings = signal<ActiveParking[]>([]);
+  private readonly _historyOperations = signal<Operation[] | null>(null);
   private readonly _activeLoading = signal(false);
   private readonly locallyEndedOperationIds = this.readLocallyEndedOperationIds();
   private readonly paidFineKeys = new Set<string>(this.readPaidFineKeys());
@@ -119,6 +122,8 @@ export class OperationsService {
   private activeLoadingRequests = 0;
   private lastLoadParameters: [string?, string?, number[]?] = [];
   private generation = 0;
+  private historyRange: { from: string; to: string } | null = null;
+  private historyRevision = 0;
   private requestedLoadKey: string | null = null;
   private lastSuccessfulLoad: { key: string; at: number } | null = null;
 
@@ -129,6 +134,9 @@ export class OperationsService {
 
   reset(): void {
     this.generation++;
+    this.historyRevision++;
+    this.historyRange = null;
+    this._historyOperations.set(null);
     this.requestedLoadKey = null;
     this.lastSuccessfulLoad = null;
     this._operations.set([]);
@@ -153,6 +161,7 @@ export class OperationsService {
   }
 
   readonly operations = this._operations.asReadonly();
+  readonly historyOperations = this._historyOperations.asReadonly();
   readonly activeParkings = this._activeParkings.asReadonly();
   readonly activeParkingsCount = computed(() => this._activeParkings().length);
   readonly hasActiveParkings = computed(() => this._activeParkings().length > 0);
@@ -184,7 +193,7 @@ export class OperationsService {
   load(
     dateStart?: string,
     dateEnd?: string,
-    operationTypeList = [1, 2, 3, 4, 5, 7, 101, 102, 103, 104],
+    operationTypeList = DEFAULT_OPERATION_TYPES,
     options: { reuseRecent?: boolean } = {},
   ): Promise<void> {
     operationTypeList = [...new Set(operationTypeList)].sort((a, b) => a - b);
@@ -251,6 +260,7 @@ export class OperationsService {
       );
       this.source.set('remote');
       this.lastSuccessfulLoad = { key: requestKey, at: Date.now() };
+      if (this.historyRange) void this.loadHistory(this.historyRange.from, this.historyRange.to);
     } catch (error) {
       if (generation !== this.generation || requestKey !== this.requestedLoadKey) return;
       this.responseError.set(error);
@@ -264,6 +274,44 @@ export class OperationsService {
     } finally {
       if (generation === this.generation && requestKey === this.requestedLoadKey) this.loading.set(false);
     }
+  }
+
+  async loadHistory(dateStart: string, dateEnd: string): Promise<void> {
+    this.historyRange = { from: dateStart, to: dateEnd };
+    const generation = this.generation;
+    const revision = ++this.historyRevision;
+    const token = this.session.token();
+    if (!token) return;
+    try {
+      const response = await this.api.post<OperationResponseDto[]>(
+        OPS_ENDPOINTS.user.operations,
+        {
+          contractId: 0,
+          dateStart: this.queryDate(dateStart, false),
+          dateEnd: this.queryDate(dateEnd, true),
+          operationTypeList: [...DEFAULT_OPERATION_TYPES].sort((a, b) => a - b),
+        },
+        { token },
+      );
+      if (generation !== this.generation || revision !== this.historyRevision) return;
+      this._historyOperations.set(
+        response
+          .map((item) => this.mapRemoteOperation(item))
+          .filter((operation) => !this.isConfirmedPaidFine(operation))
+          .map((operation) =>
+            operation.timePeriod === 2 && this.locallyEndedOperationIds.has(operation.id) ? { ...operation, timePeriod: 1 } : operation,
+          ),
+      );
+    } catch (error) {
+      if (generation !== this.generation || revision !== this.historyRevision) return;
+      console.warn('[OPS API] No se pudo cargar el histórico por rango', error);
+    }
+  }
+
+  clearHistory(): void {
+    this.historyRevision++;
+    this.historyRange = null;
+    this._historyOperations.set(null);
   }
 
   async loadDetail(id: string): Promise<Operation | undefined> {
@@ -338,6 +386,7 @@ export class OperationsService {
     if (!fine || fine.type !== OperationType.UNPAID_FINES) return;
     this.paidFineKeys.add(this.fineKey(fine));
     this._operations.update((operations) => operations.filter((operation) => !this.isConfirmedPaidFine(operation)));
+    this._historyOperations.update((operations) => operations?.filter((operation) => !this.isConfirmedPaidFine(operation)) ?? null);
     try {
       sessionStorage.setItem('urbanoa.operations.paid-fines', JSON.stringify([...this.paidFineKeys]));
     } catch {
@@ -499,7 +548,7 @@ export class OperationsService {
   }
 
   getOperationById(id: string): Operation | undefined {
-    return this._operations().find((op) => op.id === id);
+    return this._operations().find((op) => op.id === id) ?? this._historyOperations()?.find((op) => op.id === id);
   }
 
   private todayDateString(): string {

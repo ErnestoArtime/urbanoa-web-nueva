@@ -56,6 +56,7 @@ describe('UnpaidFinesService acknowledgeExpired', () => {
     const api = { post: jasmine.createSpy('post').and.resolveTo('') };
     const operations = {
       operations: signal([EXPIRED_FINE]).asReadonly(),
+      historyOperations: signal(null),
       load: jasmine.createSpy('load').and.resolveTo(),
     };
     localStorage.clear();
@@ -86,6 +87,7 @@ describe('UnpaidFinesService acknowledgeExpired', () => {
     const api = { post: jasmine.createSpy('post').and.resolveTo('') };
     const operations = {
       operations: signal([{ ...EXPIRED_FINE, fineStatus: FineStatus.PAYABLE }]).asReadonly(),
+      historyOperations: signal(null),
       load: jasmine.createSpy('load').and.resolveTo(),
     };
     localStorage.clear();
@@ -112,6 +114,7 @@ describe('UnpaidFinesService acknowledgeExpired', () => {
     const api = { post: jasmine.createSpy('post').and.resolveTo('') };
     const operations = {
       operations: signal([EXPIRED_FINE]).asReadonly(),
+      historyOperations: signal(null),
       load: jasmine.createSpy('load').and.resolveTo(),
     };
     localStorage.clear();
@@ -137,6 +140,7 @@ describe('UnpaidFinesService acknowledgeExpired', () => {
     const api = { post: jasmine.createSpy('post').and.rejectWith(new Error('network')) };
     const operations = {
       operations: signal([EXPIRED_FINE]).asReadonly(),
+      historyOperations: signal(null),
       load: jasmine.createSpy('load').and.resolveTo(),
     };
     localStorage.clear();
@@ -170,6 +174,7 @@ describe('UnpaidFinesService acknowledgeExpired', () => {
     };
     const operations = {
       operations: signal([EXPIRED_FINE]).asReadonly(),
+      historyOperations: signal(null),
       load: jasmine.createSpy('load').and.resolveTo(),
     };
     localStorage.clear();
@@ -205,7 +210,7 @@ describe('UnpaidFinesService fines listing rules', () => {
   };
 
   function configure(fine: Operation) {
-    const operations = { operations: signal([fine]).asReadonly(), load: jasmine.createSpy('load').and.resolveTo() };
+    const operations = { operations: signal([fine]).asReadonly(), historyOperations: signal(null), load: jasmine.createSpy('load').and.resolveTo() };
     localStorage.clear();
     TestBed.configureTestingModule({
       providers: [
@@ -268,6 +273,7 @@ describe('UnpaidFinesService PSD2 confirmation', () => {
     };
     const operations = {
       operations: signal([{ ...EXPIRED_FINE, fineStatus: FineStatus.PAYABLE }]).asReadonly(),
+      historyOperations: signal(null),
       load: jasmine.createSpy('load').and.resolveTo(),
     };
     const wallet = {
@@ -374,6 +380,7 @@ describe('Confirmed fine payment refresh', () => {
     const post = jasmine.createSpy().and.returnValue(new Promise(() => undefined));
     const operations = {
       operations: signal([{ ...EXPIRED_FINE, fineStatus: 1 }]),
+      historyOperations: signal(null),
       load: jasmine.createSpy(),
       markFinePaid: jasmine.createSpy(),
     };

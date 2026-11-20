@@ -296,11 +296,11 @@ export class OperationsLayoutComponent implements OnInit, AfterViewInit {
   private readonly parkingFlowStore = inject(ParkingFlowStore);
   private readonly vehicleService = inject(VehicleService);
   private readonly translations = inject(TranslationService);
-  private readonly operations = this.operationsService.operations;
+  private readonly operations = computed(() => this.operationsService.historyOperations() ?? this.operationsService.operations());
   private readonly rangeFilter = signal<DateRange>({ from: '', to: '' });
   readonly historyControlsHeight = signal(0);
   private readonly unpaidFinesService = inject(UnpaidFinesService);
-  readonly unpaidFinesCount = () => this.unpaidFinesService.visibleFines().length;
+  readonly unpaidFinesCount = () => this.unpaidFinesService.fines().length;
   readonly OperationType = OperationType;
   readonly OPERATION_TYPE_LABELS = OPERATION_TYPE_LABELS;
   readonly activeParkings = this.parkingSessionService.activeParkings;
@@ -380,16 +380,22 @@ export class OperationsLayoutComponent implements OnInit, AfterViewInit {
 
   onRangeChange(range: DateRange): void {
     this.rangeFilter.set(range);
-    this.unpaidFinesService.dateRange.set(range);
-    this.loadEarlierHistory(range.from);
+    this.loadHistoryRange(range);
   }
 
-  private loadEarlierHistory(from: string): void {
-    if (!from) return;
-    const [day, month, year] = from.split('/').map(Number);
-    if (!year || year >= new Date().getFullYear()) return;
-    const iso = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    void this.operationsService.load(iso).catch(() => undefined);
+  private loadHistoryRange(range: DateRange): void {
+    if (!range.from && !range.to) {
+      this.operationsService.clearHistory();
+      return;
+    }
+    const year = new Date().getFullYear();
+    void this.operationsService.loadHistory(this.toIso(range.from) ?? `${year}-01-01`, this.toIso(range.to) ?? `${year}-12-31`);
+  }
+
+  private toIso(value: string): string | null {
+    const [day, month, year] = value.split('/').map(Number);
+    if (!day || !month || !year) return null;
+    return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
   }
 
   async onUnpark(parkingId: string): Promise<void> {

@@ -26,7 +26,7 @@ describe('UnpaidFinesComponent', () => {
       providers: [
         provideZonelessChangeDetection(),
         provideRouter([]),
-        { provide: UnpaidFinesService, useValue: { visibleFines: signal([fine]) } },
+        { provide: UnpaidFinesService, useValue: { fines: signal([fine]) } },
         { provide: TranslationService, useValue: { translate: (key: string) => key, currentLang$: () => 'es' } },
       ],
     }).compileComponents();

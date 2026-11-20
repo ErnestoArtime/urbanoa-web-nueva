@@ -188,6 +188,7 @@ describe('Error state consistency', () => {
           useValue: {
             load: () => Promise.resolve(),
             source: () => 'remote',
+            historyOperations: () => null,
             operations: () => [
               {
                 id: 'old-operation',

@@ -56,7 +56,7 @@ import { TranslationService } from '../../../core/services/translation.service';
 })
 export class UnpaidFinesComponent {
   private readonly unpaidFinesService = inject(UnpaidFinesService);
-  readonly fines = this.unpaidFinesService.visibleFines;
+  readonly fines = this.unpaidFinesService.fines;
   readonly operationType = OperationType;
   private readonly translations = inject(TranslationService);
   readonly displayDate = (value: string) => formatFineDate(value, this.translations.currentLang$());

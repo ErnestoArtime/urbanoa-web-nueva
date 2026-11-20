@@ -265,6 +265,7 @@ describe('Web consistency regressions', () => {
     const api = jasmine.createSpyObj<OpsApiClient>('OpsApiClient', ['post']);
     api.post.and.resolveTo({ operationId: null, challengeUrl: null });
     const operations = {
+      historyOperations: signal(null),
       operations: signal([
         {
           id: 'fine',
