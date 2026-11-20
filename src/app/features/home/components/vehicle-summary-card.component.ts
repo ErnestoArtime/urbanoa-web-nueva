@@ -11,7 +11,7 @@ import type { Vehicle } from '../../../shared/models/vehicle';
   imports: [ApiErrorPipe, RouterLink, TranslatePipe, AppIconComponent],
   template: `
     <div class="card compact-card vehicle-summary-card">
-      <app-icon name="vehicle" class="vehicle-summary-icon" [stroke]="false" />
+      <app-icon name="car" class="vehicle-summary-icon" [stroke]="false" />
       @if (vehicle(); as currentVehicle) {
         <div>
           <p class="vehicle-summary-label">{{ 'dashboard.vehicle' | translate }}</p>

@@ -32,13 +32,13 @@ import { APP_BRAND } from '../../../shared/constants/app-brand';
       <div class="wallet-main-card-row">
         <app-icon name="card" class="wallet-card-icon" [stroke]="false" />
         @if (hasCards()) {
-          <div>
+          <div class="wallet-main-row-text">
             <p class="wallet-main-label">{{ 'dashboard.mainCard' | translate }}</p>
             <p class="wallet-main-value">{{ mainCard().brand }} Debit ·{{ mainCard().last4 }}</p>
             <p class="wallet-main-expiry">{{ mainCard().cardholderName }} {{ mainCard().expiryDate }}</p>
           </div>
         } @else {
-          <div>
+          <div class="wallet-main-row-text">
             <p class="wallet-main-label">{{ 'dashboard.cardEmptyTitle' | translate }}</p>
             <p class="wallet-main-expiry">{{ 'dashboard.cardEmptyDetail' | translate }}</p>
           </div>

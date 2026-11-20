@@ -37,6 +37,15 @@
   font-weight: var(--font-extra);
   position: relative;
   cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+.progress-help:hover,
+.progress-help:focus-visible {
+  background: var(--color-primary);
+  color: var(--color-surface);
+  outline: none;
 }
 .profile-checklist {
   display: grid;
