@@ -3,6 +3,7 @@
 map "$status:$uri" $urbanoa_cache_control {
   default "no-store";
   "~*^(200|304):/.*-[a-z0-9]{8,}\.(js|css)$" "public, max-age=31536000, immutable";
+  ~*^(200|304):/assets/(municipios|brand)/.*\.(png|jpg|jpeg|webp|svg|json)$ "public, max-age=86400, stale-while-revalidate=604800";
   ~*^(200|304):/.*\.(js|css|png|jpg|jpeg|gif|ico|svg|webp|json|woff|woff2)$ "no-cache";
 }
 
