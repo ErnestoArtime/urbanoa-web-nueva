@@ -338,8 +338,6 @@
   "account.supportSuccess.detail": "Hemos recibido tu comentario. Nuestro equipo lo revisará y nos pondremos en contacto contigo a través de tu email.",
   "account.supportSuccess.button": "Entendido",
   "account.addCard.title": "Añadir tarjeta",
-  "account.addCard.secureCheckout": "Secure Checkout",
-  "account.addCard.paycomet": "PAYCOMET",
   "breadcrumb.cities": "Municipios",
   "breadcrumb.cityInfo": "Información",
   "breadcrumb.streets": "Calles",

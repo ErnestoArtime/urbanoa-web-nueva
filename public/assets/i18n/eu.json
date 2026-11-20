@@ -331,8 +331,6 @@
   "account.supportSuccess.detail": "Zure iruzkina jaso dugu. Gure taldeak aztertu egingo du eta zurekin harremanetan jarriko gara zure posta elektronikoaren bidez.",
   "account.supportSuccess.button": "Ulertuta",
   "account.addCard.title": "Txartela gehitu",
-  "account.addCard.secureCheckout": "eu_Secure Checkout",
-  "account.addCard.paycomet": "eu_PAYCOMET",
   "account.addCard.loading": "eu_Cargando formulario de pago...",
   "account.addCard.formError": "eu_No se pudo cargar el formulario de pago. Inténtalo de nuevo.",
   "account.addCard.successTitle": "eu_¡Tarjeta añadida correctamente!",

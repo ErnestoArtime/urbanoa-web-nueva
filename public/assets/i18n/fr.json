@@ -331,8 +331,6 @@
   "account.supportSuccess.detail": "Nous avons bien reçu vos commentaires. Notre équipe va les examiner et vous contactera par email.",
   "account.supportSuccess.button": "Compris",
   "account.addCard.title": "Ajouter une carte",
-  "account.addCard.secureCheckout": "fr_Secure Checkout",
-  "account.addCard.paycomet": "fr_PAYCOMET",
   "account.addCard.loading": "fr_Cargando formulario de pago...",
   "account.addCard.formError": "fr_No se pudo cargar el formulario de pago. Inténtalo de nuevo.",
   "account.addCard.successTitle": "fr_¡Tarjeta añadida correctamente!",

@@ -1,3 +1,4 @@
+import { RuntimeStyleDirective } from '../../../shared/directives/runtime-style.directive';
 import { ApiErrorPipe } from '../../../shared/pipes/api-error.pipe';
 import { Component, ElementRef, ViewChild, input, output, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
@@ -8,7 +9,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 
 @Component({
   selector: 'app-payment-add',
-  imports: [ApiErrorPipe, TranslatePipe, DetailPanelHeaderComponent],
+  imports: [ApiErrorPipe, TranslatePipe, DetailPanelHeaderComponent, RuntimeStyleDirective],
   template: `
     <div class="page account-static-page paycomet-page">
       @if (!embedded()) {
@@ -48,9 +49,10 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
           class="paycomet-frame"
           title="Paycomet"
           [srcdoc]="formHtml()!"
+          [appRuntimeStyle]="{ height: frameHeight() + 'px' }"
+          (load)="onFrameLoad()"
           sandbox="allow-scripts allow-forms allow-popups allow-same-origin allow-modals"
         ></iframe>
-        <p class="secure-note">{{ 'account.addCard.secureCheckout' | translate }} · {{ 'account.addCard.paycomet' | translate }}</p>
       }
     </div>
   `,
@@ -84,6 +86,34 @@ export class PaymentAddComponent implements OnInit, OnDestroy {
   readonly success = signal(false);
   readonly confirmationError = signal(false);
   readonly formHtml = signal<SafeHtml | null>(null);
+  readonly frameHeight = signal(560);
+  private frameObserver: ResizeObserver | null = null;
+
+  onFrameLoad(): void {
+    this.frameObserver?.disconnect();
+    const frame = this.paymentFrame?.nativeElement;
+    const doc = frame?.contentDocument;
+    if (!frame || !doc?.body) return;
+    let host: HTMLElement | null = frame.parentElement;
+    let background = '';
+    while (host) {
+      const color = getComputedStyle(host).backgroundColor;
+      if (color && color !== 'transparent' && !/,\s*0\)$/.test(color)) {
+        background = color;
+        break;
+      }
+      host = host.parentElement;
+    }
+    if (background) {
+      const style = doc.createElement('style');
+      style.textContent = `.label .text { background-color: ${background} !important; }`;
+      doc.head.appendChild(style);
+    }
+    const measure = () => this.frameHeight.set(Math.ceil(doc.documentElement.scrollHeight));
+    measure();
+    this.frameObserver = new ResizeObserver(measure);
+    this.frameObserver.observe(doc.documentElement);
+  }
 
   ngOnInit(): void {
     window.addEventListener('message', this.onMessage);
@@ -94,6 +124,7 @@ export class PaymentAddComponent implements OnInit, OnDestroy {
     this.destroyed = true;
     this.requestRevision++;
     window.removeEventListener('message', this.onMessage);
+    this.frameObserver?.disconnect();
   }
 
   async loadForm(): Promise<void> {

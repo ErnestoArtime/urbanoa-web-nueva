@@ -1,13 +1,13 @@
 .paycomet-page {
-  padding-bottom: 2rem;
+  padding-bottom: 0;
 }
 .paycomet-frame {
   width: 100%;
-  min-height: 560px;
-  margin-top: 1rem;
+  display: block;
+  margin-top: 0;
   border: 0;
-  border-radius: var(--radius-md);
-  background: var(--color-surface-raised);
+  background: transparent;
+  color-scheme: light;
 }
 .state {
   display: grid;
@@ -34,12 +34,6 @@
   background: var(--color-primary);
   color: var(--color-on-primary);
   font-size: 2rem;
-}
-.secure-note {
-  margin-top: 0.8rem;
-  color: var(--color-text-muted);
-  font-size: var(--text-xs);
-  text-align: center;
 }
 @keyframes spin {
   to {

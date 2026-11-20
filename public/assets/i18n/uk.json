@@ -331,8 +331,6 @@
   "account.supportSuccess.detail": "We have received your feedback. Our team will review it and get in touch with you via email.",
   "account.supportSuccess.button": "Understood",
   "account.addCard.title": "Add card",
-  "account.addCard.secureCheckout": "uk_Secure Checkout",
-  "account.addCard.paycomet": "uk_PAYCOMET",
   "account.addCard.loading": "uk_Cargando formulario de pago...",
   "account.addCard.formError": "uk_No se pudo cargar el formulario de pago. Inténtalo de nuevo.",
   "account.addCard.successTitle": "uk_¡Tarjeta añadida correctamente!",
