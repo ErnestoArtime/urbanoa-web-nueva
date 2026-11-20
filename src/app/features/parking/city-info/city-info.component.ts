@@ -15,7 +15,7 @@ import { ParkingFlowStore } from '../parking-flow.store';
       @if (municipio(); as city) {
         @if (city.imagePath || city.imagen) {
           <div class="city-hero">
-            <img [src]="city.imagePath || 'assets/municipios/' + city.imagen" [alt]="city.nombre" /><strong>{{ city.nombre }}</strong>
+            <img decoding="async" [src]="city.imagePath || 'assets/municipios/' + city.imagen" [alt]="city.nombre" /><strong>{{ city.nombre }}</strong>
           </div>
         }
         <h2>{{ 'parking.cityInfo.contact' | translate }}</h2>

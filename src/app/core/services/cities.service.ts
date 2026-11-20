@@ -165,7 +165,7 @@ export class CitiesService {
       nombre: name,
       provincia: '',
       zonas: 0,
-      imagen: `${id}.jpg`,
+      imagen: `${id}.webp`,
       contractId: item.contractId,
       description1: item.description1 ?? '',
       address: item.address ?? '',
