@@ -1,5 +1,5 @@
-import { Component, inject } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Component, effect, inject } from '@angular/core';
+import { Router, RouterLink } from '@angular/router';
 import { UnpaidFinesService } from '../../../core/services/unpaid-fines.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { OperationIconComponent } from '../../../shared/components/operation-icon/operation-icon.component';
@@ -44,11 +44,6 @@ import { TranslationService } from '../../../core/services/translation.service';
             </li>
           }
         </ul>
-      } @else {
-        <div class="card empty-fines">
-          <p>{{ 'ops.unpaidFines.allPaid' | translate }}</p>
-          <p class="text-muted">{{ 'ops.unpaidFines.nonePending' | translate }}</p>
-        </div>
       }
     </div>
   `,
@@ -56,8 +51,13 @@ import { TranslationService } from '../../../core/services/translation.service';
 })
 export class UnpaidFinesComponent {
   private readonly unpaidFinesService = inject(UnpaidFinesService);
+  private readonly router = inject(Router);
   readonly fines = this.unpaidFinesService.fines;
   readonly operationType = OperationType;
   private readonly translations = inject(TranslationService);
+  private readonly leaveWhenEmpty = effect(() => {
+    if (this.unpaidFinesService.settled() && this.fines().length === 0)
+      void this.router.navigate(['/app/operations'], { replaceUrl: true });
+  });
   readonly displayDate = (value: string) => formatFineDate(value, this.translations.currentLang$());
 }

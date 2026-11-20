@@ -96,6 +96,7 @@ export class UnpaidFinesService {
       .map((operation) => this.mapOperation(operation)),
   );
   readonly source = this.operationsService.source;
+  readonly settled = computed(() => this.operationsService.source() === 'remote' && !this.operationsService.loading());
 
   async payFine(id: string, cardId?: string): Promise<FinePaymentResult> {
     const fine = this.fines().find((item) => item.id === id);

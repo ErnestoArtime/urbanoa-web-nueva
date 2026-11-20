@@ -493,8 +493,6 @@
   "auth.resetCode.title": "Zure pasahitza berrezartzeko mezu elektronikoa bidali dizugu",
   "auth.resetCode.subtitle": "Aurkitu ezean Spam karpetan begiratzea gomendatzen dizugu.",
   "auth.resetCode.enterCode": "eu_Introducir código",
-  "ops.unpaidFines.allPaid": "eu_Todas las sanciones han sido pagadas.",
-  "ops.unpaidFines.nonePending": "eu_No tienes sanciones pendientes de pago.",
   "account.webContent.displayError": "eu_No se pudo mostrar el contenido",
   "account.webContent.openBrowser": "eu_Abrir en navegador",
   "dashboard.profileCompletion.help": "eu_Ver detalle del progreso",

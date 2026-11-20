@@ -115,17 +115,3 @@
   font-weight: 600;
   text-align: right;
 }
-.empty-fines {
-  text-align: center;
-  padding: 2rem 1rem;
-  max-width: 34rem;
-  margin-inline: auto;
-  line-height: var(--line-readable);
-}
-.empty-fines p {
-  margin: 0;
-}
-.empty-fines p:first-child {
-  font-weight: var(--font-bold);
-  margin-bottom: 0.3rem;
-}

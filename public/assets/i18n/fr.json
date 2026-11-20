@@ -493,8 +493,6 @@
   "auth.resetCode.title": "Nous vous avons envoyé un email pour réinitialiser votre mot de passe.",
   "auth.resetCode.subtitle": "Si vous ne le trouvez pas, nous vous recommandons de vérifier votre dossier d'emails indésirables.",
   "auth.resetCode.enterCode": "fr_Introducir código",
-  "ops.unpaidFines.allPaid": "fr_Todas las sanciones han sido pagadas.",
-  "ops.unpaidFines.nonePending": "fr_No tienes sanciones pendientes de pago.",
   "account.webContent.displayError": "fr_No se pudo mostrar el contenido",
   "account.webContent.openBrowser": "fr_Abrir en navegador",
   "dashboard.profileCompletion.help": "fr_Ver detalle del progreso",

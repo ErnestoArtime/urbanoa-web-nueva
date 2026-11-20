@@ -502,8 +502,6 @@
   "auth.resetCode.subtitle": "Si no lo encuentras, es posible que se haya almacenado en la carpeta Spam.",
   "auth.resetCode.enterCode": "Introducir código",
   "auth.resetCode.resend": "Reenviar código",
-  "ops.unpaidFines.allPaid": "Todas las sanciones han sido pagadas.",
-  "ops.unpaidFines.nonePending": "No tienes sanciones pendientes de pago.",
   "account.webContent.displayError": "No se pudo mostrar el contenido",
   "account.webContent.openBrowser": "Abrir en navegador",
   "dashboard.profileCompletion.help": "Ver detalle del progreso",

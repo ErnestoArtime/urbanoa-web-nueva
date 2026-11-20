@@ -493,8 +493,6 @@
   "auth.resetCode.title": "We sent you an email to reset your password .",
   "auth.resetCode.subtitle": "If you cannot find it, it might have ended up in your Spam folder.",
   "auth.resetCode.enterCode": "uk_Introducir código",
-  "ops.unpaidFines.allPaid": "uk_Todas las sanciones han sido pagadas.",
-  "ops.unpaidFines.nonePending": "uk_No tienes sanciones pendientes de pago.",
   "account.webContent.displayError": "uk_No se pudo mostrar el contenido",
   "account.webContent.openBrowser": "uk_Abrir en navegador",
   "dashboard.profileCompletion.help": "uk_Ver detalle del progreso",
