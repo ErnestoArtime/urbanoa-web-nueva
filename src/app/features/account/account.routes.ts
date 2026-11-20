@@ -56,11 +56,6 @@ export const ACCOUNT_ROUTES: Routes = [
         data: { title: 'account.menu.privacy', contentType: 'privacy', backLink: '/app/account' },
       },
       {
-        path: 'delete-account',
-        title: 'account.deleteAccount.title',
-        loadComponent: () => import('./delete-account/delete-account.component').then((m) => m.AccountDeleteAccountComponent),
-      },
-      {
         path: 'about',
         title: 'account.menu.about',
         loadComponent: () => import('./about/about.component').then((m) => m.AccountAboutComponent),

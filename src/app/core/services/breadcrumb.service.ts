@@ -71,7 +71,6 @@ export class BreadcrumbService {
       support: 'account.support',
       'support-success': 'account.supportSuccess.title',
       about: 'account.menu.about',
-      'delete-account': 'account.deleteAccount.title',
     };
     return map[segment] ?? segment;
   }

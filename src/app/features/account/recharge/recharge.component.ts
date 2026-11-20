@@ -3,7 +3,7 @@ import { formatEuro } from '../../../core/utils/euro-format';
 import { EuroPipe } from '../../../shared/pipes/euro.pipe';
 
 import { ConnectivityService } from '../../../core/services/connectivity.service';
-import { Component, effect, input, output, inject, signal } from '@angular/core';
+import { Component, computed, effect, input, output, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
@@ -66,7 +66,7 @@ import { isCardUsable } from '../../../core/utils/card-expiry';
             <fieldset class="payment-card-selector mt-1">
               <legend>{{ 'account.recharge.cardForRecharge' | translate }}</legend>
               <div role="radiogroup" [attr.aria-label]="'account.recharge.cardForRecharge' | translate">
-                @for (card of walletService.cards(); track card.id) {
+                @for (card of sortedCards(); track card.id) {
                   <label class="payment-card-option" [class.selected]="selectedCardId() === card.id" [class.disabled]="!isCardUsable(card)">
                     <input type="radio" formControlName="cardId" [value]="card.id" [disabled]="!isCardUsable(card)" />
                     <span
@@ -135,6 +135,10 @@ export class AccountRechargeComponent {
   readonly saving = signal(false);
   readonly submitError = signal<string | null>(null);
   readonly isCardUsable = isCardUsable;
+  readonly sortedCards = computed(() => {
+    const defaultId = this.walletService.defaultCardId();
+    return [...this.walletService.cards()].sort((a, b) => Number(b.id === defaultId) - Number(a.id === defaultId));
+  });
   readonly usableCards = () => this.walletService.cards().filter((card) => isCardUsable(card));
   private readonly queryCardId = toSignal(this.route.queryParamMap.pipe(map((params) => params.get('cardId'))), {
     initialValue: this.route.snapshot.queryParamMap.get('cardId'),

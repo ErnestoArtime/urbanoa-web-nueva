@@ -1,3 +1,6 @@
+import { apiErrorMessage } from '../../../core/http/api-error-key';
+import { LoaderComponent } from '../../../shared/components/loader/loader.component';
+import { ResultModalComponent } from '../../../shared/components/result-modal/result-modal.component';
 import { EuroPipe } from '../../../shared/pipes/euro.pipe';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/router';
@@ -15,7 +18,16 @@ import { TranslationService } from '../../../core/services/translation.service';
 
 @Component({
   selector: 'app-account-shell',
-  imports: [EuroPipe, RouterLink, RouterLinkActive, AppIconComponent, SplitViewComponent, TranslatePipe],
+  imports: [
+    EuroPipe,
+    RouterLink,
+    RouterLinkActive,
+    AppIconComponent,
+    LoaderComponent,
+    ResultModalComponent,
+    SplitViewComponent,
+    TranslatePipe,
+  ],
   template: `
     <app-split-view
       [class.account-split]="isVehicleRoute() || isPaymentMethodsRoute()"
@@ -72,12 +84,33 @@ import { TranslationService } from '../../../core/services/translation.service';
           <app-icon name="logout" class="logout-icon" [size]="18" [stroke]="false" />
           {{ 'account.logout' | translate }}
         </button>
-        <a routerLink="/app/account/delete-account" class="account-logout account-delete">
+        <button type="button" class="account-logout account-delete" (click)="confirmingDelete.set(true)">
           <app-icon name="delete" class="logout-icon" [size]="18" [stroke]="false" />
           {{ 'account.deleteAccount.action' | translate }}
-        </a>
+        </button>
       </div>
     </app-split-view>
+
+    @if (deleteError(); as message) {
+      <app-result-modal
+        type="error"
+        [title]="'account.deleteAccount.title' | translate"
+        [message]="message"
+        [primaryText]="'common.accept' | translate"
+        (primaryAction)="deleteError.set('')"
+      />
+    } @else if (confirmingDelete()) {
+      <app-result-modal
+        type="confirmation"
+        [title]="'account.deleteAccount.title' | translate"
+        [message]="'account.deleteAccount.warning' | translate"
+        [primaryText]="'common.accept' | translate"
+        [secondaryText]="'common.cancel' | translate"
+        (primaryAction)="confirmDelete()"
+        (secondaryAction)="confirmingDelete.set(false)"
+      />
+    }
+    <app-loader [visible]="deleting()" [message]="'common.loading' | translate" />
 
     @if (toast()) {
       <div class="toast">{{ toast() }}</div>
@@ -91,10 +124,13 @@ export class AccountShellComponent implements OnInit {
   private readonly userService = inject(UserService);
   private readonly translationService = inject(TranslationService);
   readonly walletService = inject(WalletService);
-  readonly menu = ACCOUNT_MENU.filter((item) => item.key !== 'delete-account');
+  readonly menu = ACCOUNT_MENU;
   readonly user = this.userService.user;
   readonly brand = APP_BRAND;
   readonly toast = signal('');
+  readonly confirmingDelete = signal(false);
+  readonly deleting = signal(false);
+  readonly deleteError = signal('');
 
   private readonly url = toSignal(
     this.router.events.pipe(
@@ -133,6 +169,20 @@ export class AccountShellComponent implements OnInit {
     const prev = this.menu[index - 1];
     return index === 0 || prev.groupKey !== item.groupKey ? item.groupKey : null;
   };
+
+  async confirmDelete(): Promise<void> {
+    if (this.deleting()) return;
+    this.confirmingDelete.set(false);
+    this.deleting.set(true);
+    try {
+      await this.authService.cancelAccount();
+      await this.router.navigateByUrl('/auth/login');
+    } catch (error) {
+      this.deleteError.set(apiErrorMessage(error, this.translationService));
+    } finally {
+      this.deleting.set(false);
+    }
+  }
 
   logout(): void {
     void this.authService.logout();

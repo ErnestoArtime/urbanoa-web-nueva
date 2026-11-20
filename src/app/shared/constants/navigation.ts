@@ -83,11 +83,4 @@ export const ACCOUNT_MENU: readonly AccountMenuItem[] = [
   },
   { key: 'about', path: '/app/account/about', labelKey: 'account.menu.about', icon: 'about', groupKey: 'account.menu.group.other' },
   { key: 'support', path: '/app/account/support', labelKey: 'account.menu.support', icon: 'support', groupKey: 'account.menu.group.other' },
-  {
-    key: 'delete-account',
-    path: '/app/account/delete-account',
-    labelKey: 'account.deleteAccount.action',
-    icon: 'delete',
-    groupKey: 'account.menu.group.other',
-  },
 ];
