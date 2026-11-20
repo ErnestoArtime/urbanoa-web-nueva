@@ -2,3 +2,8 @@
   display: inline-block;
   margin-bottom: 1rem;
 }
+@media (min-width: 960px) {
+  .page-title {
+    display: none;
+  }
+}

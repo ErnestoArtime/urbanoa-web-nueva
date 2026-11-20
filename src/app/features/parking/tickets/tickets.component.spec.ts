@@ -67,9 +67,8 @@ describe('ParkingTicketsComponent', () => {
       });
       const fixture = TestBed.createComponent(ParkingTicketsComponent);
       await fixture.whenStable();
-      const link = fixture.nativeElement.querySelector('.back-link') as HTMLAnchorElement;
+      const link = fixture.nativeElement.querySelector('.back-btn') as HTMLAnchorElement;
       expect(link.pathname).toBe(origin === 'streets' ? '/app/parking/streets' : '/app/parking');
-      expect(link.textContent?.trim()).toBe(origin === 'streets' ? 'parking.streets.back' : 'parking.tickets.back');
       const query = new URL(link.href).searchParams;
       expect(query.get('city')).toBe('durango');
       expect(query.get('cityId')).toBe('23');

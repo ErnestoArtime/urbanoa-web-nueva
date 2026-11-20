@@ -1,3 +1,4 @@
+import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
 import { AppIconComponent } from '../../../shared/icons/app-icon.component';
 import { ApiErrorPipe } from '../../../shared/pipes/api-error.pipe';
 import { Component, inject, OnInit, signal } from '@angular/core';
@@ -7,10 +8,10 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { ParkingFlowStore } from '../parking-flow.store';
 @Component({
   selector: 'app-parking-city-info',
-  imports: [AppIconComponent, ApiErrorPipe, RouterLink, TranslatePipe],
+  imports: [DetailPanelHeaderComponent, AppIconComponent, ApiErrorPipe, RouterLink, TranslatePipe],
   template: `
     <div class="page">
-      <a routerLink="/app/parking/cities" class="back-link">{{ 'parking.cityInfo.back' | translate }}</a>
+      <app-detail-panel-header [title]="municipio()?.nombre ?? ''" backRoute="/app/parking/cities" [backDesktop]="true" />
       @if (municipio(); as city) {
         @if (city.imagePath || city.imagen) {
           <div class="city-hero">
@@ -19,20 +20,15 @@ import { ParkingFlowStore } from '../parking-flow.store';
         }
         <h2>{{ 'parking.cityInfo.contact' | translate }}</h2>
         <div class="card mt-2">
-          @if (city.address) {
-            <a class="contact-row" [href]="mapsUrl(city.address)" target="_blank" rel="noopener">
-              <app-icon name="location" [size]="24" [stroke]="false" /><span>{{ city.address }}</span>
-            </a>
-          }
           @if (city.phone) {
             <a class="contact-row" [href]="'tel:' + city.phone"
               ><app-icon name="phone" [size]="24" [stroke]="false" /><span>{{ city.phone }}</span></a
             >
           }
-          @if (city.email) {
-            <a class="contact-row" [href]="'mailto:' + city.email"
-              ><app-icon name="email" [size]="24" [stroke]="false" /><span>{{ city.email }}</span></a
-            >
+          @if (city.address) {
+            <a class="contact-row" [href]="mapsUrl(city.address)" target="_blank" rel="noopener">
+              <app-icon name="location" [size]="24" [stroke]="false" /><span>{{ city.address }}</span>
+            </a>
           }
         </div>
         <a

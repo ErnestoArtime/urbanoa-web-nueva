@@ -1,3 +1,4 @@
+import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
 import { Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
@@ -6,10 +7,10 @@ import { ParkingFlowStore } from '../parking-flow.store';
 
 @Component({
   selector: 'app-parking-ticket-detail',
-  imports: [RouterLink, TranslatePipe],
+  imports: [DetailPanelHeaderComponent, RouterLink, TranslatePipe],
   template: `
     <div class="page">
-      <a routerLink="/app/home" class="back-link">{{ 'parking.ticketDetail.back' | translate }}</a>
+      <app-detail-panel-header [title]="'parking.ticketDetail.title' | translate" backRoute="/app/home" [backDesktop]="true" />
       <h1 class="page-title">{{ 'parking.ticketDetail.title' | translate }}</h1>
       <div class="card mt-2">
         <p>

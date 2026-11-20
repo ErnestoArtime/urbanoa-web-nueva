@@ -28,7 +28,7 @@ describe('ParkingStreetsComponent back navigation', () => {
     });
     const fixture = TestBed.createComponent(ParkingStreetsComponent);
     await fixture.whenStable();
-    const link = fixture.nativeElement.querySelector('.back-link') as HTMLAnchorElement;
+    const link = fixture.nativeElement.querySelector('.back-btn') as HTMLAnchorElement;
     expect(link.pathname).toBe('/app/parking/cities');
     const query = new URL(link.href).searchParams;
     expect(query.get('city')).toBe('zarautz');

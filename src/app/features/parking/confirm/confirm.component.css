@@ -130,3 +130,8 @@
     padding-bottom: 0.25rem;
   }
 }
+@media (min-width: 960px) {
+  .page-title {
+    display: none;
+  }
+}

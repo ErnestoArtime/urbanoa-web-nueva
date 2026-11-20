@@ -229,3 +229,8 @@
     padding-inline: 1rem;
   }
 }
+@media (min-width: 960px) {
+  .page-title {
+    display: none;
+  }
+}

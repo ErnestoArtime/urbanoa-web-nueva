@@ -1,3 +1,4 @@
+import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
 import { ApiErrorPipe } from '../../../shared/pipes/api-error.pipe';
 import { normalizeSectorColor } from '../../../shared/utils/sector-color';
 import { RuntimeStyleDirective } from '../../../shared/directives/runtime-style.directive';
@@ -12,11 +13,16 @@ import { TranslationService } from '../../../core/services/translation.service';
 
 @Component({
   selector: 'app-parking-tickets',
-  imports: [ApiErrorPipe, RuntimeStyleDirective, RouterLink, LoaderComponent, TranslatePipe],
+  imports: [DetailPanelHeaderComponent, ApiErrorPipe, RuntimeStyleDirective, RouterLink, LoaderComponent, TranslatePipe],
   template: `
     <app-loader [visible]="loading()" [message]="'parking.tickets.loading' | translate" />
     <div class="page flow-page">
-      <a [routerLink]="backRoute()" [queryParams]="backParams()" class="back-link">{{ backLabel() | translate }}</a>
+      <app-detail-panel-header
+        [title]="'parking.tickets.title' | translate"
+        [backRoute]="backRoute()"
+        [backParams]="backParams()"
+        [backDesktop]="true"
+      />
       <h1 class="page-title">{{ 'parking.tickets.title' | translate }}</h1>
       <div class="selection-summary card">
         <span class="zone-color" [appRuntimeStyle]="{ background: '#' + query().sectorColor }"></span>
@@ -106,7 +112,6 @@ export class ParkingTicketsComponent implements OnInit {
   );
   readonly loading = signal(true);
   readonly backRoute = computed(() => (this.query().selectionOrigin === 'streets' ? '/app/parking/streets' : '/app/parking'));
-  readonly backLabel = computed(() => (this.query().selectionOrigin === 'streets' ? 'parking.streets.back' : 'parking.tickets.back'));
   readonly backParams = computed(() => {
     const query = this.query();
     return {

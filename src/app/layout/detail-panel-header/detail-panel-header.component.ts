@@ -9,7 +9,12 @@ import { TranslatePipe } from '../../shared/pipes/translate.pipe';
   template: `
     <div class="detail-panel-header">
       @if (backRoute()) {
-        <a [routerLink]="backRoute()" class="back-btn" [class.back-desktop]="backDesktop()" [attr.aria-label]="'common.back' | translate"
+        <a
+          [routerLink]="backRoute()"
+          [queryParams]="backParams()"
+          class="back-btn"
+          [class.back-desktop]="backDesktop()"
+          [attr.aria-label]="'common.back' | translate"
           ><app-icon name="arrowBackBlack24" [size]="24" [stroke]="false"
         /></a>
       }
@@ -37,6 +42,7 @@ import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 })
 export class DetailPanelHeaderComponent {
   readonly backRoute = input<string>();
+  readonly backParams = input<Record<string, unknown> | null>(null);
   readonly title = input.required<string>();
   readonly showAttach = input(false);
   readonly showMore = input(false);

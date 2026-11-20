@@ -1,3 +1,4 @@
+import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
 import { AppIconComponent } from '../../../shared/icons/app-icon.component';
 import { ApiErrorPipe } from '../../../shared/pipes/api-error.pipe';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
@@ -10,13 +11,16 @@ import { LoaderComponent } from '../../../shared/components/loader/loader.compon
 
 @Component({
   selector: 'app-parking-streets',
-  imports: [AppIconComponent, ApiErrorPipe, RouterLink, TranslatePipe, LoaderComponent],
+  imports: [DetailPanelHeaderComponent, AppIconComponent, ApiErrorPipe, RouterLink, TranslatePipe, LoaderComponent],
   template: `
     <div class="page">
       <app-loader [visible]="loading()" [message]="'parking.streets.loading' | translate" imageSrc="/assets/brand/login-logo.jpg" />
-      <a [routerLink]="['/app/parking/cities']" [queryParams]="{ city: cityId, cityName, vehicleId, plate }" class="back-link">{{
-        'parking.streets.back' | translate
-      }}</a>
+      <app-detail-panel-header
+        [title]="'parking.selectStreet' | translate"
+        backRoute="/app/parking/cities"
+        [backParams]="{ city: cityId, cityName, vehicleId, plate }"
+        [backDesktop]="true"
+      />
       <h1 class="page-title">{{ 'parking.selectStreet' | translate }}</h1>
       <div class="selected-city card" aria-live="polite">
         <small>{{ 'parking.cities.selected' | translate }}</small>

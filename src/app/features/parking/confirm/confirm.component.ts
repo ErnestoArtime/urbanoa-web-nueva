@@ -1,10 +1,11 @@
+import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
 import { apiErrorMessage } from '../../../core/http/api-error-key';
 import { formatEuro, formatEuroNumber } from '../../../core/utils/euro-format';
 import { RuntimeStyleDirective } from '../../../shared/directives/runtime-style.directive';
 import { WalletManagerModalComponent } from '../../account/wallet-manager-modal/wallet-manager-modal.component';
 import { ConnectivityService } from '../../../core/services/connectivity.service';
 import { Component, computed, inject, OnInit, signal, ViewChild } from '@angular/core';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { LoaderComponent } from '../../../shared/components/loader/loader.component';
 import { PaymentSummaryComponent } from '../../../shared/components/payment-summary/payment-summary.component';
 import { SwipeToPayComponent } from '../../../shared/components/swipe-to-pay/swipe-to-pay.component';
@@ -24,10 +25,11 @@ import { AuthService } from '../../../core/services/auth.service';
 @Component({
   selector: 'app-parking-confirm',
   imports: [
+    DetailPanelHeaderComponent,
     RuntimeStyleDirective,
     WalletManagerModalComponent,
     ResultModalComponent,
-    RouterLink,
+
     LoaderComponent,
     PaymentSummaryComponent,
     SwipeToPayComponent,
@@ -36,7 +38,12 @@ import { AuthService } from '../../../core/services/auth.service';
   template: `
     <div class="page flow-page confirm-page has-sticky-actions">
       <app-loader [visible]="loading()" [message]="'parking.confirm.loading' | translate" imageSrc="/assets/brand/login-logo.jpg" />
-      <a routerLink="/app/parking/time-steps" [queryParams]="query()" class="back-link">{{ 'parking.confirm.back' | translate }}</a>
+      <app-detail-panel-header
+        [title]="'parking.confirm.title' | translate"
+        backRoute="/app/parking/time-steps"
+        [backParams]="query()"
+        [backDesktop]="true"
+      />
       <h1 class="page-title">{{ 'parking.confirm.title' | translate }}</h1>
       @if (submitError(); as error) {
         <app-result-modal
@@ -130,7 +137,7 @@ import { AuthService } from '../../../core/services/auth.service';
           type="warning"
           [title]="'payment.insufficient.title' | translate"
           [message]="'payment.insufficient.message' | translate"
-          [primaryText]="'parking.confirm.changePayment' | translate"
+          [primaryText]="'common.accept' | translate"
           [secondaryText]="'common.cancel' | translate"
           (primaryAction)="openPaymentMethods()"
           (secondaryAction)="paymentAlertOpen.set(false)"

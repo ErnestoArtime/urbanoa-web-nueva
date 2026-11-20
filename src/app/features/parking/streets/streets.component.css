@@ -73,3 +73,8 @@
     box-sizing: border-box;
   }
 }
+@media (min-width: 960px) {
+  .page-title {
+    display: none;
+  }
+}

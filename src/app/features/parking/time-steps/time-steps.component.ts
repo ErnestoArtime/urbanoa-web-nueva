@@ -1,3 +1,4 @@
+import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
 import { AppIconComponent } from '../../../shared/icons/app-icon.component';
 import { ApiErrorPipe } from '../../../shared/pipes/api-error.pipe';
 import { formatEuro } from '../../../core/utils/euro-format';
@@ -16,11 +17,16 @@ import { opsRelativeDayLabel, formatOpsTime, parseOpsDate } from '../../../core/
 
 @Component({
   selector: 'app-parking-time-steps',
-  imports: [AppIconComponent, ApiErrorPipe, RuntimeStyleDirective, RouterLink, LoaderComponent, TranslatePipe],
+  imports: [DetailPanelHeaderComponent, AppIconComponent, ApiErrorPipe, RuntimeStyleDirective, RouterLink, LoaderComponent, TranslatePipe],
   template: `
     <app-loader [visible]="loading()" [message]="'parking.timeSteps.loading' | translate" imageSrc="/assets/brand/login-logo.jpg" />
     <div class="page flow-page has-sticky-actions">
-      <a routerLink="/app/parking/tickets" [queryParams]="query()" class="back-link">{{ 'parking.timeSteps.back' | translate }}</a>
+      <app-detail-panel-header
+        [title]="'parking.timeSteps.title' | translate"
+        backRoute="/app/parking/tickets"
+        [backParams]="query()"
+        [backDesktop]="true"
+      />
       <h1 class="page-title">{{ 'parking.timeSteps.title' | translate }}</h1>
       <p class="page-subtitle">{{ 'parking.timeSteps.subtitle' | translate }}</p>
 
