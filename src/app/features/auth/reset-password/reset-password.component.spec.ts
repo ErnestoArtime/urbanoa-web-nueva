@@ -11,15 +11,13 @@ import { apiErrorKey } from '../../../core/http/api-error-key';
 
 describe('ResetPasswordComponent recovery errors', () => {
   it('shows unknown email for OPS -20, stays on the form and allows a successful retry', async () => {
-    const requestCode = jasmine
-      .createSpy('requestCode')
-      .and.rejectWith(
-        new OpsApiError('backend', OPS_ENDPOINTS.auth.recoverPassword, 'Mobile user not found', undefined, {
-          code: -20,
-          type: 1,
-          message_ES: 'El usuario del móvil no se encuentra',
-        }),
-      );
+    const requestCode = jasmine.createSpy('requestCode').and.rejectWith(
+      new OpsApiError('backend', OPS_ENDPOINTS.auth.recoverPassword, 'Mobile user not found', undefined, {
+        code: -20,
+        type: 1,
+        message_ES: 'El usuario del móvil no se encuentra',
+      }),
+    );
     const navigate = jasmine.createSpy('navigate').and.resolveTo(true);
     TestBed.configureTestingModule({
       providers: [

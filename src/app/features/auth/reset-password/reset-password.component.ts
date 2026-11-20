@@ -1,3 +1,4 @@
+import { AppIconComponent } from '../../../shared/icons/app-icon.component';
 import { TranslationService } from '../../../core/services/translation.service';
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -8,16 +9,23 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 
 @Component({
   selector: 'app-reset-password',
-  imports: [ReactiveFormsModule, RouterLink, TranslatePipe],
+  imports: [AppIconComponent, ReactiveFormsModule, RouterLink, TranslatePipe],
   template: `
     <main class="auth-page auth-page-centered">
       <section class="auth-panel" aria-labelledby="reset-password-title">
-        <h1 id="reset-password-title" class="auth-flow-title">{{ 'auth.reset.title' | translate }}</h1>
-        <p class="auth-flow-intro">{{ 'auth.reset.subtitle' | translate }}</p>
+        <header class="auth-title-row">
+          <a routerLink="/auth/login" class="auth-back" [attr.aria-label]="'common.back' | translate"
+            ><app-icon name="arrowBackBlack24" [size]="24" [stroke]="false"
+          /></a>
+          <h1 id="reset-password-title" class="auth-flow-title">{{ 'auth.reset.title' | translate }}</h1>
+        </header>
+        <p class="auth-flow-intro auth-flow-intro-start">{{ 'auth.reset.subtitle' | translate }}</p>
         <form [formGroup]="form" (ngSubmit)="onSubmit()">
           <div class="form-group">
-            <label class="form-label" for="reset-password-email">{{ 'account.profile.email' | translate }}</label>
-            <input id="reset-password-email" class="form-input" type="email" formControlName="email" autocomplete="email" />
+            <label class="outlined-field"
+              ><span>{{ 'auth.register.email' | translate }}</span
+              ><input id="reset-password-email" type="email" formControlName="email" autocomplete="email"
+            /></label>
             @if (form.controls.email.touched && form.controls.email.invalid) {
               <p class="form-error">
                 {{ (form.controls.email.hasError('email') ? 'auth.reset.emailInvalid' : 'auth.reset.emailRequired') | translate }}
@@ -31,9 +39,6 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
             {{ (submitting() ? 'auth.reset.sending' : 'auth.reset.generateCode') | translate }}
           </button>
         </form>
-        <p class="text-center mt-2">
-          <a routerLink="/auth/login">{{ 'auth.reset.backToLogin' | translate }}</a>
-        </p>
       </section>
     </main>
   `,

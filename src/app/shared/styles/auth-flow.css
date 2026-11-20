@@ -31,3 +31,21 @@
   margin-top: var(--space-2);
   text-align: center;
 }
+.auth-back {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--color-text);
+  transition: background 150ms ease;
+}
+.auth-back:hover,
+.auth-back:focus-visible {
+  background: var(--color-active);
+  outline: none;
+}
+.auth-flow-intro-start {
+  text-align: left;
+}
