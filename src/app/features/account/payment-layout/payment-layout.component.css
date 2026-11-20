@@ -317,8 +317,7 @@
   font-size: var(--text-xs);
 }
 .wallet-topup {
-  margin-top: 0.5rem;
-  border: 1px solid color-mix(in srgb, var(--color-on-primary) 55%, transparent);
+  margin-bottom: 0.5rem;
   background: var(--color-primary);
   color: var(--color-on-primary);
 }

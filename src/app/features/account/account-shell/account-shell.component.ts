@@ -72,6 +72,10 @@ import { TranslationService } from '../../../core/services/translation.service';
           <app-icon name="logout" class="logout-icon" [size]="18" [stroke]="false" />
           {{ 'account.logout' | translate }}
         </button>
+        <a routerLink="/app/account/delete-account" class="account-logout account-delete">
+          <app-icon name="delete" class="logout-icon" [size]="18" [stroke]="false" />
+          {{ 'account.deleteAccount.action' | translate }}
+        </a>
       </div>
     </app-split-view>
 
@@ -87,7 +91,7 @@ export class AccountShellComponent implements OnInit {
   private readonly userService = inject(UserService);
   private readonly translationService = inject(TranslationService);
   readonly walletService = inject(WalletService);
-  readonly menu = ACCOUNT_MENU;
+  readonly menu = ACCOUNT_MENU.filter((item) => item.key !== 'delete-account');
   readonly user = this.userService.user;
   readonly brand = APP_BRAND;
   readonly toast = signal('');

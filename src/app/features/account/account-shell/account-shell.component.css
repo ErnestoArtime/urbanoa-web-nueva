@@ -28,6 +28,10 @@
     background 0.2s,
     color 0.2s;
 }
+.account-delete {
+  margin-top: 0.75rem;
+  text-decoration: none;
+}
 .account-logout:hover {
   background: var(--color-error, var(--color-account-logout-border));
   color: var(--color-on-primary);

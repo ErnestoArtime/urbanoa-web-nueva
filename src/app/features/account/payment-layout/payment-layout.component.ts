@@ -83,14 +83,6 @@ import { RuntimeStyleDirective } from '../../../shared/directives/runtime-style.
             <div class="wallet-section">
               <strong>{{ 'account.wallet' | translate }}</strong>
               <p class="wallet-balance-large">{{ walletService.balance() | euro }}</p>
-              <button
-                type="button"
-                class="btn btn-primary btn-sm wallet-topup"
-                [disabled]="walletService.cards().length === 0"
-                (click)="goToRecharge()"
-              >
-                {{ 'account.recharge.title' | translate }}
-              </button>
             </div>
           </div>
           <p class="section-title cards-heading">
@@ -162,6 +154,14 @@ import { RuntimeStyleDirective } from '../../../shared/directives/runtime-style.
           </div>
         </div>
         <div class="wallet-actions">
+          <button
+            type="button"
+            class="btn btn-primary btn-block wallet-topup"
+            [disabled]="walletService.cards().length === 0"
+            (click)="goToRecharge()"
+          >
+            {{ 'account.recharge.title' | translate }}
+          </button>
           <button type="button" (click)="openScreen('add')" class="btn btn-secondary btn-block">
             {{ 'account.addCard' | translate }}
           </button>
