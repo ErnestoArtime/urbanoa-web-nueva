@@ -99,7 +99,7 @@ interface MapParkingZone {
                 ><small>{{ 'parking.map.vehicle' | translate }}</small
                 ><strong>{{ selectedVehicle()?.plate ?? (vehiclePlaceholderKey() | translate) }}</strong></span
               >
-              <app-icon name="dropDown" class="vehicle-control-chevron" [size]="20" [stroke]="false" />
+              <app-icon name="chevrolenRight" class="vehicle-control-chevron" [size]="20" [stroke]="false" />
             </button>
 
             @if (selectedVehicle() && isParkedIn(selectedVehicle()!)) {
@@ -128,15 +128,23 @@ interface MapParkingZone {
                     type="button"
                     class="vehicle-option"
                     [class.selected]="v === selectedVehicle()"
+                    [class.favorite]="v.isDefault"
                     [class.parked]="isParkedIn(v)"
                     (click)="selectVehicle(v)"
                   >
-                    <span>{{ v.plate }}</span>
-                    <span class="vehicle-label">{{ translateLabel(v.label) }}</span>
+                    <app-icon class="vehicle-option-icon" name="car" [size]="22" [stroke]="false" />
+                    <span class="vehicle-option-text">
+                      @if (v.isDefault) {
+                        <small>{{ 'account.vehicleFavorite' | translate }}</small>
+                      } @else if (v.label) {
+                        <small>{{ translateLabel(v.label) }}</small>
+                      }
+                      <strong>{{ v.plate }}</strong>
+                    </span>
                     @if (isParkedIn(v)) {
                       <span class="badge badge-warning">{{ 'account.vehicle.alreadyParked' | translate }}</span>
-                    } @else if (v.isDefault) {
-                      <span class="badge badge-primary"><app-icon name="favorite" [size]="12" [stroke]="false" /></span>
+                    } @else if (v === selectedVehicle()) {
+                      <app-icon class="vehicle-option-check" name="check" [size]="20" [stroke]="false" />
                     }
                   </button>
                 }
