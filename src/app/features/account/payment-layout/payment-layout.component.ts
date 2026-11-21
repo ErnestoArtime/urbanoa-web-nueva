@@ -165,7 +165,7 @@ import { RuntimeStyleDirective } from '../../../shared/directives/runtime-style.
             >
               {{ 'account.recharge.title' | translate }}
             </button>
-            <button type="button" (click)="openScreen('add')" class="btn btn-secondary">
+            <button type="button" (click)="openScreen('add')" class="btn btn-primary">
               {{ 'account.addCard' | translate }}
             </button>
           </div>
@@ -174,7 +174,7 @@ import { RuntimeStyleDirective } from '../../../shared/directives/runtime-style.
               type="button"
               (click)="refundBalance()"
               [disabled]="walletService.balance() <= 0 || busy()"
-              class="btn btn-secondary refund-action"
+              class="btn btn-ghost refund-action"
             >
               {{ 'account.withdrawBalance' | translate }}
             </button>

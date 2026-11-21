@@ -315,7 +315,21 @@
   margin-top: 0.5rem;
 }
 .refund-action {
-  min-width: 180px;
+  width: calc((100% - 0.5rem) / 2);
+  min-width: 0;
+  min-height: 0;
+  padding: 0.4rem 0.5rem;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--color-primary);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+}
+.refund-action:hover:not(:disabled),
+.refund-action:focus-visible {
+  background: var(--color-active);
+  color: var(--color-primary-dark);
 }
 .wallet-main-actions {
   display: grid;
