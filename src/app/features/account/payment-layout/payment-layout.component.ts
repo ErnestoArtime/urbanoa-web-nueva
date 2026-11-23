@@ -157,14 +157,6 @@ import { RuntimeStyleDirective } from '../../../shared/directives/runtime-style.
         </div>
         <div class="wallet-actions">
           <div class="wallet-main-actions">
-            <button
-              type="button"
-              class="btn btn-primary wallet-topup"
-              [disabled]="walletService.cards().length === 0"
-              (click)="goToRecharge()"
-            >
-              {{ 'account.recharge.title' | translate }}
-            </button>
             <button type="button" (click)="openScreen('add')" class="btn btn-primary">
               {{ 'account.addCard' | translate }}
             </button>
@@ -376,11 +368,6 @@ export class PaymentLayoutComponent implements OnInit {
   rechargeCard(id: string): void {
     this.activeCardMenu.set(null);
     this.openScreen('recharge', id);
-  }
-  goToRecharge(): void {
-    const cardId = this.walletService.defaultCardId();
-    if (!this.walletService.cards().length || !cardId) return;
-    this.openScreen('recharge', cardId);
   }
   refundBalance(): void {
     this.openScreen('refund');

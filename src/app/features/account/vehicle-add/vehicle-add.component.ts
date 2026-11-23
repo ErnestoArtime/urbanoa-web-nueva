@@ -1,5 +1,5 @@
 import { ApiErrorPipe } from '../../../shared/pipes/api-error.pipe';
-import { Component, inject, input, signal } from '@angular/core';
+import { afterNextRender, Component, effect, ElementRef, inject, Injector, input, output, signal, viewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { DetailPanelHeaderComponent } from '../../../layout/detail-panel-header/detail-panel-header.component';
@@ -23,7 +23,9 @@ import { LoaderComponent } from '../../../shared/components/loader/loader.compon
       <div class="card">
         <div class="form-group">
           <input
+            #plateInput
             class="form-input"
+            [disabled]="!enabled()"
             [attr.aria-label]="'account.vehicleAdd.plate' | translate"
             aria-required="true"
             [class.invalid]="plateError() || plateInvalid() || plateDuplicate()"
@@ -44,9 +46,11 @@ import { LoaderComponent } from '../../../shared/components/loader/loader.compon
         </div>
         <label class="switch-row"
           ><span>{{ 'account.vehicleAdd.foreignPlate' | translate }}</span
-          ><input type="checkbox" [checked]="foreignPlate()" (change)="foreignPlate.set(checked($event))" /><span class="switch"></span
+          ><input type="checkbox" [disabled]="!enabled()" [checked]="foreignPlate()" (change)="foreignPlate.set(checked($event))" /><span
+            class="switch"
+          ></span
         ></label>
-        <button type="button" class="btn btn-primary btn-block mt-2" [disabled]="saving()" (click)="save()">
+        <button type="button" class="btn btn-primary btn-block mt-2" [disabled]="saving() || !enabled()" (click)="save()">
           {{ 'account.vehicleAdd.save' | translate }}
         </button>
       </div>
@@ -76,7 +80,12 @@ export class VehicleAddComponent {
   private readonly vehicleService = inject(VehicleService);
   private readonly operationsService = inject(OperationsService);
   private readonly router = inject(Router);
+  private readonly injector = inject(Injector);
   readonly embedded = input(false);
+  readonly enabled = input(true);
+  readonly focusRequest = input(0);
+  readonly done = output<void>();
+  private readonly plateInput = viewChild<ElementRef<HTMLInputElement>>('plateInput');
   readonly plate = signal('');
   readonly foreignPlate = signal(false);
   readonly plateError = signal(false);
@@ -87,6 +96,14 @@ export class VehicleAddComponent {
   readonly addFailed = signal(false);
   readonly addErrorMessage = signal<unknown>(null);
   readonly FOREIGN_PLATE_MAX_LENGTH = FOREIGN_PLATE_MAX_LENGTH;
+
+  constructor() {
+    effect(() => {
+      if (this.focusRequest() > 0 && this.enabled()) {
+        afterNextRender(() => this.plateInput()?.nativeElement.focus(), { injector: this.injector });
+      }
+    });
+  }
 
   setPlate(event: Event): void {
     this.plate.set((event.target as HTMLInputElement).value.toUpperCase());
@@ -144,6 +161,7 @@ export class VehicleAddComponent {
       this.saved.set(false);
       this.plate.set('');
       this.foreignPlate.set(false);
+      this.done.emit();
       return;
     }
     void this.router.navigate(['/app/account/vehicles']);

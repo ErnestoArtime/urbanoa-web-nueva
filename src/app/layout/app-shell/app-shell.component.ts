@@ -44,12 +44,10 @@ const TITLE_KEYS: Record<string, string> = {
   '/app/account/tax-data': 'account.taxData',
   '/app/account/vehicles': 'account.vehicles',
   '/app/account/vehicles/add': 'account.vehicles',
-  '/app/account/vehicles/edit': 'account.vehicles',
   '/app/account/payment-methods': 'account.paymentMethods',
   '/app/account/payment-methods/add': 'account.paymentMethods',
   '/app/account/payment-methods/recharge': 'dashboard.recharge',
   '/app/account/payment-methods/refund': 'ops.type.balanceRefund',
-  '/app/account/about': 'app.title',
   '/app/account/support': 'account.support',
   '/app/account/support-success': 'account.support',
 };

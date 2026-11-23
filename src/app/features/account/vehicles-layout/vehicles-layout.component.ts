@@ -8,6 +8,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { SplitViewComponent } from '../../../layout/split-view/split-view.component';
 import { AppIconComponent } from '../../../shared/icons/app-icon.component';
 import { LoaderComponent } from '../../../shared/components/loader/loader.component';
+import { VehicleAddComponent } from '../vehicle-add/vehicle-add.component';
 import { ResultModalComponent } from '../../../shared/components/result-modal/result-modal.component';
 import { RuntimeStyleDirective } from '../../../shared/directives/runtime-style.directive';
 import { VehicleService } from '../../../core/services/vehicle.service';
@@ -27,6 +28,7 @@ const VIEWPORT_PADDING = 8;
     ApiErrorPipe,
     RouterLink,
     SplitViewComponent,
+    VehicleAddComponent,
     TranslatePipe,
     AppIconComponent,
     LoaderComponent,
@@ -39,13 +41,23 @@ const VIEWPORT_PADDING = 8;
       class="vehicles-split"
       [hideList]="isChildRoute() && !wideLayout()"
       [hideDetail]="!isChildRoute() && !wideLayout()"
-      [showOutlet]="isChildRoute() || wideLayout()"
+      [showOutlet]="isChildRoute() && !wideLayout()"
+      [projectDetail]="wideLayout()"
       emptyMessageKey="account.vehicles.empty"
     >
       <div splitList class="page has-sticky-actions" [attr.aria-busy]="loadingVehicles()">
         <h1 class="page-title">{{ 'account.menu.vehicles' | translate }}</h1>
         @if (loadingVehicles()) {
           <span class="sr-only" role="status">{{ 'common.loading' | translate }}</span>
+          <div class="card vehicles-skeleton" aria-hidden="true">
+            @for (row of skeletonRows; track row) {
+              <div class="vehicle-skeleton-row">
+                <span class="skeleton-block skeleton-icon"></span>
+                <span class="skeleton-copy"><i class="skeleton-block"></i><i class="skeleton-block"></i></span>
+                <span class="skeleton-block skeleton-menu"></span>
+              </div>
+            }
+          </div>
         } @else if (vehicleService.source() === 'error') {
           <div class="card" role="alert">
             <p>{{ errorForDisplay() | apiError: 'errors.server' }}</p>
@@ -56,22 +68,24 @@ const VIEWPORT_PADDING = 8;
             @for (v of sortedVehicles(); track v.id) {
               <li class="list-item vehicle-item">
                 <div class="vehicle-item-row">
-                  <span class="vehicle-icon-wrap"><app-icon name="car" class="vehicle-icon" [size]="22" [stroke]="false" /></span>
-                  <div class="list-item-content">
-                    <div class="list-item-title">{{ v.plate }}</div>
-                    <div class="list-item-subtitle">
+                  <div class="vehicle-link">
+                    <span class="vehicle-icon-wrap"><app-icon name="car" class="vehicle-icon" [size]="22" [stroke]="false" /></span>
+                    <div class="list-item-content">
+                      <div class="list-item-title">{{ v.plate }}</div>
+                      <div class="list-item-subtitle">
+                        @if (v.isDefault) {
+                          {{ 'account.vehicleFavorite' | translate }}
+                        } @else if (v.label; as label) {
+                          {{ translateLabel(label) }}
+                        }
+                      </div>
                       @if (v.isDefault) {
-                        {{ 'account.vehicleFavorite' | translate }}
-                      } @else if (v.label; as label) {
-                        {{ translateLabel(label) }}
+                        <span class="badge badge-primary">{{ 'account.cardPrimary' | translate }}</span>
+                      }
+                      @if (isVehicleParked(v)) {
+                        <span class="badge badge-warning">{{ 'account.vehicle.alreadyParked' | translate }}</span>
                       }
                     </div>
-                    @if (v.isDefault) {
-                      <span class="badge badge-primary">{{ 'account.cardPrimary' | translate }}</span>
-                    }
-                    @if (isVehicleParked(v)) {
-                      <span class="badge badge-warning">{{ 'account.vehicle.alreadyParked' | translate }}</span>
-                    }
                   </div>
                   @if (!v.isDefault) {
                     <button
@@ -98,24 +112,30 @@ const VIEWPORT_PADDING = 8;
               </li>
             }
           </ul>
-          @if (!wideLayout()) {
+        } @else {
+          <div class="card empty-vehicles">
+            <p>{{ 'account.vehicles.noneSaved' | translate }}</p>
+          </div>
+        }
+        @if (!loadingVehicles() && vehicleService.source() !== 'error') {
+          @if (wideLayout()) {
+            <div class="list-actions">
+              <button type="button" class="btn btn-primary btn-block" (click)="enableAdd()">{{ 'account.addVehicle' | translate }}</button>
+            </div>
+          } @else {
             <div class="sticky-actions">
               <a routerLink="/app/account/vehicles/add" class="btn btn-primary btn-block">{{ 'account.addVehicle' | translate }}</a>
             </div>
           }
-        } @else {
-          @if (!wideLayout()) {
-            <div class="card empty-vehicles">
-              <p>{{ 'account.vehicles.noneSaved' | translate }}</p>
-              <a routerLink="/app/account/vehicles/add" class="btn btn-primary btn-block">{{ 'account.addVehicle' | translate }}</a>
-            </div>
-          } @else {
-            <div class="card empty-vehicles">
-              <p>{{ 'account.vehicles.noneSaved' | translate }}</p>
-            </div>
-          }
         }
       </div>
+      <app-vehicle-add
+        splitDetailContent
+        [embedded]="true"
+        [enabled]="addEnabled()"
+        [focusRequest]="focusTick()"
+        (done)="addEnabled.set(false)"
+      />
     </app-split-view>
 
     @if (confirmDelete(); as vehicle) {
@@ -151,6 +171,7 @@ const VIEWPORT_PADDING = 8;
   styleUrl: './vehicles-layout.component.css',
 })
 export class VehiclesLayoutComponent implements OnInit {
+  readonly skeletonRows = [0, 1, 2];
   errorForDisplay(): unknown {
     return this.vehicleService.lastError?.();
   }
@@ -163,6 +184,8 @@ export class VehiclesLayoutComponent implements OnInit {
   readonly sortedVehicles = computed(() => [...this.vehicles()].sort((a, b) => Number(b.isDefault) - Number(a.isDefault)));
   readonly loadingVehicles = signal(true);
   readonly busy = signal(false);
+  readonly addEnabled = signal(false);
+  readonly focusTick = signal(0);
   readonly activeMenu = signal<string | null>(null);
   readonly menuPosition = signal<{ top: number; left: number } | null>(null);
   readonly confirmDelete = signal<Vehicle | null>(null);
@@ -195,8 +218,13 @@ export class VehiclesLayoutComponent implements OnInit {
   );
   isChildRoute = () => {
     const u = this.url();
-    return u.includes('/vehicles/add') || u.includes('/vehicles/edit');
+    return u.includes('/vehicles/add');
   };
+
+  enableAdd(): void {
+    this.addEnabled.set(true);
+    this.focusTick.update((n) => n + 1);
+  }
 
   menuStyles(): Record<string, string> {
     const position = this.menuPosition();

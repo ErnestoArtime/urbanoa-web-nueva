@@ -81,6 +81,5 @@ export const ACCOUNT_MENU: readonly AccountMenuItem[] = [
     icon: 'privacy',
     groupKey: 'account.menu.group.other',
   },
-  { key: 'about', path: '/app/account/about', labelKey: 'account.menu.about', icon: 'about', groupKey: 'account.menu.group.other' },
   { key: 'support', path: '/app/account/support', labelKey: 'account.menu.support', icon: 'support', groupKey: 'account.menu.group.other' },
 ];

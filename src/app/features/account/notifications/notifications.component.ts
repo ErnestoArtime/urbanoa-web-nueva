@@ -79,7 +79,7 @@ import { NotificationsService } from '../../../core/services/notifications.servi
       }
     </div>
   `,
-  styleUrls: ['../account-editor.css', './notifications.component.css'],
+  styleUrls: ['../account-editor.css'],
 })
 export class AccountNotificationsComponent implements OnInit {
   errorForDisplay(): unknown {

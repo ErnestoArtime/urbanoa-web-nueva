@@ -315,11 +315,10 @@
   margin-top: 0.5rem;
 }
 .refund-action {
-  width: calc((100% - 0.5rem) / 2);
   min-width: 0;
   min-height: 0;
-  padding: 0.4rem 0.5rem;
-  border: 0;
+  padding: 0.35rem 1.25rem;
+  border: 1px solid var(--color-primary);
   background: transparent;
   box-shadow: none;
   color: var(--color-primary);
@@ -331,18 +330,8 @@
   background: var(--color-active);
   color: var(--color-primary-dark);
 }
-.wallet-main-actions {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.5rem;
-}
 .wallet-main-actions .btn {
-  min-width: 0;
-  padding-inline: 0.5rem;
-}
-.wallet-topup {
-  background: var(--color-primary);
-  color: var(--color-on-primary);
+  width: 100%;
 }
 .wallet-page.compact {
   height: auto;

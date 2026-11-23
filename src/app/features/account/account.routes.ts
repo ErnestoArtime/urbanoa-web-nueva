@@ -56,11 +56,6 @@ export const ACCOUNT_ROUTES: Routes = [
         data: { title: 'account.menu.privacy', contentType: 'privacy', backLink: '/app/account', hideHeader: true },
       },
       {
-        path: 'about',
-        title: 'account.menu.about',
-        loadComponent: () => import('./about/about.component').then((m) => m.AccountAboutComponent),
-      },
-      {
         path: 'support-success',
         title: 'account.support.title',
         loadComponent: () => import('./support-success/support-success.component').then((m) => m.AccountSupportSuccessComponent),
@@ -101,11 +96,6 @@ export const ACCOUNT_ROUTES: Routes = [
             path: 'add',
             title: 'account.vehicleAdd.title',
             loadComponent: () => import('./vehicle-add/vehicle-add.component').then((m) => m.VehicleAddComponent),
-          },
-          {
-            path: 'edit/:id',
-            title: 'account.vehicleEdit.title',
-            loadComponent: () => import('./vehicle-edit/vehicle-edit.component').then((m) => m.VehicleEditComponent),
           },
         ],
       },

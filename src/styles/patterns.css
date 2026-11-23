@@ -265,7 +265,9 @@
 @media (min-width: 960px) {
   .vehicles-split > .split-view > .split-view-list {
     display: block;
-    width: clamp(260px, 24vw, 420px);
+    width: min(560px, 50%);
+    min-width: 310px;
+    flex: 0 0 min(560px, 50%);
   }
   .vehicles-split > .split-view > .split-view-detail {
     min-width: 0;

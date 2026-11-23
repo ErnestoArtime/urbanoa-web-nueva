@@ -9,14 +9,12 @@ import { AccountProfileComponent } from '../profile/profile.component';
 import { AccountSettingsComponent } from '../settings/settings.component';
 import { AccountNotificationsComponent } from '../notifications/notifications.component';
 import { AccountTaxDataComponent } from '../tax-data/tax-data.component';
-import { AccountAboutComponent } from '../about/about.component';
 import { AccountSupportComponent } from '../support/support.component';
 import { AccountSupportSuccessComponent } from '../support-success/support-success.component';
 import { AccountChangePasswordComponent } from '../change-password/change-password.component';
 import { AccountRechargeComponent } from '../recharge/recharge.component';
 import { AccountRefundComponent } from '../refund/refund.component';
 import { VehicleAddComponent } from '../vehicle-add/vehicle-add.component';
-import { VehicleEditComponent } from '../vehicle-edit/vehicle-edit.component';
 import { PaymentAddComponent } from '../payment-add/payment-add.component';
 import { WebContentComponent } from '../web-content/web-content.component';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
@@ -38,14 +36,12 @@ import { legalContentPath, type LegalContentType } from '../../../core/utils/leg
     AccountSettingsComponent,
     AccountNotificationsComponent,
     AccountTaxDataComponent,
-    AccountAboutComponent,
     AccountSupportComponent,
     AccountSupportSuccessComponent,
     AccountChangePasswordComponent,
     AccountRechargeComponent,
     AccountRefundComponent,
     VehicleAddComponent,
-    VehicleEditComponent,
     PaymentAddComponent,
     WebContentComponent,
   ],
@@ -112,9 +108,6 @@ import { legalContentPath, type LegalContentType } from '../../../core/utils/leg
               @case ('help') {
                 <app-web-content [title]="'account.menu.help' | translate" backLink="/app/account" [hideHeader]="true" [url]="helpUrl()" />
               }
-              @case ('about') {
-                <app-account-about />
-              }
               @case ('support') {
                 <app-account-support />
               }
@@ -149,13 +142,11 @@ import { legalContentPath, type LegalContentType } from '../../../core/utils/leg
               @case ('vehicles') {
                 @if (vehiclesSub() === 'add') {
                   <app-vehicle-add />
-                } @else if (vehiclesSub() === 'edit') {
-                  <app-vehicle-edit />
                 } @else {
                   <div class="page">
                     <ul class="list card account-menu-list">
                       @for (v of vehicles(); track v.id) {
-                        <a class="list-item" (click)="vehiclesSub.set('edit'); $event.preventDefault()">
+                        <li class="list-item">
                           <div class="list-item-content">
                             <div class="list-item-title">{{ v.plate }}</div>
                             <div class="list-item-subtitle">
@@ -169,7 +160,7 @@ import { legalContentPath, type LegalContentType } from '../../../core/utils/leg
                           @if (v.isDefault) {
                             <span class="badge badge-primary">★</span>
                           }
-                        </a>
+                        </li>
                       }
                     </ul>
                     <button type="button" class="btn btn-primary btn-block mt-2" (click)="vehiclesSub.set('add')">
@@ -338,7 +329,6 @@ export class AccountMenuComponent implements OnInit {
     if (accountPath.startsWith('vehicles')) {
       this.select('vehicles');
       if (accountPath.endsWith('/add')) this.vehiclesSub.set('add');
-      if (accountPath.endsWith('/edit')) this.vehiclesSub.set('edit');
       return;
     }
 

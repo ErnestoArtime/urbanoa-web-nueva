@@ -16,6 +16,8 @@ import { TranslatePipe } from '../../shared/pipes/translate.pipe';
       <div class="split-view-detail" [class.split-hidden]="hideDetail()">
         @if (showOutlet()) {
           <router-outlet />
+        } @else if (projectDetail()) {
+          <ng-content select="[splitDetailContent]" />
         } @else {
           <div class="split-view-detail-empty">
             <p>{{ emptyMessageKey() | translate }}</p>
@@ -30,5 +32,6 @@ export class SplitViewComponent {
   hideList = input(false);
   hideDetail = input(false);
   showOutlet = input(true);
+  projectDetail = input(false);
   emptyMessageKey = input('layout.splitView.empty');
 }

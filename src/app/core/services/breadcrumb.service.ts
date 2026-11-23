@@ -70,7 +70,6 @@ export class BreadcrumbService {
       'tax-data': 'account.taxData',
       support: 'account.support',
       'support-success': 'account.supportSuccess.title',
-      about: 'account.menu.about',
       help: 'account.menu.help',
       'terms-and-conditions': 'account.menu.terms',
       'privacy-policy': 'account.menu.privacy',

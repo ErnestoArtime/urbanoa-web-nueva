@@ -8,7 +8,6 @@ import { OperationsService } from '../../core/services/operations.service';
 import { ParkingSessionService } from '../../core/services/parking-session.service';
 import { LoaderComponent } from '../../shared/components/loader/loader.component';
 import { VehicleAddComponent } from './vehicle-add/vehicle-add.component';
-import { VehicleEditComponent } from './vehicle-edit/vehicle-edit.component';
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -49,17 +48,17 @@ describe('Vehicle action loading', () => {
     spyOn(LoaderComponent.prototype, 'ngAfterViewInit').and.stub();
   });
 
-  for (const action of ['add', 'update', 'remove'] as const) {
+  for (const action of ['add'] as const) {
     it(`shows loading throughout ${action} and refresh, rejecting duplicate submissions`, async () => {
       const mutation = deferred<{ success: boolean }>();
       const refresh = deferred<void>();
       vehicles[action].and.returnValue(mutation.promise);
       operations.load.and.returnValue(refresh.promise);
-      const fixture = action === 'add' ? TestBed.createComponent(VehicleAddComponent) : TestBed.createComponent(VehicleEditComponent);
+      const fixture = TestBed.createComponent(VehicleAddComponent);
       await fixture.whenStable();
       const component = fixture.componentInstance;
       component.plate.set('1234ZZZ');
-      const submit = () => (action === 'remove' ? (component as VehicleEditComponent).confirmRemove() : component.save());
+      const submit = () => component.save();
       const pending = submit();
       await fixture.whenStable();
       const loader = () => fixture.debugElement.query(By.directive(LoaderComponent))?.componentInstance as LoaderComponent | undefined;
@@ -80,15 +79,13 @@ describe('Vehicle action loading', () => {
 
     it(`releases loading and shows failure if ${action} rejects`, async () => {
       vehicles[action].and.rejectWith(new Error('network'));
-      const fixture = action === 'add' ? TestBed.createComponent(VehicleAddComponent) : TestBed.createComponent(VehicleEditComponent);
+      const fixture = TestBed.createComponent(VehicleAddComponent);
       await fixture.whenStable();
       const component = fixture.componentInstance;
       component.plate.set('1234ZZZ');
-      await (action === 'remove' ? (component as VehicleEditComponent).confirmRemove() : component.save());
+      await component.save();
       expect(component.saving()).toBeFalse();
-      expect(
-        action === 'add' ? (component as VehicleAddComponent).addFailed() : (component as VehicleEditComponent).deleteFailed(),
-      ).toBeTrue();
+      expect(component.addFailed()).toBeTrue();
     });
   }
 
