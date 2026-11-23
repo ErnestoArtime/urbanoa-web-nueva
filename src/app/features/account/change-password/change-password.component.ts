@@ -19,7 +19,7 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
       <app-detail-panel-header [title]="'account.changePassword.title' | translate" backRoute="/app/account" />
       <div class="account-editor-body">
         <div class="card">
-          <div class="form-group">
+          <div class="form-group span-full">
             <label for="current-password">{{ 'account.changePassword.current' | translate }} <span class="text-error">*</span></label>
             <div class="password-field">
               <input
@@ -81,7 +81,7 @@ import { ResultModalComponent } from '../../../shared/components/result-modal/re
               </div>
             </div>
           </div>
-          <small class="text-muted">{{ 'account.changePassword.minLength' | translate }}</small>
+          <small class="text-muted span-full">{{ 'account.changePassword.minLength' | translate }}</small>
         </div>
       </div>
       <div class="account-editor-actions">
