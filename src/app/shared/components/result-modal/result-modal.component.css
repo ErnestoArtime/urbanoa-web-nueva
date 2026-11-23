@@ -62,6 +62,7 @@
   margin: 0 0 1.5rem;
   line-height: var(--line-readable);
   overflow-wrap: anywhere;
+  white-space: pre-line;
 }
 .result-actions {
   display: flex;
