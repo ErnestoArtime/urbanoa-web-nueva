@@ -5,8 +5,8 @@ import { ApiErrorPipe } from '../../../shared/pipes/api-error.pipe';
 import { formatEuro } from '../../../core/utils/euro-format';
 import { EuroPipe } from '../../../shared/pipes/euro.pipe';
 import { RuntimeStyleDirective } from '../../../shared/directives/runtime-style.directive';
-import { AfterViewInit, Component, computed, DestroyRef, ElementRef, inject, OnInit, signal, ViewChild } from '@angular/core';
-import { RouterLink, RouterLinkActive, NavigationEnd, Router } from '@angular/router';
+import { AfterViewInit, Component, computed, DestroyRef, effect, ElementRef, inject, OnInit, signal, ViewChild } from '@angular/core';
+import { RouterLink, RouterLinkActive, NavigationEnd, PRIMARY_OUTLET, Router } from '@angular/router';
 import { filter, map, startWith } from 'rxjs/operators';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -69,7 +69,7 @@ import { TranslationService } from '../../../core/services/translation.service';
         }
 
         <div [class.operations-content-hidden]="initialLoading()">
-          @if (unpaidFinesCount() > 0) {
+          @if (showUnpaidFines()) {
             <section class="sanctions-alert">
               <a
                 routerLink="/app/operations/unpaid-fines"
@@ -161,81 +161,96 @@ import { TranslationService } from '../../../core/services/translation.service';
           </div>
 
           <ul class="list history-list" [appRuntimeStyle]="{ '--history-controls-height': historyControlsHeight() + 'px' }">
-            @for (group of groupedHistory(); track group.label) {
-              <details class="history-group" open>
-                <summary class="history-group-label">{{ group.label | translate }}</summary>
-                <ul class="history-group-items">
-                  @for (op of group.items; track op.id) {
-                    <li>
-                      <a
-                        [routerLink]="['/app/operations/detail', op.id]"
-                        class="list-item"
-                        [class.historic-fine-item]="isHistoricFine(op)"
-                        routerLinkActive="active"
-                        [routerLinkActiveOptions]="{ exact: true }"
-                      >
-                        <app-operation-icon [type]="op.type" />
-                        <div class="list-item-content">
-                          <div class="list-item-title" [class.finish-op-title]="isFinishParking(op)">
-                            {{ operationLabel(op) | translate }}
-                            @if (isHistoricFine(op)) {
-                              <span class="historic-fine-badge">{{ 'ops.fineDetail.historic' | translate }}</span>
-                            }
-                            @if (op.timePeriod === 2) {
-                              <span class="badge badge-warning">{{ 'ops.active' | translate }}</span>
-                            }
-                          </div>
-                          <div class="list-item-subtitle">
-                            {{ joinParts([op.zone, op.cityName, op.ticketName]) }}
-                            @if (isFreeParking(op)) {
-                              <span> · {{ 'parking.tickets.free' | translate }}</span>
-                            }
-                          </div>
-                          @if (op.plate) {
-                            <div class="operation-meta">
-                              {{ op.plate }}
-                              @if (isParking(op) && op.durationLabel) {
-                                <span> · {{ op.durationLabel }}</span>
+            @if (historyStatus() === 'loading') {
+              <li class="history-range-skeleton">
+                <p role="status">{{ 'common.loading' | translate }}...</p>
+                <div class="skeleton-list-row" aria-hidden="true"></div>
+                <div class="skeleton-list-row" aria-hidden="true"></div>
+                <div class="skeleton-list-row" aria-hidden="true"></div>
+              </li>
+            } @else if (historyStatus() === 'error') {
+              <li class="list-item history-empty">
+                <div class="operations-error">
+                  <span role="alert">{{ historyError() | apiError: 'ops.loadError' }}</span>
+                  <button type="button" class="btn btn-secondary" (click)="retryHistory()">{{ 'common.retry' | translate }}</button>
+                </div>
+              </li>
+            } @else {
+              @for (group of groupedHistory(); track group.label) {
+                <details class="history-group" open>
+                  <summary class="history-group-label">{{ group.label | translate }}</summary>
+                  <ul class="history-group-items">
+                    @for (op of group.items; track op.id) {
+                      <li>
+                        <a
+                          [routerLink]="['/app/operations/detail', op.id]"
+                          class="list-item"
+                          [class.historic-fine-item]="isHistoricFine(op)"
+                          routerLinkActive="active"
+                          [routerLinkActiveOptions]="{ exact: true }"
+                        >
+                          <app-operation-icon [type]="op.type" />
+                          <div class="list-item-content">
+                            <div class="list-item-title" [class.finish-op-title]="isFinishParking(op)">
+                              {{ operationLabel(op) | translate }}
+                              @if (isHistoricFine(op)) {
+                                <span class="historic-fine-badge">{{ 'ops.fineDetail.historic' | translate }}</span>
+                              }
+                              @if (op.timePeriod === 2) {
+                                <span class="badge badge-warning">{{ 'ops.active' | translate }}</span>
                               }
                             </div>
-                          }
-                          @if ((op.type === OperationType.TOP_UP || op.type === OperationType.BALANCE_REFUND) && op.cardLabel) {
-                            <div class="operation-meta">{{ op.cardLabel }}</div>
-                          }
-                        </div>
-                        <div class="operation-price-date">
-                          <span class="operation-date">{{ op.date }}</span>
-                          @if (operationTime(op)) {
-                            <span class="operation-time">{{ operationTime(op) }}</span>
-                          }
-                          <div class="operation-amount-row">
-                            <span
-                              [class]="
-                                op.amount > 0 ? 'operation-amount operation-amount-credit' : 'operation-amount operation-amount-debit'
-                              "
-                            >
-                              {{ op.amount > 0 ? '+' : '' }}{{ op.amount | euro }}
-                            </span>
-                            <span class="operation-chevron" aria-hidden="true"></span>
+                            <div class="list-item-subtitle">
+                              {{ joinParts([op.zone, op.cityName, op.ticketName]) }}
+                              @if (isFreeParking(op)) {
+                                <span> · {{ 'parking.tickets.free' | translate }}</span>
+                              }
+                            </div>
+                            @if (op.plate) {
+                              <div class="operation-meta">
+                                {{ op.plate }}
+                                @if (isParking(op) && op.durationLabel) {
+                                  <span> · {{ op.durationLabel }}</span>
+                                }
+                              </div>
+                            }
+                            @if ((op.type === OperationType.TOP_UP || op.type === OperationType.BALANCE_REFUND) && op.cardLabel) {
+                              <div class="operation-meta">{{ op.cardLabel }}</div>
+                            }
                           </div>
-                        </div>
-                      </a>
-                    </li>
+                          <div class="operation-price-date">
+                            <span class="operation-date">{{ op.date }}</span>
+                            @if (operationTime(op)) {
+                              <span class="operation-time">{{ operationTime(op) }}</span>
+                            }
+                            <div class="operation-amount-row">
+                              <span
+                                [class]="
+                                  op.amount > 0 ? 'operation-amount operation-amount-credit' : 'operation-amount operation-amount-debit'
+                                "
+                              >
+                                {{ op.amount > 0 ? '+' : '' }}{{ op.amount | euro }}
+                              </span>
+                              <span class="operation-chevron" aria-hidden="true"></span>
+                            </div>
+                          </div>
+                        </a>
+                      </li>
+                    }
+                  </ul>
+                </details>
+              } @empty {
+                <li class="list-item history-empty">
+                  @if (historyStatus() === 'idle' && operationsSource() === 'error') {
+                    <div class="operations-error">
+                      <span>{{ errorForDisplay() | apiError: 'ops.loadError' }}</span>
+                      <button type="button" class="btn btn-secondary" (click)="retryOperations()">{{ 'common.retry' | translate }}</button>
+                    </div>
+                  } @else {
+                    {{ 'ops.empty' | translate }}
                   }
-                </ul>
-              </details>
-            }
-            @if (groupedHistory().length === 0) {
-              <li class="list-item history-empty">
-                @if (operationsSource() === 'error') {
-                  <div class="operations-error">
-                    <span>{{ errorForDisplay() | apiError: 'ops.loadError' }}</span>
-                    <button type="button" class="btn btn-secondary" (click)="retryOperations()">{{ 'common.retry' | translate }}</button>
-                  </div>
-                } @else {
-                  {{ 'ops.empty' | translate }}
-                }
-              </li>
+                </li>
+              }
             }
           </ul>
         </div>
@@ -297,10 +312,21 @@ export class OperationsLayoutComponent implements OnInit, AfterViewInit {
   private readonly vehicleService = inject(VehicleService);
   private readonly translations = inject(TranslationService);
   private readonly operations = computed(() => this.operationsService.historyOperations() ?? this.operationsService.operations());
-  private readonly rangeFilter = signal<DateRange>({ from: '', to: '' });
+  private readonly rangeFilter = signal<DateRange | null>(null);
   readonly historyControlsHeight = signal(0);
   private readonly unpaidFinesService = inject(UnpaidFinesService);
+  private readonly finesOpenWhileFiltering = signal(false);
   readonly unpaidFinesCount = () => this.unpaidFinesService.fines().length;
+  readonly historyStatus = this.operationsService.historyStatus;
+  readonly historyError = this.operationsService.historyError;
+  private readonly finesRangeReady = computed(() => {
+    const range = this.rangeFilter();
+    if (!range) return false;
+    return range.from || range.to ? this.historyStatus() === 'ready' : this.unpaidFinesService.settled();
+  });
+  readonly showUnpaidFines = computed(
+    () => this.unpaidFinesCount() > 0 && (this.finesRangeReady() || (this.finesOpenWhileFiltering() && this.isUnpaidFinesRoute())),
+  );
   readonly OperationType = OperationType;
   readonly OPERATION_TYPE_LABELS = OPERATION_TYPE_LABELS;
   readonly activeParkings = this.parkingSessionService.activeParkings;
@@ -329,6 +355,28 @@ export class OperationsLayoutComponent implements OnInit, AfterViewInit {
     ),
     { initialValue: this.router.url },
   );
+
+  private readonly finesRoute = computed(() => {
+    const segments = this.router.parseUrl(this.url()).root.children[PRIMARY_OUTLET]?.segments;
+    if (segments?.[0]?.path !== 'app' || segments[1]?.path !== 'operations') return null;
+    if (segments[2]?.path === 'unpaid-fines') return { fineId: null };
+    if (segments[2]?.path === 'unpaid-fine-detail') return { fineId: segments[3]?.path };
+    return null;
+  });
+
+  private readonly syncFinesRouteWithFilter = effect(() => {
+    if (!this.finesRangeReady()) return;
+    const route = this.finesRoute();
+    // Only leave a fine detail in response to a filter change. The detail handles its own payment result.
+    if (route && route.fineId !== null && !this.finesOpenWhileFiltering()) return;
+    this.finesOpenWhileFiltering.set(false);
+    if (!route) return;
+    if (!this.unpaidFinesCount()) {
+      void this.router.navigate(['/app/operations'], { replaceUrl: true });
+    } else if (route.fineId && !this.unpaidFinesService.getFine(route.fineId)) {
+      void this.router.navigate(['/app/operations/unpaid-fines'], { replaceUrl: true });
+    }
+  });
 
   ngOnInit(): void {
     void this.reload();
@@ -373,14 +421,17 @@ export class OperationsLayoutComponent implements OnInit, AfterViewInit {
     return path !== '/app/operations';
   };
 
-  isUnpaidFinesRoute = () => {
-    const path = this.url().split('?')[0];
-    return path.startsWith('/app/operations/unpaid-fines') || path.startsWith('/app/operations/unpaid-fine-detail');
-  };
+  isUnpaidFinesRoute = () => this.finesRoute() !== null;
 
   onRangeChange(range: DateRange): void {
+    this.finesOpenWhileFiltering.set(this.isUnpaidFinesRoute() && this.showUnpaidFines());
     this.rangeFilter.set(range);
     this.loadHistoryRange(range);
+  }
+
+  retryHistory(): void {
+    const range = this.rangeFilter();
+    if (range) this.loadHistoryRange(range);
   }
 
   private loadHistoryRange(range: DateRange): void {
@@ -481,7 +532,7 @@ export class OperationsLayoutComponent implements OnInit, AfterViewInit {
   }
 
   private applyFilter(list: Operation[]): Operation[] {
-    const { from, to } = this.rangeFilter();
+    const { from, to } = this.rangeFilter() ?? {};
     const history = list.filter((op) => op.type !== OperationType.UNPAID_FINES || isHistoricalUnpaidFine(op));
     const sorted = [...history].sort((a, b) => {
       const diff = this.toDateValue(b.date) - this.toDateValue(a.date);

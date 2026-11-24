@@ -7,6 +7,47 @@ import { ParkingTicketsComponent } from './tickets.component';
 import { SupportedLang, TranslationService } from '../../../core/services/translation.service';
 
 describe('ParkingTicketsComponent', () => {
+  it('shows an informational tariff as an alert with a sector heading and no empty fields or purchase link', async () => {
+    const notice = 'El estacionamiento regulado sólo está operativo durante el periodo vacacional.';
+    TestBed.configureTestingModule({
+      imports: [ParkingTicketsComponent],
+      providers: [
+        provideZonelessChangeDetection(),
+        provideRouter([]),
+        { provide: TranslationService, useValue: { translate: (key: string) => key, currentLang$: () => 'es' } },
+        {
+          provide: ParkingApiService,
+          useValue: {
+            tickets: async () => ({
+              data: [
+                {
+                  id: '0',
+                  zoneName: 'Zona 2',
+                  sectorName: 'Z2 Azul',
+                  name: 'Tique de temporada',
+                  desc: notice,
+                  informationalOnly: true,
+                  sectorColor: '1E88E5',
+                },
+              ],
+              source: 'remote',
+            }),
+            serverNow: () => new Date(),
+            opsDate: () => '120000241126',
+          },
+        },
+      ],
+    });
+    const fixture = TestBed.createComponent(ParkingTicketsComponent);
+    await fixture.whenStable();
+    const card = (fixture.nativeElement as HTMLElement).querySelector('.ticket-option-information')!;
+    expect(card.querySelector('h2')?.textContent?.trim()).toBe('Zona 2 · Z2 Azul');
+    expect(getComputedStyle(card.querySelector('.ticket-zone-header')!).backgroundColor).toBe('rgb(30, 136, 229)');
+    expect(card.querySelector('.ticket-behavior p')?.textContent?.trim()).toBe(notice);
+    expect(card.querySelector('.ticket-behavior app-icon')).not.toBeNull();
+    expect(card.querySelector('.ticket-meta, .ticket-action')).toBeNull();
+  });
+
   it('reloads tariffs after a confirmed language change and discards a late previous-language result', async () => {
     const language = signal<SupportedLang>('es');
     const parkingApi = jasmine.createSpyObj<ParkingApiService>('ParkingApiService', ['tickets', 'opsDate', 'serverNow']);

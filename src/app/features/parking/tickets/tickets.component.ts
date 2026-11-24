@@ -10,10 +10,12 @@ import { ParkingFlowQuery, readParkingFlowQuery } from '../parking-flow.model';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { ParkingApiService, ParkingTicketOption } from '../../../core/services/parking-api.service';
 import { TranslationService } from '../../../core/services/translation.service';
+import { AppIconComponent } from '../../../shared/icons/app-icon.component';
+import { joinParts } from '../../../shared/utils/join-parts';
 
 @Component({
   selector: 'app-parking-tickets',
-  imports: [DetailPanelHeaderComponent, ApiErrorPipe, RuntimeStyleDirective, RouterLink, LoaderComponent, TranslatePipe],
+  imports: [DetailPanelHeaderComponent, ApiErrorPipe, RuntimeStyleDirective, RouterLink, LoaderComponent, TranslatePipe, AppIconComponent],
   template: `
     <app-loader [visible]="loading()" [message]="'parking.tickets.loading' | translate" />
     <div class="page flow-page">
@@ -37,36 +39,59 @@ import { TranslationService } from '../../../core/services/translation.service';
           <article
             class="ticket-option"
             [class.ticket-option-information]="tariff.informationalOnly"
-            [attr.aria-disabled]="tariff.informationalOnly ? 'true' : null"
             [attr.role]="tariff.informationalOnly ? 'status' : null"
           >
             <div
               class="ticket-zone-header"
-              aria-hidden="true"
+              [attr.aria-hidden]="tariff.informationalOnly ? null : 'true'"
               [appRuntimeStyle]="{
                 background: normalizeSectorColor(tariff.sectorColor || query().sectorColor) || 'var(--color-parking-fallback)',
               }"
-            ></div>
-            <div class="ticket-content">
-              <div class="ticket-option-head">
-                <h2>{{ tariff.name }}</h2>
-                <strong>{{ tariff.free ? ('parking.tickets.free' | translate) : tariff.price }}</strong>
-              </div>
-              <div class="ticket-meta">
-                <span
-                  ><small>{{ 'parking.tickets.schedule' | translate }}</small
-                  ><strong class="ticket-schedule">{{ tariff.schedule || '—' }}</strong></span
-                ><span
-                  ><small>{{ 'parking.tickets.maximumTime' | translate }}</small
-                  ><strong>{{ tariff.maxTime || '—' }}</strong></span
-                ><span
-                  ><small>{{ 'parking.tickets.amount' | translate }}</small
-                  ><strong>{{ tariff.free ? ('parking.tickets.free' | translate) : tariff.minAmount || tariff.price || '—' }}</strong></span
-                >
-              </div>
+            >
               @if (tariff.informationalOnly) {
-                <p class="ticket-behavior">{{ tariff.desc || tariff.name }}</p>
-              } @else {
+                <h2>{{ informationTitle(tariff) }}</h2>
+              }
+            </div>
+            <div class="ticket-content">
+              @if (!tariff.informationalOnly) {
+                <div class="ticket-option-head">
+                  <h2>{{ tariff.name }}</h2>
+                  <strong>{{ tariff.free ? ('parking.tickets.free' | translate) : tariff.price }}</strong>
+                </div>
+              }
+              @if (tariff.informationalOnly) {
+                <div class="ticket-behavior">
+                  @if (tariff.id === '0' || tariff.ticketBehavior === 3) {
+                    <app-icon name="warning" [size]="26" />
+                  }
+                  <p>{{ tariff.desc || tariff.name }}</p>
+                </div>
+              }
+              @if (!tariff.informationalOnly || tariff.schedule || tariff.maxTime || tariff.free || tariff.minAmount || tariff.price) {
+                <div class="ticket-meta">
+                  @if (!tariff.informationalOnly || tariff.schedule) {
+                    <span
+                      ><small>{{ 'parking.tickets.schedule' | translate }}</small
+                      ><strong class="ticket-schedule">{{ tariff.schedule || '—' }}</strong></span
+                    >
+                  }
+                  @if (!tariff.informationalOnly || tariff.maxTime) {
+                    <span
+                      ><small>{{ 'parking.tickets.maximumTime' | translate }}</small
+                      ><strong>{{ tariff.maxTime || '—' }}</strong></span
+                    >
+                  }
+                  @if (!tariff.informationalOnly || tariff.free || tariff.minAmount || tariff.price) {
+                    <span
+                      ><small>{{ 'parking.tickets.amount' | translate }}</small
+                      ><strong>{{
+                        tariff.free ? ('parking.tickets.free' | translate) : tariff.minAmount || tariff.price || '—'
+                      }}</strong></span
+                    >
+                  }
+                </div>
+              }
+              @if (!tariff.informationalOnly) {
                 <a
                   routerLink="/app/parking/time-steps"
                   [queryParams]="withTariff(tariff)"
@@ -128,6 +153,11 @@ export class ParkingTicketsComponent implements OnInit {
   private currentlyLoadedLanguage = this.translation.currentLang$();
   private initialized = false;
   private requestSequence = 0;
+
+  informationTitle(tariff: ParkingTicketOption): string {
+    const sector = tariff.sectorName || tariff.name;
+    return joinParts([tariff.zoneName, sector === tariff.zoneName ? undefined : sector]);
+  }
 
   async ngOnInit(): Promise<void> {
     this.initialized = true;

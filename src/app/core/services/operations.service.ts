@@ -115,6 +115,8 @@ export class OperationsService {
   private readonly _operations = signal<Operation[]>([]);
   private readonly _activeParkings = signal<ActiveParking[]>([]);
   private readonly _historyOperations = signal<Operation[] | null>(null);
+  private readonly _historyStatus = signal<'idle' | 'loading' | 'ready' | 'error'>('idle');
+  private readonly _historyError = signal<unknown>(null);
   private readonly _activeLoading = signal(false);
   private readonly locallyEndedOperationIds = this.readLocallyEndedOperationIds();
   private readonly paidFineKeys = new Set<string>(this.readPaidFineKeys());
@@ -137,6 +139,8 @@ export class OperationsService {
     this.historyRevision++;
     this.historyRange = null;
     this._historyOperations.set(null);
+    this._historyStatus.set('idle');
+    this._historyError.set(null);
     this.requestedLoadKey = null;
     this.lastSuccessfulLoad = null;
     this._operations.set([]);
@@ -162,6 +166,8 @@ export class OperationsService {
 
   readonly operations = this._operations.asReadonly();
   readonly historyOperations = this._historyOperations.asReadonly();
+  readonly historyStatus = this._historyStatus.asReadonly();
+  readonly historyError = this._historyError.asReadonly();
   readonly activeParkings = this._activeParkings.asReadonly();
   readonly activeParkingsCount = computed(() => this._activeParkings().length);
   readonly hasActiveParkings = computed(() => this._activeParkings().length > 0);
@@ -260,7 +266,7 @@ export class OperationsService {
       );
       this.source.set('remote');
       this.lastSuccessfulLoad = { key: requestKey, at: Date.now() };
-      if (this.historyRange) void this.loadHistory(this.historyRange.from, this.historyRange.to);
+      if (this.historyRange) void this.loadHistory(this.historyRange.from, this.historyRange.to, { refresh: true });
     } catch (error) {
       if (generation !== this.generation || requestKey !== this.requestedLoadKey) return;
       this.responseError.set(error);
@@ -276,12 +282,19 @@ export class OperationsService {
     }
   }
 
-  async loadHistory(dateStart: string, dateEnd: string): Promise<void> {
+  async loadHistory(dateStart: string, dateEnd: string, { refresh = false } = {}): Promise<void> {
+    const keepResults =
+      refresh && this._historyStatus() === 'ready' && this.historyRange?.from === dateStart && this.historyRange.to === dateEnd;
     this.historyRange = { from: dateStart, to: dateEnd };
     const generation = this.generation;
     const revision = ++this.historyRevision;
     const token = this.session.token();
-    if (!token) return;
+    this._historyError.set(null);
+    if (!token) {
+      this._historyStatus.set('error');
+      return;
+    }
+    if (!keepResults) this._historyStatus.set('loading');
     try {
       const response = await this.api.post<OperationResponseDto[]>(
         OPS_ENDPOINTS.user.operations,
@@ -302,8 +315,13 @@ export class OperationsService {
             operation.timePeriod === 2 && this.locallyEndedOperationIds.has(operation.id) ? { ...operation, timePeriod: 1 } : operation,
           ),
       );
+      this._historyStatus.set('ready');
     } catch (error) {
       if (generation !== this.generation || revision !== this.historyRevision) return;
+      if (!keepResults) {
+        this._historyError.set(error);
+        this._historyStatus.set('error');
+      }
       console.warn('[OPS API] No se pudo cargar el histórico por rango', error);
     }
   }
@@ -312,6 +330,8 @@ export class OperationsService {
     this.historyRevision++;
     this.historyRange = null;
     this._historyOperations.set(null);
+    this._historyStatus.set('idle');
+    this._historyError.set(null);
   }
 
   async loadDetail(id: string): Promise<Operation | undefined> {

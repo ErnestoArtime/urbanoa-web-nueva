@@ -31,6 +31,7 @@
   padding-top: 0.75rem;
 }
 .operations-skeleton > div,
+.history-range-skeleton > div,
 .active-parking-skeleton,
 .skeleton-chips span {
   position: relative;
@@ -39,6 +40,7 @@
   background: var(--color-skeleton-shape-surface);
 }
 .operations-skeleton > div::after,
+.history-range-skeleton > div::after,
 .active-parking-skeleton::after,
 .skeleton-chips span::after {
   position: absolute;
@@ -182,6 +184,21 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-surface);
+}
+.history-range-skeleton {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-3);
+}
+.history-range-skeleton p {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+@media (prefers-reduced-motion: reduce) {
+  .history-range-skeleton > div::after {
+    animation: none;
+  }
 }
 .history-group {
   display: flex;
