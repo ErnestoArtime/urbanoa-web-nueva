@@ -22,5 +22,10 @@ export function createGoogleMapStyle(): google.maps.MapTypeStyle[] {
       elementType: stylePath('labels', 'text', 'fill'),
       stylers: [{ color: readDesignToken('--color-map-water-label') }],
     },
+    {
+      featureType: stylePath('landscape', 'man_made'),
+      elementType: stylePath('geometry', 'fill'),
+      stylers: [{ visibility: 'off' }],
+    },
   ];
 }

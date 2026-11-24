@@ -121,3 +121,6 @@ app-location-map .operation-location-pin::after {
   background: var(--color-surface-raised);
   content: '';
 }
+.map-frame .leaflet-tile-pane {
+  filter: grayscale(1);
+}

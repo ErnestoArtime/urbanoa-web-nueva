@@ -28,8 +28,8 @@ interface MapPoint {
 
 interface MapParkingZone {
   zoneId: number;
-  sectorId?: number;
   name: string;
+  localizedNames?: string[];
   color: string;
   points: L.LatLngTuple[];
   leafletLayer?: L.Polygon;
@@ -58,14 +58,12 @@ interface MapParkingZone {
 
       <div class="map-frame">
         <div #mapContainer class="leaflet-map" [attr.aria-label]="'parking.map.ariaLabel' | translate"></div>
-        <div class="map-target" aria-hidden="true"><span></span></div>
-        @if (zoneLabelVisible()) {
-          @if (selectedZone(); as zone) {
-            <div class="map-zone-label" role="status" aria-live="polite">
-              <span>{{ zone.name }}</span>
-              <button type="button" [attr.aria-label]="'common.close' | translate" (click)="closeZoneLabel()">×</button>
-            </div>
-          }
+        <div class="map-target" aria-hidden="true"></div>
+        @if (!mapLoading() && !mapError()) {
+          <div class="map-zone-label" [class.map-zone-label-unavailable]="!markerZone()" role="status" [attr.aria-busy]="mapMoving()">
+            <app-icon class="map-zone-car" name="parkingMarkerCar" [size]="24" [appRuntimeStyle]="markerIconStyle()" />
+            <span>{{ markerName() || ('parking.timeSteps.ticketUnavailable' | translate) }}</span>
+          </div>
         }
         <app-map-location-control [state]="locationState()" (locate)="locateUser()" />
 
@@ -152,18 +150,18 @@ interface MapParkingZone {
             }
           </div>
 
-          @if (selectedZone(); as zone) {
+          @if (sectorResolving()) {
+            <p class="select-hint" role="status">{{ 'parking.map.resolvingSector' | translate }}</p>
+          } @else if (sectorError()) {
+            <p class="select-hint select-hint-error" role="status">{{ sectorResponseError() | apiError: 'parking.map.sectorNotFound' }}</p>
+          } @else if (selectedZone(); as zone) {
             <div class="selected-zone">
               <span [appRuntimeStyle]="{ background: '#' + zone.color }"></span>
               <div>
                 <small>{{ 'parking.map.selectedZone' | translate }}</small
-                ><strong>{{ zone.name }}</strong>
+                ><strong>{{ markerName() || zone.name }}</strong>
               </div>
             </div>
-          } @else if (sectorResolving()) {
-            <p class="select-hint" role="status">{{ 'parking.map.resolvingSector' | translate }}</p>
-          } @else if (sectorError()) {
-            <p class="select-hint select-hint-error" role="status">{{ sectorResponseError() | apiError: 'parking.map.sectorNotFound' }}</p>
           } @else {
             <p class="select-hint">{{ 'parking.map.selectHint' | translate }}</p>
           }
@@ -211,7 +209,8 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
   private googleLocationMarker?: google.maps.Circle;
   private destroyed = false;
   private readonly zones: MapParkingZone[] = [];
-  private highlightedZone?: MapParkingZone;
+  readonly mapMoving = signal(false);
+  private selectedPoint?: MapPoint;
   private sectorRequestVersion = 0;
   private readonly selectedState = signal<ParkingMunicipio>(EMPTY_CITY);
   get selected(): ParkingMunicipio {
@@ -227,7 +226,18 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
   readonly locationState = signal<MapLocationState>('idle');
   readonly zoneCount = signal(0);
   readonly selectedZone = signal<MapParkingZone | null>(null);
-  readonly zoneLabelVisible = signal(false);
+  readonly markerZone = signal<MapParkingZone | null>(null);
+  readonly markerName = computed(() => {
+    const zone = this.markerZone();
+    if (!zone) return '';
+    const localeIndex = { es: 0, eu: 1, uk: 2, fr: 3 }[this.translationService.currentLang$()];
+    return zone.localizedNames?.[localeIndex] || zone.name;
+  });
+  readonly markerIconStyle = computed(() => {
+    const color = this.markerZone()?.color;
+    return { '--map-marker-sector-color': color ? '#' + color : null };
+  });
+  private readonly parkingStatusesLoading = signal(false);
   readonly vehicles = this.vehicleService.vehicles;
   private readonly parkingSessionService = inject(ParkingSessionService);
   readonly isParkedIn = (vehicle: Vehicle) =>
@@ -248,7 +258,7 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
   readonly canStartParking = computed(() => {
     const zone = this.selectedZone();
     const vehicle = this.selectedVehicle();
-    return Boolean(zone?.sectorId && vehicle && !this.sectorResolving());
+    return Boolean(zone && vehicle && !this.mapError() && !this.sectorResolving() && !this.parkingStatusesLoading());
   });
   readonly showVehicleSelector = signal(false);
   readonly showParkingBehaviorHelp = signal(false);
@@ -287,10 +297,6 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
     this.showParkingBehaviorHelp.set(false);
   }
 
-  closeZoneLabel(): void {
-    this.zoneLabelVisible.set(false);
-  }
-
   vehicleQueryParams(): Record<string, string> {
     const vehicle = this.selectedVehicle();
     const params: Record<string, string> = {};
@@ -308,8 +314,8 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
 
   async ngAfterViewInit(): Promise<void> {
     try {
-      await this.vehicleService.load();
-      const { data } = await this.citiesService.getCities();
+      const [, { data }] = await Promise.all([this.vehicleService.load(), this.citiesService.getCities()]);
+      if (this.destroyed) return;
       const selectableCities = this.citiesService.selectableCities(data);
       const requestedContractId = Number(this.query.cityId);
       const preferredId = this.locationSettings.settings().preferredCityId;
@@ -330,7 +336,6 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
       if (remotePreferredContractId === selected.contractId) {
         this.locationSettings.setPreferredCity(selected.id, selected.nombre, selected.contractId);
       }
-      await this.parkingSessionService.loadParkingStatuses(this.vehicles());
       this.selectedVehicle.set(
         this.availableVehicles().find((vehicle) => vehicle.id === this.query.vehicleId || vehicle.plate === this.query.plate) ??
           preferredVehicle(this.availableVehicles()),
@@ -356,11 +361,23 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
     this.resizeObserver = new ResizeObserver(() => this.scheduleMapResize());
     this.resizeObserver.observe(this.mapContainer.nativeElement);
     this.scheduleMapResize();
+    this.parkingStatusesLoading.set(true);
     void this.loadRealZones();
+    try {
+      await this.parkingSessionService.loadParkingStatuses(this.vehicles());
+    } catch (error) {
+      if (!this.destroyed) {
+        this.mapResponseError.set(error);
+        this.mapError.set(true);
+      }
+    } finally {
+      this.parkingStatusesLoading.set(false);
+    }
   }
 
   ngOnDestroy(): void {
     this.destroyed = true;
+    this.sectorRequestVersion++;
     this.resizeObserver?.disconnect();
     if (this.resizeFrame !== undefined) cancelAnimationFrame(this.resizeFrame);
     this.leafletMap?.remove();
@@ -415,32 +432,69 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
     if (this.resizeFrame !== undefined) cancelAnimationFrame(this.resizeFrame);
     this.resizeFrame = requestAnimationFrame(() => {
       this.resizeFrame = undefined;
-      this.leafletMap?.invalidateSize({ pan: false });
+      this.leafletMap?.invalidateSize({ animate: false });
       if (this.googleMap) google.maps.event.trigger(this.googleMap, 'resize');
     });
   }
 
-  startParking(): void {
+  async startParking(): Promise<void> {
     const zone = this.selectedZone();
-    const center = this.mapCenter();
+    const center = this.selectedPoint;
     const vehicle = this.selectedVehicle();
     if (!zone || !center || !vehicle || !this.canStartParking()) return;
+    const requestVersion = ++this.sectorRequestVersion;
+    this.sectorError.set(false);
+    this.sectorResponseError.set(null);
+    this.sectorResolving.set(true);
+
+    try {
+      const sectors = await this.parkingApi.sectors({
+        contractId: this.selected.contractId,
+        latitude: center.lat,
+        longitude: center.lng,
+      });
+      if (requestVersion !== this.sectorRequestVersion || this.selectedVehicle() !== vehicle || this.mapError()) return;
+
+      // A KML zone identifier can correspond to a sector ID or to a zone ID in OPS.
+      const validSectors = sectors.filter((sector) => sector.sectorId > 0);
+      const match =
+        validSectors.find((sector) => sector.sectorId === zone.zoneId) ??
+        validSectors.find((sector) => sector.zoneId === zone.zoneId) ??
+        validSectors[0];
+      if (!match) {
+        this.sectorError.set(true);
+        return;
+      }
+      const name = match.sector || match.zone || zone.name;
+      const color = match.sectorId === zone.zoneId ? zone.color : this.normalizeZoneColor(match.sectorColor || match.zoneColor, zone.color);
+      await this.openTickets(vehicle, center, match.zoneId > 0 ? match.zoneId : zone.zoneId, match.sectorId, name, color);
+    } catch (error) {
+      if (requestVersion === this.sectorRequestVersion) {
+        this.sectorResponseError.set(error);
+        this.sectorError.set(true);
+      }
+    } finally {
+      if (requestVersion === this.sectorRequestVersion) this.sectorResolving.set(false);
+    }
+  }
+
+  private openTickets(vehicle: Vehicle, center: MapPoint, zoneId: number, sectorId: number, name: string, color: string): Promise<boolean> {
     this.store.update({
       city: this.selected.id,
       cityId: String(this.selected.contractId),
       cityName: this.selected.nombre,
       plate: vehicle.plate,
       vehicleId: vehicle.id,
-      zoneId: String(zone.zoneId),
-      zoneName: zone.name,
-      sectorId: String(zone.sectorId),
-      sectorName: zone.name,
+      zoneId: String(zoneId),
+      zoneName: name,
+      sectorId: String(sectorId),
+      sectorName: name,
       street: '',
-      sectorColor: zone.color,
+      sectorColor: color,
       latitude: center.lat.toFixed(7),
       longitude: center.lng.toFixed(7),
     });
-    void this.router.navigate(['/app/parking/tickets'], {
+    return this.router.navigate(['/app/parking/tickets'], {
       queryParams: {
         selectionOrigin: 'map',
         city: this.selected.id,
@@ -448,12 +502,12 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
         cityId: this.selected.contractId,
         plate: vehicle.plate,
         vehicleId: vehicle.id,
-        zoneId: zone.zoneId,
-        zone: zone.name,
-        sectorId: zone.sectorId,
-        sector: zone.name,
+        zoneId,
+        zone: name,
+        sectorId,
+        sector: name,
         street: '',
-        sectorColor: zone.color,
+        sectorColor: color,
         latitude: center.lat.toFixed(7),
         longitude: center.lng.toFixed(7),
       },
@@ -473,7 +527,7 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
       maxZoom: 19,
       attribution: '&copy; OpenStreetMap contributors',
     }).addTo(this.leafletMap);
-    this.leafletMap.on('moveend', () => this.selectZoneAtMapCenter());
+    this.leafletMap.on('moveend', () => this.handleMapMoveEnd());
   }
 
   private initializeGoogleMap(googleMaps: typeof google.maps, center: L.LatLngExpression): void {
@@ -481,6 +535,7 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
     this.googleMap = new googleMaps.Map(this.mapContainer.nativeElement, {
       center: { lat, lng },
       zoom: 15,
+      backgroundColor: readDesignToken('--color-map-base'),
       styles: createGoogleMapStyle(),
       zoomControl: true,
       zoomControlOptions: { position: googleMaps.ControlPosition.RIGHT_TOP },
@@ -489,11 +544,12 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
       fullscreenControl: false,
     });
     this.googleMap.addListener('dragstart', () => this.handleMapMoveStart());
-    this.googleMap.addListener('idle', () => this.selectZoneAtMapCenter());
+    this.googleMap.addListener('center_changed', () => this.handleMapMoveStart());
+    this.googleMap.addListener('idle', () => this.handleMapMoveEnd());
   }
 
   private mapCenter(): MapPoint | null {
-    const leafletCenter = this.leafletMap?.getCenter();
+    const leafletCenter = this.leafletMap?.containerPointToLatLng(this.leafletMap.getSize().divideBy(2));
     if (leafletCenter) return { lat: leafletCenter.lat, lng: leafletCenter.lng };
     const googleCenter = this.googleMap?.getCenter();
     return googleCenter ? { lat: googleCenter.lat(), lng: googleCenter.lng() } : null;
@@ -501,7 +557,20 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
 
   private handleMapMoveStart(): void {
     this.showParkingBehaviorHelp.set(false);
-    this.zoneLabelVisible.set(false);
+    if (this.mapMoving()) return;
+    this.mapMoving.set(true);
+    this.sectorRequestVersion++;
+    this.selectedPoint = undefined;
+    const zone = this.selectedZone();
+    if (zone) this.setZoneStyle(zone, false);
+    this.selectedZone.set(null);
+    this.sectorResolving.set(false);
+    this.sectorError.set(false);
+  }
+
+  private handleMapMoveEnd(): void {
+    this.mapMoving.set(false);
+    this.selectZoneAtMapCenter();
   }
 
   private async loadRealZones(): Promise<void> {
@@ -515,10 +584,15 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
       for (const placemark of Array.from(xml.getElementsByTagName('Placemark'))) {
         const name = placemark.getElementsByTagName('name')[0]?.textContent?.trim() || 'Zona';
         const description = placemark.getElementsByTagName('description')[0]?.textContent?.trim() || '';
-        const color =
-          placemark.querySelector('ExtendedData zoneColor')?.textContent?.trim() ||
-          readDesignToken('--color-map-zone-fallback').replace('#', '');
+        const color = this.normalizeZoneColor(
+          placemark.querySelector('ExtendedData zoneColor')?.textContent,
+          readDesignToken('--color-map-zone-fallback').slice(1),
+        );
         const zoneId = Number(placemark.querySelector('ExtendedData zoneId')?.textContent?.trim()) || 0;
+        const localizedNames = placemark
+          .querySelector('ExtendedData zoneName')
+          ?.textContent?.split(';')
+          .map((value) => value.trim());
         for (const polygon of Array.from(placemark.getElementsByTagName('Polygon'))) {
           const coordinates = polygon.getElementsByTagName('coordinates')[0]?.textContent;
           if (!coordinates) continue;
@@ -534,6 +608,7 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
           const zone: MapParkingZone = {
             zoneId,
             name: description || this.readableZoneName(name),
+            localizedNames,
             color,
             points,
           };
@@ -543,6 +618,7 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
               fillColor: `#${color}`,
               fillOpacity: 0.28,
               weight: 2,
+              smoothFactor: 0,
             });
             zone.leafletLayer.on('click', (event: L.LeafletMouseEvent) => {
               this.leafletMap?.panTo(event.latlng);
@@ -586,36 +662,29 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
 
   private selectZoneAtMapCenter(): void {
     const center = this.mapCenter();
-    if (!center || !this.zones.length) return;
-    this.selectZone(this.zones.find((zone) => this.containsPoint(center, zone.points)) ?? null);
+    if (!center || this.mapMoving() || !this.zones.length) return;
+    const map = this.leafletMap;
+    // Leaflet draws straight segments between rounded layer pixels. Test those same
+    // segments against the center pixel so the selected area matches what is visible.
+    const project = map ? (vertex: L.LatLngTuple) => map.latLngToLayerPoint(vertex) : ([lat, lng]: L.LatLngTuple) => L.point(lng, lat);
+    const target = map ? map.containerPointToLayerPoint(map.getSize().divideBy(2)) : project([center.lat, center.lng]);
+    this.selectZone(this.zones.find((zone) => this.containsPoint(target, zone.points, project)) ?? null, center);
   }
 
-  private selectZone(zone: MapParkingZone | null): void {
-    const sameZoneIsAlreadyResolved =
-      zone !== null && this.highlightedZone === zone && this.selectedZone()?.zoneId === zone.zoneId && !this.sectorResolving();
-    if (sameZoneIsAlreadyResolved) {
-      this.zoneLabelVisible.set(true);
-      return;
-    }
-
-    const requestVersion = ++this.sectorRequestVersion;
-    this.zoneLabelVisible.set(false);
+  private selectZone(zone: MapParkingZone | null, center: MapPoint): void {
+    const previousZone = this.selectedZone();
+    if (zone === previousZone && this.selectedPoint?.lat === center.lat && this.selectedPoint.lng === center.lng) return;
+    this.sectorRequestVersion++;
+    this.selectedPoint = zone ? center : undefined;
+    this.selectedZone.set(zone);
+    this.markerZone.set(zone);
     this.sectorError.set(false);
     this.sectorResponseError.set(null);
-    this.sectorResolving.set(Boolean(zone));
-    if (this.highlightedZone && this.highlightedZone !== zone) {
-      this.setZoneStyle(this.highlightedZone, false);
+    this.sectorResolving.set(false);
+    if (previousZone !== zone) {
+      if (previousZone) this.setZoneStyle(previousZone, false);
+      if (zone) this.setZoneStyle(zone, true);
     }
-    if (zone) {
-      this.setZoneStyle(zone, true);
-      this.highlightedZone = zone;
-    } else {
-      this.highlightedZone = undefined;
-    }
-    this.selectedZone.set(null);
-    const center = this.mapCenter();
-    if (zone && center) void this.resolveSector(zone, center, requestVersion);
-    else this.sectorResolving.set(false);
   }
 
   private setZoneStyle(zone: MapParkingZone, highlighted: boolean): void {
@@ -628,45 +697,22 @@ export class ParkingMapComponent implements AfterViewInit, OnDestroy {
     });
   }
 
-  private async resolveSector(zone: MapParkingZone, point: MapPoint, requestVersion: number): Promise<void> {
-    try {
-      const sectors = await this.parkingApi.sectors({
-        contractId: this.selected.contractId,
-        latitude: point.lat,
-        longitude: point.lng,
-      });
-      if (requestVersion !== this.sectorRequestVersion) return;
-      // QueryMapStretchesAPI and QuerySectorsAPI do not use the same zone identifiers
-      // in every municipality. The sector response is authoritative for these coordinates.
-      const match = sectors.find((sector) => sector.zoneId === zone.zoneId) ?? sectors[0];
-      if (!match) {
-        this.sectorError.set(true);
-        return;
-      }
-      const resolved = {
-        ...zone,
-        sectorId: match.sectorId,
-        name: match.sector || match.zone || zone.name,
-        color: (match.sectorColor || match.zoneColor || zone.color).replace('#', ''),
-      };
-      this.selectedZone.set(resolved);
-      this.zoneLabelVisible.set(true);
-    } catch (error) {
-      if (requestVersion === this.sectorRequestVersion) {
-        this.sectorResponseError.set(error);
-        this.sectorError.set(true);
-      }
-    } finally {
-      if (requestVersion === this.sectorRequestVersion) this.sectorResolving.set(false);
-    }
+  private normalizeZoneColor(value: string | null | undefined, fallback: string): string {
+    const color = value?.trim().replace(/^#/, '');
+    return color && /^[0-9a-f]{6}$/i.test(color) ? color : fallback;
   }
 
-  private containsPoint(point: MapPoint, polygon: L.LatLngTuple[]): boolean {
+  private containsPoint(point: L.Point, polygon: L.LatLngTuple[], project: (vertex: L.LatLngTuple) => L.Point): boolean {
     let inside = false;
-    for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-      const [yi, xi] = polygon[i];
-      const [yj, xj] = polygon[j];
-      if (yi > point.lat !== yj > point.lat && point.lng < ((xj - xi) * (point.lat - yi)) / (yj - yi) + xi) inside = !inside;
+    let previous = project(polygon[polygon.length - 1]);
+    for (const vertex of polygon) {
+      const current = project(vertex);
+      if (
+        current.y > point.y !== previous.y > point.y &&
+        point.x < ((previous.x - current.x) * (point.y - current.y)) / (previous.y - current.y) + current.x
+      )
+        inside = !inside;
+      previous = current;
     }
     return inside;
   }
